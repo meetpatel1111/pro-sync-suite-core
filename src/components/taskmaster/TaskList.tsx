@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,8 +46,8 @@ const TaskList = () => {
           ...task,
           status: validateStatus(task.status),
           priority: validatePriority(task.priority)
-        }));
-        setTasks(validTasks as Task[]);
+        })) as Task[];
+        setTasks(validTasks);
       } catch (error) {
         console.error("Error parsing tasks:", error);
         setTasks([]);
