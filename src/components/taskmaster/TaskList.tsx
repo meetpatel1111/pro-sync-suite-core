@@ -41,13 +41,15 @@ const TaskList = () => {
     if (storedTasks) {
       try {
         const parsedTasks = JSON.parse(storedTasks);
-        // Ensure status is one of the allowed values
+        // Ensure each task has a valid status and priority by mapping through them
         const validTasks = parsedTasks.map((task: any) => ({
           ...task,
           status: validateStatus(task.status),
           priority: validatePriority(task.priority)
-        })) as Task[];
-        setTasks(validTasks);
+        }));
+        
+        // Type assertion to tell TypeScript these are valid Task objects
+        setTasks(validTasks as Task[]);
       } catch (error) {
         console.error("Error parsing tasks:", error);
         setTasks([]);
@@ -57,14 +59,14 @@ const TaskList = () => {
 
   // Helper function to validate status
   const validateStatus = (status: string): 'todo' | 'inProgress' | 'review' | 'done' => {
-    const validStatuses = ['todo', 'inProgress', 'review', 'done'];
-    return validStatuses.includes(status) ? status as 'todo' | 'inProgress' | 'review' | 'done' : 'todo';
+    const validStatuses: Array<'todo' | 'inProgress' | 'review' | 'done'> = ['todo', 'inProgress', 'review', 'done'];
+    return validStatuses.includes(status as any) ? (status as 'todo' | 'inProgress' | 'review' | 'done') : 'todo';
   };
 
   // Helper function to validate priority
   const validatePriority = (priority: string): 'low' | 'medium' | 'high' => {
-    const validPriorities = ['low', 'medium', 'high'];
-    return validPriorities.includes(priority) ? priority as 'low' | 'medium' | 'high' : 'medium';
+    const validPriorities: Array<'low' | 'medium' | 'high'> = ['low', 'medium', 'high'];
+    return validPriorities.includes(priority as any) ? (priority as 'low' | 'medium' | 'high') : 'medium';
   };
 
   useEffect(() => {
