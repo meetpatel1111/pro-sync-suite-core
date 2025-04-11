@@ -2,6 +2,7 @@
 import { cn } from '@/lib/utils';
 import { LucideIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import AppIcon from './AppIcon';
 
 interface AppCardProps {
   title: string;
@@ -15,19 +16,17 @@ interface AppCardProps {
 const AppCard = ({
   title,
   description,
-  icon: Icon,
+  icon,
   bgColor,
   route,
   featureCount
 }: AppCardProps) => {
   return (
-    <Link to={route}>
-      <div className="group app-card h-full overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-1">
-        <div className="p-6">
-          <div className="flex items-start gap-4">
-            <div className={cn("app-card-icon rounded-md p-2", bgColor)}>
-              <Icon className="h-6 w-6 text-white" />
-            </div>
+    <Link to={route} className="block h-full">
+      <div className="group h-full overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-1">
+        <div className="p-5">
+          <div className="flex flex-col space-y-4">
+            <AppIcon icon={icon} bgColor={bgColor} size="md" />
             <div className="space-y-1">
               <h3 className="font-semibold tracking-tight text-lg">{title}</h3>
               <p className="text-sm text-muted-foreground">{description}</p>

@@ -44,7 +44,7 @@ const data = [
 
 const BudgetChart = () => {
   // Custom tooltip to format currency
-  const CustomTooltip = ({ active, payload, label }) => {
+  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-background border p-3 shadow-sm rounded-md">

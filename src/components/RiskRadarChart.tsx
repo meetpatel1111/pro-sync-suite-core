@@ -28,7 +28,7 @@ const risks = [
 ];
 
 // Get color based on probability and impact
-const getRiskColor = (probability, impact) => {
+const getRiskColor = (probability: number, impact: number) => {
   const riskScore = probability * impact;
   if (riskScore >= 15) return '#ef4444'; // High risk - red
   if (riskScore >= 8) return '#f59e0b';  // Medium risk - amber
@@ -36,7 +36,7 @@ const getRiskColor = (probability, impact) => {
 };
 
 // Get size based on priority
-const getRiskSize = (probability, impact) => {
+const getRiskSize = (probability: number, impact: number) => {
   const riskScore = probability * impact;
   if (riskScore >= 15) return 1000;  // High risk
   if (riskScore >= 8) return 800;    // Medium risk
@@ -45,7 +45,7 @@ const getRiskSize = (probability, impact) => {
 
 const RiskRadarChart = () => {
   // Custom tooltip component
-  const CustomTooltip = ({ active, payload }) => {
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       const riskScore = data.probability * data.impact;

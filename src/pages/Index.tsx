@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Calendar, Clock, MessageSquare, FileText, BarChart2, 
-         PieChart, Users, Shield, FileCog } from 'lucide-react';
+         PieChart, Users, Shield, FileCog, FolderLock } from 'lucide-react';
 import AppCard from '@/components/AppCard';
 import AppLayout from '@/components/AppLayout';
 import DashboardStats from '@/components/DashboardStats';
@@ -43,7 +43,7 @@ const Index = () => {
     {
       title: 'FileVault',
       description: 'Document & File Management',
-      icon: FileCog,
+      icon: FolderLock,
       bgColor: 'bg-purple-600',
       route: '/filevault',
       featureCount: 100
@@ -104,7 +104,7 @@ const Index = () => {
 
         <div className="mt-8">
           <h2 className="text-xl font-semibold mb-4">Your Apps</h2>
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             {appList.map((app) => (
               <AppCard 
                 key={app.title}
