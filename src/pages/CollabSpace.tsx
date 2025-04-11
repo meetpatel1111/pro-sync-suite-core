@@ -1,11 +1,10 @@
-
 import React from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Plus, Search, MessageSquare, Users, Video, Calendar, Send, Paperclip, Smile, Bell, Filter, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Plus, Search, MessageSquare, Users, Video, Calendar, Send, Paperclip, Smile, Bell, Filter, ChevronDown, FileIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -54,7 +53,6 @@ const CollabSpace = () => {
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left Sidebar - Channels and Chats */}
         <Card className="p-4 lg:col-span-1">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-medium">Spaces</h3>
@@ -225,7 +223,6 @@ const CollabSpace = () => {
           </Tabs>
         </Card>
         
-        {/* Main Chat Area */}
         <Card className="p-0 overflow-hidden lg:col-span-2">
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center">
@@ -278,7 +275,6 @@ const CollabSpace = () => {
           </div>
         </Card>
         
-        {/* Right Sidebar - Info Panel */}
         <Card className="p-4 lg:col-span-1">
           <Tabs defaultValue="about">
             <TabsList className="grid w-full grid-cols-3 mb-4">
@@ -450,7 +446,7 @@ const CollabSpace = () => {
                   <Card className="p-3">
                     <div className="flex items-center">
                       <div className="h-10 w-10 bg-blue-100 flex items-center justify-center rounded-md mr-3">
-                        <FileText className="h-5 w-5 text-blue-600" />
+                        <FileIcon className="h-5 w-5 text-blue-600" />
                       </div>
                       <div>
                         <p className="text-sm font-medium">Project Proposal.docx</p>
@@ -462,7 +458,7 @@ const CollabSpace = () => {
                   <Card className="p-3">
                     <div className="flex items-center">
                       <div className="h-10 w-10 bg-green-100 flex items-center justify-center rounded-md mr-3">
-                        <FileText className="h-5 w-5 text-green-600" />
+                        <FileIcon className="h-5 w-5 text-green-600" />
                       </div>
                       <div>
                         <p className="text-sm font-medium">Q2 Budget.xlsx</p>
@@ -474,7 +470,7 @@ const CollabSpace = () => {
                   <Card className="p-3">
                     <div className="flex items-center">
                       <div className="h-10 w-10 bg-amber-100 flex items-center justify-center rounded-md mr-3">
-                        <FileText className="h-5 w-5 text-amber-600" />
+                        <FileIcon className="h-5 w-5 text-amber-600" />
                       </div>
                       <div>
                         <p className="text-sm font-medium">Client Presentation.pptx</p>
@@ -486,7 +482,7 @@ const CollabSpace = () => {
                   <Card className="p-3">
                     <div className="flex items-center">
                       <div className="h-10 w-10 bg-red-100 flex items-center justify-center rounded-md mr-3">
-                        <FileText className="h-5 w-5 text-red-600" />
+                        <FileIcon className="h-5 w-5 text-red-600" />
                       </div>
                       <div>
                         <p className="text-sm font-medium">Design Assets.zip</p>

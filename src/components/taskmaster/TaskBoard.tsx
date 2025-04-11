@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, MoreHorizontal, Clock, Calendar, Edit, Trash2 } from 'lucide-react';
+import { Plus, MoreHorizontal, Clock, Calendar, Edit, Trash2, ListCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -87,7 +86,6 @@ const TaskBoard = () => {
   });
 
   useEffect(() => {
-    // Load tasks from localStorage or use initial data
     const storedTasks = localStorage.getItem('tasks');
     if (storedTasks) {
       setTasks(JSON.parse(storedTasks));
@@ -399,7 +397,6 @@ const TaskBoard = () => {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      {/* Calendar component would go here but for simplicity, we're using a date input */}
                       <input
                         type="date"
                         className="w-full p-2"
@@ -455,13 +452,12 @@ const TaskBoard = () => {
       </div>
 
       <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
-        <StatusColumn title="To Do" status="todo" icon={ListTodo} />
+        <StatusColumn title="To Do" status="todo" icon={ListCheck} />
         <StatusColumn title="In Progress" status="inProgress" icon={Clock} />
         <StatusColumn title="Review" status="review" icon={Edit} />
         <StatusColumn title="Done" status="done" icon={Calendar} />
       </div>
 
-      {/* Edit Task Dialog */}
       <Dialog open={isEditTaskDialogOpen} onOpenChange={setIsEditTaskDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>

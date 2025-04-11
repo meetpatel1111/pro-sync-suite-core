@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -152,7 +151,7 @@ const GanttChart = () => {
         
         {/* Gantt chart area */}
         <div className="flex-1 overflow-x-auto">
-          <ScrollArea className="w-full" orientation="horizontal">
+          <ScrollArea className="w-full">
             <div style={{ width: '1200px' }}>
               {/* Month header */}
               <div className="flex border-b bg-muted">

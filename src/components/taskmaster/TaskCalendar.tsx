@@ -159,14 +159,14 @@ const TaskCalendar = () => {
               onSelect={(date) => date && setSelectedDate(date)}
               className="rounded-md border"
               components={{
-                Day: ({ day }) => {
-                  const hasTask = hasTasksOnDate(day.date);
+                Day: ({ date }) => {
+                  const hasTask = hasTasksOnDate(date);
                   return (
                     <div className="relative">
                       <div 
                         className={`h-9 w-9 p-0 font-normal ${hasTask ? 'font-bold' : ''} aria-selected:opacity-100`}
                       >
-                        {format(day.date, 'd')}
+                        {format(date, 'd')}
                       </div>
                       {hasTask && (
                         <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2">

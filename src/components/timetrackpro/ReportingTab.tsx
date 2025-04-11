@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO, isWithinInterval } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Download, ArrowDownload } from 'lucide-react';
+import { CalendarIcon, Download, ArrowDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface TimeEntry {
