@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { supabase } from "@/integrations/supabase/client";
 
 interface Task {
   id: string;
@@ -22,6 +23,7 @@ interface Task {
   assignee?: string;
   project?: string;
   createdAt: string;
+  user_id?: string;
 }
 
 const initialData: Task[] = [
@@ -84,18 +86,103 @@ const TaskBoard = () => {
     priority: 'medium',
     project: 'project1'
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
-    const storedTasks = localStorage.getItem('tasks');
-    if (storedTasks) {
-      setTasks(JSON.parse(storedTasks));
-    } else {
-      setTasks(initialData);
-      localStorage.setItem('tasks', JSON.stringify(initialData));
-    }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const handleCreateTask = () => {
+  useEffect(() => {
+    async function fetchTasks() {
+      if (!session) {
+        const storedTasks = localStorage.getItem('tasks');
+        if (storedTasks) {
+          setTasks(JSON.parse(storedTasks));
+        } else {
+          setTasks(initialData);
+          localStorage.setItem('tasks', JSON.stringify(initialData));
+        }
+        setIsLoading(false);
+        return;
+      }
+      
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('tasks')
+          .select('*');
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          const mappedTasks = data.map((task): Task => ({
+            id: task.id,
+            title: task.title,
+            description: task.description || '',
+            status: validateStatus(task.status),
+            priority: validatePriority(task.priority),
+            dueDate: task.due_date,
+            assignee: task.assignee,
+            project: task.project,
+            createdAt: task.created_at,
+            user_id: task.user_id
+          }));
+          
+          setTasks(mappedTasks);
+        } else {
+          const storedTasks = localStorage.getItem('tasks');
+          if (storedTasks) {
+            setTasks(JSON.parse(storedTasks));
+          } else {
+            setTasks(initialData);
+            localStorage.setItem('tasks', JSON.stringify(initialData));
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+        toast({
+          title: "Error fetching tasks",
+          description: "There was an error loading your tasks",
+          variant: "destructive"
+        });
+        
+        const storedTasks = localStorage.getItem('tasks');
+        if (storedTasks) {
+          setTasks(JSON.parse(storedTasks));
+        } else {
+          setTasks(initialData);
+          localStorage.setItem('tasks', JSON.stringify(initialData));
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchTasks();
+  }, [session, toast]);
+
+  const validateStatus = (status: string): 'todo' | 'inProgress' | 'review' | 'done' => {
+    const validStatuses: Array<'todo' | 'inProgress' | 'review' | 'done'> = ['todo', 'inProgress', 'review', 'done'];
+    return validStatuses.includes(status as any) ? (status as 'todo' | 'inProgress' | 'review' | 'done') : 'todo';
+  };
+
+  const validatePriority = (priority: string): 'low' | 'medium' | 'high' => {
+    const validPriorities: Array<'low' | 'medium' | 'high'> = ['low', 'medium', 'high'];
+    return validPriorities.includes(priority as any) ? (priority as 'low' | 'medium' | 'high') : 'medium';
+  };
+
+  const handleCreateTask = async () => {
     if (!newTask.title) {
       toast({
         title: "Title required",
@@ -105,8 +192,7 @@ const TaskBoard = () => {
       return;
     }
 
-    const task: Task = {
-      id: Date.now().toString(),
+    const taskData = {
       title: newTask.title,
       description: newTask.description || '',
       status: newTask.status as 'todo' | 'inProgress' | 'review' | 'done',
@@ -115,6 +201,50 @@ const TaskBoard = () => {
       assignee: newTask.assignee,
       project: newTask.project,
       createdAt: new Date().toISOString()
+    };
+
+    let newId = '';
+
+    if (session) {
+      try {
+        const { data, error } = await supabase
+          .from('tasks')
+          .insert({
+            title: taskData.title,
+            description: taskData.description,
+            status: taskData.status,
+            priority: taskData.priority,
+            due_date: taskData.dueDate,
+            assignee: taskData.assignee,
+            project: taskData.project,
+            user_id: session.user.id
+          })
+          .select();
+        
+        if (error) throw error;
+        
+        if (data && data[0]) {
+          newId = data[0].id;
+        } else {
+          newId = Date.now().toString();
+        }
+      } catch (error) {
+        console.error("Error creating task:", error);
+        toast({
+          title: "Error creating task",
+          description: "There was an error creating your task",
+          variant: "destructive"
+        });
+        
+        newId = Date.now().toString();
+      }
+    } else {
+      newId = Date.now().toString();
+    }
+
+    const task: Task = {
+      id: newId,
+      ...taskData
     };
 
     const updatedTasks = [...tasks, task];
@@ -137,9 +267,35 @@ const TaskBoard = () => {
     });
   };
 
-  const handleUpdateTask = () => {
+  const handleUpdateTask = async () => {
     if (!editingTask || !editingTask.title) return;
 
+    if (session) {
+      try {
+        const { error } = await supabase
+          .from('tasks')
+          .update({
+            title: editingTask.title,
+            description: editingTask.description,
+            status: editingTask.status,
+            priority: editingTask.priority,
+            due_date: editingTask.dueDate,
+            assignee: editingTask.assignee,
+            project: editingTask.project
+          })
+          .eq('id', editingTask.id);
+        
+        if (error) throw error;
+      } catch (error) {
+        console.error("Error updating task:", error);
+        toast({
+          title: "Error updating task",
+          description: "There was an error updating the task",
+          variant: "destructive"
+        });
+      }
+    }
+    
     const updatedTasks = tasks.map(task => 
       task.id === editingTask.id ? editingTask : task
     );
@@ -154,7 +310,25 @@ const TaskBoard = () => {
     });
   };
 
-  const handleDeleteTask = (taskId: string) => {
+  const handleDeleteTask = async (taskId: string) => {
+    if (session) {
+      try {
+        const { error } = await supabase
+          .from('tasks')
+          .delete()
+          .eq('id', taskId);
+        
+        if (error) throw error;
+      } catch (error) {
+        console.error("Error deleting task:", error);
+        toast({
+          title: "Error deleting task",
+          description: "There was an error deleting the task",
+          variant: "destructive"
+        });
+      }
+    }
+    
     const updatedTasks = tasks.filter(task => task.id !== taskId);
     setTasks(updatedTasks);
     localStorage.setItem('tasks', JSON.stringify(updatedTasks));
@@ -173,9 +347,27 @@ const TaskBoard = () => {
     e.preventDefault();
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>, status: 'todo' | 'inProgress' | 'review' | 'done') => {
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>, status: 'todo' | 'inProgress' | 'review' | 'done') => {
     e.preventDefault();
     const taskId = e.dataTransfer.getData('taskId');
+    
+    if (session) {
+      try {
+        const { error } = await supabase
+          .from('tasks')
+          .update({ status })
+          .eq('id', taskId);
+        
+        if (error) throw error;
+      } catch (error) {
+        console.error("Error updating task status:", error);
+        toast({
+          title: "Error updating task",
+          description: "There was an error updating the task status",
+          variant: "destructive"
+        });
+      }
+    }
     
     const updatedTasks = tasks.map(task => {
       if (task.id === taskId) {
@@ -310,6 +502,41 @@ const TaskBoard = () => {
       </Card>
     </div>
   );
+
+  if (!session) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8 text-muted-foreground">
+              <p>Please log in to view and manage your tasks.</p>
+              <Button 
+                variant="default" 
+                className="mt-4"
+                onClick={() => window.location.href = '/auth'}
+              >
+                Log In / Sign Up
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8 text-muted-foreground">
+              <p>Loading tasks...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

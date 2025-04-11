@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import Auth from "./pages/Auth";
 import TaskMaster from "./pages/TaskMaster";
 import TimeTrackPro from "./pages/TimeTrackPro";
 import CollabSpace from "./pages/CollabSpace";
@@ -27,6 +28,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
           <Route path="/taskmaster" element={<TaskMaster />} />
           <Route path="/timetrackpro" element={<TimeTrackPro />} />
           <Route path="/collabspace" element={<CollabSpace />} />

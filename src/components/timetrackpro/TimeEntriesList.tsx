@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TimeEntry {
   id: string;
@@ -14,12 +15,15 @@ interface TimeEntry {
   timeSpent: number; // in seconds
   date: string;
   manual: boolean;
+  user_id?: string;
 }
 
 const TimeEntriesList = () => {
   const { toast } = useToast();
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [filterProject, setFilterProject] = useState('all');
+  const [isLoading, setIsLoading] = useState(true);
+  const [session, setSession] = useState<any>(null);
 
   // Project mapping
   const projectMap: Record<string, string> = {
@@ -29,14 +33,104 @@ const TimeEntriesList = () => {
     'project4': 'Database Migration',
   };
 
+  // Check for authentication
   useEffect(() => {
-    const storedEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
-    // Sort by date, newest first
-    storedEntries.sort((a: TimeEntry, b: TimeEntry) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setEntries(storedEntries);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const deleteEntry = (id: string) => {
+  // Fetch time entries
+  useEffect(() => {
+    async function fetchTimeEntries() {
+      if (!session) {
+        // If not logged in, use localStorage
+        const storedEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
+        // Sort by date, newest first
+        storedEntries.sort((a: TimeEntry, b: TimeEntry) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setEntries(storedEntries);
+        setIsLoading(false);
+        return;
+      }
+      
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('time_entries')
+          .select('*')
+          .order('date', { ascending: false });
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          // Map the database columns to our TimeEntry interface
+          const mappedEntries = data.map((entry): TimeEntry => ({
+            id: entry.id,
+            description: entry.description,
+            project: entry.project,
+            timeSpent: entry.time_spent,
+            date: entry.date,
+            manual: entry.manual,
+            user_id: entry.user_id
+          }));
+          
+          setEntries(mappedEntries);
+        } else {
+          // If no data from Supabase, use localStorage as fallback
+          const storedEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
+          // Sort by date, newest first
+          storedEntries.sort((a: TimeEntry, b: TimeEntry) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          setEntries(storedEntries);
+        }
+      } catch (error) {
+        console.error("Error fetching time entries:", error);
+        toast({
+          title: "Error fetching entries",
+          description: "There was an error loading your time entries",
+          variant: "destructive"
+        });
+        
+        // Fallback to localStorage
+        const storedEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
+        // Sort by date, newest first
+        storedEntries.sort((a: TimeEntry, b: TimeEntry) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setEntries(storedEntries);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchTimeEntries();
+  }, [session, toast]);
+
+  const deleteEntry = async (id: string) => {
+    if (session) {
+      try {
+        const { error } = await supabase
+          .from('time_entries')
+          .delete()
+          .eq('id', id);
+        
+        if (error) throw error;
+      } catch (error) {
+        console.error("Error deleting time entry:", error);
+        toast({
+          title: "Error deleting entry",
+          description: "There was an error deleting the time entry",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+    
     const updatedEntries = entries.filter(entry => entry.id !== id);
     setEntries(updatedEntries);
     localStorage.setItem('timeEntries', JSON.stringify(updatedEntries));
@@ -69,6 +163,37 @@ const TimeEntriesList = () => {
   const filteredEntries = filterProject === 'all' 
     ? entries 
     : entries.filter(entry => entry.project === filterProject);
+
+  if (!session) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-8 text-muted-foreground">
+            <p>Please log in to view your time entries.</p>
+            <Button 
+              variant="default" 
+              className="mt-4"
+              onClick={() => window.location.href = '/auth'}
+            >
+              Log In / Sign Up
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-8 text-muted-foreground">
+            <p>Loading time entries...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

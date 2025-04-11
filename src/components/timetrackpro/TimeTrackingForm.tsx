@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TimeEntry {
   id: string;
@@ -15,6 +16,7 @@ interface TimeEntry {
   timeSpent: number; // in seconds
   date: string;
   manual: boolean;
+  user_id?: string;
 }
 
 const TimeTrackingForm = () => {
@@ -25,6 +27,7 @@ const TimeTrackingForm = () => {
   const [timeSpent, setTimeSpent] = useState(0);
   const [manualHours, setManualHours] = useState(0);
   const [manualMinutes, setManualMinutes] = useState(0);
+  const [session, setSession] = useState<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
@@ -34,6 +37,19 @@ const TimeTrackingForm = () => {
     { id: 'project3', name: 'Marketing Campaign' },
     { id: 'project4', name: 'Database Migration' },
   ];
+
+  // Check for authentication
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -87,7 +103,7 @@ const TimeTrackingForm = () => {
     startTimeRef.current = null;
   };
 
-  const saveTimeEntry = (manual = false) => {
+  const saveTimeEntry = async (manual = false) => {
     if (!description) {
       toast({
         title: "Description needed",
@@ -136,7 +152,31 @@ const TimeTrackingForm = () => {
       manual
     };
     
-    // Save to local storage
+    if (session) {
+      try {
+        const { error } = await supabase
+          .from('time_entries')
+          .insert({
+            description: newEntry.description,
+            project: newEntry.project,
+            time_spent: newEntry.timeSpent,
+            date: newEntry.date,
+            manual: newEntry.manual,
+            user_id: session.user.id
+          });
+        
+        if (error) throw error;
+      } catch (error) {
+        console.error("Error saving time entry:", error);
+        toast({
+          title: "Error saving entry",
+          description: "There was an error saving your time entry",
+          variant: "destructive"
+        });
+      }
+    }
+    
+    // Also save to local storage as fallback
     const existingEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
     localStorage.setItem('timeEntries', JSON.stringify([...existingEntries, newEntry]));
     
@@ -163,6 +203,25 @@ const TimeTrackingForm = () => {
     
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
+
+  if (!session) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-8 text-muted-foreground">
+            <p>Please log in to track your time.</p>
+            <Button 
+              variant="default" 
+              className="mt-4"
+              onClick={() => window.location.href = '/auth'}
+            >
+              Log In / Sign Up
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="grid gap-4 md:grid-cols-2">

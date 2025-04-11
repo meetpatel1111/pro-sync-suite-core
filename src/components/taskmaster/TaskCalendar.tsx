@@ -1,12 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, startOfWeek, endOfWeek } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Task {
   id: string;
@@ -18,6 +18,7 @@ interface Task {
   assignee?: string;
   project?: string;
   createdAt: string;
+  user_id?: string;
 }
 
 const TaskCalendar = () => {
@@ -25,17 +26,89 @@ const TaskCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [tasksForSelectedDate, setTasksForSelectedDate] = useState<Task[]>([]);
   const [filterProject, setFilterProject] = useState('all');
+  const [isLoading, setIsLoading] = useState(true);
+  const [session, setSession] = useState<any>(null);
   
   useEffect(() => {
-    // Load tasks from localStorage
-    const storedTasks = localStorage.getItem('tasks');
-    if (storedTasks) {
-      setTasks(JSON.parse(storedTasks));
-    }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    async function fetchTasks() {
+      if (!session) {
+        const storedTasks = localStorage.getItem('tasks');
+        if (storedTasks) {
+          setTasks(JSON.parse(storedTasks));
+        }
+        setIsLoading(false);
+        return;
+      }
+      
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('tasks')
+          .select('*');
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          const mappedTasks = data.map((task): Task => ({
+            id: task.id,
+            title: task.title,
+            description: task.description || '',
+            status: validateStatus(task.status),
+            priority: validatePriority(task.priority),
+            dueDate: task.due_date,
+            assignee: task.assignee,
+            project: task.project,
+            createdAt: task.created_at,
+            user_id: task.user_id
+          }));
+          
+          setTasks(mappedTasks);
+        } else {
+          const storedTasks = localStorage.getItem('tasks');
+          if (storedTasks) {
+            setTasks(JSON.parse(storedTasks));
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+        
+        const storedTasks = localStorage.getItem('tasks');
+        if (storedTasks) {
+          setTasks(JSON.parse(storedTasks));
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchTasks();
+  }, [session]);
+
+  const validateStatus = (status: string): 'todo' | 'inProgress' | 'review' | 'done' => {
+    const validStatuses: Array<'todo' | 'inProgress' | 'review' | 'done'> = ['todo', 'inProgress', 'review', 'done'];
+    return validStatuses.includes(status as any) ? (status as 'todo' | 'inProgress' | 'review' | 'done') : 'todo';
+  };
+
+  const validatePriority = (priority: string): 'low' | 'medium' | 'high' => {
+    const validPriorities: Array<'low' | 'medium' | 'high'> = ['low', 'medium', 'high'];
+    return validPriorities.includes(priority as any) ? (priority as 'low' | 'medium' | 'high') : 'medium';
+  };
   
   useEffect(() => {
-    // Filter tasks for selected date
     const filtered = tasks.filter(task => {
       if (!task.dueDate) return false;
       
@@ -94,6 +167,41 @@ const TaskCalendar = () => {
     'user3': 'Taylor Lee',
     'user4': 'Morgan Chen'
   };
+
+  if (!session) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8 text-muted-foreground">
+              <p>Please log in to view your task calendar.</p>
+              <Button 
+                variant="default" 
+                className="mt-4"
+                onClick={() => window.location.href = '/auth'}
+              >
+                Log In / Sign Up
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8 text-muted-foreground">
+              <p>Loading tasks...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

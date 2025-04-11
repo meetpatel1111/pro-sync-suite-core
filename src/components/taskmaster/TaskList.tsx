@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { supabase } from "@/integrations/supabase/client";
 
 interface Task {
   id: string;
@@ -20,6 +21,7 @@ interface Task {
   assignee?: string;
   project?: string;
   createdAt: string;
+  user_id?: string;
 }
 
 const TaskList = () => {
@@ -34,32 +36,89 @@ const TaskList = () => {
   const [sortOrder, setSortOrder] = useState('asc');
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
-    const storedTasks = localStorage.getItem('tasks');
-    if (storedTasks) {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    async function fetchTasks() {
+      if (!session) return;
+      
+      setIsLoading(true);
       try {
-        const parsedTasks = JSON.parse(storedTasks);
+        const { data, error } = await supabase
+          .from('tasks')
+          .select('*');
         
-        const validTasks = parsedTasks.map((task: any): Task => ({
-          id: task.id,
-          title: task.title,
-          description: task.description || '',
-          status: validateStatus(task.status),
-          priority: validatePriority(task.priority),
-          dueDate: task.dueDate,
-          assignee: task.assignee,
-          project: task.project,
-          createdAt: task.createdAt || new Date().toISOString()
-        }));
+        if (error) {
+          throw error;
+        }
         
-        setTasks(validTasks);
+        if (data) {
+          const mappedTasks = data.map((task): Task => ({
+            id: task.id,
+            title: task.title,
+            description: task.description || '',
+            status: validateStatus(task.status),
+            priority: validatePriority(task.priority),
+            dueDate: task.due_date,
+            assignee: task.assignee,
+            project: task.project,
+            createdAt: task.created_at,
+            user_id: task.user_id
+          }));
+          
+          setTasks(mappedTasks);
+        }
       } catch (error) {
-        console.error("Error parsing tasks:", error);
-        setTasks([]);
+        console.error("Error fetching tasks:", error);
+        toast({
+          title: "Error fetching tasks",
+          description: "There was an error loading your tasks",
+          variant: "destructive"
+        });
+        
+        const storedTasks = localStorage.getItem('tasks');
+        if (storedTasks) {
+          try {
+            const parsedTasks = JSON.parse(storedTasks);
+            
+            const validTasks = parsedTasks.map((task: any): Task => ({
+              id: task.id,
+              title: task.title,
+              description: task.description || '',
+              status: validateStatus(task.status),
+              priority: validatePriority(task.priority),
+              dueDate: task.dueDate,
+              assignee: task.assignee,
+              project: task.project,
+              createdAt: task.createdAt || new Date().toISOString()
+            }));
+            
+            setTasks(validTasks);
+          } catch (error) {
+            console.error("Error parsing tasks:", error);
+            setTasks([]);
+          }
+        }
+      } finally {
+        setIsLoading(false);
       }
     }
-  }, []);
+    
+    fetchTasks();
+  }, [session, toast]);
 
   const validateStatus = (status: string): 'todo' | 'inProgress' | 'review' | 'done' => {
     const validStatuses: Array<'todo' | 'inProgress' | 'review' | 'done'> = ['todo', 'inProgress', 'review', 'done'];
@@ -129,16 +188,40 @@ const TaskList = () => {
     setFilteredTasks(result);
   }, [tasks, searchQuery, filterStatus, filterPriority, filterProject, sortBy, sortOrder]);
 
-  const handleToggleStatus = (taskId: string) => {
+  const handleToggleStatus = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    
+    const newStatus = task.status === 'done' ? 'todo' : 'done';
+    
+    if (session) {
+      try {
+        const { error } = await supabase
+          .from('tasks')
+          .update({ status: newStatus })
+          .eq('id', taskId);
+        
+        if (error) throw error;
+      } catch (error) {
+        console.error("Error updating task status:", error);
+        toast({
+          title: "Error updating task",
+          description: "There was an error updating the task status",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+    
     const updatedTasks = tasks.map(task => {
       if (task.id === taskId) {
-        const newStatus = task.status === 'done' ? 'todo' : 'done';
         return { ...task, status: newStatus };
       }
       return task;
     });
     
     setTasks(updatedTasks);
+    
     localStorage.setItem('tasks', JSON.stringify(updatedTasks));
     
     toast({
@@ -147,8 +230,35 @@ const TaskList = () => {
     });
   };
 
-  const handleEditTask = () => {
+  const handleEditTask = async () => {
     if (!editingTask) return;
+    
+    if (session) {
+      try {
+        const { error } = await supabase
+          .from('tasks')
+          .update({
+            title: editingTask.title,
+            description: editingTask.description,
+            status: editingTask.status,
+            priority: editingTask.priority,
+            due_date: editingTask.dueDate,
+            assignee: editingTask.assignee,
+            project: editingTask.project
+          })
+          .eq('id', editingTask.id);
+        
+        if (error) throw error;
+      } catch (error) {
+        console.error("Error updating task:", error);
+        toast({
+          title: "Error updating task",
+          description: "There was an error updating the task",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
     
     const updatedTasks = tasks.map(task => 
       task.id === editingTask.id ? editingTask : task
@@ -164,7 +274,26 @@ const TaskList = () => {
     });
   };
 
-  const handleDeleteTask = (taskId: string) => {
+  const handleDeleteTask = async (taskId: string) => {
+    if (session) {
+      try {
+        const { error } = await supabase
+          .from('tasks')
+          .delete()
+          .eq('id', taskId);
+        
+        if (error) throw error;
+      } catch (error) {
+        console.error("Error deleting task:", error);
+        toast({
+          title: "Error deleting task",
+          description: "There was an error deleting the task",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+    
     const updatedTasks = tasks.filter(task => task.id !== taskId);
     setTasks(updatedTasks);
     localStorage.setItem('tasks', JSON.stringify(updatedTasks));
@@ -267,6 +396,41 @@ const TaskList = () => {
     'project3': 'Marketing Campaign',
     'project4': 'Database Migration'
   };
+
+  if (!session) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8 text-muted-foreground">
+              <p>Please log in to view and manage your tasks.</p>
+              <Button 
+                variant="default" 
+                className="mt-4"
+                onClick={() => window.location.href = '/auth'}
+              >
+                Log In / Sign Up
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8 text-muted-foreground">
+              <p>Loading tasks...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -554,22 +718,24 @@ const TaskList = () => {
                   </Select>
                 </div>
               </div>
-              <div className="grid gap-2">
-                <label htmlFor="edit-project" className="text-sm font-medium">Project</label>
-                <Select
-                  value={editingTask.project}
-                  onValueChange={(value) => setEditingTask({ ...editingTask, project: value })}
-                >
-                  <SelectTrigger id="edit-project">
-                    <SelectValue placeholder="Select project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="project1">Website Redesign</SelectItem>
-                    <SelectItem value="project2">Mobile App</SelectItem>
-                    <SelectItem value="project3">Marketing Campaign</SelectItem>
-                    <SelectItem value="project4">Database Migration</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <label htmlFor="edit-project" className="text-sm font-medium">Project</label>
+                  <Select
+                    value={editingTask.project}
+                    onValueChange={(value) => setEditingTask({ ...editingTask, project: value })}
+                  >
+                    <SelectTrigger id="edit-project">
+                      <SelectValue placeholder="Select project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="project1">Website Redesign</SelectItem>
+                      <SelectItem value="project2">Mobile App</SelectItem>
+                      <SelectItem value="project3">Marketing Campaign</SelectItem>
+                      <SelectItem value="project4">Database Migration</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           )}
