@@ -36,20 +36,24 @@ const TaskList = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
-    // Load tasks from localStorage
     const storedTasks = localStorage.getItem('tasks');
     if (storedTasks) {
       try {
         const parsedTasks = JSON.parse(storedTasks);
-        // Ensure each task has a valid status and priority by mapping through them
-        const validTasks = parsedTasks.map((task: any) => ({
-          ...task,
+        
+        const validTasks = parsedTasks.map((task: any): Task => ({
+          id: task.id,
+          title: task.title,
+          description: task.description || '',
           status: validateStatus(task.status),
-          priority: validatePriority(task.priority)
+          priority: validatePriority(task.priority),
+          dueDate: task.dueDate,
+          assignee: task.assignee,
+          project: task.project,
+          createdAt: task.createdAt || new Date().toISOString()
         }));
         
-        // Type assertion to tell TypeScript these are valid Task objects
-        setTasks(validTasks as Task[]);
+        setTasks(validTasks);
       } catch (error) {
         console.error("Error parsing tasks:", error);
         setTasks([]);
@@ -57,23 +61,19 @@ const TaskList = () => {
     }
   }, []);
 
-  // Helper function to validate status
   const validateStatus = (status: string): 'todo' | 'inProgress' | 'review' | 'done' => {
     const validStatuses: Array<'todo' | 'inProgress' | 'review' | 'done'> = ['todo', 'inProgress', 'review', 'done'];
     return validStatuses.includes(status as any) ? (status as 'todo' | 'inProgress' | 'review' | 'done') : 'todo';
   };
 
-  // Helper function to validate priority
   const validatePriority = (priority: string): 'low' | 'medium' | 'high' => {
     const validPriorities: Array<'low' | 'medium' | 'high'> = ['low', 'medium', 'high'];
     return validPriorities.includes(priority as any) ? (priority as 'low' | 'medium' | 'high') : 'medium';
   };
 
   useEffect(() => {
-    // Apply filters and search
     let result = [...tasks];
     
-    // Apply search
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(task => 
@@ -82,22 +82,18 @@ const TaskList = () => {
       );
     }
     
-    // Apply status filter
     if (filterStatus !== 'all') {
       result = result.filter(task => task.status === filterStatus);
     }
     
-    // Apply priority filter
     if (filterPriority !== 'all') {
       result = result.filter(task => task.priority === filterPriority);
     }
     
-    // Apply project filter
     if (filterProject !== 'all') {
       result = result.filter(task => task.project === filterProject);
     }
     
-    // Apply sorting
     result.sort((a, b) => {
       let compareA, compareB;
       
@@ -466,7 +462,6 @@ const TaskList = () => {
         </CardContent>
       </Card>
 
-      {/* Edit Task Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
