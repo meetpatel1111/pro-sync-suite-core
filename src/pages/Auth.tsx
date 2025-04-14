@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { setupSampleData } from '@/utils/sampleData';
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -29,7 +30,15 @@ const Auth = () => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        navigate('/');
+        // Set up sample data for new users
+        setTimeout(async () => {
+          try {
+            await setupSampleData();
+          } catch (error) {
+            console.error('Error setting up sample data:', error);
+          }
+          navigate('/');
+        }, 0);
       }
     });
 
@@ -101,14 +110,13 @@ const Auth = () => {
 
       if (error) throw error;
       
-      navigate('/');
+      // Navigation will happen in the auth state change listener after sample data setup
     } catch (error: any) {
       toast({
         title: 'Error',
         description: error.message || 'Invalid login credentials',
         variant: 'destructive',
       });
-    } finally {
       setLoading(false);
     }
   };

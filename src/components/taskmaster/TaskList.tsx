@@ -38,6 +38,8 @@ const TaskList = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState<any>(null);
+  const [projects, setProjects] = useState<{id: string, name: string}[]>([]);
+  const [teamMembers, setTeamMembers] = useState<{id: string, name: string}[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -50,6 +52,49 @@ const TaskList = () => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    async function fetchProjects() {
+      if (!session) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('*');
+        
+        if (error) throw error;
+        
+        if (data) {
+          setProjects(data);
+        }
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+      }
+    }
+    
+    async function fetchTeamMembers() {
+      if (!session) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('team_members')
+          .select('*');
+        
+        if (error) throw error;
+        
+        if (data) {
+          setTeamMembers(data);
+        }
+      } catch (error) {
+        console.error("Error fetching team members:", error);
+      }
+    }
+    
+    if (session) {
+      fetchProjects();
+      fetchTeamMembers();
+    }
+  }, [session]);
 
   useEffect(() => {
     async function fetchTasks() {
@@ -383,18 +428,16 @@ const TaskList = () => {
     );
   };
 
-  const assigneeMap: Record<string, string> = {
-    'user1': 'Alex Johnson',
-    'user2': 'Jamie Smith',
-    'user3': 'Taylor Lee',
-    'user4': 'Morgan Chen'
+  const getProjectName = (projectId?: string) => {
+    if (!projectId) return '-';
+    const project = projects.find(p => p.id === projectId);
+    return project ? project.name : projectId;
   };
 
-  const projectMap: Record<string, string> = {
-    'project1': 'Website Redesign',
-    'project2': 'Mobile App',
-    'project3': 'Marketing Campaign',
-    'project4': 'Database Migration'
+  const getAssigneeName = (assigneeId?: string) => {
+    if (!assigneeId) return '-';
+    const member = teamMembers.find(m => m.id === assigneeId);
+    return member ? member.name : assigneeId;
   };
 
   if (!session) {
@@ -490,8 +533,8 @@ const TaskList = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Projects</SelectItem>
-                  {Object.entries(projectMap).map(([id, name]) => (
-                    <SelectItem key={id} value={id}>{name}</SelectItem>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -571,7 +614,7 @@ const TaskList = () => {
                             )}
                           </td>
                           <td className="p-2 align-middle text-sm">
-                            {projectMap[task.project || ''] || '-'}
+                            {getProjectName(task.project)}
                           </td>
                           <td className="p-2 align-middle">
                             {getStatusBadge(task.status)}
@@ -590,7 +633,7 @@ const TaskList = () => {
                             )}
                           </td>
                           <td className="p-2 align-middle text-sm">
-                            {task.assignee ? assigneeMap[task.assignee] || task.assignee : '-'}
+                            {getAssigneeName(task.assignee)}
                           </td>
                           <td className="p-2 align-middle text-right">
                             <div className="flex justify-end">
@@ -710,10 +753,9 @@ const TaskList = () => {
                       <SelectValue placeholder="Select assignee" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="user1">Alex Johnson</SelectItem>
-                      <SelectItem value="user2">Jamie Smith</SelectItem>
-                      <SelectItem value="user3">Taylor Lee</SelectItem>
-                      <SelectItem value="user4">Morgan Chen</SelectItem>
+                      {teamMembers.map(member => (
+                        <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -729,10 +771,9 @@ const TaskList = () => {
                       <SelectValue placeholder="Select project" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="project1">Website Redesign</SelectItem>
-                      <SelectItem value="project2">Mobile App</SelectItem>
-                      <SelectItem value="project3">Marketing Campaign</SelectItem>
-                      <SelectItem value="project4">Database Migration</SelectItem>
+                      {projects.map(project => (
+                        <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
