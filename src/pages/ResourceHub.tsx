@@ -1,16 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AppLayout } from '@/components/AppLayout';
+import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart2, ArrowLeft, Search, Plus, Filter, Users, Calendar, Clock, Briefcase } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { Progress } from '@/components/ui/progress';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 
 interface Resource {
   id: string;
@@ -132,32 +124,10 @@ const ResourceHub = () => {
   const [allocations, setAllocations] = useState<ResourceAllocation[]>(sampleAllocations);
   const [isLoading, setIsLoading] = useState(false);
 
-  // In a real app, we would fetch resources from the database
-  // For now we're using sample data, but we'll simulate the fetch
   useEffect(() => {
     const fetchResourceData = async () => {
       setIsLoading(true);
       try {
-        // In a real implementation, these would be actual table names
-        // Since the tables don't exist yet, we're using sample data
-        /*
-        const { data: resourcesData, error: resourcesError } = await supabase
-          .from('team_members')
-          .select('*');
-        
-        const { data: allocationsData, error: allocationsError } = await supabase
-          .from('resource_allocations')
-          .select('*');
-        
-        if (resourcesError || allocationsError) {
-          throw new Error(resourcesError?.message || allocationsError?.message);
-        }
-        
-        setResources(resourcesData as Resource[]);
-        setAllocations(allocationsData as ResourceAllocation[]);
-        */
-        
-        // Simulate API call
         setTimeout(() => {
           setResources(sampleResources);
           setAllocations(sampleAllocations);

@@ -167,7 +167,15 @@ const TaskList = ({ view = 'list', onViewChange, filter }: TaskListProps) => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [showIntegrations, setShowIntegrations] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
-  
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskDescription, setNewTaskDescription] = useState('');
+  const [newTaskPriority, setNewTaskPriority] = useState('medium');
+  const [newTaskDueDate, setNewTaskDueDate] = useState('');
+  const [newTaskAssignee, setNewTaskAssignee] = useState('');
+  const [newTaskProject, setNewTaskProject] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [isAddingTask, setIsAddingTask] = useState(false);
+
   const form = useForm<z.infer<typeof taskSchema>>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
@@ -192,7 +200,6 @@ const TaskList = ({ view = 'list', onViewChange, filter }: TaskListProps) => {
       
       if (error) throw error;
       
-      // Map the database fields to our Task interface, ensuring status is correctly typed
       const mappedTasks = data.map(task => ({
         id: task.id,
         title: task.title,
@@ -219,7 +226,6 @@ const TaskList = ({ view = 'list', onViewChange, filter }: TaskListProps) => {
     }
   };
 
-  // Helper function to ensure status values conform to our TaskStatus type
   const mapStatusValue = (status: string): TaskStatus => {
     switch(status) {
       case 'inProgress': return 'inProgress';
@@ -255,17 +261,14 @@ const TaskList = ({ view = 'list', onViewChange, filter }: TaskListProps) => {
 
   const onSubmit = async (values: z.infer<typeof taskSchema>) => {
     try {
-      // Format the due date if it exists
       const formattedValues = {
         ...values,
         due_date: values.dueDate ? format(values.dueDate, 'yyyy-MM-dd') : null,
       };
       
-      // Remove the dueDate field as we're using due_date for the database
       const { dueDate, ...dataToSubmit } = formattedValues;
       
       if (editingTask) {
-        // Update existing task
         const { error } = await supabase
           .from('tasks')
           .update(dataToSubmit)
@@ -278,7 +281,6 @@ const TaskList = ({ view = 'list', onViewChange, filter }: TaskListProps) => {
           description: 'Your task has been updated successfully.'
         });
         
-        // Update the tasks state
         setTasks(tasks.map(task => 
           task.id === editingTask.id 
             ? { 
@@ -289,7 +291,6 @@ const TaskList = ({ view = 'list', onViewChange, filter }: TaskListProps) => {
             : task
         ));
       } else {
-        // Add new task
         const { data, error } = await supabase
           .from('tasks')
           .insert(dataToSubmit)
@@ -298,7 +299,6 @@ const TaskList = ({ view = 'list', onViewChange, filter }: TaskListProps) => {
           
         if (error) throw error;
         
-        // Convert the created task to our Task interface
         const newTask: Task = {
           id: data.id,
           title: data.title,
@@ -356,12 +356,60 @@ const TaskList = ({ view = 'list', onViewChange, filter }: TaskListProps) => {
     }
   };
 
+  const createTask = async () => {
+    if (!newTaskTitle) return;
+    
+    setIsCreating(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+      
+      const { error } = await supabase
+        .from('tasks')
+        .insert({
+          title: newTaskTitle,
+          description: newTaskDescription,
+          status: 'todo',
+          priority: newTaskPriority || 'medium',
+          due_date: newTaskDueDate,
+          assignee: newTaskAssignee,
+          project: newTaskProject,
+          user_id: user.id
+        });
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Task created',
+        description: 'Your new task has been created successfully.'
+      });
+      
+      setNewTaskTitle('');
+      setNewTaskDescription('');
+      setNewTaskPriority('medium');
+      setNewTaskDueDate('');
+      setNewTaskAssignee('');
+      setNewTaskProject('');
+      fetchTasks();
+    } catch (error: any) {
+      toast({
+        title: 'Error creating task',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCreating(false);
+      setIsAddingTask(false);
+    }
+  };
+
   const openTaskIntegrations = (task: Task) => {
     setCurrentTask(task);
     setShowIntegrations(true);
   };
-
-  
 
   return (
     <div>

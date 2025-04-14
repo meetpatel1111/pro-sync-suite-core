@@ -1,30 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { AppLayout } from '@/components/AppLayout';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, BarChart2, TrendingUp, PieChart, Clock, Activity, Edit, Trash2, Pencil } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  BarChart2, 
+  ArrowLeft, 
+  Plus, 
+  Filter, 
+  PieChart, 
+  LineChart, 
+  CalendarDays, 
+  User, 
+  Users,
+  FileText,
+  Clock,
+  Download
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell
-} from 'recharts';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import type { Dashboard, Widget, Project, TimeEntry, Task } from '@/utils/dbtypes';
 
 const InsightIQ = () => {
   const { toast } = useToast();
@@ -509,6 +512,13 @@ const InsightIQ = () => {
       default:
         return <div>Unsupported widget type</div>;
     }
+  };
+
+  const calculateCompletionRate = (tasks: Task[]): number => {
+    if (!tasks || tasks.length === 0) return 0;
+    const completedTasks = tasks.filter(task => task.status === 'done').length;
+    const percentage = (completedTasks / tasks.length) * 100;
+    return Number(percentage.toFixed(1));
   };
 
   if (!session) {

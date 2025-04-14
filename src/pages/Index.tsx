@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { Calendar, Clock, MessageSquare, FileText, BarChart2, 
          PieChart, Users, Shield, FileCog, FolderLock } from 'lucide-react';
 import AppCard from '@/components/AppCard';
-import { AppLayout } from '@/components/AppLayout';
+import AppLayout from '@/components/AppLayout';
 import DashboardStats from '@/components/DashboardStats';
 
 const Index = () => {
