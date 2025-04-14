@@ -1,313 +1,221 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+
+import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Filter, Plus, Users, Calendar, Clock, Briefcase, Search } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-interface Resource {
-  id: string;
-  name: string;
-  type: string;
-  availability: number;
-  skills?: string[];
-  image?: string;
-  department?: string;
-  utilization?: number;
-}
-
-interface ResourceAllocation {
-  id: string;
-  resource_id: string;
-  project_id: string;
-  start_date: string;
-  end_date: string;
-  allocation_percentage: number;
-}
-
-// Sample resource data
-const sampleResources: Resource[] = [
+// Sample data for resources
+const resourcesData = [
   {
-    id: '1',
-    name: 'Sarah Johnson',
-    type: 'Developer',
-    availability: 80,
-    skills: ['React', 'TypeScript', 'Node.js'],
-    department: 'Engineering',
-    utilization: 85
+    id: 1,
+    name: 'Alex Johnson',
+    role: 'UI Designer',
+    avatar: '/placeholder.svg',
+    availability: 'Available',
+    utilization: 75,
+    skills: ['UI/UX', 'Figma', 'Sketch'],
+    schedule: []
   },
   {
-    id: '2',
-    name: 'Michael Chen',
-    type: 'Designer',
-    availability: 60,
-    skills: ['UI/UX', 'Figma', 'Illustrator'],
-    department: 'Design',
-    utilization: 70
+    id: 2,
+    name: 'Jamie Smith',
+    role: 'Frontend Developer',
+    avatar: '/placeholder.svg',
+    availability: 'Unavailable',
+    utilization: 90,
+    skills: ['React', 'TypeScript', 'Tailwind'],
+    schedule: []
   },
   {
-    id: '3',
-    name: 'Jessica Williams',
-    type: 'Project Manager',
-    availability: 40,
+    id: 3,
+    name: 'Taylor Lee',
+    role: 'Backend Developer',
+    avatar: '/placeholder.svg',
+    availability: 'Available',
+    utilization: 60,
+    skills: ['Node.js', 'PostgreSQL', 'Express'],
+    schedule: []
+  },
+  {
+    id: 4,
+    name: 'Morgan Chen',
+    role: 'Project Manager',
+    avatar: '/placeholder.svg',
+    availability: 'Limited',
+    utilization: 85,
     skills: ['Agile', 'Scrum', 'Jira'],
-    department: 'Project Management',
-    utilization: 95
-  },
-  {
-    id: '4',
-    name: 'David Smith',
-    type: 'QA Engineer',
-    availability: 90,
-    skills: ['Testing', 'Automation', 'Selenium'],
-    department: 'Quality Assurance',
-    utilization: 60
-  },
-  {
-    id: '5',
-    name: 'Lisa Rodriguez',
-    type: 'Developer',
-    availability: 70,
-    skills: ['Python', 'Django', 'SQL'],
-    department: 'Engineering',
-    utilization: 75
-  }
-];
-
-// Sample allocation data
-const sampleAllocations: ResourceAllocation[] = [
-  {
-    id: 'a1',
-    resource_id: '1',
-    project_id: 'p1',
-    start_date: '2025-04-01',
-    end_date: '2025-05-15',
-    allocation_percentage: 75
-  },
-  {
-    id: 'a2',
-    resource_id: '2',
-    project_id: 'p2',
-    start_date: '2025-04-10',
-    end_date: '2025-06-10',
-    allocation_percentage: 50
-  },
-  {
-    id: 'a3',
-    resource_id: '3',
-    project_id: 'p1',
-    start_date: '2025-04-01',
-    end_date: '2025-07-01',
-    allocation_percentage: 25
-  },
-  {
-    id: 'a4',
-    resource_id: '4',
-    project_id: 'p3',
-    start_date: '2025-05-01',
-    end_date: '2025-05-30',
-    allocation_percentage: 100
-  },
-  {
-    id: 'a5',
-    resource_id: '5',
-    project_id: 'p2',
-    start_date: '2025-04-15',
-    end_date: '2025-06-15',
-    allocation_percentage: 60
+    schedule: []
   }
 ];
 
 const ResourceHub = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('team');
-  const [resources, setResources] = useState<Resource[]>(sampleResources);
-  const [allocations, setAllocations] = useState<ResourceAllocation[]>(sampleAllocations);
-  const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    const fetchResourceData = async () => {
-      setIsLoading(true);
-      try {
-        setTimeout(() => {
-          setResources(sampleResources);
-          setAllocations(sampleAllocations);
-          setIsLoading(false);
-        }, 500);
-      } catch (error) {
-        console.error('Error fetching resource data:', error);
-        setIsLoading(false);
-      }
-    };
-
-    fetchResourceData();
-  }, []);
+  // Filter resources based on search query
+  const filteredResources = resourcesData.filter(resource =>
+    resource.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    resource.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    resource.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   return (
     <AppLayout>
-      <div className="mb-4">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="gap-1 mb-4" 
-          onClick={() => navigate('/')}
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Button>
-      </div>
-      
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold mb-1">ResourceHub</h1>
-          <p className="text-muted-foreground">Resource allocation and management</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-          <Button size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Resource
-          </Button>
-        </div>
-      </div>
-
-      <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="team" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Team Members
-          </TabsTrigger>
-          <TabsTrigger value="schedule" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Resource Schedule
-          </TabsTrigger>
-          <TabsTrigger value="utilization" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Utilization
-          </TabsTrigger>
-          <TabsTrigger value="projects" className="flex items-center gap-2">
-            <Briefcase className="h-4 w-4" />
-            Projects
-          </TabsTrigger>
-        </TabsList>
-
-        <div className="mb-4">
-          <div className="relative w-full max-w-md">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search resources..." className="pl-8" />
+      <div className="space-y-6">
+        <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
+          <div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="mb-4 gap-1" 
+              onClick={() => navigate('/')}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Button>
+            <h1 className="text-3xl font-bold tracking-tight">Resource Hub</h1>
+            <p className="text-muted-foreground">
+              Manage team resources, availability, and allocation
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button variant="outline" size="sm" className="gap-1">
+              <Filter className="h-4 w-4" />
+              Filter
+            </Button>
+            <Button size="sm" className="gap-1">
+              <Plus className="h-4 w-4" />
+              Add Resource
+            </Button>
           </div>
         </div>
 
-        <TabsContent value="team" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {resources.map(resource => (
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-2">
+            <TabsTrigger value="team" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span>Team</span>
+            </TabsTrigger>
+            <TabsTrigger value="schedule" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              <span>Schedule</span>
+            </TabsTrigger>
+            <TabsTrigger value="utilization" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              <span>Utilization</span>
+            </TabsTrigger>
+            <TabsTrigger value="projects" className="flex items-center gap-2">
+              <Briefcase className="h-4 w-4" />
+              <span>Projects</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="flex items-center space-x-2 mb-4">
+            <Search className="h-5 w-5 text-muted-foreground" />
+            <Input
+              placeholder="Search resources..."
+              className="flex-1"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <TabsContent value="team" className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {filteredResources.map((resource) => (
               <Card key={resource.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-4">
-                    <Avatar>
-                      <AvatarImage src={resource.image} />
-                      <AvatarFallback>{resource.name.charAt(0)}{resource.name.split(' ')[1]?.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="space-y-1">
-                      <h3 className="font-medium">{resource.name}</h3>
-                      <div className="flex items-center">
-                        <Badge variant="secondary" className="mr-2">
-                          {resource.type}
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {resource.department}
-                        </span>
-                      </div>
+                <CardHeader className="flex flex-row items-center gap-4">
+                  <Avatar>
+                    <AvatarImage src={resource.avatar} alt={resource.name} />
+                    <AvatarFallback>{resource.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <CardTitle className="text-base">{resource.name}</CardTitle>
+                    <CardDescription>{resource.role}</CardDescription>
+                    <div className="flex gap-2 mt-1">
+                      <Badge variant={resource.availability === 'Available' ? 'success' : resource.availability === 'Limited' ? 'warning' : 'destructive'}>
+                        {resource.availability}
+                      </Badge>
                     </div>
                   </div>
-                  
-                  <div className="mt-4">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Availability</span>
-                      <span>{resource.availability}%</span>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Utilization</p>
+                    <div className="flex items-center gap-2">
+                      <Progress value={resource.utilization} className="h-2" />
+                      <span className="text-sm">{resource.utilization}%</span>
                     </div>
-                    <Progress value={resource.availability} className="h-2" />
-                    
-                    <div className="flex justify-between text-sm mt-3 mb-1">
-                      <span>Utilization</span>
-                      <span>{resource.utilization}%</span>
-                    </div>
-                    <Progress 
-                      value={resource.utilization} 
-                      className={`h-2 ${resource.utilization > 90 ? 'bg-red-600' : ''}`} 
-                    />
                   </div>
-                  
-                  <div className="mt-4">
-                    <h4 className="text-sm font-medium mb-2">Skills</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {resource.skills?.map(skill => (
-                        <Badge key={skill} variant="outline" className="text-xs">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Availability This Week</p>
+                    <div className="flex items-center gap-2">
+                      <Progress value={100 - resource.utilization} className="h-2" />
+                      <span className="text-sm">{100 - resource.utilization}%</span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Skills</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {resource.skills.map((skill, idx) => (
+                        <Badge key={idx} variant="outline">
                           {skill}
                         </Badge>
                       ))}
                     </div>
                   </div>
-                  
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="flex justify-between">
-                      <Button variant="outline" size="sm">View Profile</Button>
-                      <Button variant="outline" size="sm">Allocate</Button>
-                    </div>
-                  </div>
+                  <Button variant="outline" size="sm" className="w-full">
+                    View Details
+                  </Button>
                 </CardContent>
               </Card>
             ))}
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="schedule" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Resource Schedule</CardTitle>
-              <CardDescription>View and manage resource allocations over time</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Resource scheduling visualization coming soon.</p>
-                <p className="text-sm mt-2">Track resource allocations across projects and time periods.</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          <TabsContent value="schedule">
+            <Card>
+              <CardHeader>
+                <CardTitle>Resource Schedule</CardTitle>
+                <CardDescription>View and manage team member schedules</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p>Schedule content will be implemented soon.</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <TabsContent value="utilization" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Resource Utilization</CardTitle>
-              <CardDescription>Track how resources are being utilized across projects</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Utilization metrics and charts coming soon.</p>
-                <p className="text-sm mt-2">Get insights into resource utilization and identify optimization opportunities.</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          <TabsContent value="utilization">
+            <Card>
+              <CardHeader>
+                <CardTitle>Resource Utilization</CardTitle>
+                <CardDescription>Track resource allocation and utilization rates</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p>Utilization content will be implemented soon.</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <TabsContent value="projects" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Project Resources</CardTitle>
-              <CardDescription>View resource allocation by project</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Project resource allocation dashboard coming soon.</p>
-                <p className="text-sm mt-2">Manage and optimize resource allocation across your projects.</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="projects">
+            <Card>
+              <CardHeader>
+                <CardTitle>Project Allocations</CardTitle>
+                <CardDescription>Manage resource allocations across projects</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p>Project allocations content will be implemented soon.</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </AppLayout>
   );
 };
