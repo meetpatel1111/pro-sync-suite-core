@@ -1,6 +1,40 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+// Helper to create projects for a user
+async function setupProjects(userId: string) {
+  const projectsData = [
+    { id: 'project1', name: 'Website Redesign', user_id: userId },
+    { id: 'project2', name: 'Mobile App', user_id: userId },
+    { id: 'project3', name: 'Marketing Campaign', user_id: userId },
+    { id: 'project4', name: 'Database Migration', user_id: userId }
+  ];
+  
+  for (const project of projectsData) {
+    await supabase
+      .from('projects')
+      .upsert(project, { onConflict: 'id' });
+  }
+  return projectsData;
+}
+
+// Helper to create team members for a user
+async function setupTeamMembers(userId: string) {
+  const teamMembersData = [
+    { id: 'user1', name: 'Alex Johnson', user_id: userId },
+    { id: 'user2', name: 'Jamie Smith', user_id: userId },
+    { id: 'user3', name: 'Taylor Lee', user_id: userId },
+    { id: 'user4', name: 'Morgan Chen', user_id: userId }
+  ];
+  
+  for (const member of teamMembersData) {
+    await supabase
+      .from('team_members')
+      .upsert(member, { onConflict: 'id' });
+  }
+  return teamMembersData;
+}
+
 export const setupSampleData = async () => {
   const { data: { user } } = await supabase.auth.getUser();
   
@@ -22,32 +56,10 @@ export const setupSampleData = async () => {
     }
     
     // Add sample projects
-    const projectsData = [
-      { id: 'project1', name: 'Website Redesign', user_id: user.id },
-      { id: 'project2', name: 'Mobile App', user_id: user.id },
-      { id: 'project3', name: 'Marketing Campaign', user_id: user.id },
-      { id: 'project4', name: 'Database Migration', user_id: user.id }
-    ];
-    
-    for (const project of projectsData) {
-      await supabase
-        .from('projects')
-        .upsert(project);
-    }
+    const projects = await setupProjects(user.id);
     
     // Add sample team members
-    const teamMembersData = [
-      { id: 'user1', name: 'Alex Johnson', user_id: user.id },
-      { id: 'user2', name: 'Jamie Smith', user_id: user.id },
-      { id: 'user3', name: 'Taylor Lee', user_id: user.id },
-      { id: 'user4', name: 'Morgan Chen', user_id: user.id }
-    ];
-    
-    for (const member of teamMembersData) {
-      await supabase
-        .from('team_members')
-        .upsert(member);
-    }
+    const teamMembers = await setupTeamMembers(user.id);
     
     // Add sample tasks
     const tasksData = [
@@ -131,6 +143,107 @@ export const setupSampleData = async () => {
       await supabase
         .from('time_entries')
         .insert(entry);
+    }
+    
+    // Add sample clients for ClientConnect
+    const clientsData = [
+      {
+        name: 'Acme Corporation',
+        email: 'contact@acmecorp.com',
+        phone: '555-123-4567',
+        company: 'Acme Corporation',
+        user_id: user.id
+      },
+      {
+        name: 'Global Enterprises',
+        email: 'info@globalenterprises.com',
+        phone: '555-987-6543',
+        company: 'Global Enterprises',
+        user_id: user.id
+      },
+      {
+        name: 'Tech Innovations',
+        email: 'support@techinnovations.com',
+        phone: '555-456-7890',
+        company: 'Tech Innovations',
+        user_id: user.id
+      }
+    ];
+    
+    for (const client of clientsData) {
+      await supabase
+        .from('clients')
+        .insert(client);
+    }
+    
+    // Add sample dashboards for InsightIQ
+    const dashboardsData = [
+      {
+        title: 'Project Overview',
+        description: 'Overview of all project metrics',
+        user_id: user.id
+      },
+      {
+        title: 'Team Performance',
+        description: 'Performance metrics for team members',
+        user_id: user.id
+      },
+      {
+        title: 'Resource Allocation',
+        description: 'Resource allocation across projects',
+        user_id: user.id
+      }
+    ];
+    
+    for (const dashboard of dashboardsData) {
+      const { data: dashboardData } = await supabase
+        .from('dashboards')
+        .insert(dashboard)
+        .select();
+      
+      if (dashboardData && dashboardData.length > 0) {
+        // Add sample widgets for each dashboard
+        const widgetsData = [
+          {
+            dashboard_id: dashboardData[0].id,
+            title: 'Tasks by Status',
+            widget_type: 'pie_chart',
+            config: {
+              data_source: 'tasks',
+              group_by: 'status'
+            },
+            position: {
+              x: 0,
+              y: 0,
+              w: 6,
+              h: 4
+            },
+            user_id: user.id
+          },
+          {
+            dashboard_id: dashboardData[0].id,
+            title: 'Time Tracked by Project',
+            widget_type: 'bar_chart',
+            config: {
+              data_source: 'time_entries',
+              group_by: 'project'
+            },
+            position: {
+              x: 6,
+              y: 0,
+              w: 6,
+              h: 4
+            },
+            user_id: user.id
+          }
+        ];
+        
+        for (const widget of widgetsData) {
+          await supabase
+            .from('widgets')
+            .insert(widget);
+        }
+      }
     }
     
     return true;
