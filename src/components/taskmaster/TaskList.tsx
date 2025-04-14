@@ -11,6 +11,16 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from "@/integrations/supabase/client";
 
+interface Project {
+  id: string;
+  name: string;
+}
+
+interface TeamMember {
+  id: string;
+  name: string;
+}
+
 interface Task {
   id: string;
   title: string;
@@ -38,8 +48,8 @@ const TaskList = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState<any>(null);
-  const [projects, setProjects] = useState<{id: string, name: string}[]>([]);
-  const [teamMembers, setTeamMembers] = useState<{id: string, name: string}[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -65,7 +75,7 @@ const TaskList = () => {
         if (error) throw error;
         
         if (data) {
-          setProjects(data);
+          setProjects(data as Project[]);
         }
       } catch (error) {
         console.error("Error fetching projects:", error);
@@ -83,7 +93,7 @@ const TaskList = () => {
         if (error) throw error;
         
         if (data) {
-          setTeamMembers(data);
+          setTeamMembers(data as TeamMember[]);
         }
       } catch (error) {
         console.error("Error fetching team members:", error);
