@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,7 +57,9 @@ const TaskList = () => {
           const projectData: Project[] = data.map(p => ({
             id: p.id,
             name: p.name,
-            user_id: p.user_id
+            description: p.description,
+            user_id: p.user_id,
+            created_at: p.created_at
           }));
           setProjects(projectData);
         }
@@ -79,7 +82,10 @@ const TaskList = () => {
           const memberData: TeamMember[] = data.map(m => ({
             id: m.id,
             name: m.name,
-            user_id: m.user_id
+            email: m.email,
+            role: m.role,
+            user_id: m.user_id,
+            created_at: m.created_at
           }));
           setTeamMembers(memberData);
         }
@@ -146,7 +152,8 @@ const TaskList = () => {
               dueDate: task.dueDate,
               assignee: task.assignee,
               project: task.project,
-              createdAt: task.createdAt || new Date().toISOString()
+              createdAt: task.createdAt || new Date().toISOString(),
+              user_id: task.user_id
             }));
             
             setTasks(validTasks);

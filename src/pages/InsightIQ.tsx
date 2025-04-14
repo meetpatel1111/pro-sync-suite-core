@@ -25,49 +25,7 @@ import {
   Cell
 } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-interface Dashboard {
-  id: string;
-  title: string;
-  description: string;
-  created_at: string;
-}
-
-interface Widget {
-  id: string;
-  dashboard_id: string;
-  title: string;
-  widget_type: string;
-  config: any;
-  position: {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-  };
-  created_at: string;
-}
-
-interface Project {
-  id: string;
-  name: string;
-}
-
-interface TimeEntry {
-  id: string;
-  description: string;
-  project: string;
-  time_spent: number;
-  date: string;
-}
-
-interface Task {
-  id: string;
-  title: string;
-  status: string;
-  priority: string;
-  project: string;
-}
+import { Dashboard, Widget, Project, TimeEntry, Task } from '@/utils/dbtypes';
 
 const InsightIQ = () => {
   const { toast } = useToast();
@@ -218,7 +176,19 @@ const InsightIQ = () => {
       if (error) throw error;
       
       if (data) {
-        setTasks(data as Task[]);
+        const mappedTasks: Task[] = data.map((task): Task => ({
+          id: task.id,
+          title: task.title,
+          description: task.description || '',
+          status: task.status as 'todo' | 'inProgress' | 'review' | 'done',
+          priority: task.priority as 'low' | 'medium' | 'high',
+          dueDate: task.due_date,
+          assignee: task.assignee,
+          project: task.project,
+          createdAt: task.created_at,
+          user_id: task.user_id
+        }));
+        setTasks(mappedTasks);
       }
     } catch (error) {
       console.error('Error fetching tasks:', error);

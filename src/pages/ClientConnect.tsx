@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,22 +10,7 @@ import { Users, Plus, Search, Phone, Mail, Building, Edit, Trash2, MessageSquare
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-
-interface Client {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  company: string;
-  created_at: string;
-}
-
-interface ClientNote {
-  id: string;
-  client_id: string;
-  content: string;
-  created_at: string;
-}
+import { Client, ClientNote } from '@/utils/dbtypes';
 
 const ClientConnect = () => {
   const { toast } = useToast();
@@ -310,8 +294,8 @@ const ClientConnect = () => {
 
   const filteredClients = clients.filter(client => 
     client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.company.toLowerCase().includes(searchQuery.toLowerCase())
+    (client.email && client.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (client.company && client.company.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   if (!session) {

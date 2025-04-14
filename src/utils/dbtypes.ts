@@ -5,13 +5,18 @@
 export interface Project {
   id: string;
   name: string;
+  description?: string;
   user_id: string;
+  created_at: string;
 }
 
 export interface TeamMember {
   id: string;
   name: string;
+  email?: string;
+  role?: string;
   user_id: string;
+  created_at: string;
 }
 
 export interface Task {
@@ -118,6 +123,17 @@ export interface Expense {
   date: string;
   category_id?: string;
   project_id?: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface Integration {
+  source_app: string;
+  target_app: string;
+  action_type: string;
+  trigger_condition?: string;
+  config: any;
+  enabled: boolean;
   user_id: string;
   created_at: string;
 }
