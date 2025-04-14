@@ -10,29 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from "@/integrations/supabase/client";
-
-interface Project {
-  id: string;
-  name: string;
-}
-
-interface TeamMember {
-  id: string;
-  name: string;
-}
-
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  status: 'todo' | 'inProgress' | 'review' | 'done';
-  priority: 'low' | 'medium' | 'high';
-  dueDate?: string;
-  assignee?: string;
-  project?: string;
-  createdAt: string;
-  user_id?: string;
-}
+import { Project, TeamMember, Task } from '@/utils/dbtypes';
 
 const TaskList = () => {
   const { toast } = useToast();
@@ -75,7 +53,12 @@ const TaskList = () => {
         if (error) throw error;
         
         if (data) {
-          setProjects(data as Project[]);
+          const projectData: Project[] = data.map(p => ({
+            id: p.id,
+            name: p.name,
+            user_id: p.user_id
+          }));
+          setProjects(projectData);
         }
       } catch (error) {
         console.error("Error fetching projects:", error);
@@ -93,7 +76,12 @@ const TaskList = () => {
         if (error) throw error;
         
         if (data) {
-          setTeamMembers(data as TeamMember[]);
+          const memberData: TeamMember[] = data.map(m => ({
+            id: m.id,
+            name: m.name,
+            user_id: m.user_id
+          }));
+          setTeamMembers(memberData);
         }
       } catch (error) {
         console.error("Error fetching team members:", error);
@@ -121,7 +109,7 @@ const TaskList = () => {
         }
         
         if (data) {
-          const mappedTasks = data.map((task): Task => ({
+          const mappedTasks: Task[] = data.map((task): Task => ({
             id: task.id,
             title: task.title,
             description: task.description || '',

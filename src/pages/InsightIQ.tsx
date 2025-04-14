@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, BarChart2, LineChart, PieChart, Clock, Activity, Edit, Trash2, Pencil } from 'lucide-react';
+import { Plus, BarChart2, PieChart, Clock, Activity, Edit, Trash2, Pencil, TrendingUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -85,7 +84,6 @@ const InsightIQ = () => {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   
-  // Form states
   const [newDashboard, setNewDashboard] = useState({
     title: '',
     description: ''
@@ -98,7 +96,6 @@ const InsightIQ = () => {
     group_by: 'status'
   });
 
-  // Colors for charts
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
   useEffect(() => {
@@ -141,7 +138,6 @@ const InsightIQ = () => {
       if (data) {
         setDashboards(data as Dashboard[]);
         
-        // Select the first dashboard by default
         if (data.length > 0 && !selectedDashboard) {
           setSelectedDashboard(data[0]);
         }
@@ -241,7 +237,6 @@ const InsightIQ = () => {
 
     try {
       if (isEditingDashboard && selectedDashboard) {
-        // Update existing dashboard
         const { error } = await supabase
           .from('dashboards')
           .update({
@@ -257,7 +252,6 @@ const InsightIQ = () => {
           description: 'Dashboard has been updated successfully.'
         });
         
-        // Update the local state
         setDashboards(dashboards.map(dashboard => 
           dashboard.id === selectedDashboard.id 
             ? { ...dashboard, ...newDashboard } 
@@ -270,7 +264,6 @@ const InsightIQ = () => {
           description: newDashboard.description
         });
       } else {
-        // Add new dashboard
         const { data, error } = await supabase
           .from('dashboards')
           .insert({
@@ -292,7 +285,6 @@ const InsightIQ = () => {
         }
       }
       
-      // Reset form and close dialog
       setNewDashboard({ title: '', description: '' });
       setShowAddDashboardDialog(false);
       setIsEditingDashboard(false);
@@ -329,7 +321,7 @@ const InsightIQ = () => {
           },
           position: {
             x: 0,
-            y: widgets.length * 4, // Position new widgets below existing ones
+            y: widgets.length * 4,
             w: 12,
             h: 4
           },
@@ -347,7 +339,6 @@ const InsightIQ = () => {
         });
       }
       
-      // Reset form and close dialog
       setNewWidget({
         title: '',
         widget_type: 'bar_chart',
@@ -430,11 +421,9 @@ const InsightIQ = () => {
     setShowAddDashboardDialog(true);
   };
 
-  // Get data for charts based on widget configuration
   const getChartData = (widget: Widget) => {
     const { data_source, group_by } = widget.config;
     
-    // Group data by the specified field
     if (data_source === 'tasks') {
       const groupedData = tasks.reduce((acc, task) => {
         const key = task[group_by as keyof Task] as string;
@@ -445,11 +434,9 @@ const InsightIQ = () => {
         return acc;
       }, {} as Record<string, number>);
       
-      // Convert to chart data format
       return Object.entries(groupedData).map(([name, value]) => ({ name, value }));
     } else if (data_source === 'time_entries') {
       const groupedData = timeEntries.reduce((acc, entry) => {
-        // Handle project specially to show project names
         let key = entry[group_by as keyof TimeEntry] as string;
         
         if (group_by === 'project') {
@@ -463,28 +450,24 @@ const InsightIQ = () => {
           acc[key] = 0;
         }
         
-        // Convert minutes to hours for better visualization
         acc[key] += entry.time_spent / 60;
         return acc;
       }, {} as Record<string, number>);
       
-      // Convert to chart data format
       return Object.entries(groupedData).map(([name, value]) => ({ 
         name, 
-        value: parseFloat(value.toFixed(1)) // Round to 1 decimal place
+        value: parseFloat(value.toFixed(1))
       }));
     }
     
     return [];
   };
 
-  // Get project name by ID
   const getProjectName = (projectId: string) => {
     const project = projects.find(p => p.id === projectId);
     return project ? project.name : projectId;
   };
 
-  // Render a widget based on its type
   const renderWidget = (widget: Widget) => {
     const data = getChartData(widget);
     
@@ -594,7 +577,7 @@ const InsightIQ = () => {
               <span>Reports</span>
             </TabsTrigger>
             <TabsTrigger value="metrics" className="flex items-center gap-2">
-              <LineChart className="h-4 w-4" />
+              <TrendingUp className="h-4 w-4" />
               <span>Metrics</span>
             </TabsTrigger>
           </TabsList>
@@ -760,7 +743,6 @@ const InsightIQ = () => {
         </Tabs>
       </div>
 
-      {/* Add Dashboard Dialog */}
       <Dialog open={showAddDashboardDialog} onOpenChange={setShowAddDashboardDialog}>
         <DialogContent>
           <DialogHeader>
@@ -808,7 +790,6 @@ const InsightIQ = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Add Widget Dialog */}
       <Dialog open={showAddWidgetDialog} onOpenChange={setShowAddWidgetDialog}>
         <DialogContent>
           <DialogHeader>
