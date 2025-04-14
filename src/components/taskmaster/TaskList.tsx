@@ -1,796 +1,634 @@
-
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Filter, ArrowUpDown, Clock, Plus, Edit, Trash2 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { 
+  Plus, Filter, ArrowUpDown, MoreHorizontal, Check, Clock, ArrowRight, 
+  CheckCircle, User, CalendarDays, BarChart2, PencilIcon, Trash2Icon
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger, 
+  DropdownMenuSeparator 
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { format } from 'date-fns';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { supabase } from "@/integrations/supabase/client";
-import { Project, TeamMember, Task } from '@/utils/dbtypes';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import TaskIntegrations from './TaskIntegrations';
 
-const TaskList = () => {
+export type TaskPriority = 'low' | 'medium' | 'high';
+export type TaskStatus = 'todo' | 'inProgress' | 'review' | 'done';
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate?: string;
+  assignee?: string;
+  project?: string;
+  createdAt: string;
+  user_id?: string;
+}
+
+interface TaskListProps {
+  view?: 'kanban' | 'list' | 'calendar' | 'gantt';
+  onViewChange?: (view: 'kanban' | 'list' | 'calendar' | 'gantt') => void;
+  filter?: string;
+}
+
+// Form validation schema
+const taskSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  status: z.enum(['todo', 'inProgress', 'review', 'done']),
+  priority: z.enum(['low', 'medium', 'high']),
+  dueDate: z.date().optional(),
+  assignee: z.string().optional(),
+  project: z.string().optional(),
+});
+
+// Define TaskListItem component
+const TaskListItem = ({ task, onEdit, onDelete }: { 
+  task: Task; 
+  onEdit: (task: Task) => void;
+  onDelete: (taskId: string) => void;
+}) => {
+  const priorityColors = {
+    low: "bg-blue-100 text-blue-800",
+    medium: "bg-orange-100 text-orange-800",
+    high: "bg-red-100 text-red-800",
+  };
+
+  const statusIcons = {
+    todo: <Clock className="h-4 w-4" />,
+    inProgress: <ArrowRight className="h-4 w-4" />,
+    review: <CheckCircle className="h-4 w-4 text-orange-500" />,
+    done: <CheckCircle className="h-4 w-4 text-green-500" />,
+  };
+
+  return (
+    <div className="flex items-center justify-between p-4 border-b">
+      <div className="flex items-center gap-3">
+        <div className="flex-shrink-0">
+          {statusIcons[task.status]}
+        </div>
+        <div>
+          <h3 className="font-medium">{task.title}</h3>
+          <p className="text-sm text-gray-500 line-clamp-1">{task.description}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        {task.assignee && (
+          <div className="flex items-center">
+            <User className="h-4 w-4 mr-1 text-gray-500" />
+            <span className="text-sm">{task.assignee}</span>
+          </div>
+        )}
+        {task.project && (
+          <div className="hidden md:flex items-center">
+            <BarChart2 className="h-4 w-4 mr-1 text-gray-500" />
+            <span className="text-sm">{task.project}</span>
+          </div>
+        )}
+        {task.dueDate && (
+          <div className="flex items-center">
+            <CalendarDays className="h-4 w-4 mr-1 text-gray-500" />
+            <span className="text-sm">{format(new Date(task.dueDate), 'MMM dd')}</span>
+          </div>
+        )}
+        <Badge className={priorityColors[task.priority]}>
+          {task.priority}
+        </Badge>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onEdit(task)}>
+              <PencilIcon className="h-4 w-4 mr-2" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={() => onDelete(task.id)} 
+              className="text-red-600"
+            >
+              <Trash2Icon className="h-4 w-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+};
+
+const TaskList = ({ view = 'list', onViewChange, filter }: TaskListProps) => {
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterPriority, setFilterPriority] = useState('all');
-  const [filterProject, setFilterProject] = useState('all');
-  const [sortBy, setSortBy] = useState('dueDate');
-  const [sortOrder, setSortOrder] = useState('asc');
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [session, setSession] = useState<any>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [showIntegrations, setShowIntegrations] = useState(false);
+  const [currentTask, setCurrentTask] = useState<Task | null>(null);
+  
+  const form = useForm<z.infer<typeof taskSchema>>({
+    resolver: zodResolver(taskSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      status: 'todo',
+      priority: 'medium',
+    },
+  });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
+    fetchTasks();
   }, []);
 
-  useEffect(() => {
-    async function fetchProjects() {
-      if (!session) return;
+  const fetchTasks = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('created_at', { ascending: false });
       
-      try {
-        const { data, error } = await supabase
-          .from('projects')
-          .select('*');
-        
-        if (error) throw error;
-        
-        if (data) {
-          const projectData: Project[] = data.map(p => ({
-            id: p.id,
-            name: p.name,
-            description: p.description,
-            user_id: p.user_id,
-            created_at: p.created_at
-          }));
-          setProjects(projectData);
-        }
-      } catch (error) {
-        console.error("Error fetching projects:", error);
-      }
-    }
-    
-    async function fetchTeamMembers() {
-      if (!session) return;
+      if (error) throw error;
       
-      try {
-        const { data, error } = await supabase
-          .from('team_members')
-          .select('*');
-        
-        if (error) throw error;
-        
-        if (data) {
-          const memberData: TeamMember[] = data.map(m => ({
-            id: m.id,
-            name: m.name,
-            email: m.email,
-            role: m.role,
-            user_id: m.user_id,
-            created_at: m.created_at
-          }));
-          setTeamMembers(memberData);
-        }
-      } catch (error) {
-        console.error("Error fetching team members:", error);
-      }
-    }
-    
-    if (session) {
-      fetchProjects();
-      fetchTeamMembers();
-    }
-  }, [session]);
-
-  useEffect(() => {
-    async function fetchTasks() {
-      if (!session) return;
+      // Map the database fields to our Task interface, ensuring status is correctly typed
+      const mappedTasks = data.map(task => ({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        status: mapStatusValue(task.status),
+        priority: task.priority as TaskPriority,
+        dueDate: task.due_date,
+        assignee: task.assignee,
+        project: task.project,
+        createdAt: task.created_at,
+        user_id: task.user_id
+      }));
       
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('tasks')
-          .select('*');
-        
-        if (error) {
-          throw error;
-        }
-        
-        if (data) {
-          const mappedTasks: Task[] = data.map((task): Task => ({
-            id: task.id,
-            title: task.title,
-            description: task.description || '',
-            status: validateStatus(task.status),
-            priority: validatePriority(task.priority),
-            dueDate: task.due_date,
-            assignee: task.assignee,
-            project: task.project,
-            createdAt: task.created_at,
-            user_id: task.user_id
-          }));
-          
-          setTasks(mappedTasks);
-        }
-      } catch (error) {
-        console.error("Error fetching tasks:", error);
-        toast({
-          title: "Error fetching tasks",
-          description: "There was an error loading your tasks",
-          variant: "destructive"
-        });
-        
-        const storedTasks = localStorage.getItem('tasks');
-        if (storedTasks) {
-          try {
-            const parsedTasks = JSON.parse(storedTasks);
-            
-            const validTasks = parsedTasks.map((task: any): Task => ({
-              id: task.id,
-              title: task.title,
-              description: task.description || '',
-              status: validateStatus(task.status),
-              priority: validatePriority(task.priority),
-              dueDate: task.dueDate,
-              assignee: task.assignee,
-              project: task.project,
-              createdAt: task.createdAt || new Date().toISOString(),
-              user_id: task.user_id
-            }));
-            
-            setTasks(validTasks);
-          } catch (error) {
-            console.error("Error parsing tasks:", error);
-            setTasks([]);
-          }
-        }
-      } finally {
-        setIsLoading(false);
-      }
+      setTasks(mappedTasks);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      toast({
+        title: 'Error fetching tasks',
+        description: 'There was a problem fetching your tasks.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
     }
-    
-    fetchTasks();
-  }, [session, toast]);
-
-  const validateStatus = (status: string): 'todo' | 'inProgress' | 'review' | 'done' => {
-    const validStatuses: Array<'todo' | 'inProgress' | 'review' | 'done'> = ['todo', 'inProgress', 'review', 'done'];
-    return validStatuses.includes(status as any) ? (status as 'todo' | 'inProgress' | 'review' | 'done') : 'todo';
   };
 
-  const validatePriority = (priority: string): 'low' | 'medium' | 'high' => {
-    const validPriorities: Array<'low' | 'medium' | 'high'> = ['low', 'medium', 'high'];
-    return validPriorities.includes(priority as any) ? (priority as 'low' | 'medium' | 'high') : 'medium';
+  // Helper function to ensure status values conform to our TaskStatus type
+  const mapStatusValue = (status: string): TaskStatus => {
+    switch(status) {
+      case 'inProgress': return 'inProgress';
+      case 'review': return 'review';
+      case 'done': return 'done';
+      default: return 'todo';
+    }
   };
 
-  useEffect(() => {
-    let result = [...tasks];
-    
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(task => 
-        task.title.toLowerCase().includes(query) || 
-        task.description.toLowerCase().includes(query)
-      );
+  const openTaskDialog = (task?: Task) => {
+    if (task) {
+      setEditingTask(task);
+      form.reset({
+        title: task.title,
+        description: task.description,
+        status: task.status,
+        priority: task.priority,
+        dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+        assignee: task.assignee,
+        project: task.project,
+      });
+    } else {
+      setEditingTask(null);
+      form.reset({
+        title: '',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+      });
     }
-    
-    if (filterStatus !== 'all') {
-      result = result.filter(task => task.status === filterStatus);
-    }
-    
-    if (filterPriority !== 'all') {
-      result = result.filter(task => task.priority === filterPriority);
-    }
-    
-    if (filterProject !== 'all') {
-      result = result.filter(task => task.project === filterProject);
-    }
-    
-    result.sort((a, b) => {
-      let compareA, compareB;
-      
-      switch (sortBy) {
-        case 'title':
-          compareA = a.title.toLowerCase();
-          compareB = b.title.toLowerCase();
-          break;
-        case 'priority':
-          const priorityOrder = { high: 3, medium: 2, low: 1 };
-          compareA = priorityOrder[a.priority as keyof typeof priorityOrder] || 0;
-          compareB = priorityOrder[b.priority as keyof typeof priorityOrder] || 0;
-          break;
-        case 'dueDate':
-          compareA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-          compareB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-          break;
-        case 'status':
-          const statusOrder = { todo: 1, inProgress: 2, review: 3, done: 4 };
-          compareA = statusOrder[a.status as keyof typeof statusOrder];
-          compareB = statusOrder[b.status as keyof typeof statusOrder];
-          break;
-        default:
-          compareA = a.title.toLowerCase();
-          compareB = b.title.toLowerCase();
-      }
-      
-      if (compareA < compareB) return sortOrder === 'asc' ? -1 : 1;
-      if (compareA > compareB) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
-    });
-    
-    setFilteredTasks(result);
-  }, [tasks, searchQuery, filterStatus, filterPriority, filterProject, sortBy, sortOrder]);
+    setIsDialogOpen(true);
+  };
 
-  const handleToggleStatus = async (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return;
-    
-    const newStatus = task.status === 'done' ? 'todo' : 'done';
-    
-    if (session) {
-      try {
+  const onSubmit = async (values: z.infer<typeof taskSchema>) => {
+    try {
+      // Format the due date if it exists
+      const formattedValues = {
+        ...values,
+        due_date: values.dueDate ? format(values.dueDate, 'yyyy-MM-dd') : null,
+      };
+      
+      // Remove the dueDate field as we're using due_date for the database
+      const { dueDate, ...dataToSubmit } = formattedValues;
+      
+      if (editingTask) {
+        // Update existing task
         const { error } = await supabase
           .from('tasks')
-          .update({ status: newStatus })
-          .eq('id', taskId);
-        
-        if (error) throw error;
-      } catch (error) {
-        console.error("Error updating task status:", error);
-        toast({
-          title: "Error updating task",
-          description: "There was an error updating the task status",
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-    
-    const updatedTasks = tasks.map(task => {
-      if (task.id === taskId) {
-        return { ...task, status: newStatus };
-      }
-      return task;
-    });
-    
-    setTasks(updatedTasks);
-    
-    localStorage.setItem('tasks', JSON.stringify(updatedTasks));
-    
-    toast({
-      title: "Task updated",
-      description: "Task status has been updated"
-    });
-  };
-
-  const handleEditTask = async () => {
-    if (!editingTask) return;
-    
-    if (session) {
-      try {
-        const { error } = await supabase
-          .from('tasks')
-          .update({
-            title: editingTask.title,
-            description: editingTask.description,
-            status: editingTask.status,
-            priority: editingTask.priority,
-            due_date: editingTask.dueDate,
-            assignee: editingTask.assignee,
-            project: editingTask.project
-          })
+          .update(dataToSubmit)
           .eq('id', editingTask.id);
-        
+          
         if (error) throw error;
-      } catch (error) {
-        console.error("Error updating task:", error);
+        
         toast({
-          title: "Error updating task",
-          description: "There was an error updating the task",
-          variant: "destructive"
+          title: 'Task updated',
+          description: 'Your task has been updated successfully.'
         });
-        return;
+        
+        // Update the tasks state
+        setTasks(tasks.map(task => 
+          task.id === editingTask.id 
+            ? { 
+                ...task, 
+                ...values, 
+                dueDate: values.dueDate ? format(values.dueDate, 'yyyy-MM-dd') : undefined 
+              } 
+            : task
+        ));
+      } else {
+        // Add new task
+        const { data, error } = await supabase
+          .from('tasks')
+          .insert(dataToSubmit)
+          .select('*')
+          .single();
+          
+        if (error) throw error;
+        
+        // Convert the created task to our Task interface
+        const newTask: Task = {
+          id: data.id,
+          title: data.title,
+          description: data.description,
+          status: mapStatusValue(data.status),
+          priority: data.priority as TaskPriority,
+          dueDate: data.due_date,
+          assignee: data.assignee,
+          project: data.project,
+          createdAt: data.created_at,
+          user_id: data.user_id
+        };
+        
+        setTasks([newTask, ...tasks]);
+        
+        toast({
+          title: 'Task added',
+          description: 'Your task has been added successfully.'
+        });
       }
+      
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error('Error adding/updating task:', error);
+      toast({
+        title: 'Error',
+        description: 'There was a problem saving your task.',
+        variant: 'destructive'
+      });
     }
-    
-    const updatedTasks = tasks.map(task => 
-      task.id === editingTask.id ? editingTask : task
-    );
-    
-    setTasks(updatedTasks);
-    localStorage.setItem('tasks', JSON.stringify(updatedTasks));
-    setIsEditDialogOpen(false);
-    
-    toast({
-      title: "Task updated",
-      description: "Your task has been updated successfully"
-    });
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    if (session) {
-      try {
-        const { error } = await supabase
-          .from('tasks')
-          .delete()
-          .eq('id', taskId);
-        
-        if (error) throw error;
-      } catch (error) {
-        console.error("Error deleting task:", error);
-        toast({
-          title: "Error deleting task",
-          description: "There was an error deleting the task",
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-    
-    const updatedTasks = tasks.filter(task => task.id !== taskId);
-    setTasks(updatedTasks);
-    localStorage.setItem('tasks', JSON.stringify(updatedTasks));
-    
-    toast({
-      title: "Task deleted",
-      description: "The task has been removed"
-    });
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '-';
     try {
-      return format(new Date(dateString), 'MMM d, yyyy');
-    } catch (e) {
-      return dateString;
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId);
+        
+      if (error) throw error;
+      
+      setTasks(tasks.filter(task => task.id !== taskId));
+      
+      toast({
+        title: 'Task deleted',
+        description: 'Your task has been deleted successfully.'
+      });
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast({
+        title: 'Error',
+        description: 'There was a problem deleting your task.',
+        variant: 'destructive'
+      });
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'todo': return 'To Do';
-      case 'inProgress': return 'In Progress';
-      case 'review': return 'Review';
-      case 'done': return 'Done';
-      default: return status;
-    }
+  const openTaskIntegrations = (task: Task) => {
+    setCurrentTask(task);
+    setShowIntegrations(true);
   };
 
-  const getPriorityBadge = (priority: string) => {
-    let bgColor, textColor;
-    
-    switch (priority) {
-      case 'high':
-        bgColor = 'bg-red-100';
-        textColor = 'text-red-800';
-        break;
-      case 'medium':
-        bgColor = 'bg-amber-100';
-        textColor = 'text-amber-800';
-        break;
-      case 'low':
-        bgColor = 'bg-green-100';
-        textColor = 'text-green-800';
-        break;
-      default:
-        bgColor = 'bg-slate-100';
-        textColor = 'text-slate-800';
-    }
-    
-    return (
-      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${bgColor} ${textColor} capitalize`}>
-        {priority}
-      </span>
-    );
-  };
-
-  const getStatusBadge = (status: string) => {
-    let bgColor, textColor;
-    
-    switch (status) {
-      case 'todo':
-        bgColor = 'bg-slate-100';
-        textColor = 'text-slate-800';
-        break;
-      case 'inProgress':
-        bgColor = 'bg-blue-100';
-        textColor = 'text-blue-800';
-        break;
-      case 'review':
-        bgColor = 'bg-purple-100';
-        textColor = 'text-purple-800';
-        break;
-      case 'done':
-        bgColor = 'bg-green-100';
-        textColor = 'text-green-800';
-        break;
-      default:
-        bgColor = 'bg-slate-100';
-        textColor = 'text-slate-800';
-    }
-    
-    return (
-      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${bgColor} ${textColor}`}>
-        {getStatusText(status)}
-      </span>
-    );
-  };
-
-  const getProjectName = (projectId?: string) => {
-    if (!projectId) return '-';
-    const project = projects.find(p => p.id === projectId);
-    return project ? project.name : projectId;
-  };
-
-  const getAssigneeName = (assigneeId?: string) => {
-    if (!assigneeId) return '-';
-    const member = teamMembers.find(m => m.id === assigneeId);
-    return member ? member.name : assigneeId;
-  };
-
-  if (!session) {
-    return (
-      <div className="space-y-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-8 text-muted-foreground">
-              <p>Please log in to view and manage your tasks.</p>
-              <Button 
-                variant="default" 
-                className="mt-4"
-                onClick={() => window.location.href = '/auth'}
-              >
-                Log In / Sign Up
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-8 text-muted-foreground">
-              <p>Loading tasks...</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <CardTitle>Task List</CardTitle>
-            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-              <div className="relative w-full md:w-auto">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search tasks..."
-                  className="w-full md:w-[200px] pl-8"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <Button variant="outline" className="gap-1">
-                <Filter className="h-4 w-4" />
-                Filters
+    <div>
+      <div className="flex justify-between mb-4">
+        <div className="flex">
+          {onViewChange && (
+            <div className="bg-background border rounded-md flex mr-2">
+              <Button 
+                variant={view === 'list' ? "secondary" : "ghost"} 
+                size="sm" 
+                onClick={() => onViewChange('list')}
+              >
+                List
+              </Button>
+              <Button 
+                variant={view === 'kanban' ? "secondary" : "ghost"} 
+                size="sm" 
+                onClick={() => onViewChange('kanban')}
+              >
+                Kanban
+              </Button>
+              <Button 
+                variant={view === 'calendar' ? "secondary" : "ghost"} 
+                size="sm" 
+                onClick={() => onViewChange('calendar')}
+              >
+                Calendar
+              </Button>
+              <Button 
+                variant={view === 'gantt' ? "secondary" : "ghost"} 
+                size="sm" 
+                onClick={() => onViewChange('gantt')}
+              >
+                Gantt
               </Button>
             </div>
+          )}
+          <div className="relative w-64">
+            <Filter className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Filter tasks..." className="pl-8" />
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pb-4">
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="todo">To Do</SelectItem>
-                  <SelectItem value="inProgress">In Progress</SelectItem>
-                  <SelectItem value="review">Review</SelectItem>
-                  <SelectItem value="done">Done</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Select value={filterPriority} onValueChange={setFilterPriority}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priorities</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Select value={filterProject} onValueChange={setFilterProject}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by project" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Projects</SelectItem>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full gap-1">
-                    <ArrowUpDown className="h-4 w-4" />
-                    Sort by
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => { setSortBy('title'); setSortOrder('asc'); }}>
-                    Title (A-Z)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setSortBy('title'); setSortOrder('desc'); }}>
-                    Title (Z-A)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setSortBy('dueDate'); setSortOrder('asc'); }}>
-                    Due Date (Earliest)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setSortBy('dueDate'); setSortOrder('desc'); }}>
-                    Due Date (Latest)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setSortBy('priority'); setSortOrder('desc'); }}>
-                    Priority (Highest)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setSortBy('priority'); setSortOrder('asc'); }}>
-                    Priority (Lowest)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setSortBy('status'); setSortOrder('asc'); }}>
-                    Status
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            
-            <div className="rounded-md border">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="h-10 px-2 text-left text-xs font-medium text-muted-foreground w-10">
-                        <span className="sr-only">Complete</span>
-                      </th>
-                      <th className="h-10 px-2 text-left text-xs font-medium text-muted-foreground">Task</th>
-                      <th className="h-10 px-2 text-left text-xs font-medium text-muted-foreground">Project</th>
-                      <th className="h-10 px-2 text-left text-xs font-medium text-muted-foreground">Status</th>
-                      <th className="h-10 px-2 text-left text-xs font-medium text-muted-foreground">Priority</th>
-                      <th className="h-10 px-2 text-left text-xs font-medium text-muted-foreground">Due Date</th>
-                      <th className="h-10 px-2 text-left text-xs font-medium text-muted-foreground">Assignee</th>
-                      <th className="h-10 px-2 text-right text-xs font-medium text-muted-foreground">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredTasks.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="p-4 text-center text-muted-foreground">
-                          No tasks found that match your filters
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredTasks.map((task) => (
-                        <tr key={task.id} className="border-b">
-                          <td className="p-2 align-middle">
-                            <Checkbox
-                              checked={task.status === 'done'}
-                              onCheckedChange={() => handleToggleStatus(task.id)}
-                            />
-                          </td>
-                          <td className="p-2 align-middle font-medium">
-                            {task.title}
-                            {task.description && (
-                              <p className="text-xs text-muted-foreground line-clamp-1">
-                                {task.description}
-                              </p>
-                            )}
-                          </td>
-                          <td className="p-2 align-middle text-sm">
-                            {getProjectName(task.project)}
-                          </td>
-                          <td className="p-2 align-middle">
-                            {getStatusBadge(task.status)}
-                          </td>
-                          <td className="p-2 align-middle">
-                            {getPriorityBadge(task.priority)}
-                          </td>
-                          <td className="p-2 align-middle text-sm">
-                            {task.dueDate ? (
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3 text-muted-foreground" />
-                                {formatDate(task.dueDate)}
-                              </div>
-                            ) : (
-                              '-'
-                            )}
-                          </td>
-                          <td className="p-2 align-middle text-sm">
-                            {getAssigneeName(task.assignee)}
-                          </td>
-                          <td className="p-2 align-middle text-right">
-                            <div className="flex justify-end">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setEditingTask(task);
-                                  setIsEditDialogOpen(true);
-                                }}
-                              >
-                                <Edit className="h-4 w-4" />
-                                <span className="sr-only">Edit</span>
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteTask(task.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                <span className="sr-only">Delete</span>
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+        <Button onClick={() => openTaskDialog()}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Task
+        </Button>
+      </div>
 
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+      {isLoading ? (
+        <div className="text-center py-8 text-muted-foreground">Loading tasks...</div>
+      ) : tasks.length === 0 ? (
+        <div className="text-center py-8 border rounded-md">
+          <h3 className="font-medium mb-2">No tasks found</h3>
+          <p className="text-muted-foreground mb-4">Get started by creating your first task</p>
+          <Button onClick={() => openTaskDialog()}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Task
+          </Button>
+        </div>
+      ) : (
+        <div className="border rounded-md overflow-hidden">
+          {tasks.map(task => (
+            <TaskListItem 
+              key={task.id} 
+              task={task} 
+              onEdit={openTaskDialog}
+              onDelete={handleDeleteTask}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Task dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[525px]">
           <DialogHeader>
-            <DialogTitle>Edit Task</DialogTitle>
+            <DialogTitle>{editingTask ? 'Edit Task' : 'Add New Task'}</DialogTitle>
             <DialogDescription>
-              Make changes to your task here.
+              {editingTask ? 'Update task details' : 'Fill in the details for your new task'}
             </DialogDescription>
           </DialogHeader>
-          {editingTask && (
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <label htmlFor="edit-title" className="text-sm font-medium">Title</label>
-                <Input
-                  id="edit-title"
-                  value={editingTask.title}
-                  onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Task title" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Task description"
+                        className="min-h-[100px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="todo">To Do</SelectItem>
+                          <SelectItem value="inProgress">In Progress</SelectItem>
+                          <SelectItem value="review">Review</SelectItem>
+                          <SelectItem value="done">Done</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Priority</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select priority" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-              <div className="grid gap-2">
-                <label htmlFor="edit-description" className="text-sm font-medium">Description</label>
-                <textarea
-                  id="edit-description"
-                  rows={3}
-                  className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={editingTask.description}
-                  onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="dueDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Due Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarDays className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="assignee"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Assignee</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Assignee name" {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <label htmlFor="edit-status" className="text-sm font-medium">Status</label>
-                  <Select
-                    value={editingTask.status}
-                    onValueChange={(value) => setEditingTask({ ...editingTask, status: value as any })}
+              <FormField
+                control={form.control}
+                name="project"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Project name" {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                {editingTask && (
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsDialogOpen(false);
+                      openTaskIntegrations(editingTask);
+                    }}
+                    className="mr-auto"
                   >
-                    <SelectTrigger id="edit-status">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todo">To Do</SelectItem>
-                      <SelectItem value="inProgress">In Progress</SelectItem>
-                      <SelectItem value="review">Review</SelectItem>
-                      <SelectItem value="done">Done</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <label htmlFor="edit-priority" className="text-sm font-medium">Priority</label>
-                  <Select
-                    value={editingTask.priority}
-                    onValueChange={(value) => setEditingTask({ ...editingTask, priority: value as any })}
-                  >
-                    <SelectTrigger id="edit-priority">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <label htmlFor="edit-duedate" className="text-sm font-medium">Due Date</label>
-                  <input
-                    id="edit-duedate"
-                    type="date"
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    defaultValue={editingTask.dueDate ? format(new Date(editingTask.dueDate), 'yyyy-MM-dd') : ''}
-                    onChange={(e) => setEditingTask({ ...editingTask, dueDate: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <label htmlFor="edit-assignee" className="text-sm font-medium">Assignee</label>
-                  <Select
-                    value={editingTask.assignee}
-                    onValueChange={(value) => setEditingTask({ ...editingTask, assignee: value })}
-                  >
-                    <SelectTrigger id="edit-assignee">
-                      <SelectValue placeholder="Select assignee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {teamMembers.map(member => (
-                        <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <label htmlFor="edit-project" className="text-sm font-medium">Project</label>
-                  <Select
-                    value={editingTask.project}
-                    onValueChange={(value) => setEditingTask({ ...editingTask, project: value })}
-                  >
-                    <SelectTrigger id="edit-project">
-                      <SelectValue placeholder="Select project" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {projects.map(project => (
-                        <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleEditTask}>Save Changes</Button>
-          </DialogFooter>
+                    Manage Integrations
+                  </Button>
+                )}
+                <Button type="submit">
+                  {editingTask ? 'Update Task' : 'Add Task'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Task Integrations dialog */}
+      <Dialog open={showIntegrations} onOpenChange={setShowIntegrations}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Task Integrations</DialogTitle>
+            <DialogDescription>
+              Manage integrations for this task across ProSync Suite
+            </DialogDescription>
+          </DialogHeader>
+          {currentTask && <TaskIntegrations task={currentTask} />}
         </DialogContent>
       </Dialog>
     </div>

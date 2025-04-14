@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import AppLayout from '@/components/AppLayout';
+import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Calendar, Clock, ArrowLeft, Plus, Filter, ChevronDown, Calendar as CalendarIcon } from 'lucide-react';

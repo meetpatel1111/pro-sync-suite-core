@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import AppLayout from '@/components/AppLayout';
+import { AppLayout } from '@/components/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, BarChart2, PieChart, Clock, Activity, Edit, Trash2, Pencil, TrendingUp } from 'lucide-react';
+import { Plus, BarChart2, TrendingUp, PieChart, Clock, Activity, Edit, Trash2, Pencil } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -25,7 +25,6 @@ import {
   Cell
 } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dashboard, Widget, Project, TimeEntry, Task } from '@/utils/dbtypes';
 
 const InsightIQ = () => {
   const { toast } = useToast();
@@ -123,7 +122,15 @@ const InsightIQ = () => {
       if (error) throw error;
       
       if (data) {
-        setWidgets(data as Widget[]);
+        const formattedWidgets = data.map(widget => ({
+          ...widget,
+          config: typeof widget.config === 'string' ? JSON.parse(widget.config) : widget.config,
+          position: typeof widget.position === 'string' 
+            ? JSON.parse(widget.position) 
+            : widget.position
+        })) as Widget[];
+        
+        setWidgets(formattedWidgets);
       }
     } catch (error) {
       console.error('Error fetching widgets:', error);
@@ -302,7 +309,16 @@ const InsightIQ = () => {
       if (error) throw error;
       
       if (data) {
-        setWidgets([...widgets, data[0]]);
+        const newWidgets = [...widgets, {
+          ...data[0],
+          config: typeof data[0].config === 'string' ? JSON.parse(data[0].config) : data[0].config,
+          position: typeof data[0].position === 'string' 
+            ? JSON.parse(data[0].position) 
+            : data[0].position
+        } as Widget];
+        
+        setWidgets(newWidgets);
+        
         toast({
           title: 'Widget added',
           description: 'New widget has been added successfully.'

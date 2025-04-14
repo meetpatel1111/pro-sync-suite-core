@@ -1,13 +1,28 @@
 
-// This file is read-only, so I'm not actually writing this file.
-// Here's what we would add if we could:
+import { ReactNode } from 'react';
+import Header from './Header';
+import Sidebar from './Sidebar';
+import MobileNav from './MobileNav';
+import IntegrationNotifications from './IntegrationNotifications';
 
-/*
-import IntegrationNotifications from '@/components/IntegrationNotifications';
+interface AppLayoutProps {
+  children: ReactNode;
+}
 
-// Inside the main content area, before the {children}, we would add:
-<IntegrationNotifications />
-*/
+const AppLayout = ({ children }: AppLayoutProps) => {
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      <div className="flex flex-1">
+        <Sidebar />
+        <main className="flex-1 p-6 lg:px-8">
+          <IntegrationNotifications />
+          {children}
+        </main>
+      </div>
+      <MobileNav />
+    </div>
+  );
+};
 
-// Since we can't modify this file, we'll need to find another way to display the notifications.
-// One approach would be to add the IntegrationNotifications component to each page component.
+export default AppLayout;
