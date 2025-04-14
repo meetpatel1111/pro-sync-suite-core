@@ -70,7 +70,6 @@ interface TaskListProps {
   filter?: string;
 }
 
-// Form validation schema
 const taskSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
@@ -81,7 +80,6 @@ const taskSchema = z.object({
   project: z.string().optional(),
 });
 
-// Define TaskListItem component
 const TaskListItem = ({ task, onEdit, onDelete }: { 
   task: Task; 
   onEdit: (task: Task) => void;
@@ -261,6 +259,11 @@ const TaskList = ({ view = 'list', onViewChange, filter }: TaskListProps) => {
 
   const onSubmit = async (values: z.infer<typeof taskSchema>) => {
     try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        throw new Error("User not authenticated");
+      }
+      
       const formattedValues = {
         ...values,
         due_date: values.dueDate ? format(values.dueDate, 'yyyy-MM-dd') : null,
@@ -271,7 +274,10 @@ const TaskList = ({ view = 'list', onViewChange, filter }: TaskListProps) => {
       if (editingTask) {
         const { error } = await supabase
           .from('tasks')
-          .update(dataToSubmit)
+          .update({
+            ...dataToSubmit,
+            user_id: userData.user.id
+          })
           .eq('id', editingTask.id);
           
         if (error) throw error;
@@ -293,7 +299,10 @@ const TaskList = ({ view = 'list', onViewChange, filter }: TaskListProps) => {
       } else {
         const { data, error } = await supabase
           .from('tasks')
-          .insert(dataToSubmit)
+          .insert({
+            ...dataToSubmit,
+            user_id: userData.user.id
+          })
           .select('*')
           .single();
           
@@ -482,7 +491,6 @@ const TaskList = ({ view = 'list', onViewChange, filter }: TaskListProps) => {
         </div>
       )}
 
-      {/* Task dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[525px]">
           <DialogHeader>
@@ -667,7 +675,6 @@ const TaskList = ({ view = 'list', onViewChange, filter }: TaskListProps) => {
         </DialogContent>
       </Dialog>
 
-      {/* Task Integrations dialog */}
       <Dialog open={showIntegrations} onOpenChange={setShowIntegrations}>
         <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -10,7 +11,7 @@ interface AppPlaceholderProps {
   comingSoon?: boolean;
 }
 
-const AppPlaceholder = ({ title, description, comingSoon = true }: AppPlaceholderProps) => {
+export const AppPlaceholder = ({ title, description, comingSoon = true }: AppPlaceholderProps) => {
   const navigate = useNavigate();
 
   return (

@@ -15,7 +15,11 @@ import {
   Users,
   FileText,
   Clock,
-  Download
+  Download,
+  Activity,
+  TrendingUp,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,6 +31,36 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  LineChart as RechartLineChart,
+  Line,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell
+} from 'recharts';
 import type { Dashboard, Widget, Project, TimeEntry, Task } from '@/utils/dbtypes';
 
 const InsightIQ = () => {
@@ -468,7 +502,7 @@ const InsightIQ = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip />
+              <RechartsTooltip />
               <Legend />
               <Bar dataKey="value" fill="#8884d8" />
             </BarChart>
@@ -477,14 +511,14 @@ const InsightIQ = () => {
       case 'line_chart':
         return (
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data}>
+            <RechartLineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip />
+              <RechartsTooltip />
               <Legend />
               <Line type="monotone" dataKey="value" stroke="#8884d8" />
-            </LineChart>
+            </RechartLineChart>
           </ResponsiveContainer>
         );
       case 'pie_chart':
@@ -505,7 +539,7 @@ const InsightIQ = () => {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
+              <RechartsTooltip />
             </RechartsPieChart>
           </ResponsiveContainer>
         );
