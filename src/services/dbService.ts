@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { checkTableExists, safeQueryTable } from '@/utils/db-helpers';
@@ -109,75 +110,6 @@ export const dbService = {
     );
   },
 
-  // Type-safe way to get a user profile
-  async getUserProfile(userId: string) {
-    // Try user_profiles first
-    const userProfilesExists = await this.tableExists('user_profiles');
-    
-    if (userProfilesExists) {
-      const { data, error } = await safeQueryTable('user_profiles', (query) => 
-        query
-          .select('*')
-          .eq('id', userId)
-          .single()
-      );
-      
-      if (!error && data && data.length > 0) {
-        return { data: data[0], error: null };
-      }
-    }
-    
-    // Fall back to profiles table
-    const { data, error } = await safeQueryTable('profiles', (query) => 
-      query
-        .select('*')
-        .eq('id', userId)
-        .single()
-    );
-    
-    if (!error && data && data.length > 0) {
-      return { data: data[0], error: null };
-    }
-    
-    return { data: null, error: error || new Error('Profile not found') };
-  },
-
-  // Type-safe way to update a user profile
-  async updateUserProfile(userId: string, updates: any) {
-    const userProfilesExists = await this.tableExists('user_profiles');
-    
-    if (userProfilesExists) {
-      return await safeQueryTable('user_profiles', (query) => 
-        query
-          .upsert({
-            id: userId,
-            ...updates,
-            updated_at: new Date().toISOString()
-          })
-      );
-    } else {
-      // Fall back to profiles table
-      return await safeQueryTable('profiles', (query) => 
-        query
-          .upsert({
-            id: userId,
-            full_name: updates.full_name,
-            avatar_url: updates.avatar_url
-          })
-      );
-    }
-  },
-
-  // Type-safe way to get files
-  async getFiles(userId: string) {
-    return await safeQueryTable('files', (query) => 
-      query
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-    );
-  },
-
   // Get user profile
   async getUserProfile(userId: string) {
     return await safeQueryTable('user_profiles', (query) => 
@@ -226,16 +158,6 @@ export const dbService = {
           updated_at: new Date().toISOString()
         })
         .eq('user_id', userId)
-    );
-  },
-
-  // Get notifications
-  async getNotifications(userId: string) {
-    return await safeQueryTable('notifications', (query) => 
-      query
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
     );
   },
 
