@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -25,7 +26,7 @@ const TaskList = ({ tasks: initialTasks = [], onTaskUpdate, onTaskDelete }: Task
     title: '',
     description: '',
     status: 'todo',
-    priority: 'medium',
+    priority: 'medium' as 'low' | 'medium' | 'high',
     due_date: '',
     assignee: '',
     project: ''
@@ -107,7 +108,7 @@ const TaskList = ({ tasks: initialTasks = [], onTaskUpdate, onTaskDelete }: Task
         title: newTask.title,
         description: newTask.description || "",
         status: newTask.status || "todo",
-        priority: newTask.priority || "medium", // Set default priority
+        priority: newTask.priority || "medium", 
         due_date: newTask.due_date || null,
         assignee: newTask.assignee || null,
         project: newTask.project || null,
@@ -124,7 +125,7 @@ const TaskList = ({ tasks: initialTasks = [], onTaskUpdate, onTaskDelete }: Task
         title: '',
         description: '',
         status: 'todo',
-        priority: 'medium',
+        priority: 'medium' as 'low' | 'medium' | 'high',
         due_date: '',
         assignee: '',
         project: ''
@@ -261,10 +262,8 @@ const TaskList = ({ tasks: initialTasks = [], onTaskUpdate, onTaskDelete }: Task
             <div>
               <Label htmlFor="priority">Priority</Label>
               <Select
-                id="priority"
-                name="priority"
                 value={newTask.priority}
-                onValueChange={(value) => setNewTask({ ...newTask, priority: value })}
+                onValueChange={(value: 'low' | 'medium' | 'high') => setNewTask({ ...newTask, priority: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select priority" />
@@ -326,9 +325,8 @@ const TaskList = ({ tasks: initialTasks = [], onTaskUpdate, onTaskDelete }: Task
                               <div>
                                 <Label htmlFor={`priority-${task.id}`}>Priority</Label>
                                 <Select
-                                  id={`priority-${task.id}`}
                                   value={editingTask.priority}
-                                  onValueChange={(value) => setEditingTask({ ...editingTask, priority: value })}
+                                  onValueChange={(value: 'low' | 'medium' | 'high') => setEditingTask({ ...editingTask, priority: value })}
                                 >
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select priority" />

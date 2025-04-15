@@ -67,6 +67,13 @@ const ResourceHub = () => {
     resource.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  // Function to determine badge variant based on availability
+  const getBadgeVariant = (availability: string) => {
+    if (availability === 'Available') return 'outline';
+    if (availability === 'Limited') return 'secondary';
+    return 'destructive';
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -140,7 +147,7 @@ const ResourceHub = () => {
                     <CardTitle className="text-base">{resource.name}</CardTitle>
                     <CardDescription>{resource.role}</CardDescription>
                     <div className="flex gap-2 mt-1">
-                      <Badge variant={resource.availability === 'Available' ? 'success' : resource.availability === 'Limited' ? 'warning' : 'destructive'}>
+                      <Badge variant={getBadgeVariant(resource.availability)}>
                         {resource.availability}
                       </Badge>
                     </div>
