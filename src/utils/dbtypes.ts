@@ -87,13 +87,25 @@ export interface Widget {
 export interface Resource {
   id: string;
   name: string;
-  type: string;
+  role: string;
+  avatar_url?: string;
   availability: string;
+  utilization: number;
+  skills: string[];
+  schedule?: any[];
   user_id: string;
   created_at: string;
 }
 
-export interface ResourceAllocation {
+export interface ResourceSkill {
+  id: string;
+  resource_id: string;
+  skill: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface ResourceSchedule {
   id: string;
   resource_id: string;
   project_id: string;

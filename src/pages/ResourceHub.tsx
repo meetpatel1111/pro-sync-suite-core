@@ -16,16 +16,15 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { safeQueryTable } from '@/utils/db-helpers';
+import { Resource, ResourceSkill } from '@/utils/dbtypes';
 
-interface Resource {
-  id: string;
+interface ResourceFormState {
   name: string;
   role: string;
-  avatar?: string;
   availability: string;
   utilization: number;
   skills: string[];
-  schedule: any[];
 }
 
 const ResourceHub = () => {
@@ -39,7 +38,7 @@ const ResourceHub = () => {
   const [session, setSession] = useState<any>(null);
   
   // New resource form state
-  const [newResource, setNewResource] = useState({
+  const [newResource, setNewResource] = useState<ResourceFormState>({
     name: '',
     role: '',
     availability: 'Available',
@@ -70,33 +69,43 @@ const ResourceHub = () => {
 
       setIsLoading(true);
       try {
-        // Fetch resources
-        const { data: resourcesData, error: resourcesError } = await supabase
-          .from('resources')
-          .select('*')
-          .eq('user_id', session.user.id);
+        // Fetch resources using safeQueryTable helper
+        const { data: resourcesData, error: resourcesError } = await safeQueryTable<Resource>(
+          'resources',
+          (query) => query.select('*').eq('user_id', session.user.id)
+        );
         
         if (resourcesError) throw resourcesError;
         
-        // For each resource, fetch their skills
-        const resourcesWithSkills = await Promise.all(
-          resourcesData.map(async (resource) => {
-            const { data: skillsData, error: skillsError } = await supabase
-              .from('resource_skills')
-              .select('skill')
-              .eq('resource_id', resource.id);
-            
-            if (skillsError) throw skillsError;
-            
-            return {
-              ...resource,
-              skills: skillsData.map(s => s.skill),
-              schedule: [] // Placeholder for future schedule data
-            };
-          })
-        );
-        
-        setResources(resourcesWithSkills);
+        if (resourcesData) {
+          // For each resource, fetch their skills
+          const resourcesWithSkills = await Promise.all(
+            resourcesData.map(async (resource) => {
+              // Fetch skills using safeQueryTable helper
+              const { data: skillsData, error: skillsError } = await safeQueryTable<ResourceSkill>(
+                'resource_skills',
+                (query) => query.select('skill').eq('resource_id', resource.id)
+              );
+              
+              if (skillsError) {
+                console.error('Error fetching skills:', skillsError);
+                return {
+                  ...resource,
+                  skills: [],
+                  schedule: [] // Placeholder for future schedule data
+                };
+              }
+              
+              return {
+                ...resource,
+                skills: skillsData ? skillsData.map(s => s.skill) : [],
+                schedule: [] // Placeholder for future schedule data
+              };
+            })
+          );
+          
+          setResources(resourcesWithSkills as Resource[]);
+        }
       } catch (error) {
         console.error('Error fetching resources:', error);
         toast({
@@ -133,34 +142,35 @@ const ResourceHub = () => {
     }
 
     try {
-      // Insert new resource
-      const { data: resourceData, error: resourceError } = await supabase
-        .from('resources')
-        .insert({
+      // Insert new resource using safeQueryTable helper
+      const { data: resourceData, error: resourceError } = await safeQueryTable<Resource>(
+        'resources',
+        (query) => query.insert({
           name: newResource.name,
           role: newResource.role,
           availability: newResource.availability,
           utilization: newResource.utilization,
           user_id: session.user.id
-        })
-        .select();
+        }).select()
+      );
       
       if (resourceError) throw resourceError;
       
-      // Insert skills for the resource
       if (resourceData && resourceData.length > 0) {
-        const skillsToInsert = newResource.skills
-          .filter(skill => skill.trim() !== '')
-          .map(skill => ({
+        // Insert skills for the resource
+        const skills = newResource.skills.filter(skill => skill.trim() !== '');
+        
+        if (skills.length > 0) {
+          const skillsToInsert = skills.map(skill => ({
             resource_id: resourceData[0].id,
             skill,
             user_id: session.user.id
           }));
-        
-        if (skillsToInsert.length > 0) {
-          const { error: skillsError } = await supabase
-            .from('resource_skills')
-            .insert(skillsToInsert);
+          
+          const { error: skillsError } = await safeQueryTable<ResourceSkill>(
+            'resource_skills',
+            (query) => query.insert(skillsToInsert)
+          );
           
           if (skillsError) throw skillsError;
         }
@@ -168,8 +178,10 @@ const ResourceHub = () => {
         // Add the new resource to state
         const newResourceComplete: Resource = {
           ...resourceData[0],
-          skills: newResource.skills.filter(skill => skill.trim() !== ''),
-          schedule: []
+          skills: skills,
+          schedule: [],
+          user_id: session.user.id,
+          created_at: new Date().toISOString()
         };
         
         setResources(prevResources => [...prevResources, newResourceComplete]);
@@ -204,7 +216,7 @@ const ResourceHub = () => {
   const filteredResources = resources.filter(resource =>
     resource.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     resource.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    resource.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()))
+    (resource.skills && resource.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
   // Function to determine badge variant based on availability
@@ -325,7 +337,7 @@ const ResourceHub = () => {
                       value={newResource.availability} 
                       onValueChange={(value) => setNewResource({...newResource, availability: value})}
                     >
-                      <SelectTrigger id="availability">
+                      <SelectTrigger>
                         <SelectValue placeholder="Select availability" />
                       </SelectTrigger>
                       <SelectContent>
@@ -433,7 +445,7 @@ const ResourceHub = () => {
                       <Card key={resource.id}>
                         <CardHeader className="flex flex-row items-center gap-4">
                           <Avatar>
-                            <AvatarImage src={resource.avatar} alt={resource.name} />
+                            <AvatarImage src={resource.avatar_url} alt={resource.name} />
                             <AvatarFallback>{resource.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                           </Avatar>
                           <div>
@@ -464,7 +476,7 @@ const ResourceHub = () => {
                           <div>
                             <p className="text-sm text-muted-foreground mb-1">Skills</p>
                             <div className="flex flex-wrap gap-1 mt-1">
-                              {resource.skills.map((skill, idx) => (
+                              {resource.skills && resource.skills.map((skill, idx) => (
                                 <Badge key={idx} variant="outline">
                                   {skill}
                                 </Badge>
