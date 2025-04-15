@@ -371,6 +371,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_settings: {
+        Row: {
+          app_notifications: Json | null
+          created_at: string
+          date_format: string | null
+          email_notifications: Json | null
+          id: string
+          language: string | null
+          theme: string | null
+          timezone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_notifications?: Json | null
+          created_at?: string
+          date_format?: string | null
+          email_notifications?: Json | null
+          id?: string
+          language?: string | null
+          theme?: string | null
+          timezone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_notifications?: Json | null
+          created_at?: string
+          date_format?: string | null
+          email_notifications?: Json | null
+          id?: string
+          language?: string | null
+          theme?: string | null
+          timezone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       widgets: {
         Row: {
           config: Json
@@ -447,7 +486,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      notification_type: "info" | "warning" | "success" | "error"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -562,6 +601,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      notification_type: ["info", "warning", "success", "error"],
+    },
   },
 } as const

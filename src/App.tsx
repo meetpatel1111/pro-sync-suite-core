@@ -3,10 +3,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { IntegrationProvider } from "@/context/IntegrationContext";
-import { useState, useEffect } from "react";
-import { dbService } from "./services/dbService";
+import { useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import TaskMaster from "./pages/TaskMaster";
@@ -26,18 +25,22 @@ import Notifications from "./pages/Notifications";
 
 const queryClient = new QueryClient();
 
-const App = () => {
-  const [dbInitialized, setDbInitialized] = useState(false);
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
 
-  // Initialize database tables when the app loads
-  useEffect(() => {
-    const initDb = async () => {
-      const result = await dbService.initializeDatabase();
-      setDbInitialized(result);
-    };
-    
-    initDb();
-  }, []);
+  if (loading) {
+    return <div>Loading...</div>; // You might want to create a proper loading component
+  }
+
+  return user ? <>{children}</> : <Navigate to="/auth" replace />;
+};
+
+const App = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>; // You might want to create a proper loading component
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -47,21 +50,40 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/taskmaster" element={<TaskMaster />} />
-              <Route path="/timetrackpro" element={<TimeTrackPro />} />
-              <Route path="/collabspace" element={<CollabSpace />} />
-              <Route path="/planboard" element={<PlanBoard />} />
-              <Route path="/filevault" element={<FileVault />} />
-              <Route path="/budgetbuddy" element={<BudgetBuddy />} />
-              <Route path="/insightiq" element={<InsightIQ />} />
-              <Route path="/clientconnect" element={<ClientConnect />} />
-              <Route path="/riskradar" element={<RiskRadar />} />
-              <Route path="/resourcehub" element={<ResourceHub />} />
-              <Route path="/profile" element={<ProfileSettings />} />
-              <Route path="/settings" element={<UserSettings />} />
-              <Route path="/notifications" element={<Notifications />} />
+              
+              <Route 
+                path="/" 
+                element={
+                  <ProtectedRoute>
+                    <Index />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              <Route 
+                path="/taskmaster" 
+                element={
+                  <ProtectedRoute>
+                    <TaskMaster />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Repeat ProtectedRoute for other routes */}
+              <Route path="/timetrackpro" element={<ProtectedRoute><TimeTrackPro /></ProtectedRoute>} />
+              <Route path="/collabspace" element={<ProtectedRoute><CollabSpace /></ProtectedRoute>} />
+              <Route path="/planboard" element={<ProtectedRoute><PlanBoard /></ProtectedRoute>} />
+              <Route path="/filevault" element={<ProtectedRoute><FileVault /></ProtectedRoute>} />
+              <Route path="/budgetbuddy" element={<ProtectedRoute><BudgetBuddy /></ProtectedRoute>} />
+              <Route path="/insightiq" element={<ProtectedRoute><InsightIQ /></ProtectedRoute>} />
+              <Route path="/clientconnect" element={<ProtectedRoute><ClientConnect /></ProtectedRoute>} />
+              <Route path="/riskradar" element={<ProtectedRoute><RiskRadar /></ProtectedRoute>} />
+              <Route path="/resourcehub" element={<ProtectedRoute><ResourceHub /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
+              <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

@@ -1,7 +1,7 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { checkTableExists, safeQueryTable } from '@/utils/db-helpers';
+import { User } from '@supabase/supabase-js';
 
 // Service to handle database checking and creation
 export const dbService = {
@@ -175,6 +175,86 @@ export const dbService = {
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
+    );
+  },
+
+  // Get user profile
+  async getUserProfile(userId: string) {
+    return await safeQueryTable('user_profiles', (query) => 
+      query
+        .select('*')
+        .eq('id', userId)
+        .single()
+    );
+  },
+
+  // Update user profile
+  async updateUserProfile(userId: string, updates: Partial<{
+    full_name: string, 
+    avatar_url: string, 
+    bio: string, 
+    job_title: string, 
+    phone: string, 
+    location: string
+  }>) {
+    return await safeQueryTable('user_profiles', (query) => 
+      query
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+    );
+  },
+
+  // Get user settings
+  async getUserSettings(userId: string) {
+    return await safeQueryTable('user_settings', (query) => 
+      query
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+    );
+  },
+
+  // Update user settings
+  async updateUserSettings(userId: string, updates: Record<string, any>) {
+    return await safeQueryTable('user_settings', (query) => 
+      query
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+    );
+  },
+
+  // Get notifications
+  async getNotifications(userId: string) {
+    return await safeQueryTable('notifications', (query) => 
+      query
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+    );
+  },
+
+  // Mark notification as read
+  async markNotificationAsRead(notificationId: string, userId: string) {
+    return await safeQueryTable('notifications', (query) => 
+      query
+        .update({ read: true })
+        .eq('id', notificationId)
+        .eq('user_id', userId)
+    );
+  },
+
+  // Mark all notifications as read
+  async markAllNotificationsAsRead(userId: string) {
+    return await safeQueryTable('notifications', (query) => 
+      query
+        .update({ read: true })
+        .eq('user_id', userId)
     );
   }
 };
