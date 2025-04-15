@@ -25,21 +25,29 @@ export const dbService = {
     }
   },
 
-  // Check if a table exists
+  // Check if a table exists using a safer approach
   async tableExists(tableName: string): Promise<boolean> {
     try {
-      const { data, error } = await supabase
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_schema', 'public')
-        .eq('table_name', tableName);
+      // Use custom RPC function or perform a simpler check
+      const { count, error } = await supabase
+        .rpc('check_table_exists', { table_name: tableName });
         
       if (error) {
         console.error(`Error checking if table ${tableName} exists:`, error);
-        return false;
+        // Fall back to a simpler check by just trying to select from the table
+        try {
+          const { error: selectError } = await supabase
+            .from(tableName)
+            .select('id')
+            .limit(1);
+          
+          return !selectError; // If no error, table exists
+        } catch {
+          return false;
+        }
       }
       
-      return data && data.length > 0;
+      return count > 0;
     } catch (error) {
       console.error(`Error checking if table ${tableName} exists:`, error);
       return false;
@@ -54,7 +62,6 @@ export const dbService = {
       const { error } = await supabase.rpc('create_user_profiles_table');
       if (error) {
         console.error('Error creating user_profiles table:', error);
-        // Failure is not critical, continue with operation
       }
     }
   },
@@ -67,7 +74,6 @@ export const dbService = {
       const { error } = await supabase.rpc('create_user_settings_table');
       if (error) {
         console.error('Error creating user_settings table:', error);
-        // Failure is not critical, continue with operation
       }
     }
   },
@@ -80,7 +86,6 @@ export const dbService = {
       const { error } = await supabase.rpc('create_notifications_table');
       if (error) {
         console.error('Error creating notifications table:', error);
-        // Failure is not critical, continue with operation
       }
     }
   },
@@ -93,7 +98,6 @@ export const dbService = {
       const { error } = await supabase.rpc('create_files_table');
       if (error) {
         console.error('Error creating files table:', error);
-        // Failure is not critical, continue with operation
       }
     }
   }

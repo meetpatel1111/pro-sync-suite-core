@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Bell, BellOff, Check, Clock, MessageSquare, RefreshCw, X, AlertCircle, CalendarClock, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { dbService } from '@/services/dbService';
 
 interface Notification {
   id: string;
@@ -42,38 +42,24 @@ const NotificationsPanel = () => {
         });
         setIsLoading(false);
         
-        // Use sample data when user is not authenticated
         setNotifications(getSampleNotifications());
         return;
       }
 
-      // Check if notifications table exists before querying
-      const { data: tableInfo, error: tableError } = await supabase
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_schema', 'public')
-        .eq('table_name', 'notifications');
+      const tableExists = await dbService.tableExists('notifications');
       
-      if (tableError) {
-        console.error('Error checking for notifications table:', tableError);
-        setNotifications(getSampleNotifications());
-        setIsLoading(false);
-        return;
-      }
-      
-      if (!tableInfo || tableInfo.length === 0) {
+      if (!tableExists) {
         console.log('Notifications table does not exist yet, using sample data');
         setNotifications(getSampleNotifications());
         setIsLoading(false);
         return;
       }
       
-      // Table exists, fetch notifications
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', userData.user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }) as any;
 
       if (error) {
         console.error('Error fetching notifications:', error);
@@ -91,7 +77,6 @@ const NotificationsPanel = () => {
 
   const markAsRead = async (id: string) => {
     try {
-      // Check if we're using sample data
       if (id.startsWith('sample')) {
         setNotifications(prev => 
           prev.map(notification => 
@@ -106,11 +91,14 @@ const NotificationsPanel = () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
 
+      const tableExists = await dbService.tableExists('notifications');
+      if (!tableExists) return;
+
       const { error } = await supabase
         .from('notifications')
         .update({ read: true })
         .eq('id', id)
-        .eq('user_id', userData.user.id);
+        .eq('user_id', userData.user.id) as any;
 
       if (error) throw error;
       
@@ -133,7 +121,6 @@ const NotificationsPanel = () => {
 
   const markAllAsRead = async () => {
     try {
-      // Check if we're using sample data
       if (notifications.some(n => n.id.startsWith('sample'))) {
         setNotifications(prev => 
           prev.map(notification => ({ ...notification, read: true }))
@@ -147,12 +134,15 @@ const NotificationsPanel = () => {
       
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
+      
+      const tableExists = await dbService.tableExists('notifications');
+      if (!tableExists) return;
 
       const { error } = await supabase
         .from('notifications')
         .update({ read: true })
         .eq('user_id', userData.user.id)
-        .eq('read', false);
+        .eq('read', false) as any;
 
       if (error) throw error;
       
@@ -175,7 +165,6 @@ const NotificationsPanel = () => {
 
   const deleteNotification = async (id: string) => {
     try {
-      // Check if we're using sample data
       if (id.startsWith('sample')) {
         setNotifications(prev => 
           prev.filter(notification => notification.id !== id)
@@ -185,12 +174,15 @@ const NotificationsPanel = () => {
       
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
+      
+      const tableExists = await dbService.tableExists('notifications');
+      if (!tableExists) return;
 
       const { error } = await supabase
         .from('notifications')
         .delete()
         .eq('id', id)
-        .eq('user_id', userData.user.id);
+        .eq('user_id', userData.user.id) as any;
 
       if (error) throw error;
       

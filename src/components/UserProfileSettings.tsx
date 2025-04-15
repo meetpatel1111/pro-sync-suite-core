@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save, User, Camera } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { dbService } from '@/services/dbService';
 
 interface UserProfile {
   id: string;
@@ -56,14 +57,10 @@ const UserProfileSettings = () => {
 
       setEmail(userData.user.email || '');
 
-      // Check if user_profiles table exists first
-      const { data: tableInfo, error: tableError } = await supabase
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_schema', 'public')
-        .eq('table_name', 'user_profiles');
+      // Check if user_profiles table exists
+      const userProfilesTableExists = await dbService.tableExists('user_profiles');
 
-      if (tableError || !tableInfo || tableInfo.length === 0) {
+      if (!userProfilesTableExists) {
         console.log('user_profiles table not found, falling back to profiles table');
         
         // Try the original profiles table
@@ -95,11 +92,12 @@ const UserProfileSettings = () => {
         }
       } else {
         // Try to fetch from user_profiles table
+        // Use type assertion because TypeScript doesn't know about this table
         const { data, error } = await supabase
           .from('user_profiles')
           .select('*')
           .eq('id', userData.user.id)
-          .single();
+          .single() as any;
 
         if (error && error.code !== 'PGRST116') {
           throw error;
@@ -154,13 +152,9 @@ const UserProfileSettings = () => {
       }
 
       // Check if user_profiles table exists
-      const { data: tableInfo, error: tableError } = await supabase
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_schema', 'public')
-        .eq('table_name', 'user_profiles');
+      const userProfilesTableExists = await dbService.tableExists('user_profiles');
 
-      if (tableError || !tableInfo || tableInfo.length === 0) {
+      if (!userProfilesTableExists) {
         // Fall back to profiles table
         const { error } = await supabase
           .from('profiles')
@@ -172,7 +166,7 @@ const UserProfileSettings = () => {
 
         if (error) throw error;
       } else {
-        // Use user_profiles table
+        // Use user_profiles table with type assertion
         const { error } = await supabase
           .from('user_profiles')
           .upsert({
@@ -184,7 +178,7 @@ const UserProfileSettings = () => {
             phone: profile.phone,
             location: profile.location,
             updated_at: new Date().toISOString()
-          });
+          }) as any;
 
         if (error) throw error;
       }
