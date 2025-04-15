@@ -12,6 +12,19 @@ import { ArrowLeft, FolderPlus, File, Upload, Search, Filter, Grid, List, Downlo
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { dbService } from '@/services/dbService';
+
+interface FileItem {
+  id: string;
+  name: string;
+  description?: string;
+  file_type: string;
+  size_bytes: number;
+  storage_path: string;
+  created_at: string;
+  is_public: boolean;
+  is_archived: boolean;
+}
 
 const FileVault = () => {
   const navigate = useNavigate();
@@ -19,7 +32,7 @@ const FileVault = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [files, setFiles] = useState([]);
+  const [files, setFiles] = useState<FileItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -41,20 +54,16 @@ const FileVault = () => {
         return;
       }
 
-      const { data, error } = await supabase
-        .from('files')
-        .select('*')
-        .eq('user_id', userData.user.id)
-        .order('created_at', { ascending: false });
+      const { data, error } = await dbService.getFiles(userData.user.id);
 
       if (error) throw error;
       
-      setFiles(data || []);
+      setFiles(data as FileItem[] || []);
     } catch (error) {
       console.error('Error fetching files:', error);
       toast({
         title: "Failed to load files",
-        description: error.message || "An error occurred while loading your files",
+        description: "An error occurred while loading your files",
         variant: "destructive",
       });
     } finally {
@@ -62,7 +71,7 @@ const FileVault = () => {
     }
   };
 
-  const handleUpload = async (event) => {
+  const handleUpload = async (event: React.FormEvent) => {
     event.preventDefault();
     // File upload logic would go here
     toast({

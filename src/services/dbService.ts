@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { checkTableExists, safeQueryTable } from '@/utils/db-helpers';
 
 // Service to handle database checking and creation
 export const dbService = {
@@ -27,31 +28,7 @@ export const dbService = {
 
   // Check if a table exists using a safer approach
   async tableExists(tableName: string): Promise<boolean> {
-    try {
-      // Use custom RPC function or perform a simpler check
-      const { count, error } = await supabase
-        .rpc('check_table_exists', { table_name: tableName });
-        
-      if (error) {
-        console.error(`Error checking if table ${tableName} exists:`, error);
-        // Fall back to a simpler check by just trying to select from the table
-        try {
-          const { error: selectError } = await supabase
-            .from(tableName)
-            .select('id')
-            .limit(1);
-          
-          return !selectError; // If no error, table exists
-        } catch {
-          return false;
-        }
-      }
-      
-      return count > 0;
-    } catch (error) {
-      console.error(`Error checking if table ${tableName} exists:`, error);
-      return false;
-    }
+    return await checkTableExists(tableName);
   },
 
   // Check and create user_profiles table if not exists
@@ -100,5 +77,104 @@ export const dbService = {
         console.error('Error creating files table:', error);
       }
     }
+  },
+
+  // Type-safe way to query the notifications table
+  async getNotifications(userId: string) {
+    return await safeQueryTable('notifications', (query) => 
+      query
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+    );
+  },
+
+  // Type-safe way to update a notification
+  async updateNotification(id: string, userId: string, updates: any) {
+    return await safeQueryTable('notifications', (query) => 
+      query
+        .update(updates)
+        .eq('id', id)
+        .eq('user_id', userId)
+    );
+  },
+
+  // Type-safe way to delete a notification
+  async deleteNotification(id: string, userId: string) {
+    return await safeQueryTable('notifications', (query) => 
+      query
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId)
+    );
+  },
+
+  // Type-safe way to get a user profile
+  async getUserProfile(userId: string) {
+    // Try user_profiles first
+    const userProfilesExists = await this.tableExists('user_profiles');
+    
+    if (userProfilesExists) {
+      const { data, error } = await safeQueryTable('user_profiles', (query) => 
+        query
+          .select('*')
+          .eq('id', userId)
+          .single()
+      );
+      
+      if (!error && data && data.length > 0) {
+        return { data: data[0], error: null };
+      }
+    }
+    
+    // Fall back to profiles table
+    const { data, error } = await safeQueryTable('profiles', (query) => 
+      query
+        .select('*')
+        .eq('id', userId)
+        .single()
+    );
+    
+    if (!error && data && data.length > 0) {
+      return { data: data[0], error: null };
+    }
+    
+    return { data: null, error: error || new Error('Profile not found') };
+  },
+
+  // Type-safe way to update a user profile
+  async updateUserProfile(userId: string, updates: any) {
+    const userProfilesExists = await this.tableExists('user_profiles');
+    
+    if (userProfilesExists) {
+      return await safeQueryTable('user_profiles', (query) => 
+        query
+          .upsert({
+            id: userId,
+            ...updates,
+            updated_at: new Date().toISOString()
+          })
+      );
+    } else {
+      // Fall back to profiles table
+      return await safeQueryTable('profiles', (query) => 
+        query
+          .upsert({
+            id: userId,
+            full_name: updates.full_name,
+            avatar_url: updates.avatar_url
+          })
+      );
+    }
+  },
+
+  // Type-safe way to get files
+  async getFiles(userId: string) {
+    return await safeQueryTable('files', (query) => 
+      query
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+    );
   }
 };

@@ -46,21 +46,8 @@ const NotificationsPanel = () => {
         return;
       }
 
-      const tableExists = await dbService.tableExists('notifications');
+      const { data, error } = await dbService.getNotifications(userData.user.id);
       
-      if (!tableExists) {
-        console.log('Notifications table does not exist yet, using sample data');
-        setNotifications(getSampleNotifications());
-        setIsLoading(false);
-        return;
-      }
-      
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', userData.user.id)
-        .order('created_at', { ascending: false }) as any;
-
       if (error) {
         console.error('Error fetching notifications:', error);
         setNotifications(getSampleNotifications());
@@ -91,14 +78,7 @@ const NotificationsPanel = () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
 
-      const tableExists = await dbService.tableExists('notifications');
-      if (!tableExists) return;
-
-      const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('id', id)
-        .eq('user_id', userData.user.id) as any;
+      const { error } = await dbService.updateNotification(id, userData.user.id, { read: true });
 
       if (error) throw error;
       
@@ -135,16 +115,11 @@ const NotificationsPanel = () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
       
-      const tableExists = await dbService.tableExists('notifications');
-      if (!tableExists) return;
-
-      const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('user_id', userData.user.id)
-        .eq('read', false) as any;
-
-      if (error) throw error;
+      const promises = notifications
+        .filter(n => !n.read)
+        .map(n => dbService.updateNotification(n.id, userData.user.id, { read: true }));
+      
+      await Promise.all(promises);
       
       setNotifications(prev => 
         prev.map(notification => ({ ...notification, read: true }))
@@ -175,14 +150,7 @@ const NotificationsPanel = () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
       
-      const tableExists = await dbService.tableExists('notifications');
-      if (!tableExists) return;
-
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', userData.user.id) as any;
+      const { error } = await dbService.deleteNotification(id, userData.user.id);
 
       if (error) throw error;
       

@@ -57,63 +57,27 @@ const UserProfileSettings = () => {
 
       setEmail(userData.user.email || '');
 
-      // Check if user_profiles table exists
-      const userProfilesTableExists = await dbService.tableExists('user_profiles');
+      const { data, error } = await dbService.getUserProfile(userData.user.id);
 
-      if (!userProfilesTableExists) {
-        console.log('user_profiles table not found, falling back to profiles table');
-        
-        // Try the original profiles table
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userData.user.id)
-          .single();
-
-        if (error && error.code !== 'PGRST116') {
-          throw error;
-        }
-
-        if (data) {
-          setProfile({
-            id: data.id,
-            full_name: data.full_name || '',
-            avatar_url: data.avatar_url,
-            // Other fields will be undefined
-          });
-        } else {
-          // Create a default profile
-          setProfile({
-            id: userData.user.id,
-            full_name: userData.user.user_metadata?.full_name || '',
-            avatar_url: userData.user.user_metadata?.avatar_url,
-            email: userData.user.email
-          });
-        }
+      if (error) {
+        // If no profile exists, create a default one
+        setProfile({
+          id: userData.user.id,
+          full_name: userData.user.user_metadata?.full_name || '',
+          avatar_url: userData.user.user_metadata?.avatar_url,
+          email: userData.user.email
+        });
       } else {
-        // Try to fetch from user_profiles table
-        // Use type assertion because TypeScript doesn't know about this table
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', userData.user.id)
-          .single() as any;
-
-        if (error && error.code !== 'PGRST116') {
-          throw error;
-        }
-
-        if (data) {
-          setProfile(data as UserProfile);
-        } else {
-          // Create a default profile
-          setProfile({
-            id: userData.user.id,
-            full_name: userData.user.user_metadata?.full_name || '',
-            avatar_url: userData.user.user_metadata?.avatar_url,
-            email: userData.user.email
-          });
-        }
+        setProfile({
+          id: data.id,
+          full_name: data.full_name || '',
+          avatar_url: data.avatar_url,
+          bio: data.bio,
+          job_title: data.job_title,
+          phone: data.phone,
+          location: data.location,
+          email: userData.user.email
+        });
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -150,38 +114,17 @@ const UserProfileSettings = () => {
         });
         return;
       }
+      
+      const { error } = await dbService.updateUserProfile(userData.user.id, {
+        full_name: profile.full_name,
+        avatar_url: profile.avatar_url,
+        bio: profile.bio,
+        job_title: profile.job_title,
+        phone: profile.phone,
+        location: profile.location
+      });
 
-      // Check if user_profiles table exists
-      const userProfilesTableExists = await dbService.tableExists('user_profiles');
-
-      if (!userProfilesTableExists) {
-        // Fall back to profiles table
-        const { error } = await supabase
-          .from('profiles')
-          .upsert({
-            id: userData.user.id,
-            full_name: profile.full_name,
-            avatar_url: profile.avatar_url
-          });
-
-        if (error) throw error;
-      } else {
-        // Use user_profiles table with type assertion
-        const { error } = await supabase
-          .from('user_profiles')
-          .upsert({
-            id: userData.user.id,
-            full_name: profile.full_name,
-            avatar_url: profile.avatar_url,
-            bio: profile.bio,
-            job_title: profile.job_title,
-            phone: profile.phone,
-            location: profile.location,
-            updated_at: new Date().toISOString()
-          }) as any;
-
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       toast({
         title: "Profile updated",
