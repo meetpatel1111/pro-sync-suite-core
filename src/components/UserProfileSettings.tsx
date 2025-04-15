@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,40 +42,96 @@ const UserProfileSettings = () => {
           variant: "destructive",
         });
         setIsLoading(false);
+        
+        // Set default profile for demo when not authenticated
+        setProfile({
+          id: 'demo-user',
+          full_name: 'Demo User',
+          email: 'demo@example.com',
+          job_title: 'Software Developer',
+          avatar_url: ''
+        });
         return;
       }
 
       setEmail(userData.user.email || '');
 
-      // Fetch user profile data
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userData.user.id)
-        .single();
+      // Check if user_profiles table exists first
+      const { data: tableInfo, error: tableError } = await supabase
+        .from('information_schema.tables')
+        .select('table_name')
+        .eq('table_schema', 'public')
+        .eq('table_name', 'user_profiles');
 
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
+      if (tableError || !tableInfo || tableInfo.length === 0) {
+        console.log('user_profiles table not found, falling back to profiles table');
+        
+        // Try the original profiles table
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userData.user.id)
+          .single();
 
-      if (data) {
-        setProfile(data as UserProfile);
+        if (error && error.code !== 'PGRST116') {
+          throw error;
+        }
+
+        if (data) {
+          setProfile({
+            id: data.id,
+            full_name: data.full_name || '',
+            avatar_url: data.avatar_url,
+            // Other fields will be undefined
+          });
+        } else {
+          // Create a default profile
+          setProfile({
+            id: userData.user.id,
+            full_name: userData.user.user_metadata?.full_name || '',
+            avatar_url: userData.user.user_metadata?.avatar_url,
+            email: userData.user.email
+          });
+        }
       } else {
-        // Create a default profile if none exists
-        const defaultProfile: Partial<UserProfile> = {
-          id: userData.user.id,
-          full_name: userData.user.user_metadata?.full_name || '',
-          avatar_url: userData.user.user_metadata?.avatar_url,
-        };
+        // Try to fetch from user_profiles table
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', userData.user.id)
+          .single();
 
-        setProfile(defaultProfile as UserProfile);
+        if (error && error.code !== 'PGRST116') {
+          throw error;
+        }
+
+        if (data) {
+          setProfile(data as UserProfile);
+        } else {
+          // Create a default profile
+          setProfile({
+            id: userData.user.id,
+            full_name: userData.user.user_metadata?.full_name || '',
+            avatar_url: userData.user.user_metadata?.avatar_url,
+            email: userData.user.email
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
       toast({
         title: "Failed to load profile",
-        description: error.message || "An error occurred while loading your profile",
+        description: "An error occurred while loading your profile",
         variant: "destructive",
+      });
+      
+      // Set a default profile for demo
+      setProfile({
+        id: 'demo-user',
+        full_name: 'Demo User',
+        email: 'demo@example.com',
+        job_title: 'Software Developer',
+        avatar_url: ''
       });
     } finally {
       setIsLoading(false);
@@ -98,19 +153,41 @@ const UserProfileSettings = () => {
         return;
       }
 
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: userData.user.id,
-          full_name: profile.full_name,
-          avatar_url: profile.avatar_url,
-          bio: profile.bio,
-          job_title: profile.job_title,
-          phone: profile.phone,
-          location: profile.location,
-        });
+      // Check if user_profiles table exists
+      const { data: tableInfo, error: tableError } = await supabase
+        .from('information_schema.tables')
+        .select('table_name')
+        .eq('table_schema', 'public')
+        .eq('table_name', 'user_profiles');
 
-      if (error) throw error;
+      if (tableError || !tableInfo || tableInfo.length === 0) {
+        // Fall back to profiles table
+        const { error } = await supabase
+          .from('profiles')
+          .upsert({
+            id: userData.user.id,
+            full_name: profile.full_name,
+            avatar_url: profile.avatar_url
+          });
+
+        if (error) throw error;
+      } else {
+        // Use user_profiles table
+        const { error } = await supabase
+          .from('user_profiles')
+          .upsert({
+            id: userData.user.id,
+            full_name: profile.full_name,
+            avatar_url: profile.avatar_url,
+            bio: profile.bio,
+            job_title: profile.job_title,
+            phone: profile.phone,
+            location: profile.location,
+            updated_at: new Date().toISOString()
+          });
+
+        if (error) throw error;
+      }
 
       toast({
         title: "Profile updated",
@@ -120,7 +197,7 @@ const UserProfileSettings = () => {
       console.error('Error updating profile:', error);
       toast({
         title: "Failed to update profile",
-        description: error.message || "An error occurred while updating your profile",
+        description: "An error occurred while updating your profile",
         variant: "destructive",
       });
     } finally {

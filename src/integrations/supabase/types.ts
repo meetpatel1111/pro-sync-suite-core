@@ -282,7 +282,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_auth_triggers: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      create_files_table: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      create_notifications_table: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      create_user_profiles_table: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      create_user_settings_table: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
