@@ -4,6 +4,7 @@ import { integrationService } from '@/services/integrationService';
 import { Task, TimeEntry, Project } from '@/utils/dbtypes';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuthContext } from '@/context/AuthContext';
 
 interface IntegrationContextType {
   createTaskFromNote: (title: string, description: string, projectId?: string, dueDate?: string, assigneeId?: string) => Promise<Task | null>;
@@ -19,6 +20,7 @@ const IntegrationContext = createContext<IntegrationContextType | undefined>(und
 
 export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
+  const { user } = useAuthContext(); // Get authentication state
   const [dueTasks, setDueTasks] = useState<{ project: Project, tasksDue: Task[] }[]>([]);
   const [isLoadingIntegrations, setIsLoadingIntegrations] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -26,12 +28,12 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
   const checkMilestones = async () => {
     setIsLoadingIntegrations(true);
     try {
-      // Check if user is authenticated first
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        console.log("No session found, skipping milestone check");
+      // Only proceed if user is authenticated
+      if (!user) {
+        console.log("No authenticated user found, skipping milestone check");
         setDueTasks([]);
-        return;
+        setIsLoadingIntegrations(false);
+        return [];
       }
       
       const milestones = await integrationService.checkProjectMilestones();
@@ -46,6 +48,8 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
           duration: 5000,
         });
       }
+      
+      return milestones;
     } catch (error) {
       console.error('Error checking milestones:', error);
       // Provide feedback about the error
@@ -55,24 +59,37 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
         variant: 'destructive',
         duration: 5000,
       });
+      return [];
     } finally {
       setIsLoadingIntegrations(false);
       setInitialized(true);
     }
   };
 
-  // Check for due tasks when component mounts
+  // Check for due tasks when component mounts, but only if user is authenticated
   useEffect(() => {
-    checkMilestones();
-    
-    // Set up interval to check periodically
-    const intervalId = setInterval(checkMilestones, 1000 * 60 * 60); // Check every hour
-    
-    return () => clearInterval(intervalId);
-  }, []);
+    if (user && !initialized) {
+      checkMilestones();
+      
+      // Set up interval to check periodically, but only if user is authenticated
+      const intervalId = setInterval(() => {
+        if (user) checkMilestones();
+      }, 1000 * 60 * 60); // Check every hour
+      
+      return () => clearInterval(intervalId);
+    } else if (!user) {
+      // Reset state if no user
+      setDueTasks([]);
+      setInitialized(true);
+      setIsLoadingIntegrations(false);
+    }
+  }, [user, initialized]);
 
   const refreshIntegrations = async () => {
-    await checkMilestones();
+    if (user) {
+      return await checkMilestones();
+    }
+    return [];
   };
 
   const value = {

@@ -24,6 +24,7 @@ import NotFound from "./pages/NotFound";
 import ProfileSettings from "./pages/ProfileSettings";
 import UserSettings from "./pages/UserSettings";
 import Notifications from "./pages/Notifications";
+import { useState } from "react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,16 +37,26 @@ const queryClient = new QueryClient({
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
 
-  if (loading) {
-    return <div className="h-screen w-full flex items-center justify-center">
-      <LoadingFallback message="Loading user information..." />
-    </div>;
+  if (loading && !loadingTimedOut) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center">
+        <LoadingFallback 
+          message="Loading user information..." 
+          timeout={8000}
+          onTimeout={() => setLoadingTimedOut(true)}
+        />
+      </div>
+    );
   }
 
-  // For development, allow access even without authentication
-  // You can remove this condition in production
-  return user ? <>{children}</> : <Navigate to="/auth" replace />;
+  // If loading timed out or no user, redirect to auth
+  if (loadingTimedOut || !user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return <>{children}</>;
 };
 
 const App = () => {
