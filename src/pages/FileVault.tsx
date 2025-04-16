@@ -58,7 +58,7 @@ const FileVault = () => {
 
       if (error) throw error;
       
-      setFiles(data as FileItem[] || []);
+      setFiles((data as FileItem[]) || []);
     } catch (error) {
       console.error('Error fetching files:', error);
       toast({

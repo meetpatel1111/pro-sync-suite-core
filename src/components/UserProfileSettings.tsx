@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,7 +68,8 @@ const UserProfileSettings = () => {
           avatar_url: userData.user.user_metadata?.avatar_url,
           email: userData.user.email
         });
-      } else {
+      } else if (data) {
+        // Ensure data is an object, not an array
         setProfile({
           id: data.id,
           full_name: data.full_name || '',

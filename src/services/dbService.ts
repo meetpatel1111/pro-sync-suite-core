@@ -161,6 +161,16 @@ export const dbService = {
     );
   },
 
+  // Get files
+  async getFiles(userId: string) {
+    return await safeQueryTable('files', (query) => 
+      query
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+    );
+  },
+
   // Mark notification as read
   async markNotificationAsRead(notificationId: string, userId: string) {
     return await safeQueryTable('notifications', (query) => 
