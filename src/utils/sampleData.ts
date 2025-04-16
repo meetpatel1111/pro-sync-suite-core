@@ -4,34 +4,60 @@ import { supabase } from '@/integrations/supabase/client';
 // Helper to create projects for a user
 async function setupProjects(userId: string) {
   const projectsData = [
-    { id: 'project1', name: 'Website Redesign', user_id: userId },
-    { id: 'project2', name: 'Mobile App', user_id: userId },
-    { id: 'project3', name: 'Marketing Campaign', user_id: userId },
-    { id: 'project4', name: 'Database Migration', user_id: userId }
+    { 
+      name: 'Website Redesign', 
+      description: 'Complete overhaul of company website with modern design',
+      status: 'active',
+      user_id: userId 
+    },
+    { 
+      name: 'Mobile App', 
+      description: 'Development of new iOS and Android application',
+      status: 'active',
+      user_id: userId 
+    },
+    { 
+      name: 'Marketing Campaign', 
+      description: 'Q2 2025 digital marketing initiative',
+      status: 'active',
+      user_id: userId 
+    },
+    { 
+      name: 'Database Migration', 
+      description: 'Migration from legacy system to cloud platform',
+      status: 'completed',
+      user_id: userId 
+    }
   ];
   
   for (const project of projectsData) {
-    await supabase
+    const { error } = await supabase
       .from('projects')
-      .upsert(project, { onConflict: 'id' });
+      .insert(project);
+      
+    if (error) console.error('Error setting up project:', error);
   }
+  
   return projectsData;
 }
 
 // Helper to create team members for a user
 async function setupTeamMembers(userId: string) {
   const teamMembersData = [
-    { id: 'user1', name: 'Alex Johnson', user_id: userId },
-    { id: 'user2', name: 'Jamie Smith', user_id: userId },
-    { id: 'user3', name: 'Taylor Lee', user_id: userId },
-    { id: 'user4', name: 'Morgan Chen', user_id: userId }
+    { name: 'Alex Johnson', email: 'alex@example.com', role: 'Designer', user_id: userId },
+    { name: 'Jamie Smith', email: 'jamie@example.com', role: 'Developer', user_id: userId },
+    { name: 'Taylor Lee', email: 'taylor@example.com', role: 'Project Manager', user_id: userId },
+    { name: 'Morgan Chen', email: 'morgan@example.com', role: 'QA Engineer', user_id: userId }
   ];
   
   for (const member of teamMembersData) {
-    await supabase
+    const { error } = await supabase
       .from('team_members')
-      .upsert(member, { onConflict: 'id' });
+      .insert(member);
+      
+    if (error) console.error('Error setting up team member:', error);
   }
+  
   return teamMembersData;
 }
 
@@ -45,21 +71,24 @@ export const setupSampleData = async () => {
   
   try {
     // Check if user already has sample data
-    const { data: existingTasks } = await supabase
-      .from('tasks')
+    const { data: existingProjects } = await supabase
+      .from('projects')
       .select('id')
+      .eq('user_id', user.id)
       .limit(1);
       
-    if (existingTasks && existingTasks.length > 0) {
+    if (existingProjects && existingProjects.length > 0) {
       // User already has data, no need to set up sample data
       return true;
     }
     
+    console.log('Setting up sample data for user:', user.id);
+    
     // Add sample projects
-    const projects = await setupProjects(user.id);
+    await setupProjects(user.id);
     
     // Add sample team members
-    const teamMembers = await setupTeamMembers(user.id);
+    await setupTeamMembers(user.id);
     
     // Add sample tasks
     const tasksData = [
@@ -69,7 +98,7 @@ export const setupSampleData = async () => {
         status: 'todo',
         priority: 'high',
         due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-        project: 'project1',
+        project: 'Website Redesign',
         user_id: user.id
       },
       {
@@ -78,7 +107,7 @@ export const setupSampleData = async () => {
         status: 'inProgress',
         priority: 'medium',
         due_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-        project: 'project2',
+        project: 'Mobile App',
         user_id: user.id
       },
       {
@@ -87,7 +116,7 @@ export const setupSampleData = async () => {
         status: 'review',
         priority: 'low',
         due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-        project: 'project1',
+        project: 'Website Redesign',
         user_id: user.id
       },
       {
@@ -96,43 +125,45 @@ export const setupSampleData = async () => {
         status: 'done',
         priority: 'high',
         due_date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        project: 'project1',
+        project: 'Website Redesign',
         user_id: user.id
       }
     ];
     
     for (const task of tasksData) {
-      await supabase
+      const { error } = await supabase
         .from('tasks')
         .insert(task);
+        
+      if (error) console.error('Error setting up task:', error);
     }
     
     // Add sample time entries
     const timeEntriesData = [
       {
         description: 'Website design work',
-        project: 'project1',
+        project: 'Website Redesign',
         time_spent: 120, // 2 hours in minutes
         date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
         user_id: user.id
       },
       {
         description: 'Mobile app development',
-        project: 'project2',
+        project: 'Mobile App',
         time_spent: 180, // 3 hours in minutes
         date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
         user_id: user.id
       },
       {
         description: 'Client meeting',
-        project: 'project3',
+        project: 'Marketing Campaign',
         time_spent: 60, // 1 hour in minutes
         date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
         user_id: user.id
       },
       {
         description: 'Database work',
-        project: 'project4',
+        project: 'Database Migration',
         time_spent: 240, // 4 hours in minutes
         date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
         user_id: user.id
@@ -140,9 +171,11 @@ export const setupSampleData = async () => {
     ];
     
     for (const entry of timeEntriesData) {
-      await supabase
+      const { error } = await supabase
         .from('time_entries')
         .insert(entry);
+        
+      if (error) console.error('Error setting up time entry:', error);
     }
     
     // Add sample clients for ClientConnect
@@ -171,81 +204,47 @@ export const setupSampleData = async () => {
     ];
     
     for (const client of clientsData) {
-      await supabase
+      const { error } = await supabase
         .from('clients')
         .insert(client);
+        
+      if (error) console.error('Error setting up client:', error);
     }
     
-    // Add sample dashboards for InsightIQ
-    const dashboardsData = [
+    // Add notifications
+    const notificationsData = [
       {
-        title: 'Project Overview',
-        description: 'Overview of all project metrics',
+        title: 'Welcome to ProSync Suite',
+        message: 'Thank you for joining. Get started by exploring the dashboard.',
+        type: 'info',
+        related_to: 'system',
         user_id: user.id
       },
       {
-        title: 'Team Performance',
-        description: 'Performance metrics for team members',
+        title: 'Task due soon',
+        message: 'The task "Create project plan" is due in 3 days.',
+        type: 'warning',
+        related_to: 'task',
         user_id: user.id
       },
       {
-        title: 'Resource Allocation',
-        description: 'Resource allocation across projects',
+        title: 'New feature available',
+        message: 'Try our new FileVault feature for secure document storage.',
+        type: 'info',
+        related_to: 'system',
         user_id: user.id
       }
     ];
     
-    for (const dashboard of dashboardsData) {
-      const { data: dashboardData } = await supabase
-        .from('dashboards')
-        .insert(dashboard)
-        .select();
-      
-      if (dashboardData && dashboardData.length > 0) {
-        // Add sample widgets for each dashboard
-        const widgetsData = [
-          {
-            dashboard_id: dashboardData[0].id,
-            title: 'Tasks by Status',
-            widget_type: 'pie_chart',
-            config: {
-              data_source: 'tasks',
-              group_by: 'status'
-            },
-            position: {
-              x: 0,
-              y: 0,
-              w: 6,
-              h: 4
-            },
-            user_id: user.id
-          },
-          {
-            dashboard_id: dashboardData[0].id,
-            title: 'Time Tracked by Project',
-            widget_type: 'bar_chart',
-            config: {
-              data_source: 'time_entries',
-              group_by: 'project'
-            },
-            position: {
-              x: 6,
-              y: 0,
-              w: 6,
-              h: 4
-            },
-            user_id: user.id
-          }
-        ];
+    for (const notification of notificationsData) {
+      const { error } = await supabase
+        .from('notifications')
+        .insert(notification);
         
-        for (const widget of widgetsData) {
-          await supabase
-            .from('widgets')
-            .insert(widget);
-        }
-      }
+      if (error) console.error('Error setting up notification:', error);
     }
     
+    console.log('Sample data setup complete');
     return true;
   } catch (error) {
     console.error('Error setting up sample data:', error);

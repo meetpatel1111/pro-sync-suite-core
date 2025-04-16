@@ -6,6 +6,9 @@ export interface Project {
   id: string;
   name: string;
   description?: string;
+  status?: string;
+  start_date?: string;
+  end_date?: string;
   user_id: string;
   created_at: string;
 }
@@ -25,10 +28,10 @@ export interface Task {
   description: string;
   status: 'todo' | 'inProgress' | 'review' | 'done';
   priority: 'low' | 'medium' | 'high';
-  dueDate?: string;
+  due_date?: string;
   assignee?: string;
   project?: string;
-  createdAt: string;
+  created_at: string;
   user_id?: string;
 }
 
@@ -148,4 +151,60 @@ export interface Integration {
   enabled: boolean;
   user_id: string;
   created_at: string;
+}
+
+export interface UserProfile {
+  id: string;
+  full_name?: string;
+  avatar_url?: string;
+  bio?: string;
+  job_title?: string;
+  phone?: string;
+  location?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserSettings {
+  id: string;
+  user_id: string;
+  theme?: string;
+  language?: string;
+  timezone?: string;
+  date_format?: string;
+  email_notifications?: Record<string, boolean>;
+  app_notifications?: Record<string, boolean>;
+  auto_save?: boolean;
+  interface_density?: string;
+  font_size?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: string;
+  related_to?: string;
+  related_id?: string;
+  read: boolean;
+  created_at: string;
+}
+
+export interface File {
+  id: string;
+  user_id: string;
+  name: string;
+  description?: string;
+  file_type: string;
+  size_bytes: number;
+  storage_path: string;
+  is_public: boolean;
+  is_archived: boolean;
+  project_id?: string;
+  task_id?: string;
+  created_at: string;
+  updated_at: string;
 }

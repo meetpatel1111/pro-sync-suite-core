@@ -35,6 +35,10 @@ const FileVault = () => {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [fileName, setFileName] = useState('');
+  const [fileDescription, setFileDescription] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     fetchFiles();
@@ -58,7 +62,7 @@ const FileVault = () => {
 
       if (error) throw error;
       
-      setFiles((data as FileItem[]) || []);
+      setFiles(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching files:', error);
       toast({
@@ -71,20 +75,204 @@ const FileVault = () => {
     }
   };
 
-  const handleUpload = async (event: React.FormEvent) => {
-    event.preventDefault();
-    // File upload logic would go here
-    toast({
-      title: "Feature in development",
-      description: "File upload functionality will be implemented soon",
-    });
-    setUploadDialogOpen(false);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFile(e.target.files[0]);
+      if (!fileName) {
+        setFileName(e.target.files[0].name);
+      }
+    }
   };
 
-  const filteredFiles = files.filter(file => 
-    file.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    file.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleUpload = async (event: React.FormEvent) => {
+    event.preventDefault();
+    
+    if (!selectedFile) {
+      toast({
+        title: "No file selected",
+        description: "Please select a file to upload",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to upload files",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Generate a unique path for the file
+      const fileExt = selectedFile.name.split('.').pop();
+      const filePath = `${userData.user.id}/${Date.now()}.${fileExt}`;
+
+      // Upload file to Supabase storage
+      const { error: uploadError } = await supabase.storage
+        .from('files')
+        .upload(filePath, selectedFile);
+
+      if (uploadError) throw uploadError;
+
+      // Save file metadata to database
+      const fileData = {
+        name: fileName || selectedFile.name,
+        description: fileDescription,
+        file_type: selectedFile.type,
+        size_bytes: selectedFile.size,
+        storage_path: filePath,
+        is_public: false,
+        is_archived: false,
+        user_id: userData.user.id
+      };
+
+      const { error: dbError } = await supabase
+        .from('files')
+        .insert(fileData);
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "File uploaded",
+        description: "Your file has been uploaded successfully",
+      });
+
+      // Reset form
+      setFileName('');
+      setFileDescription('');
+      setSelectedFile(null);
+      setUploadDialogOpen(false);
+      
+      // Refresh files list
+      fetchFiles();
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast({
+        title: "Upload failed",
+        description: "An error occurred while uploading your file",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDownload = async (file: FileItem) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('files')
+        .download(file.storage_path);
+
+      if (error) throw error;
+
+      // Create a download link
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast({
+        title: "Download failed",
+        description: "An error occurred while downloading your file",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDelete = async (fileId: string) => {
+    try {
+      const fileToDelete = files.find(f => f.id === fileId);
+      if (!fileToDelete) return;
+
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) return;
+
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('files')
+        .remove([fileToDelete.storage_path]);
+
+      if (storageError) throw storageError;
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('files')
+        .delete()
+        .eq('id', fileId)
+        .eq('user_id', userData.user.id);
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "File deleted",
+        description: "Your file has been deleted successfully",
+      });
+
+      // Update files list
+      setFiles(files.filter(f => f.id !== fileId));
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      toast({
+        title: "Delete failed",
+        description: "An error occurred while deleting your file",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getFilteredFiles = () => {
+    return files.filter(file => {
+      const matchesSearch = 
+        file.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (file.description && file.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      switch (activeTab) {
+        case 'documents':
+          return matchesSearch && 
+            (file.file_type.includes('document') || 
+             file.file_type.includes('pdf') || 
+             file.file_type.includes('word') ||
+             file.file_type.includes('text'));
+        case 'images':
+          return matchesSearch && file.file_type.includes('image');
+        case 'shared':
+          return matchesSearch && file.is_public;
+        case 'archived':
+          return matchesSearch && file.is_archived;
+        default:
+          return matchesSearch;
+      }
+    });
+  };
+
+  const filteredFiles = getFilteredFiles();
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
 
   return (
     <AppLayout>
@@ -123,18 +311,34 @@ const FileVault = () => {
                 <form onSubmit={handleUpload} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="file">File</Label>
-                    <Input id="file" type="file" />
+                    <Input 
+                      id="file" 
+                      type="file" 
+                      onChange={handleFileChange}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="fileName">File Name</Label>
-                    <Input id="fileName" placeholder="Enter file name" />
+                    <Input 
+                      id="fileName" 
+                      placeholder="Enter file name" 
+                      value={fileName}
+                      onChange={(e) => setFileName(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="description">Description (optional)</Label>
-                    <Textarea id="description" placeholder="Enter file description" />
+                    <Textarea 
+                      id="description" 
+                      placeholder="Enter file description" 
+                      value={fileDescription}
+                      onChange={(e) => setFileDescription(e.target.value)}
+                    />
                   </div>
                   <DialogFooter>
-                    <Button type="submit">Upload</Button>
+                    <Button type="submit" disabled={isUploading}>
+                      {isUploading ? 'Uploading...' : 'Upload'}
+                    </Button>
                   </DialogFooter>
                 </form>
               </DialogContent>
@@ -184,7 +388,7 @@ const FileVault = () => {
             <TabsTrigger value="archived">Archived</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="all" className="space-y-4">
+          <TabsContent value={activeTab} className="space-y-4">
             {isLoading ? (
               <div className="flex justify-center p-8">
                 <p>Loading files...</p>
@@ -205,147 +409,81 @@ const FileVault = () => {
               </Card>
             ) : viewMode === 'grid' ? (
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {/* Placeholder files - Replace with real data when available */}
-                <Card>
-                  <CardContent className="p-4 space-y-3">
-                    <div className="bg-muted rounded-md p-4 flex justify-center items-center">
-                      <File className="h-12 w-12 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium truncate">Project Proposal.pdf</h3>
-                      <p className="text-sm text-muted-foreground">2.4 MB • Added Apr 10, 2023</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="icon" className="h-8 w-8">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="icon" className="h-8 w-8">
-                        <Share className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="icon" className="h-8 w-8 text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-4 space-y-3">
-                    <div className="bg-muted rounded-md p-4 flex justify-center items-center">
-                      <File className="h-12 w-12 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium truncate">Client Agreement.docx</h3>
-                      <p className="text-sm text-muted-foreground">1.2 MB • Added Apr 05, 2023</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="icon" className="h-8 w-8">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="icon" className="h-8 w-8">
-                        <Share className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="icon" className="h-8 w-8 text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                {filteredFiles.map(file => (
+                  <Card key={file.id}>
+                    <CardContent className="p-4 space-y-3">
+                      <div className="bg-muted rounded-md p-4 flex justify-center items-center">
+                        <File className="h-12 w-12 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium truncate">{file.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {formatFileSize(file.size_bytes)} • Added {formatDate(file.created_at)}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={() => handleDownload(file)}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" className="h-8 w-8">
+                          <Share className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => handleDelete(file.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             ) : (
               <div className="space-y-2">
-                {/* Placeholder files in list view - Replace with real data when available */}
-                <Card>
-                  <CardContent className="p-3 flex items-center gap-4">
-                    <File className="h-8 w-8 text-muted-foreground" />
-                    <div className="flex-1">
-                      <h3 className="font-medium">Project Proposal.pdf</h3>
-                      <p className="text-sm text-muted-foreground">2.4 MB • Added Apr 10, 2023</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="icon" className="h-8 w-8">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="icon" className="h-8 w-8">
-                        <Share className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="icon" className="h-8 w-8 text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-3 flex items-center gap-4">
-                    <File className="h-8 w-8 text-muted-foreground" />
-                    <div className="flex-1">
-                      <h3 className="font-medium">Client Agreement.docx</h3>
-                      <p className="text-sm text-muted-foreground">1.2 MB • Added Apr 05, 2023</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="icon" className="h-8 w-8">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="icon" className="h-8 w-8">
-                        <Share className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="icon" className="h-8 w-8 text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                {filteredFiles.map(file => (
+                  <Card key={file.id}>
+                    <CardContent className="p-3 flex items-center gap-4">
+                      <File className="h-8 w-8 text-muted-foreground" />
+                      <div className="flex-1">
+                        <h3 className="font-medium">{file.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {formatFileSize(file.size_bytes)} • Added {formatDate(file.created_at)}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={() => handleDownload(file)}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" className="h-8 w-8">
+                          <Share className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => handleDelete(file.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
-          </TabsContent>
-
-          <TabsContent value="documents">
-            <Card>
-              <CardHeader>
-                <CardTitle>Documents</CardTitle>
-                <CardDescription>View and manage your documents</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Document files will appear here.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="images">
-            <Card>
-              <CardHeader>
-                <CardTitle>Images</CardTitle>
-                <CardDescription>View and manage your images</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Image files will appear here.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="shared">
-            <Card>
-              <CardHeader>
-                <CardTitle>Shared Files</CardTitle>
-                <CardDescription>Files shared with you or by you</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Shared files will appear here.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="archived">
-            <Card>
-              <CardHeader>
-                <CardTitle>Archived Files</CardTitle>
-                <CardDescription>Files you've archived</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Archived files will appear here.</p>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </div>

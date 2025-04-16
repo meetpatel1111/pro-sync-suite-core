@@ -44,15 +44,6 @@ const UserProfileSettings = () => {
           variant: "destructive",
         });
         setIsLoading(false);
-        
-        // Set default profile for demo when not authenticated
-        setProfile({
-          id: 'demo-user',
-          full_name: 'Demo User',
-          email: 'demo@example.com',
-          job_title: 'Software Developer',
-          avatar_url: ''
-        });
         return;
       }
 
@@ -69,15 +60,17 @@ const UserProfileSettings = () => {
           email: userData.user.email
         });
       } else if (data) {
-        // Ensure data is an object, not an array
+        // Ensure data is handled as a single object, not an array
+        const profileData = Array.isArray(data) ? data[0] : data;
+        
         setProfile({
-          id: data.id,
-          full_name: data.full_name || '',
-          avatar_url: data.avatar_url,
-          bio: data.bio,
-          job_title: data.job_title,
-          phone: data.phone,
-          location: data.location,
+          id: profileData.id,
+          full_name: profileData.full_name || '',
+          avatar_url: profileData.avatar_url,
+          bio: profileData.bio,
+          job_title: profileData.job_title,
+          phone: profileData.phone,
+          location: profileData.location,
           email: userData.user.email
         });
       }
@@ -87,15 +80,6 @@ const UserProfileSettings = () => {
         title: "Failed to load profile",
         description: "An error occurred while loading your profile",
         variant: "destructive",
-      });
-      
-      // Set a default profile for demo
-      setProfile({
-        id: 'demo-user',
-        full_name: 'Demo User',
-        email: 'demo@example.com',
-        job_title: 'Software Developer',
-        avatar_url: ''
       });
     } finally {
       setIsLoading(false);

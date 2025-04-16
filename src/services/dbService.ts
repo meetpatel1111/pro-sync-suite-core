@@ -170,6 +170,34 @@ export const dbService = {
         .order('created_at', { ascending: false })
     );
   },
+  
+  // Add a file
+  async addFile(fileData: {
+    name: string;
+    description?: string;
+    file_type: string;
+    size_bytes: number;
+    storage_path: string;
+    is_public: boolean;
+    is_archived: boolean;
+    user_id: string;
+    project_id?: string;
+    task_id?: string;
+  }) {
+    return await safeQueryTable('files', (query) => 
+      query.insert(fileData)
+    );
+  },
+  
+  // Delete a file
+  async deleteFile(fileId: string, userId: string) {
+    return await safeQueryTable('files', (query) => 
+      query
+        .delete()
+        .eq('id', fileId)
+        .eq('user_id', userId)
+    );
+  },
 
   // Mark notification as read
   async markNotificationAsRead(notificationId: string, userId: string) {
@@ -188,5 +216,106 @@ export const dbService = {
         .update({ read: true })
         .eq('user_id', userId)
     );
+  },
+  
+  // Get projects
+  async getProjects(userId: string) {
+    return await safeQueryTable('projects', (query) => 
+      query
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+    );
+  },
+  
+  // Create project
+  async createProject(projectData: {
+    name: string;
+    description?: string;
+    status?: string;
+    start_date?: string;
+    end_date?: string;
+    user_id: string;
+  }) {
+    return await safeQueryTable('projects', (query) => 
+      query.insert(projectData)
+    );
+  },
+  
+  // Get tasks
+  async getTasks(userId: string, filters?: {
+    status?: string;
+    priority?: string;
+    project?: string;
+  }) {
+    return await safeQueryTable('tasks', (query) => {
+      let filteredQuery = query
+        .select('*')
+        .eq('user_id', userId);
+        
+      if (filters?.status) {
+        filteredQuery = filteredQuery.eq('status', filters.status);
+      }
+      
+      if (filters?.priority) {
+        filteredQuery = filteredQuery.eq('priority', filters.priority);
+      }
+      
+      if (filters?.project) {
+        filteredQuery = filteredQuery.eq('project', filters.project);
+      }
+      
+      return filteredQuery.order('created_at', { ascending: false });
+    });
+  },
+  
+  // Get clients
+  async getClients(userId: string) {
+    return await safeQueryTable('clients', (query) => 
+      query
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+    );
+  },
+  
+  // Create client
+  async createClient(clientData: {
+    name: string;
+    email?: string;
+    phone?: string;
+    company?: string;
+    user_id: string;
+  }) {
+    return await safeQueryTable('clients', (query) => 
+      query.insert(clientData)
+    );
+  },
+  
+  // Get time entries
+  async getTimeEntries(userId: string, filters?: {
+    project?: string;
+    startDate?: string;
+    endDate?: string;
+  }) {
+    return await safeQueryTable('time_entries', (query) => {
+      let filteredQuery = query
+        .select('*')
+        .eq('user_id', userId);
+        
+      if (filters?.project) {
+        filteredQuery = filteredQuery.eq('project', filters.project);
+      }
+      
+      if (filters?.startDate) {
+        filteredQuery = filteredQuery.gte('date', filters.startDate);
+      }
+      
+      if (filters?.endDate) {
+        filteredQuery = filteredQuery.lte('date', filters.endDate);
+      }
+      
+      return filteredQuery.order('date', { ascending: false });
+    });
   }
 };
