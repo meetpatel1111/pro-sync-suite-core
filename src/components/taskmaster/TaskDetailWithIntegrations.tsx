@@ -6,6 +6,7 @@ import { Clock, AlertCircle, FileBox, User } from 'lucide-react';
 import { format } from 'date-fns';
 import TaskIntegrations from './TaskIntegrations';
 import IntegrationNotifications from '../IntegrationNotifications';
+import { Badge } from '@/components/ui/badge';
 
 interface TaskDetailWithIntegrationsProps {
   task: Task | null;
@@ -60,10 +61,18 @@ const TaskDetailWithIntegrations: React.FC<TaskDetailWithIntegrationsProps> = ({
       
       <Card>
         <CardHeader>
-          <CardTitle>{task.title}</CardTitle>
-          <CardDescription>
-            {getProjectName(task.project)}
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>{task.title}</CardTitle>
+              <CardDescription>
+                {getProjectName(task.project)}
+              </CardDescription>
+            </div>
+            <Badge variant={task.status === 'done' ? 'success' : 'secondary'}>
+              {task.status === 'inProgress' ? 'In Progress' : 
+               task.status.charAt(0).toUpperCase() + task.status.slice(1)}
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">

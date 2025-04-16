@@ -6,17 +6,57 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useIntegration } from '@/context/IntegrationContext';
 import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const IntegrationNotifications = () => {
-  const { dueTasks, isLoadingIntegrations } = useIntegration();
+  const { dueTasks, isLoadingIntegrations, refreshIntegrations } = useIntegration();
   const [isOpen, setIsOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [processingTasks, setProcessingTasks] = useState<string[]>([]);
+  const { toast } = useToast();
   
   useEffect(() => {
     // Calculate total number of due tasks
     const count = dueTasks.reduce((sum, item) => sum + item.tasksDue.length, 0);
     setNotificationCount(count);
   }, [dueTasks]);
+  
+  const handleCompleteTask = async (taskId: string) => {
+    try {
+      // Add task to processing state to show loading
+      setProcessingTasks(prev => [...prev, taskId]);
+      
+      // Update task status to 'done' in the database
+      const { error } = await supabase
+        .from('tasks')
+        .update({ status: 'done' })
+        .eq('id', taskId);
+        
+      if (error) throw error;
+      
+      // Show success toast
+      toast({
+        title: 'Task completed',
+        description: 'The task has been marked as complete',
+      });
+      
+      // Refresh integrations to update the task list
+      if (refreshIntegrations) {
+        await refreshIntegrations();
+      }
+    } catch (error) {
+      console.error('Error completing task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to complete task',
+        variant: 'destructive',
+      });
+    } finally {
+      // Remove task from processing state
+      setProcessingTasks(prev => prev.filter(id => id !== taskId));
+    }
+  };
   
   if (isLoadingIntegrations) {
     return (
@@ -74,8 +114,14 @@ const IntegrationNotifications = () => {
                             </span>
                           )}
                         </div>
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                          <Check className="h-4 w-4" />
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 w-6 p-0"
+                          onClick={() => handleCompleteTask(task.id)}
+                          disabled={processingTasks.includes(task.id)}
+                        >
+                          <Check className={`h-4 w-4 ${processingTasks.includes(task.id) ? 'opacity-50' : ''}`} />
                         </Button>
                       </li>
                     ))}

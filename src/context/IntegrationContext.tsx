@@ -11,6 +11,7 @@ interface IntegrationContextType {
   linkDocumentToTask: (taskId: string, documentUrl: string, documentName: string) => Promise<boolean>;
   dueTasks: { project: Project, tasksDue: Task[] }[];
   isLoadingIntegrations: boolean;
+  refreshIntegrations: () => Promise<void>;
 }
 
 const IntegrationContext = createContext<IntegrationContextType | undefined>(undefined);
@@ -20,37 +21,41 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
   const [dueTasks, setDueTasks] = useState<{ project: Project, tasksDue: Task[] }[]>([]);
   const [isLoadingIntegrations, setIsLoadingIntegrations] = useState(false);
 
+  const checkMilestones = async () => {
+    setIsLoadingIntegrations(true);
+    try {
+      const milestones = await integrationService.checkProjectMilestones();
+      setDueTasks(milestones);
+      
+      // Notify about due tasks
+      if (milestones.length > 0) {
+        const totalTasks = milestones.reduce((sum, item) => sum + item.tasksDue.length, 0);
+        toast({
+          title: 'Tasks Due Soon',
+          description: `You have ${totalTasks} tasks due soon across ${milestones.length} projects.`,
+          duration: 5000,
+        });
+      }
+    } catch (error) {
+      console.error('Error checking milestones:', error);
+    } finally {
+      setIsLoadingIntegrations(false);
+    }
+  };
+
   // Check for due tasks when component mounts
   useEffect(() => {
-    const checkMilestones = async () => {
-      setIsLoadingIntegrations(true);
-      try {
-        const milestones = await integrationService.checkProjectMilestones();
-        setDueTasks(milestones);
-        
-        // Notify about due tasks
-        if (milestones.length > 0) {
-          const totalTasks = milestones.reduce((sum, item) => sum + item.tasksDue.length, 0);
-          toast({
-            title: 'Tasks Due Soon',
-            description: `You have ${totalTasks} tasks due soon across ${milestones.length} projects.`,
-            duration: 5000,
-          });
-        }
-      } catch (error) {
-        console.error('Error checking milestones:', error);
-      } finally {
-        setIsLoadingIntegrations(false);
-      }
-    };
-    
     checkMilestones();
     
     // Set up interval to check periodically
     const intervalId = setInterval(checkMilestones, 1000 * 60 * 60); // Check every hour
     
     return () => clearInterval(intervalId);
-  }, [toast]);
+  }, []);
+
+  const refreshIntegrations = async () => {
+    await checkMilestones();
+  };
 
   const value = {
     createTaskFromNote: integrationService.createTaskFromNote,
@@ -58,7 +63,8 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
     checkProjectMilestones: integrationService.checkProjectMilestones,
     linkDocumentToTask: integrationService.linkDocumentToTask,
     dueTasks,
-    isLoadingIntegrations
+    isLoadingIntegrations,
+    refreshIntegrations
   };
 
   return (

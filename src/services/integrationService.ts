@@ -188,12 +188,58 @@ export const integrationService = {
     documentName: string
   ): Promise<boolean> {
     try {
-      // This is a placeholder for document linking
-      // In a real implementation, this would update a documents or task_documents table
-      console.log('Linking document to task:', { taskId, documentUrl, documentName });
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return false;
+
+      // In a real implementation, we'd insert into the files table
+      const { error } = await supabase
+        .from('files')
+        .insert({
+          name: documentName,
+          storage_path: documentUrl,
+          file_type: 'link',
+          size_bytes: 0,
+          is_public: false,
+          is_archived: false,
+          task_id: taskId,
+          user_id: userData.user.id
+        });
+        
+      if (error) throw error;
+      
       return true;
     } catch (error) {
       console.error('Error linking document to task:', error);
+      return false;
+    }
+  },
+  
+  // Method to create integration actions
+  async createIntegrationAction(
+    sourceApp: string, 
+    targetApp: string, 
+    actionType: string, 
+    config: any = {}
+  ): Promise<boolean> {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return false;
+      
+      const { error } = await supabase
+        .from('integration_actions')
+        .insert({
+          source_app: sourceApp,
+          target_app: targetApp,
+          action_type: actionType,
+          config,
+          user_id: userData.user.id
+        });
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error creating integration action:', error);
       return false;
     }
   }
