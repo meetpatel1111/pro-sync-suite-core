@@ -8,6 +8,7 @@ import { useIntegration } from '@/context/IntegrationContext';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const IntegrationNotifications = () => {
   const { dueTasks, isLoadingIntegrations, refreshIntegrations } = useIntegration();
@@ -65,10 +66,13 @@ const IntegrationNotifications = () => {
           <CardTitle className="text-sm font-medium">
             <div className="flex items-center">
               <Bell className="mr-2 h-4 w-4" />
-              Loading notifications...
+              <Skeleton className="h-4 w-40" />
             </div>
           </CardTitle>
         </CardHeader>
+        <CardContent>
+          <Skeleton className="h-20 w-full mb-2" />
+        </CardContent>
       </Card>
     );
   }

@@ -3,6 +3,7 @@ import React, { createContext, useContext, ReactNode, useState, useEffect } from
 import { integrationService } from '@/services/integrationService';
 import { Task, TimeEntry, Project } from '@/utils/dbtypes';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface IntegrationContextType {
   createTaskFromNote: (title: string, description: string, projectId?: string, dueDate?: string, assigneeId?: string) => Promise<Task | null>;
@@ -20,10 +21,19 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   const [dueTasks, setDueTasks] = useState<{ project: Project, tasksDue: Task[] }[]>([]);
   const [isLoadingIntegrations, setIsLoadingIntegrations] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   const checkMilestones = async () => {
     setIsLoadingIntegrations(true);
     try {
+      // Check if user is authenticated first
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.log("No session found, skipping milestone check");
+        setDueTasks([]);
+        return;
+      }
+      
       const milestones = await integrationService.checkProjectMilestones();
       setDueTasks(milestones);
       
@@ -38,8 +48,16 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error('Error checking milestones:', error);
+      // Provide feedback about the error
+      toast({
+        title: 'Error',
+        description: 'Failed to check project milestones. Please try again later.',
+        variant: 'destructive',
+        duration: 5000,
+      });
     } finally {
       setIsLoadingIntegrations(false);
+      setInitialized(true);
     }
   };
 

@@ -1,12 +1,32 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Calendar, Clock, MessageSquare, FileText, BarChart2, 
          PieChart, Users, Shield, FileCog, FolderLock } from 'lucide-react';
 import AppCard from '@/components/AppCard';
 import AppLayout from '@/components/AppLayout';
 import DashboardStats from '@/components/DashboardStats';
+import LoadingFallback from '@/components/ui/loading-fallback';
+import { useAuth } from '@/hooks/useAuth';
 
 const Index = () => {
+  const { user, loading } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    // Set a timeout to ensure we don't get stuck in loading state
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      setIsLoading(false);
+    }
+  }, [loading]);
+
   const appList = [
     {
       title: 'TaskMaster',
@@ -89,6 +109,12 @@ const Index = () => {
       featureCount: 100
     }
   ];
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">
+      <LoadingFallback message="Loading dashboard..." />
+    </div>;
+  }
 
   return (
     <AppLayout>
