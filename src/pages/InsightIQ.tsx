@@ -226,10 +226,10 @@ const InsightIQ = () => {
           description: task.description || '',
           status: task.status as 'todo' | 'inProgress' | 'review' | 'done',
           priority: task.priority as 'low' | 'medium' | 'high',
-          dueDate: task.due_date,
+          due_date: task.due_date,
           assignee: task.assignee,
           project: task.project,
-          createdAt: task.created_at,
+          created_at: task.created_at,
           user_id: task.user_id
         }));
         setTasks(mappedTasks);

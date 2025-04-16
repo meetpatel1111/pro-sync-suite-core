@@ -68,9 +68,9 @@ const IntegrationNotifications = () => {
                       <li key={task.id} className="flex items-center justify-between text-sm">
                         <div>
                           <span className="font-medium">{task.title}</span>
-                          {task.dueDate && (
+                          {task.due_date && (
                             <span className="text-muted-foreground ml-2">
-                              Due: {format(new Date(task.dueDate), 'MMM d')}
+                              Due: {format(new Date(task.due_date), 'MMM d')}
                             </span>
                           )}
                         </div>

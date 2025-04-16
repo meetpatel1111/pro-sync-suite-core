@@ -57,18 +57,24 @@ const TaskList = ({ tasks: initialTasks = [], onTaskUpdate, onTaskDelete }: Task
 
       if (error) throw error;
 
-      setTasks(data ? data.map(task => ({
-        id: task.id,
-        title: task.title,
-        description: task.description || '',
-        status: task.status as 'todo' | 'inProgress' | 'review' | 'done',
-        priority: task.priority as 'low' | 'medium' | 'high',
-        dueDate: task.due_date,
-        assignee: task.assignee,
-        project: task.project,
-        createdAt: task.created_at,
-        user_id: task.user_id
-      })) : []);
+      if (data) {
+        // Map the data to match our Task interface
+        const mappedTasks: Task[] = data.map(task => ({
+          id: task.id,
+          title: task.title,
+          description: task.description || '',
+          status: task.status as 'todo' | 'inProgress' | 'review' | 'done',
+          priority: task.priority as 'low' | 'medium' | 'high',
+          due_date: task.due_date,
+          assignee: task.assignee,
+          project: task.project,
+          created_at: task.created_at,
+          user_id: task.user_id
+        }));
+        setTasks(mappedTasks);
+      } else {
+        setTasks([]);
+      }
     } catch (error) {
       console.error('Error fetching tasks:', error);
       toast({
@@ -168,7 +174,7 @@ const TaskList = ({ tasks: initialTasks = [], onTaskUpdate, onTaskDelete }: Task
           description: updatedTask.description,
           status: updatedTask.status,
           priority: updatedTask.priority,
-          due_date: updatedTask.dueDate,
+          due_date: updatedTask.due_date,
           assignee: updatedTask.assignee,
           project: updatedTask.project
         })

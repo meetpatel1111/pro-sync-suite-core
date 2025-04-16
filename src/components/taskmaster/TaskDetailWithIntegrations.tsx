@@ -94,8 +94,8 @@ const TaskDetailWithIntegrations: React.FC<TaskDetailWithIntegrationsProps> = ({
             <div className="flex items-center space-x-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">
-                {task.dueDate 
-                  ? `Due: ${format(new Date(task.dueDate), 'MMM d, yyyy')}`
+                {task.due_date 
+                  ? `Due: ${format(new Date(task.due_date), 'MMM d, yyyy')}`
                   : 'No due date'}
               </span>
             </div>
