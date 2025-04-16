@@ -24,6 +24,7 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
   const [dueTasks, setDueTasks] = useState<{ project: Project, tasksDue: Task[] }[]>([]);
   const [isLoadingIntegrations, setIsLoadingIntegrations] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
 
   const checkMilestones = async () => {
     setIsLoadingIntegrations(true);
@@ -69,16 +70,21 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
   // Check for due tasks when component mounts, but only if user is authenticated
   useEffect(() => {
     if (user && !initialized) {
+      console.log("Checking milestones on mount, user is authenticated");
       checkMilestones();
       
       // Set up interval to check periodically, but only if user is authenticated
       const intervalId = setInterval(() => {
-        if (user) checkMilestones();
+        if (user) {
+          console.log("Checking milestones on interval");
+          checkMilestones();
+        }
       }, 1000 * 60 * 60); // Check every hour
       
       return () => clearInterval(intervalId);
     } else if (!user) {
       // Reset state if no user
+      console.log("No user, resetting state");
       setDueTasks([]);
       setInitialized(true);
       setIsLoadingIntegrations(false);
@@ -86,13 +92,22 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
   }, [user, initialized]);
 
   const refreshIntegrations = async () => {
-    if (user) {
-      return await checkMilestones();
+    // Prevent multiple refreshes in quick succession
+    const now = Date.now();
+    if (now - lastRefreshTime < 5000) { // 5 second cooldown
+      console.log("Refresh throttled, try again in a few seconds");
+      return;
     }
-    return [];
+    
+    setLastRefreshTime(now);
+    console.log("Manually refreshing integrations");
+    
+    if (user) {
+      await checkMilestones();
+    }
   };
 
-  const value = {
+  const value: IntegrationContextType = {
     createTaskFromNote: integrationService.createTaskFromNote,
     logTimeForTask: integrationService.logTimeForTask,
     checkProjectMilestones: integrationService.checkProjectMilestones,

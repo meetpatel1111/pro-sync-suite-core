@@ -31,6 +31,7 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      staleTime: 60 * 1000, // 1 minute
     },
   },
 });
@@ -39,23 +40,29 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
 
+  // If not loading or already timed out and no user, redirect to auth
+  if ((!loading || loadingTimedOut) && !user) {
+    console.log("No authenticated user, redirecting to /auth");
+    return <Navigate to="/auth" replace />;
+  }
+
+  // Show loading state
   if (loading && !loadingTimedOut) {
     return (
       <div className="h-screen w-full flex items-center justify-center">
         <LoadingFallback 
           message="Loading user information..." 
           timeout={8000}
-          onTimeout={() => setLoadingTimedOut(true)}
+          onTimeout={() => {
+            console.log("Loading user timed out");
+            setLoadingTimedOut(true);
+          }}
         />
       </div>
     );
   }
 
-  // If loading timed out or no user, redirect to auth
-  if (loadingTimedOut || !user) {
-    return <Navigate to="/auth" replace />;
-  }
-
+  // If we reach here, user is authenticated
   return <>{children}</>;
 };
 

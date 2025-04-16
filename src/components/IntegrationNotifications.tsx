@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bell, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { Bell, Check, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useIntegration } from '@/context/IntegrationContext';
@@ -15,6 +15,7 @@ const IntegrationNotifications = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [processingTasks, setProcessingTasks] = useState<string[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -58,15 +59,40 @@ const IntegrationNotifications = () => {
       setProcessingTasks(prev => prev.filter(id => id !== taskId));
     }
   };
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshIntegrations();
+      toast({
+        title: 'Refreshed',
+        description: 'Notifications have been refreshed',
+      });
+    } catch (error) {
+      console.error('Error refreshing notifications:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
   
   if (isLoadingIntegrations) {
     return (
       <Card className="mb-4">
         <CardHeader className="py-2">
           <CardTitle className="text-sm font-medium">
-            <div className="flex items-center">
-              <Bell className="mr-2 h-4 w-4" />
-              <Skeleton className="h-4 w-40" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Bell className="mr-2 h-4 w-4" />
+                <Skeleton className="h-4 w-40" />
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                disabled
+                className="h-7 w-7 p-0"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
             </div>
           </CardTitle>
         </CardHeader>
@@ -78,7 +104,29 @@ const IntegrationNotifications = () => {
   }
   
   if (notificationCount === 0) {
-    return null;
+    return (
+      <Card className="mb-4">
+        <CardHeader className="py-2">
+          <CardTitle className="text-sm font-medium">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Bell className="mr-2 h-4 w-4" />
+                <span>No tasks due soon</span>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                className="h-7 w-7 p-0"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
+          </CardTitle>
+        </CardHeader>
+      </Card>
+    );
   }
   
   return (
@@ -92,11 +140,25 @@ const IntegrationNotifications = () => {
                   <Bell className="mr-2 h-4 w-4" />
                   <span>{notificationCount} Integration {notificationCount === 1 ? 'Alert' : 'Alerts'}</span>
                 </div>
-                {isOpen ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
+                <div className="flex items-center">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleManualRefresh();
+                    }}
+                    disabled={isRefreshing}
+                    className="h-7 w-7 p-0 mr-2"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  </Button>
+                  {isOpen ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </div>
               </div>
             </CardTitle>
           </CollapsibleTrigger>
