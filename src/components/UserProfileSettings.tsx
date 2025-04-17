@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save, User, Camera } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { dbService } from '@/services/dbService';
+import { useAuthContext } from '@/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface UserProfile {
   id: string;
@@ -24,40 +25,55 @@ interface UserProfile {
 
 const UserProfileSettings = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user, profile: authProfile } = useAuthContext();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [email, setEmail] = useState('');
 
   useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    
     fetchUserProfile();
-  }, []);
+  }, [user]);
 
   const fetchUserProfile = async () => {
+    if (!user) return;
+    
     setIsLoading(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) {
-        toast({
-          title: "Authentication required",
-          description: "Please log in to view your profile",
-          variant: "destructive",
+      setEmail(user.email || '');
+
+      // Check if we already have the profile from auth context
+      if (authProfile) {
+        setProfile({
+          id: authProfile.id,
+          full_name: authProfile.full_name || '',
+          avatar_url: authProfile.avatar_url,
+          bio: authProfile.bio,
+          job_title: authProfile.job_title,
+          phone: authProfile.phone,
+          location: authProfile.location,
+          email: user.email
         });
         setIsLoading(false);
         return;
       }
 
-      setEmail(userData.user.email || '');
-
-      const { data, error } = await dbService.getUserProfile(userData.user.id);
+      // Otherwise fetch from the database
+      const { data, error } = await dbService.getUserProfile(user.id);
 
       if (error) {
         // If no profile exists, create a default one
         setProfile({
-          id: userData.user.id,
-          full_name: userData.user.user_metadata?.full_name || '',
-          avatar_url: userData.user.user_metadata?.avatar_url,
-          email: userData.user.email
+          id: user.id,
+          full_name: user.user_metadata?.full_name || '',
+          avatar_url: user.user_metadata?.avatar_url,
+          email: user.email
         });
       } else if (data) {
         // Ensure data is handled as a single object, not an array
@@ -71,7 +87,7 @@ const UserProfileSettings = () => {
           job_title: profileData.job_title,
           phone: profileData.phone,
           location: profileData.location,
-          email: userData.user.email
+          email: user.email
         });
       }
     } catch (error) {
@@ -87,21 +103,11 @@ const UserProfileSettings = () => {
   };
 
   const handleSaveProfile = async () => {
-    if (!profile) return;
+    if (!profile || !user) return;
     
     setIsSaving(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) {
-        toast({
-          title: "Authentication required",
-          description: "Please log in to update your profile",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const { error } = await dbService.updateUserProfile(userData.user.id, {
+      const { error } = await dbService.updateUserProfile(user.id, {
         full_name: profile.full_name,
         avatar_url: profile.avatar_url,
         bio: profile.bio,
@@ -116,6 +122,9 @@ const UserProfileSettings = () => {
         title: "Profile updated",
         description: "Your profile has been updated successfully",
       });
+      
+      // Reload the profile to see updates
+      fetchUserProfile();
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({

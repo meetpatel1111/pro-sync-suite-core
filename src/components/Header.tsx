@@ -14,14 +14,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuthContext } from '@/context/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useToast } from '@/hooks/use-toast';
 
 const Header = () => {
   const { user, profile, signOut } = useAuthContext();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/auth');
+    const success = await signOut();
+    if (success) {
+      navigate('/auth');
+    }
   };
 
   const getInitials = (name: string) => {
