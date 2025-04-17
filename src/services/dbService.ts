@@ -469,6 +469,11 @@ export const dbService = {
       time_entry_id: entryId
     }));
     
+    if (entries.length === 0) {
+      console.log("No time entries to add to timesheet");
+      return { data: [], error: null };
+    }
+    
     return await safeQueryTable('timesheet_entries', (query) => 
       query.insert(entries)
     );
@@ -503,7 +508,7 @@ export const dbService = {
     distractions_count?: number;
   }) {
     // Check if metrics exist for this date
-    const { data } = await safeQueryTable('productivity_metrics', (query) => 
+    const { data, error } = await safeQueryTable('productivity_metrics', (query) => 
       query
         .select('id')
         .eq('user_id', userId)
