@@ -513,15 +513,15 @@ export const dbService = {
         .select('id')
         .eq('user_id', userId)
         .eq('date', date)
-        .single()
     );
     
-    if (data && data.id) {
+    // Fix: Check if data exists and has at least one element before accessing id
+    if (data && data.length > 0 && data[0]?.id) {
       // Update existing record
       return await safeQueryTable('productivity_metrics', (query) => 
         query
           .update(metrics)
-          .eq('id', data.id)
+          .eq('id', data[0].id)
           .eq('user_id', userId)
       );
     } else {
