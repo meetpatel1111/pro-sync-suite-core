@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { IntegrationProvider } from "@/context/IntegrationContext";
 import { AuthProvider } from "@/context/AuthContext";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/context/AuthContext";
 import LoadingFallback from "@/components/ui/loading-fallback";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -37,7 +37,7 @@ const queryClient = new QueryClient({
 });
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading } = useAuthContext();
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
 
   // If auth loading takes too long, we'll show the user a way to proceed
@@ -47,7 +47,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     
     // Set a longer timeout for the initial auth check
     const timeoutId = setTimeout(() => {
-      console.log("Auth loading timed out, allowing navigation");
+      console.log("Auth loading timed out, redirecting to auth page");
       setLoadingTimedOut(true);
     }, 10000); // 10 seconds timeout
     
@@ -76,7 +76,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  // If we reach here, user is authenticated or we've decided to show content anyway
+  // If we reach here, user is authenticated
   return <>{children}</>;
 };
 
@@ -92,10 +92,13 @@ const App = () => {
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 
+                {/* Make Index route protected */}
                 <Route 
                   path="/" 
                   element={
-                    <Index />
+                    <ProtectedRoute>
+                      <Index />
+                    </ProtectedRoute>
                   } 
                 />
                 

@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { setupSampleData } from '@/utils/sampleData';
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -18,6 +20,7 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [activeTab, setActiveTab] = useState('login');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if the user is already signed in
@@ -45,15 +48,16 @@ const Auth = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  const clearError = () => {
+    if (error) setError(null);
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearError();
     
     if (!email || !password || !fullName) {
-      toast({
-        title: 'Missing information',
-        description: 'Please fill in all fields',
-        variant: 'destructive',
-      });
+      setError('Please fill in all fields');
       return;
     }
     
@@ -79,11 +83,7 @@ const Auth = () => {
         setActiveTab('login');
       }
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'An error occurred during sign up',
-        variant: 'destructive',
-      });
+      setError(error.message || 'An error occurred during sign up');
     } finally {
       setLoading(false);
     }
@@ -91,13 +91,10 @@ const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearError();
     
     if (!email || !password) {
-      toast({
-        title: 'Missing information',
-        description: 'Please fill in all fields',
-        variant: 'destructive',
-      });
+      setError('Please fill in all fields');
       return;
     }
     
@@ -109,14 +106,9 @@ const Auth = () => {
       });
 
       if (error) throw error;
-      
       // Navigation will happen in the auth state change listener after sample data setup
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Invalid login credentials',
-        variant: 'destructive',
-      });
+      setError(error.message || 'Invalid login credentials');
       setLoading(false);
     }
   };
@@ -126,12 +118,19 @@ const Auth = () => {
       <div className="w-full max-w-md p-4">
         <Card>
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold">TaskMaster & TimeTrackPro</CardTitle>
+            <CardTitle className="text-2xl font-bold">ProSync Suite</CardTitle>
             <CardDescription>
-              Login or create an account to manage your tasks and track your time
+              Login or create an account to access the complete suite of productivity tools
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
