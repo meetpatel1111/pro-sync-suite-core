@@ -25,10 +25,12 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
   const [isLoadingIntegrations, setIsLoadingIntegrations] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
+  const [checkAttempts, setCheckAttempts] = useState(0);
 
   const checkMilestones = async () => {
-    setIsLoadingIntegrations(true);
     try {
+      setIsLoadingIntegrations(true);
+      
       // Only proceed if user is authenticated
       if (!user) {
         console.log("No authenticated user found, skipping milestone check");
@@ -64,38 +66,61 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoadingIntegrations(false);
       setInitialized(true);
+      // Reset attempt counter on successful completion (whether it found data or not)
+      setCheckAttempts(0);
     }
   };
 
-  // Check for due tasks when component mounts, but only if user is authenticated
+  // Check for due tasks when component mounts or when user auth state changes
   useEffect(() => {
-    if (user && !initialized) {
-      console.log("Checking milestones on mount, user is authenticated");
-      checkMilestones();
-      
-      // Set up interval to check periodically, but only if user is authenticated
-      const intervalId = setInterval(() => {
+    const loadData = async () => {
+      // Only check if not initialized yet
+      if (!initialized) {
         if (user) {
-          console.log("Checking milestones on interval");
-          checkMilestones();
+          console.log("Checking milestones on mount, user is authenticated");
+          await checkMilestones();
+        } else if (checkAttempts < 3) {
+          // If no user but we haven't tried too many times, we'll wait and try again
+          console.log(`No user yet, will retry milestone check (attempt ${checkAttempts + 1})`);
+          setCheckAttempts(prev => prev + 1);
+          
+          // Set a timeout to retry
+          setTimeout(() => {
+            setInitialized(false); // Reset initialized to trigger useEffect again
+          }, 3000); // Wait 3 seconds before retrying
+        } else {
+          // If we've tried too many times, just give up and reset state
+          console.log("Maximum milestone check attempts reached, giving up");
+          setDueTasks([]);
+          setInitialized(true);
+          setIsLoadingIntegrations(false);
         }
-      }, 1000 * 60 * 60); // Check every hour
-      
-      return () => clearInterval(intervalId);
-    } else if (!user) {
-      // Reset state if no user
-      console.log("No user, resetting state");
-      setDueTasks([]);
-      setInitialized(true);
-      setIsLoadingIntegrations(false);
-    }
-  }, [user, initialized]);
+      }
+    };
+    
+    loadData();
+    
+    // Set up interval to check periodically
+    const intervalId = setInterval(() => {
+      if (user) {
+        console.log("Checking milestones on interval");
+        checkMilestones();
+      }
+    }, 1000 * 60 * 60); // Check every hour
+    
+    return () => clearInterval(intervalId);
+  }, [user, initialized, checkAttempts]);
 
   const refreshIntegrations = async () => {
     // Prevent multiple refreshes in quick succession
     const now = Date.now();
     if (now - lastRefreshTime < 5000) { // 5 second cooldown
       console.log("Refresh throttled, try again in a few seconds");
+      toast({
+        title: 'Please wait',
+        description: 'Refresh is on cooldown. Please try again in a few seconds.',
+        duration: 3000,
+      });
       return;
     }
     
@@ -104,6 +129,18 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
     
     if (user) {
       await checkMilestones();
+      toast({
+        title: 'Refreshed',
+        description: 'Integration data has been refreshed',
+        duration: 3000,
+      });
+    } else {
+      toast({
+        title: 'Not logged in',
+        description: 'Please log in to refresh integration data',
+        variant: 'destructive',
+        duration: 3000,
+      });
     }
   };
 

@@ -24,7 +24,7 @@ import NotFound from "./pages/NotFound";
 import ProfileSettings from "./pages/ProfileSettings";
 import UserSettings from "./pages/UserSettings";
 import Notifications from "./pages/Notifications";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,13 +40,27 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
 
+  // If auth loading takes too long, we'll show the user a way to proceed
+  useEffect(() => {
+    // If loading is already false, no need to set up timeout
+    if (!loading) return;
+    
+    // Set a longer timeout for the initial auth check
+    const timeoutId = setTimeout(() => {
+      console.log("Auth loading timed out, allowing navigation");
+      setLoadingTimedOut(true);
+    }, 10000); // 10 seconds timeout
+    
+    return () => clearTimeout(timeoutId);
+  }, [loading]);
+
   // If not loading or already timed out and no user, redirect to auth
   if ((!loading || loadingTimedOut) && !user) {
     console.log("No authenticated user, redirecting to /auth");
     return <Navigate to="/auth" replace />;
   }
 
-  // Show loading state
+  // Show loading state only if we're still loading and haven't timed out
   if (loading && !loadingTimedOut) {
     return (
       <div className="h-screen w-full flex items-center justify-center">
@@ -62,7 +76,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  // If we reach here, user is authenticated
+  // If we reach here, user is authenticated or we've decided to show content anyway
   return <>{children}</>;
 };
 

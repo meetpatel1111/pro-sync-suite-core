@@ -9,9 +9,11 @@ import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuthContext } from '@/context/AuthContext';
 
 const IntegrationNotifications = () => {
   const { dueTasks, isLoadingIntegrations, refreshIntegrations } = useIntegration();
+  const { user } = useAuthContext();
   const [isOpen, setIsOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [processingTasks, setProcessingTasks] = useState<string[]>([]);
@@ -64,16 +66,21 @@ const IntegrationNotifications = () => {
     setIsRefreshing(true);
     try {
       await refreshIntegrations();
-      toast({
-        title: 'Refreshed',
-        description: 'Notifications have been refreshed',
-      });
     } catch (error) {
       console.error('Error refreshing notifications:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to refresh notifications',
+        variant: 'destructive',
+      });
     } finally {
       setIsRefreshing(false);
     }
   };
+
+  if (!user) {
+    return null; // Don't show the component at all if user is not logged in
+  }
   
   if (isLoadingIntegrations) {
     return (
