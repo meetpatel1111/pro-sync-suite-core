@@ -9,6 +9,66 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      billing_rates: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          currency: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          is_default: boolean | null
+          project_id: string | null
+          rate_amount: number
+          rate_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          currency?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          is_default?: boolean | null
+          project_id?: string | null
+          rate_amount: number
+          rate_type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          currency?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          is_default?: boolean | null
+          project_id?: string | null
+          rate_amount?: number
+          rate_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_rates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_rates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_notes: {
         Row: {
           client_id: string
@@ -230,6 +290,45 @@ export type Database = {
         }
         Relationships: []
       }
+      productivity_metrics: {
+        Row: {
+          billable_percentage: number | null
+          break_time_minutes: number | null
+          created_at: string
+          date: string
+          distractions_count: number | null
+          efficiency_score: number | null
+          focus_time_minutes: number | null
+          id: string
+          total_hours: number
+          user_id: string
+        }
+        Insert: {
+          billable_percentage?: number | null
+          break_time_minutes?: number | null
+          created_at?: string
+          date: string
+          distractions_count?: number | null
+          efficiency_score?: number | null
+          focus_time_minutes?: number | null
+          id?: string
+          total_hours?: number
+          user_id: string
+        }
+        Update: {
+          billable_percentage?: number | null
+          break_time_minutes?: number | null
+          created_at?: string
+          date?: string
+          distractions_count?: number | null
+          efficiency_score?: number | null
+          focus_time_minutes?: number | null
+          id?: string
+          total_hours?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -352,30 +451,147 @@ export type Database = {
       }
       time_entries: {
         Row: {
+          billable: boolean | null
           date: string
           description: string
+          hourly_rate: number | null
           id: string
           manual: boolean
+          notes: string | null
           project: string
+          project_id: string | null
+          tags: string[] | null
+          task_id: string | null
           time_spent: number
           user_id: string
         }
         Insert: {
+          billable?: boolean | null
           date?: string
           description: string
+          hourly_rate?: number | null
           id?: string
           manual?: boolean
+          notes?: string | null
           project: string
+          project_id?: string | null
+          tags?: string[] | null
+          task_id?: string | null
           time_spent: number
           user_id: string
         }
         Update: {
+          billable?: boolean | null
           date?: string
           description?: string
+          hourly_rate?: number | null
           id?: string
           manual?: boolean
+          notes?: string | null
           project?: string
+          project_id?: string | null
+          tags?: string[] | null
+          task_id?: string | null
           time_spent?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timesheet_entries: {
+        Row: {
+          created_at: string
+          id: string
+          time_entry_id: string
+          timesheet_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          time_entry_id: string
+          timesheet_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          time_entry_id?: string
+          timesheet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheet_entries_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_entries_timesheet_id_fkey"
+            columns: ["timesheet_id"]
+            isOneToOne: false
+            referencedRelation: "timesheets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timesheets: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          billable_hours: number
+          created_at: string
+          end_date: string
+          id: string
+          non_billable_hours: number
+          notes: string | null
+          start_date: string
+          status: string
+          submitted_at: string | null
+          total_hours: number
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          billable_hours?: number
+          created_at?: string
+          end_date: string
+          id?: string
+          non_billable_hours?: number
+          notes?: string | null
+          start_date: string
+          status?: string
+          submitted_at?: string | null
+          total_hours?: number
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          billable_hours?: number
+          created_at?: string
+          end_date?: string
+          id?: string
+          non_billable_hours?: number
+          notes?: string | null
+          start_date?: string
+          status?: string
+          submitted_at?: string | null
+          total_hours?: number
           user_id?: string
         }
         Relationships: []
@@ -492,6 +708,60 @@ export type Database = {
             columns: ["dashboard_id"]
             isOneToOne: false
             referencedRelation: "dashboards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_sessions: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_seconds: number | null
+          end_time: string | null
+          id: string
+          is_active: boolean | null
+          project_id: string | null
+          start_time: string
+          task_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          end_time?: string | null
+          id?: string
+          is_active?: boolean | null
+          project_id?: string | null
+          start_time: string
+          task_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          end_time?: string | null
+          id?: string
+          is_active?: boolean | null
+          project_id?: string | null
+          start_time?: string
+          task_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_sessions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_sessions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]

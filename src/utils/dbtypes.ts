@@ -39,10 +39,80 @@ export interface TimeEntry {
   id: string;
   description: string;
   project: string;
+  project_id?: string;
+  task_id?: string;
   time_spent: number;
   date: string;
   user_id: string;
   manual?: boolean;
+  billable?: boolean;
+  hourly_rate?: number;
+  tags?: string[];
+  notes?: string;
+}
+
+export interface WorkSession {
+  id: string;
+  user_id: string;
+  project_id?: string;
+  task_id?: string;
+  start_time: string;
+  end_time?: string;
+  duration_seconds?: number;
+  is_active: boolean;
+  description?: string;
+  created_at: string;
+}
+
+export interface Timesheet {
+  id: string;
+  user_id: string;
+  start_date: string;
+  end_date: string;
+  status: 'draft' | 'submitted' | 'approved' | 'rejected';
+  total_hours: number;
+  billable_hours: number;
+  non_billable_hours: number;
+  submitted_at?: string;
+  approved_at?: string;
+  approved_by?: string;
+  notes?: string;
+  created_at: string;
+}
+
+export interface TimesheetEntry {
+  id: string;
+  timesheet_id: string;
+  time_entry_id: string;
+  created_at: string;
+}
+
+export interface BillingRate {
+  id: string;
+  user_id: string;
+  project_id?: string;
+  client_id?: string;
+  rate_amount: number;
+  rate_type: string;
+  currency: string;
+  effective_from: string;
+  effective_to?: string;
+  is_default?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductivityMetric {
+  id: string;
+  user_id: string;
+  date: string;
+  total_hours: number;
+  billable_percentage?: number;
+  efficiency_score?: number;
+  focus_time_minutes?: number;
+  break_time_minutes?: number;
+  distractions_count?: number;
+  created_at: string;
 }
 
 export interface Client {

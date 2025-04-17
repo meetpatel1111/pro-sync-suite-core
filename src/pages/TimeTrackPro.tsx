@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { ClockIcon, Play, Pause, Save, Plus, Trash2, BarChart2, Clock, Calendar } from 'lucide-react';
+import { ClockIcon, Play, Pause, Save, Plus, Trash2, BarChart2, Clock, Calendar, FileText } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import TimeTrackingForm from '@/components/timetrackpro/TimeTrackingForm';
 import TimeEntriesList from '@/components/timetrackpro/TimeEntriesList';
 import ProductivityDashboard from '@/components/timetrackpro/ProductivityDashboard';
 import ReportingTab from '@/components/timetrackpro/ReportingTab';
+import TimesheetTab from '@/components/timetrackpro/TimesheetTab';
 
 const TimeTrackPro = () => {
   const { toast } = useToast();
@@ -29,7 +30,7 @@ const TimeTrackPro = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <TabsList className="grid grid-cols-2 md:grid-cols-5 gap-2">
             <TabsTrigger value="track" className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
               <span>Time Tracking</span>
@@ -37,6 +38,10 @@ const TimeTrackPro = () => {
             <TabsTrigger value="entries" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               <span>Entries</span>
+            </TabsTrigger>
+            <TabsTrigger value="timesheets" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              <span>Timesheets</span>
             </TabsTrigger>
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <BarChart2 className="h-4 w-4" />
@@ -54,6 +59,10 @@ const TimeTrackPro = () => {
 
           <TabsContent value="entries" className="space-y-4">
             <TimeEntriesList />
+          </TabsContent>
+
+          <TabsContent value="timesheets" className="space-y-4">
+            <TimesheetTab />
           </TabsContent>
 
           <TabsContent value="dashboard" className="space-y-4">

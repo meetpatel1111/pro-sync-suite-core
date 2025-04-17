@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Save, Plus } from 'lucide-react';
+import { Play, Pause, Save, Plus, Loader2, StopCircle } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,15 +8,19 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
+import { dbService } from '@/services/dbService';
+import { WorkSession } from '@/utils/dbtypes';
 
-interface TimeEntry {
+interface Project {
   id: string;
-  description: string;
-  project: string;
-  timeSpent: number; // in seconds
-  date: string;
-  manual: boolean;
-  user_id?: string;
+  name: string;
+}
+
+interface Task {
+  id: string;
+  title: string;
 }
 
 const TimeTrackingForm = () => {
@@ -24,19 +28,23 @@ const TimeTrackingForm = () => {
   const [isTracking, setIsTracking] = useState(false);
   const [description, setDescription] = useState('');
   const [project, setProject] = useState('');
+  const [projectId, setProjectId] = useState('');
+  const [taskId, setTaskId] = useState('');
   const [timeSpent, setTimeSpent] = useState(0);
   const [manualHours, setManualHours] = useState(0);
   const [manualMinutes, setManualMinutes] = useState(0);
   const [session, setSession] = useState<any>(null);
+  const [activeSession, setActiveSession] = useState<WorkSession | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isBillable, setIsBillable] = useState(true);
+  const [notes, setNotes] = useState('');
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const [isLoadingTasks, setIsLoadingTasks] = useState(false);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [tags, setTags] = useState('');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
-
-  const projects = [
-    { id: 'project1', name: 'Website Redesign' },
-    { id: 'project2', name: 'Mobile App Development' },
-    { id: 'project3', name: 'Marketing Campaign' },
-    { id: 'project4', name: 'Database Migration' },
-  ];
 
   // Check for authentication
   useEffect(() => {
@@ -51,15 +59,137 @@ const TimeTrackingForm = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Load projects when session is available
   useEffect(() => {
+    const loadProjects = async () => {
+      if (!session) return;
+      
+      setIsLoadingProjects(true);
+      try {
+        const { data, error } = await dbService.getProjects(session.user.id);
+        if (error) throw error;
+        
+        if (data) {
+          setProjects(data as Project[]);
+        }
+      } catch (error) {
+        console.error("Error loading projects:", error);
+        toast({
+          title: "Error loading projects",
+          description: "There was an error loading your projects",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoadingProjects(false);
+      }
+    };
+    
+    loadProjects();
+  }, [session, toast]);
+
+  // Load tasks when project is selected
+  useEffect(() => {
+    const loadTasks = async () => {
+      if (!session || !projectId) {
+        setTasks([]);
+        return;
+      }
+      
+      setIsLoadingTasks(true);
+      try {
+        const { data, error } = await dbService.getTasks(session.user.id, {
+          project: projectId
+        });
+        
+        if (error) throw error;
+        
+        if (data) {
+          setTasks(data as Task[]);
+        }
+      } catch (error) {
+        console.error("Error loading tasks:", error);
+        toast({
+          title: "Error loading tasks",
+          description: "There was an error loading tasks for this project",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoadingTasks(false);
+      }
+    };
+    
+    loadTasks();
+  }, [session, projectId, toast]);
+
+  // Check for active work sessions on load
+  useEffect(() => {
+    const checkActiveSessions = async () => {
+      if (!session) return;
+      
+      setIsLoadingSessions(true);
+      try {
+        const { data, error } = await dbService.getWorkSessions(session.user.id, {
+          active_only: true
+        });
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          const session = data[0] as WorkSession;
+          setActiveSession(session);
+          
+          // Set form values based on active session
+          setDescription(session.description || '');
+          
+          // Find project
+          if (session.project_id) {
+            setProjectId(session.project_id);
+            const project = projects.find(p => p.id === session.project_id);
+            if (project) {
+              setProject(project.name);
+            }
+          }
+          
+          // Set task
+          if (session.task_id) {
+            setTaskId(session.task_id);
+          }
+          
+          // Calculate elapsed time
+          const startTime = new Date(session.start_time).getTime();
+          const elapsed = Math.floor((Date.now() - startTime) / 1000);
+          setTimeSpent(elapsed);
+          
+          // Start timer
+          startTimeRef.current = Date.now() - (elapsed * 1000);
+          setIsTracking(true);
+          
+          timerRef.current = setInterval(() => {
+            if (startTimeRef.current) {
+              const elapsedSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
+              setTimeSpent(elapsedSeconds);
+            }
+          }, 1000);
+        }
+      } catch (error) {
+        console.error("Error checking active sessions:", error);
+      } finally {
+        setIsLoadingSessions(false);
+      }
+    };
+    
+    checkActiveSessions();
+    
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
     };
-  }, []);
+  }, [session, projects, toast]);
 
-  const startTimer = () => {
+  const startTimer = async () => {
+    if (!session) return;
+    
     if (!description) {
       toast({
         title: "Description needed",
@@ -69,7 +199,7 @@ const TimeTrackingForm = () => {
       return;
     }
 
-    if (!project) {
+    if (!projectId) {
       toast({
         title: "Project selection needed",
         description: "Please select a project for your time entry",
@@ -78,32 +208,125 @@ const TimeTrackingForm = () => {
       return;
     }
 
-    setIsTracking(true);
-    startTimeRef.current = Date.now() - (timeSpent * 1000);
-    
-    timerRef.current = setInterval(() => {
-      if (startTimeRef.current) {
-        const elapsedSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        setTimeSpent(elapsedSeconds);
+    try {
+      const startTime = new Date().toISOString();
+      
+      // Create work session in database
+      const { data, error } = await dbService.startWorkSession({
+        user_id: session.user.id,
+        project_id: projectId,
+        task_id: taskId || undefined,
+        description,
+        start_time: startTime
+      });
+      
+      if (error) throw error;
+      
+      if (data && data[0]) {
+        setActiveSession(data[0] as WorkSession);
       }
-    }, 1000);
+      
+      // Start local timer
+      setIsTracking(true);
+      startTimeRef.current = Date.now();
+      setTimeSpent(0);
+      
+      timerRef.current = setInterval(() => {
+        if (startTimeRef.current) {
+          const elapsedSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
+          setTimeSpent(elapsedSeconds);
+        }
+      }, 1000);
+      
+      toast({
+        title: "Timer started",
+        description: `Tracking time for: ${description}`
+      });
+    } catch (error) {
+      console.error("Error starting timer:", error);
+      toast({
+        title: "Error starting timer",
+        description: "There was an error starting your timer",
+        variant: "destructive"
+      });
+    }
   };
 
-  const pauseTimer = () => {
+  const pauseTimer = async () => {
+    if (!session || !activeSession) return;
+    
+    try {
+      // Stop timer interval
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      
+      const endTime = new Date().toISOString();
+      
+      // Calculate duration
+      const duration = timeSpent;
+      
+      // End work session in database
+      await dbService.endWorkSession(
+        activeSession.id,
+        session.user.id,
+        endTime,
+        duration
+      );
+      
+      // Create time entry from session
+      await dbService.createTimeEntry({
+        description,
+        project: project,
+        project_id: projectId,
+        task_id: taskId || undefined,
+        time_spent: duration,
+        date: new Date().toISOString(),
+        user_id: session.user.id,
+        manual: false,
+        billable: isBillable,
+        notes: notes || undefined,
+        tags: tags ? tags.split(',').map(tag => tag.trim()) : undefined
+      });
+      
+      // Reset state
+      setIsTracking(false);
+      setActiveSession(null);
+      resetTimer();
+      setDescription('');
+      setProject('');
+      setProjectId('');
+      setTaskId('');
+      setNotes('');
+      setTags('');
+      
+      toast({
+        title: "Timer stopped",
+        description: `Saved ${formatTime(duration)} for ${description}`,
+      });
+    } catch (error) {
+      console.error("Error stopping timer:", error);
+      toast({
+        title: "Error stopping timer",
+        description: "There was an error stopping your timer, but your time has been tracked",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const resetTimer = () => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    setIsTracking(false);
-  };
-
-  const resetTimer = () => {
-    pauseTimer();
     setTimeSpent(0);
     startTimeRef.current = null;
   };
 
-  const saveTimeEntry = async (manual = false) => {
+  const saveManualEntry = async () => {
+    if (!session) return;
+    
     if (!description) {
       toast({
         title: "Description needed",
@@ -113,7 +336,7 @@ const TimeTrackingForm = () => {
       return;
     }
 
-    if (!project) {
+    if (!projectId) {
       toast({
         title: "Project selection needed",
         description: "Please select a project for your time entry",
@@ -122,78 +345,55 @@ const TimeTrackingForm = () => {
       return;
     }
 
-    let entryTimeSpent = timeSpent;
-    
-    if (manual) {
-      entryTimeSpent = (manualHours * 3600) + (manualMinutes * 60);
-      if (entryTimeSpent <= 0) {
-        toast({
-          title: "Invalid time",
-          description: "Please enter a valid time duration",
-          variant: "destructive"
-        });
-        return;
-      }
-    } else if (timeSpent <= 0) {
+    const entryTimeSpent = (manualHours * 3600) + (manualMinutes * 60);
+    if (entryTimeSpent <= 0) {
       toast({
-        title: "No time recorded",
-        description: "Please track some time before saving",
+        title: "Invalid time",
+        description: "Please enter a valid time duration",
         variant: "destructive"
       });
       return;
     }
 
-    const newEntry: TimeEntry = {
-      id: Date.now().toString(),
-      description,
-      project,
-      timeSpent: entryTimeSpent,
-      date: new Date().toISOString(),
-      manual
-    };
-    
-    if (session) {
-      try {
-        const { error } = await supabase
-          .from('time_entries')
-          .insert({
-            description: newEntry.description,
-            project: newEntry.project,
-            time_spent: newEntry.timeSpent,
-            date: newEntry.date,
-            manual: newEntry.manual,
-            user_id: session.user.id
-          });
-        
-        if (error) throw error;
-      } catch (error) {
-        console.error("Error saving time entry:", error);
-        toast({
-          title: "Error saving entry",
-          description: "There was an error saving your time entry",
-          variant: "destructive"
-        });
-      }
-    }
-    
-    // Also save to local storage as fallback
-    const existingEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
-    localStorage.setItem('timeEntries', JSON.stringify([...existingEntries, newEntry]));
-    
-    toast({
-      title: "Time entry saved",
-      description: `Saved ${formatTime(entryTimeSpent)} for ${description}`,
-    });
-    
-    // Reset form if it was a timer entry (not manual)
-    if (!manual) {
-      resetTimer();
+    try {
+      // Create time entry
+      await dbService.createTimeEntry({
+        description,
+        project: project,
+        project_id: projectId,
+        task_id: taskId || undefined,
+        time_spent: entryTimeSpent,
+        date: new Date().toISOString(),
+        user_id: session.user.id,
+        manual: true,
+        billable: isBillable,
+        notes: notes || undefined,
+        tags: tags ? tags.split(',').map(tag => tag.trim()) : undefined
+      });
+      
+      toast({
+        title: "Time entry saved",
+        description: `Saved ${formatTime(entryTimeSpent)} for ${description}`,
+      });
+      
+      // Reset manual fields
+      setManualHours(0);
+      setManualMinutes(0);
       setDescription('');
+      setProject('');
+      setProjectId('');
+      setTaskId('');
+      setNotes('');
+      setTags('');
+      setIsBillable(true);
+    } catch (error) {
+      console.error("Error saving manual entry:", error);
+      toast({
+        title: "Error saving entry",
+        description: "There was an error saving your time entry",
+        variant: "destructive"
+      });
     }
-
-    // Reset manual fields
-    setManualHours(0);
-    setManualMinutes(0);
   };
 
   const formatTime = (seconds: number) => {
@@ -238,23 +438,82 @@ const TimeTrackingForm = () => {
                 placeholder="What are you working on?"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
+                disabled={isTracking}
               />
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="project">Project</Label>
-              <Select value={project} onValueChange={setProject}>
+              <Select 
+                value={projectId} 
+                onValueChange={(value) => {
+                  setProjectId(value);
+                  const selectedProject = projects.find(p => p.id === value);
+                  if (selectedProject) {
+                    setProject(selectedProject.name);
+                  }
+                }}
+                disabled={isTracking || isLoadingProjects}
+              >
                 <SelectTrigger id="project">
                   <SelectValue placeholder="Select a project" />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
+                  {isLoadingProjects ? (
+                    <div className="flex items-center justify-center p-2">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span>Loading projects...</span>
+                    </div>
+                  ) : (
+                    projects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="task">Task (Optional)</Label>
+              <Select 
+                value={taskId} 
+                onValueChange={setTaskId}
+                disabled={isTracking || !projectId || isLoadingTasks}
+              >
+                <SelectTrigger id="task">
+                  <SelectValue placeholder="Select a task" />
+                </SelectTrigger>
+                <SelectContent>
+                  {isLoadingTasks ? (
+                    <div className="flex items-center justify-center p-2">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span>Loading tasks...</span>
+                    </div>
+                  ) : tasks.length > 0 ? (
+                    tasks.map((task) => (
+                      <SelectItem key={task.id} value={task.id}>
+                        {task.title}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="p-2 text-sm text-center text-muted-foreground">
+                      No tasks found for this project
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="billable" 
+                checked={isBillable} 
+                onCheckedChange={(checked) => setIsBillable(checked as boolean)}
+                disabled={isTracking}
+              />
+              <Label htmlFor="billable">Billable time</Label>
             </div>
             
             <div className="text-center py-4">
@@ -264,23 +523,22 @@ const TimeTrackingForm = () => {
         </CardContent>
         <CardFooter className="flex justify-between">
           {!isTracking ? (
-            <Button onClick={startTimer} className="w-full">
-              <Play className="mr-2 h-4 w-4" /> Start
+            <Button 
+              onClick={startTimer} 
+              className="w-full"
+              disabled={isLoadingSessions}
+            >
+              <Play className="mr-2 h-4 w-4" /> Start Timer
             </Button>
           ) : (
-            <Button onClick={pauseTimer} variant="secondary" className="w-full">
-              <Pause className="mr-2 h-4 w-4" /> Pause
+            <Button 
+              onClick={pauseTimer} 
+              variant="destructive" 
+              className="w-full"
+            >
+              <StopCircle className="mr-2 h-4 w-4" /> Stop Timer
             </Button>
           )}
-          
-          <Button 
-            onClick={() => saveTimeEntry(false)} 
-            variant="outline" 
-            className="w-full ml-2" 
-            disabled={timeSpent === 0}
-          >
-            <Save className="mr-2 h-4 w-4" /> Save
-          </Button>
         </CardFooter>
       </Card>
       
@@ -302,16 +560,63 @@ const TimeTrackingForm = () => {
             
             <div className="space-y-2">
               <Label htmlFor="manual-project">Project</Label>
-              <Select value={project} onValueChange={setProject}>
+              <Select 
+                value={projectId} 
+                onValueChange={(value) => {
+                  setProjectId(value);
+                  const selectedProject = projects.find(p => p.id === value);
+                  if (selectedProject) {
+                    setProject(selectedProject.name);
+                  }
+                }}
+              >
                 <SelectTrigger id="manual-project">
                   <SelectValue placeholder="Select a project" />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
+                  {isLoadingProjects ? (
+                    <div className="flex items-center justify-center p-2">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span>Loading projects...</span>
+                    </div>
+                  ) : (
+                    projects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="manual-task">Task (Optional)</Label>
+              <Select 
+                value={taskId} 
+                onValueChange={setTaskId}
+                disabled={!projectId || isLoadingTasks}
+              >
+                <SelectTrigger id="manual-task">
+                  <SelectValue placeholder="Select a task" />
+                </SelectTrigger>
+                <SelectContent>
+                  {isLoadingTasks ? (
+                    <div className="flex items-center justify-center p-2">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span>Loading tasks...</span>
+                    </div>
+                  ) : tasks.length > 0 ? (
+                    tasks.map((task) => (
+                      <SelectItem key={task.id} value={task.id}>
+                        {task.title}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="p-2 text-sm text-center text-muted-foreground">
+                      No tasks found for this project
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -339,10 +644,40 @@ const TimeTrackingForm = () => {
                 />
               </div>
             </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="tags">Tags (comma separated)</Label>
+              <Input
+                id="tags"
+                placeholder="design, meeting, coding"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes (Optional)</Label>
+              <Textarea
+                id="notes"
+                placeholder="Additional notes..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="manual-billable" 
+                checked={isBillable} 
+                onCheckedChange={(checked) => setIsBillable(checked as boolean)}
+              />
+              <Label htmlFor="manual-billable">Billable time</Label>
+            </div>
           </div>
         </CardContent>
         <CardFooter>
-          <Button onClick={() => saveTimeEntry(true)} className="w-full">
+          <Button onClick={saveManualEntry} className="w-full">
             <Plus className="mr-2 h-4 w-4" /> Add Entry
           </Button>
         </CardFooter>

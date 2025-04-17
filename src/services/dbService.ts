@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { checkTableExists, safeQueryTable } from '@/utils/db-helpers';
@@ -292,19 +291,29 @@ export const dbService = {
     );
   },
   
-  // Get time entries
+  // Get time entries with enhanced filters
   async getTimeEntries(userId: string, filters?: {
-    project?: string;
+    project_id?: string;
+    task_id?: string;
     startDate?: string;
     endDate?: string;
+    billable?: boolean;
   }) {
     return await safeQueryTable('time_entries', (query) => {
       let filteredQuery = query
         .select('*')
         .eq('user_id', userId);
         
-      if (filters?.project) {
-        filteredQuery = filteredQuery.eq('project', filters.project);
+      if (filters?.project_id) {
+        filteredQuery = filteredQuery.eq('project_id', filters.project_id);
+      }
+      
+      if (filters?.task_id) {
+        filteredQuery = filteredQuery.eq('task_id', filters.task_id);
+      }
+      
+      if (filters?.billable !== undefined) {
+        filteredQuery = filteredQuery.eq('billable', filters.billable);
       }
       
       if (filters?.startDate) {
@@ -317,5 +326,252 @@ export const dbService = {
       
       return filteredQuery.order('date', { ascending: false });
     });
+  },
+
+  // Create time entry with enhanced fields
+  async createTimeEntry(entryData: {
+    description: string;
+    project: string;
+    project_id?: string;
+    task_id?: string;
+    time_spent: number;
+    date: string;
+    user_id: string;
+    manual?: boolean;
+    billable?: boolean;
+    hourly_rate?: number;
+    tags?: string[];
+    notes?: string;
+  }) {
+    return await safeQueryTable('time_entries', (query) => 
+      query.insert(entryData)
+    );
+  },
+
+  // Get work sessions
+  async getWorkSessions(userId: string, filters?: {
+    active_only?: boolean;
+    project_id?: string;
+    task_id?: string;
+  }) {
+    return await safeQueryTable('work_sessions', (query) => {
+      let filteredQuery = query
+        .select('*')
+        .eq('user_id', userId);
+        
+      if (filters?.active_only) {
+        filteredQuery = filteredQuery.eq('is_active', true);
+      }
+      
+      if (filters?.project_id) {
+        filteredQuery = filteredQuery.eq('project_id', filters.project_id);
+      }
+      
+      if (filters?.task_id) {
+        filteredQuery = filteredQuery.eq('task_id', filters.task_id);
+      }
+      
+      return filteredQuery.order('start_time', { ascending: false });
+    });
+  },
+
+  // Start a work session
+  async startWorkSession(sessionData: {
+    user_id: string;
+    project_id?: string;
+    task_id?: string;
+    description?: string;
+    start_time: string;
+  }) {
+    return await safeQueryTable('work_sessions', (query) => 
+      query.insert({
+        ...sessionData,
+        is_active: true
+      })
+    );
+  },
+
+  // End a work session
+  async endWorkSession(sessionId: string, userId: string, endTime: string, durationSeconds: number) {
+    return await safeQueryTable('work_sessions', (query) => 
+      query
+        .update({
+          end_time: endTime,
+          duration_seconds: durationSeconds,
+          is_active: false
+        })
+        .eq('id', sessionId)
+        .eq('user_id', userId)
+    );
+  },
+
+  // Get timesheets
+  async getTimesheets(userId: string, filters?: {
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+  }) {
+    return await safeQueryTable('timesheets', (query) => {
+      let filteredQuery = query
+        .select('*')
+        .eq('user_id', userId);
+        
+      if (filters?.status) {
+        filteredQuery = filteredQuery.eq('status', filters.status);
+      }
+      
+      if (filters?.startDate) {
+        filteredQuery = filteredQuery.gte('start_date', filters.startDate);
+      }
+      
+      if (filters?.endDate) {
+        filteredQuery = filteredQuery.lte('end_date', filters.endDate);
+      }
+      
+      return filteredQuery.order('start_date', { ascending: false });
+    });
+  },
+
+  // Create timesheet
+  async createTimesheet(timesheetData: {
+    user_id: string;
+    start_date: string;
+    end_date: string;
+    status?: string;
+    notes?: string;
+  }) {
+    return await safeQueryTable('timesheets', (query) => 
+      query.insert(timesheetData)
+    );
+  },
+
+  // Update timesheet
+  async updateTimesheet(timesheetId: string, userId: string, updates: {
+    status?: string;
+    total_hours?: number;
+    billable_hours?: number;
+    non_billable_hours?: number;
+    notes?: string;
+    submitted_at?: string;
+  }) {
+    return await safeQueryTable('timesheets', (query) => 
+      query
+        .update(updates)
+        .eq('id', timesheetId)
+        .eq('user_id', userId)
+    );
+  },
+
+  // Add entries to timesheet
+  async addTimeEntriesToTimesheet(timesheetId: string, timeEntryIds: string[]) {
+    const entries = timeEntryIds.map(entryId => ({
+      timesheet_id: timesheetId,
+      time_entry_id: entryId
+    }));
+    
+    return await safeQueryTable('timesheet_entries', (query) => 
+      query.insert(entries)
+    );
+  },
+
+  // Get productivity metrics
+  async getProductivityMetrics(userId: string, startDate?: string, endDate?: string) {
+    return await safeQueryTable('productivity_metrics', (query) => {
+      let filteredQuery = query
+        .select('*')
+        .eq('user_id', userId);
+        
+      if (startDate) {
+        filteredQuery = filteredQuery.gte('date', startDate);
+      }
+      
+      if (endDate) {
+        filteredQuery = filteredQuery.lte('date', endDate);
+      }
+      
+      return filteredQuery.order('date', { ascending: false });
+    });
+  },
+
+  // Update or insert productivity metrics for a day
+  async upsertProductivityMetrics(userId: string, date: string, metrics: {
+    total_hours: number;
+    billable_percentage?: number;
+    efficiency_score?: number;
+    focus_time_minutes?: number;
+    break_time_minutes?: number;
+    distractions_count?: number;
+  }) {
+    // Check if metrics exist for this date
+    const { data } = await safeQueryTable('productivity_metrics', (query) => 
+      query
+        .select('id')
+        .eq('user_id', userId)
+        .eq('date', date)
+        .single()
+    );
+    
+    if (data && data.id) {
+      // Update existing record
+      return await safeQueryTable('productivity_metrics', (query) => 
+        query
+          .update(metrics)
+          .eq('id', data.id)
+          .eq('user_id', userId)
+      );
+    } else {
+      // Insert new record
+      return await safeQueryTable('productivity_metrics', (query) => 
+        query.insert({
+          user_id: userId,
+          date,
+          ...metrics
+        })
+      );
+    }
+  },
+
+  // Get billing rates
+  async getBillingRates(userId: string, filters?: {
+    project_id?: string;
+    client_id?: string;
+    is_default?: boolean;
+  }) {
+    return await safeQueryTable('billing_rates', (query) => {
+      let filteredQuery = query
+        .select('*')
+        .eq('user_id', userId);
+        
+      if (filters?.project_id) {
+        filteredQuery = filteredQuery.eq('project_id', filters.project_id);
+      }
+      
+      if (filters?.client_id) {
+        filteredQuery = filteredQuery.eq('client_id', filters.client_id);
+      }
+      
+      if (filters?.is_default !== undefined) {
+        filteredQuery = filteredQuery.eq('is_default', filters.is_default);
+      }
+      
+      return filteredQuery.order('created_at', { ascending: false });
+    });
+  },
+
+  // Create billing rate
+  async createBillingRate(rateData: {
+    user_id: string;
+    project_id?: string;
+    client_id?: string;
+    rate_amount: number;
+    rate_type?: string;
+    currency?: string;
+    effective_from?: string;
+    effective_to?: string;
+    is_default?: boolean;
+  }) {
+    return await safeQueryTable('billing_rates', (query) => 
+      query.insert(rateData)
+    );
   }
 };
