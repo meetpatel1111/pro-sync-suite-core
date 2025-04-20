@@ -20,6 +20,13 @@ import GanttChart from '@/components/GanttChart';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import {
+  getResourceAllocations,
+  createResourceAllocation,
+  updateResourceAllocation,
+  deleteResourceAllocation,
+  ResourceAllocation as ResourceAllocationType
+} from '@/services/resourceAllocations';
 
 interface Project {
   id: string;
@@ -122,15 +129,65 @@ const PlanBoard = () => {
     }
   };
 
-  const fetchResourceAllocations = async () => {
-    // In a real app, this would fetch from a resource_allocations table
-    // For now, using placeholder data
-    setResources([
-      { team: 'Design Team', allocation: 80 },
-      { team: 'Development', allocation: 95 },
-      { team: 'QA Team', allocation: 50 }
-    ]);
-  };
+
+const fetchResourceAllocations = async () => {
+  setIsLoading(true);
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return;
+    const data = await getResourceAllocations(userData.user.id);
+    setResources(data || []);
+  } catch (error) {
+    console.error('Error fetching resource allocations:', error);
+    setResources([]);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+// Add Resource Allocation
+const handleAddResource = async (team: string, allocation: number) => {
+  setIsLoading(true);
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return;
+    const newResource = await createResourceAllocation({ team, allocation }, userData.user.id);
+    setResources(prev => [...prev, newResource]);
+  } catch (error) {
+    console.error('Error adding resource allocation:', error);
+    toast({ title: 'Failed to add resource', variant: 'destructive' });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+// Edit Resource Allocation
+const handleEditResource = async (id: string, updates: Partial<ResourceAllocationType>) => {
+  setIsLoading(true);
+  try {
+    const updated = await updateResourceAllocation(id, updates);
+    setResources(prev => prev.map(r => (r.id === id ? updated : r)));
+  } catch (error) {
+    console.error('Error updating resource allocation:', error);
+    toast({ title: 'Failed to update resource', variant: 'destructive' });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+// Delete Resource Allocation
+const handleDeleteResource = async (id: string) => {
+  setIsLoading(true);
+  try {
+    await deleteResourceAllocation(id);
+    setResources(prev => prev.filter(r => r.id !== id));
+  } catch (error) {
+    console.error('Error deleting resource allocation:', error);
+    toast({ title: 'Failed to delete resource', variant: 'destructive' });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleCreateProject = async () => {
     try {
@@ -406,29 +463,115 @@ const PlanBoard = () => {
         
         <Card className="p-4">
           <h3 className="font-medium mb-2">Resource Allocation</h3>
+          <form
+            className="flex gap-2 mb-4"
+            onSubmit={async e => {
+              e.preventDefault();
+              const form = e.target as HTMLFormElement;
+              const team = (form.elements.namedItem('team') as HTMLInputElement)?.value.trim();
+              const allocation = Number((form.elements.namedItem('allocation') as HTMLInputElement)?.value);
+              if (!team || isNaN(allocation)) return;
+              await handleAddResource(team, allocation);
+              form.reset();
+            }}
+          >
+            <input
+              name="team"
+              placeholder="Team name"
+              className="border rounded px-2 py-1 text-sm"
+              required
+            />
+            <input
+              name="allocation"
+              type="number"
+              min={0}
+              max={100}
+              placeholder="%"
+              className="border rounded px-2 py-1 text-sm w-16"
+              required
+            />
+            <Button type="submit" size="sm">Add</Button>
+          </form>
           <div className="space-y-3">
-            {resources.map((resource, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">{resource.team}</p>
-                  <p className="text-sm text-muted-foreground">{resource.allocation}% allocated</p>
-                </div>
-                <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full ${
-                      resource.allocation > 90 ? "bg-amber-600" : 
-                      resource.allocation > 70 ? "bg-emerald-600" : "bg-blue-600"
-                    }`} 
-                    style={{ width: `${resource.allocation}%` }}
-                  ></div>
-                </div>
-              </div>
-            ))}
+            {isLoading ? (
+              <div className="text-center py-4">Loading resources...</div>
+            ) : resources.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">No resource allocations yet</div>
+            ) : (
+              resources.map((resource, index) => (
+                <ResourceRow
+                  key={resource.id || index}
+                  resource={resource}
+                  onEdit={handleEditResource}
+                  onDelete={handleDeleteResource}
+                />
+              ))
+            )}
           </div>
         </Card>
       </div>
     </AppLayout>
   );
 };
+
+function ResourceRow({ resource, onEdit, onDelete }: {
+  resource: ResourceAllocation & { id?: string };
+  onEdit: (id: string, updates: Partial<ResourceAllocation>) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [editMode, setEditMode] = React.useState(false);
+  const [team, setTeam] = React.useState(resource.team);
+  const [allocation, setAllocation] = React.useState(resource.allocation);
+  return (
+    <div className="flex items-center justify-between gap-2">
+      {editMode ? (
+        <>
+          <input
+            value={team}
+            onChange={e => setTeam(e.target.value)}
+            className="border rounded px-2 py-1 text-sm w-32"
+          />
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={allocation}
+            onChange={e => setAllocation(Number(e.target.value))}
+            className="border rounded px-2 py-1 text-sm w-16"
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              if (resource.id) {
+                await onEdit(resource.id, { team, allocation });
+                setEditMode(false);
+              }
+            }}
+          >Save</Button>
+          <Button size="sm" variant="ghost" onClick={() => setEditMode(false)}>Cancel</Button>
+        </>
+      ) : (
+        <>
+          <div>
+            <p className="font-medium">{resource.team}</p>
+            <p className="text-sm text-muted-foreground">{resource.allocation}% allocated</p>
+          </div>
+          <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full ${
+                resource.allocation > 90 ? "bg-amber-600" :
+                resource.allocation > 70 ? "bg-emerald-600" : "bg-blue-600"
+              }`}
+              style={{ width: `${resource.allocation}%` }}
+            ></div>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setEditMode(true)}>Edit</Button>
+          <Button size="sm" variant="destructive" onClick={() => resource.id && onDelete(resource.id)}>Delete</Button>
+        </>
+      )}
+    </div>
+  );
+}
 
 export default PlanBoard;

@@ -8,7 +8,7 @@ interface AuthContextType {
   session: Session | null;
   profile: any;
   loading: boolean;
-  signOut: () => Promise<void>;
+  signOut: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -16,7 +16,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
   loading: true,
-  signOut: async () => {}
+  signOut: async () => false
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -8,18 +8,85 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import dbService from '@/services/dbService';
+import { useAuth } from '@/hooks/useAuth';
 import { Trash2, Plus, Save, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const TaskSettings = () => {
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  // All settings state
+  const [defaultView, setDefaultView] = useState<'board' | 'list'>('board');
+  const [showCompleted, setShowCompleted] = useState(true);
+  const [autoArchive, setAutoArchive] = useState(false);
+  const [defaultPriority, setDefaultPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [defaultProject, setDefaultProject] = useState<string>('project1');
+  const [reminderTime, setReminderTime] = useState<string>('1day');
+
+  // Fetch settings from Supabase on mount
+  useEffect(() => {
+    if (!user?.id) return;
+    setLoading(true);
+    setError(null);
+    dbService.getTaskSettings(user.id)
+      .then(({ data, error }) => {
+        if (error && error.code === 'PGRST116') {
+          // Row does not exist: create default
+          dbService.createTaskSettings(user.id, {
+            default_view: 'board',
+            show_completed: true,
+            auto_archive: false,
+            default_priority: 'medium',
+            default_project: 'project1',
+            reminder_time: '1day',
+          });
+        } else if (data) {
+          setDefaultView(data.default_view === 'list' ? 'list' : 'board');
+          setShowCompleted(!!data.show_completed);
+          setAutoArchive(!!data.auto_archive);
+          setDefaultPriority(data.default_priority || 'medium');
+          setDefaultProject(data.default_project || 'project1');
+          setReminderTime(data.reminder_time || '1day');
+        } else if (error) {
+          setError('Failed to load settings.');
+        }
+      })
+      .catch(() => setError('Failed to load settings.'))
+      .finally(() => setLoading(false));
+  }, [user?.id]);
+
   
-  const handleSaveSettings = () => {
-    toast({
-      title: "Settings saved",
-      description: "Your task settings have been saved successfully"
-    });
+  const handleSaveSettings = async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    setError(null);
+    const updates = {
+      default_view: defaultView,
+      show_completed: showCompleted,
+      auto_archive: autoArchive,
+      default_priority: defaultPriority,
+      default_project: defaultProject,
+      reminder_time: reminderTime,
+    };
+    const { error } = await dbService.updateTaskSettings(user.id, updates);
+    setLoading(false);
+    if (error) {
+      setError('Failed to save settings.');
+      toast({
+        title: 'Save failed',
+        description: 'Could not save your task settings.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Settings saved',
+        description: 'Your task settings have been saved successfully',
+      });
+    }
   };
   
   const handleResetData = () => {
@@ -32,6 +99,13 @@ const TaskSettings = () => {
     });
   };
   
+  if (authLoading || loading) {
+    return <div className="p-8 text-center text-muted-foreground">Loading settings...</div>;
+  }
+  if (error) {
+    return <div className="p-8 text-center text-destructive">{error}</div>;
+  }
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Settings</h2>
@@ -55,22 +129,22 @@ const TaskSettings = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="defaultView" />
+                  <Checkbox id="defaultView" checked={defaultView === 'board'} onCheckedChange={val => setDefaultView(val ? 'board' : 'list')} />
                   <Label htmlFor="defaultView">Use board view as default</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="showCompleted" defaultChecked />
+                  <Checkbox id="showCompleted" checked={showCompleted} onCheckedChange={setShowCompleted} />
                   <Label htmlFor="showCompleted">Show completed tasks</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="autoArchive" />
+                  <Checkbox id="autoArchive" checked={autoArchive} onCheckedChange={setAutoArchive} />
                   <Label htmlFor="autoArchive">Auto-archive completed tasks after 30 days</Label>
                 </div>
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="defaultPriority">Default task priority</Label>
-                <Select defaultValue="medium">
+                <Select value={defaultPriority} onValueChange={val => setDefaultPriority(val as 'low' | 'medium' | 'high')}>
                   <SelectTrigger id="defaultPriority">
                     <SelectValue placeholder="Select priority" />
                   </SelectTrigger>
@@ -84,7 +158,7 @@ const TaskSettings = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="defaultProject">Default project</Label>
-                <Select defaultValue="project1">
+                <Select value={defaultProject} onValueChange={val => setDefaultProject(val)}>
                   <SelectTrigger id="defaultProject">
                     <SelectValue placeholder="Select project" />
                   </SelectTrigger>
@@ -283,7 +357,7 @@ const TaskSettings = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="reminderTime">Task reminder time</Label>
-                <Select defaultValue="1day">
+                <Select value={reminderTime} onValueChange={val => setReminderTime(val)}>
                   <SelectTrigger id="reminderTime">
                     <SelectValue placeholder="Select time" />
                   </SelectTrigger>

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   ArrowUpRight, 
   CheckCircle2, 
@@ -7,6 +7,8 @@ import {
   AlertCircle,
   Users
 } from 'lucide-react';
+import { getDashboardStats } from '@/services/dbService';
+import { useAuth } from '@/hooks/useAuth';
 
 interface StatCardProps {
   title: string;
@@ -43,33 +45,61 @@ const StatCard = ({ title, value, change, icon, trend }: StatCardProps) => {
 };
 
 const DashboardStats = () => {
+  const { user, loading } = useAuth();
+  const [stats, setStats] = useState({
+    completedTasks: null,
+    hoursTracked: null,
+    openIssues: null,
+    teamMembers: null
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!loading && user?.id) {
+      setIsLoading(true);
+      getDashboardStats(user.id)
+        .then((data) => {
+          setStats(data);
+          setError(null);
+        })
+        .catch((e) => {
+          setError('Failed to load dashboard stats');
+        })
+        .finally(() => setIsLoading(false));
+    }
+  }, [user, loading]);
+
+  if (isLoading) {
+    return <div className="col-span-4 text-center text-muted-foreground py-10">Loading dashboard statistics...</div>;
+  }
+  if (error) {
+    return <div className="col-span-4 text-center text-red-500 py-10">{error}</div>;
+  }
+
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <StatCard
         title="Completed Tasks"
-        value="147"
-        change="12%"
-        trend="up"
+        value={stats.completedTasks !== null && stats.completedTasks !== undefined ? String(stats.completedTasks) : '-'}
+        trend="neutral"
         icon={<CheckCircle2 className="h-4 w-4 text-green-600" />}
       />
       <StatCard
         title="Hours Tracked"
-        value="215.5"
-        change="8%"
-        trend="up"
+        value={stats.hoursTracked !== null && stats.hoursTracked !== undefined ? String(stats.hoursTracked) : '-'}
+        trend="neutral"
         icon={<Clock className="h-4 w-4 text-blue-600" />}
       />
       <StatCard
         title="Open Issues"
-        value="23"
-        change="5%"
-        trend="down"
+        value={stats.openIssues !== null && stats.openIssues !== undefined ? String(stats.openIssues) : '-'}
+        trend="neutral"
         icon={<AlertCircle className="h-4 w-4 text-amber-600" />}
       />
       <StatCard
         title="Team Members"
-        value="18"
-        change="2"
+        value={stats.teamMembers !== null && stats.teamMembers !== undefined ? String(stats.teamMembers) : '-'}
         trend="neutral"
         icon={<Users className="h-4 w-4 text-violet-600" />}
       />

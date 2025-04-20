@@ -11,6 +11,9 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Shield, MoreHorizontal, AlertTriangle, ShieldAlert, Calendar } from 'lucide-react';
 import {
   DropdownMenu,
@@ -19,71 +22,49 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-// Sample risk data
-const risks = [
-  {
-    id: 1,
-    name: 'Server Outage',
-    description: 'Risk of cloud server outage affecting service availability',
-    category: 'Technical',
-    probability: 2,
-    impact: 5,
-    owner: { name: 'Taylor Wong', avatar: '/avatar-4.png', initials: 'TW' },
-    status: 'Open',
-    lastReview: '2025-04-05',
-    nextReview: '2025-04-20',
-  },
-  {
-    id: 2,
-    name: 'Data Breach',
-    description: 'Risk of unauthorized access to sensitive customer data',
-    category: 'Technical',
-    probability: 1,
-    impact: 5,
-    owner: { name: 'Casey Johnson', avatar: '/avatar-7.png', initials: 'CJ' },
-    status: 'Mitigated',
-    lastReview: '2025-04-08',
-    nextReview: '2025-04-22',
-  },
-  {
-    id: 3,
-    name: 'API Integration Delay',
-    description: 'Potential delay in third-party API integration',
-    category: 'Technical',
-    probability: 4,
-    impact: 3,
-    owner: { name: 'Jordan Smith', avatar: '/avatar-3.png', initials: 'JS' },
-    status: 'Open',
-    lastReview: '2025-04-01',
-    nextReview: '2025-04-15',
-  },
-  {
-    id: 4,
-    name: 'Scope Creep',
-    description: 'Expanding project requirements beyond initial specifications',
-    category: 'Schedule',
-    probability: 4,
-    impact: 4,
-    owner: { name: 'Alex Kim', avatar: '/avatar-1.png', initials: 'AK' },
-    status: 'Open',
-    lastReview: '2025-04-07',
-    nextReview: '2025-04-21',
-  },
-  {
-    id: 5,
-    name: 'Budget Overrun',
-    description: 'Project expenses exceeding allocated budget',
-    category: 'Financial',
-    probability: 3,
-    impact: 4,
-    owner: { name: 'Alex Kim', avatar: '/avatar-1.png', initials: 'AK' },
-    status: 'Mitigated',
-    lastReview: '2025-04-06',
-    nextReview: '2025-04-20',
-  },
-];
+import { useEffect, useState } from 'react';
+import { dbService } from '@/services/dbService';
+
+// Risk type definition (adjust as needed)
+type Risk = {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  probability: number;
+  impact: number;
+  owner: { name: string; avatar: string; initials: string };
+  status: string;
+  lastReview: string;
+  nextReview: string;
+};
+
 
 const RiskTable = () => {
+  const [risks, setRisks] = useState<Risk[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [projectId, setProjectId] = useState('');
+
+  useEffect(() => {
+    const fetchRisks = async () => {
+      setLoading(true);
+      try {
+        if (!projectId) {
+          setRisks([]);
+          setLoading(false);
+          return;
+        }
+        const data = await dbService.getAiRisk(projectId);
+        setRisks(data ? [data] : []);
+      } catch (error) {
+        // Optionally handle error
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRisks();
+  }, []);
+
   // Calculate risk level
   const getRiskLevel = (probability, impact) => {
     const riskScore = probability * impact;
@@ -99,7 +80,24 @@ const RiskTable = () => {
   };
   
   return (
-    <Table>
+    <div>
+      <div style={{ marginBottom: 16 }}>
+        <label htmlFor="projectIdInput" style={{ marginRight: 8 }}>Project ID:</label>
+        <input
+          id="projectIdInput"
+          type="text"
+          value={projectId}
+          onChange={e => setProjectId(e.target.value)}
+          placeholder="Enter project ID"
+          style={{ padding: 4, border: '1px solid #ccc', borderRadius: 4 }}
+        />
+      </div>
+      {!projectId && (
+        <div style={{ marginBottom: 16, color: '#d97706' }}>
+          Please enter a Project ID to view risks.
+        </div>
+      )}
+      <Table>
       <TableHeader>
         <TableRow>
           <TableHead className="w-[250px]">Risk</TableHead>
@@ -112,7 +110,15 @@ const RiskTable = () => {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {risks.map((risk) => {
+        {loading ? (
+          <TableRow>
+            <TableCell colSpan={7} className="text-center">Loading risks...</TableCell>
+          </TableRow>
+        ) : risks.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={7} className="text-center">No risks found.</TableCell>
+          </TableRow>
+        ) : risks.map((risk) => {
           const riskLevel = getRiskLevel(risk.probability, risk.impact);
           
           return (
@@ -192,6 +198,7 @@ const RiskTable = () => {
         })}
       </TableBody>
     </Table>
+    </div>
   );
 };
 

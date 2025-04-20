@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Users, Plus, Search, Phone, Mail, Building, Edit, Trash2, MessageSquare, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import dbService from '@/services/dbService';
 import { format } from 'date-fns';
 import { Client, ClientNote } from '@/utils/dbtypes';
 
@@ -64,16 +64,8 @@ const ClientConnect = () => {
   const fetchClients = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      if (data) {
-        setClients(data as Client[]);
-      }
+      const data = await dbService.getClients();
+      setClients(data as Client[]);
     } catch (error) {
       console.error('Error fetching clients:', error);
       toast({
@@ -88,17 +80,8 @@ const ClientConnect = () => {
 
   const fetchClientNotes = async (clientId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('client_notes')
-        .select('*')
-        .eq('client_id', clientId)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      if (data) {
-        setClientNotes(data as ClientNote[]);
-      }
+      const data = await dbService.getClientNotesByClientId(clientId);
+      setClientNotes(data as ClientNote[]);
     } catch (error) {
       console.error('Error fetching client notes:', error);
       toast({
@@ -122,53 +105,27 @@ const ClientConnect = () => {
     try {
       if (isEditingClient && selectedClient) {
         // Update existing client
-        const { error } = await supabase
-          .from('clients')
-          .update({
-            name: newClient.name,
-            email: newClient.email,
-            phone: newClient.phone,
-            company: newClient.company
-          })
-          .eq('id', selectedClient.id);
-          
-        if (error) throw error;
-        
-        toast({
-          title: 'Client updated',
-          description: 'Client has been updated successfully.'
-        });
-        
-        // Update the local state
-        setClients(clients.map(client => 
-          client.id === selectedClient.id 
-            ? { ...client, ...newClient } 
+        await dbService.updateClient(selectedClient.id, newClient);
+        setClients(clients.map(client =>
+          client.id === selectedClient.id
+            ? { ...client, ...newClient }
             : client
         ));
+        toast({
+          title: 'Client updated',
+          description: 'Client information has been updated successfully.'
+        });
       } else {
         // Add new client
-        const { data, error } = await supabase
-          .from('clients')
-          .insert({
-            name: newClient.name,
-            email: newClient.email,
-            phone: newClient.phone,
-            company: newClient.company,
-            user_id: session.user.id
-          })
-          .select();
-          
-        if (error) throw error;
-        
-        if (data) {
-          setClients([data[0], ...clients]);
+        const created = await dbService.createClient(newClient);
+        if (created) {
+          setClients([created, ...clients]);
           toast({
             title: 'Client added',
             description: 'New client has been added successfully.'
           });
         }
       }
-      
       // Reset form and close dialog
       setNewClient({ name: '', email: '', phone: '', company: '' });
       setShowAddClientDialog(false);
@@ -194,25 +151,18 @@ const ClientConnect = () => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('client_notes')
-        .insert({
-          client_id: selectedClient.id,
-          content: newNote.content,
-          user_id: session.user.id
-        })
-        .select();
-        
-      if (error) throw error;
-      
-      if (data) {
-        setClientNotes([data[0], ...clientNotes]);
+      const created = await dbService.createClientNote({
+        client_id: selectedClient.id,
+        content: newNote.content,
+        user_id: session.user.id
+      });
+      if (created) {
+        setClientNotes([created, ...clientNotes]);
         toast({
           title: 'Note added',
           description: 'New note has been added successfully.'
         });
       }
-      
       // Reset form and close dialog
       setNewNote({ content: '' });
       setShowAddNoteDialog(false);
@@ -228,20 +178,12 @@ const ClientConnect = () => {
 
   const handleDeleteClient = async (clientId: string) => {
     try {
-      const { error } = await supabase
-        .from('clients')
-        .delete()
-        .eq('id', clientId);
-        
-      if (error) throw error;
-      
+      await dbService.deleteClient(clientId);
       setClients(clients.filter(client => client.id !== clientId));
-      
       if (selectedClient && selectedClient.id === clientId) {
         setSelectedClient(null);
         setClientNotes([]);
       }
-      
       toast({
         title: 'Client deleted',
         description: 'Client has been deleted successfully.'
@@ -258,15 +200,8 @@ const ClientConnect = () => {
 
   const handleDeleteNote = async (noteId: string) => {
     try {
-      const { error } = await supabase
-        .from('client_notes')
-        .delete()
-        .eq('id', noteId);
-        
-      if (error) throw error;
-      
+      await dbService.deleteClientNote(noteId);
       setClientNotes(clientNotes.filter(note => note.id !== noteId));
-      
       toast({
         title: 'Note deleted',
         description: 'Note has been deleted successfully.'

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { setupSampleData } from '@/utils/sampleData';
+
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -33,15 +33,7 @@ const Auth = () => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        // Set up sample data for new users
-        setTimeout(async () => {
-          try {
-            await setupSampleData();
-          } catch (error) {
-            console.error('Error setting up sample data:', error);
-          }
-          navigate('/');
-        }, 0);
+        navigate('/');
       }
     });
 

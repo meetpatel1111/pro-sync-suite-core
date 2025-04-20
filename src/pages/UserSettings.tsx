@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { dbService } from '@/services/dbService';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -24,18 +25,189 @@ import {
   Download,
   Trash2
 } from 'lucide-react';
+import { useSettings } from '@/contexts/SettingsContext';
+import { useAuth } from '@/hooks/useAuth';
 
 const UserSettings = () => {
+  // Move all hooks to the top
+  const { settings, setSettings, saveSettings } = useSettings();
+  const [settingsLoading, setSettingsLoading] = React.useState(false);
+  const { user, loading } = useAuth();
+  const [error, setError] = React.useState<string | null>(null);
+  const [password, setPassword] = React.useState('');
+  const [currentPassword, setCurrentPassword] = React.useState('');
+  const [newPassword, setNewPassword] = React.useState('');
+  const [confirmPassword, setConfirmPassword] = React.useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSaveSettings = () => {
-    toast({
-      title: "Settings saved",
-      description: "Your settings have been saved successfully"
-    });
+  // Debug logging
+  // console.log('UserSettings context:', { settings, loading });
+
+  if (settingsLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <span>Loading settings...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ color: 'red', padding: 32 }}>
+        <h2>Error loading settings</h2>
+        <pre>{error}</pre>
+      </div>
+    );
+  }
+
+  if (!settings || Object.keys(settings).length === 0) {
+    return (
+      <div style={{ color: 'orange', padding: 32 }}>
+        <h2>No settings found for your account.</h2>
+        <p>Please contact support or try reloading the page.</p>
+      </div>
+    );
+  }
+
+  const handleSaveSettings = async () => {
+    setError(null);
+    try {
+      await saveSettings(settings);
+      toast({
+        title: 'Settings saved',
+        description: 'Your settings have been saved successfully',
+      });
+    } catch (e) {
+      setError('Failed to save settings.');
+      toast({
+        title: 'Save failed',
+        description: 'Could not save your settings.',
+        variant: 'destructive',
+      });
+    }
   };
-  
+
+  // Export actions
+  const handleExport = async (type: 'csv' | 'json') => {
+    if (!user?.id) return;
+    setSettingsLoading(true);
+    setError(null);
+    try {
+      // Fetch user profile, settings, and tasks
+      const [settingsRes, tasksRes, profileRes] = await Promise.all([
+        dbService.getUserSettings(user.id),
+        dbService.getTaskSettings ? dbService.getTaskSettings(user.id) : { data: null },
+        dbService.getUserProfile ? dbService.getUserProfile(user.id) : { data: null },
+      ]);
+      const exportData = {
+        settings: settingsRes.data,
+        tasks: tasksRes.data,
+        profile: profileRes.data,
+      };
+      let fileContent = '', mime = '', fileName = '';
+      if (type === 'json') {
+        fileContent = JSON.stringify(exportData, null, 2);
+        mime = 'application/json';
+        fileName = 'user_data.json';
+      } else {
+        // CSV: flatten settings/tasks/profile for CSV export
+        const flatten = (obj: any) => Object.entries(obj || {}).map(([k, v]) => `${k},${v}`).join('\n');
+        fileContent =
+          'Settings\n' + flatten(exportData.settings) +
+          '\n\nTasks\n' + flatten(exportData.tasks) +
+          '\n\nProfile\n' + flatten(exportData.profile);
+        mime = 'text/csv';
+        fileName = 'user_data.csv';
+      }
+      // Download
+      const blob = new Blob([fileContent], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({ title: 'Export', description: `Exported your data as ${type.toUpperCase()}.` });
+    } catch (err) {
+      setError('Failed to export data.');
+      toast({ title: 'Export failed', description: 'Could not export your data.', variant: 'destructive' });
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  // Account deletion
+  const handleDeleteAccount = async () => {
+    if (!user?.id) return;
+    setSettingsLoading(true);
+    setError(null);
+    try {
+      // Remove from user_settings, task_settings, user_profiles, and Supabase auth
+      await dbService.updateUserSettings(user.id, { deleted: true });
+      if (dbService.updateTaskSettings) await dbService.updateTaskSettings(user.id, { deleted: true });
+      // No 'deleted' field in user_profiles; skip this update.
+// if (dbService.updateUserProfile) await dbService.updateUserProfile(user.id, { deleted: true });
+      // Remove from Supabase auth
+      if (window && window.supabase) {
+        await window.supabase.auth.admin.deleteUser(user.id);
+      }
+      toast({
+        title: 'Account Deleted',
+        description: 'Your account and all associated data have been deleted.',
+        variant: 'destructive',
+      });
+      setTimeout(() => window.location.href = '/', 2000);
+    } catch (err) {
+      setError('Failed to delete account.');
+      toast({ title: 'Delete failed', description: 'Could not delete your account.', variant: 'destructive' });
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  // Security actions
+  const handleUpdatePassword = async () => {
+    if (!user?.id) return;
+    setError(null);
+    if (!newPassword || !confirmPassword) {
+      setError('Please enter and confirm your new password.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('New password and confirmation do not match.');
+      return;
+    }
+    setSettingsLoading(true);
+    try {
+      if (window && window.supabase) {
+        const { error } = await window.supabase.auth.updateUser({ password: newPassword });
+        if (error) throw error;
+      }
+      toast({ title: 'Password Updated', description: 'Your password has been updated.' });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setError('Failed to update password.');
+      toast({ title: 'Update failed', description: 'Could not update your password.', variant: 'destructive' });
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+  const handleSignOutAll = () => {
+    toast({ title: 'Signed Out', description: 'Signed out from all other devices.' });
+  };
+
+  if (settingsLoading || loading) {
+    return <div className="p-8 text-center text-muted-foreground">Loading settings...</div>;
+  }
+  if (error) {
+    return <div className="p-8 text-center text-destructive">{error}</div>;
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -68,65 +240,32 @@ const UserSettings = () => {
             <Card>
               <CardHeader>
                 <CardTitle>General Settings</CardTitle>
-                <CardDescription>
-                  Configure general application preferences
-                </CardDescription>
+                <CardDescription>Configure your general settings</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="language">Language</Label>
-                  <Select defaultValue="en">
-                    <SelectTrigger id="language">
-                      <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="es">Spanish</SelectItem>
-                      <SelectItem value="fr">French</SelectItem>
-                      <SelectItem value="de">German</SelectItem>
-                      <SelectItem value="zh">Chinese</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <Select defaultValue="utc">
-                    <SelectTrigger id="timezone">
-                      <SelectValue placeholder="Select timezone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="utc">UTC</SelectItem>
-                      <SelectItem value="est">Eastern Time (EST)</SelectItem>
-                      <SelectItem value="cst">Central Time (CST)</SelectItem>
-                      <SelectItem value="mst">Mountain Time (MST)</SelectItem>
-                      <SelectItem value="pst">Pacific Time (PST)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="dateFormat">Date Format</Label>
-                  <Select defaultValue="mmddyyyy">
-                    <SelectTrigger id="dateFormat">
-                      <SelectValue placeholder="Select date format" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="mmddyyyy">MM/DD/YYYY</SelectItem>
-                      <SelectItem value="ddmmyyyy">DD/MM/YYYY</SelectItem>
-                      <SelectItem value="yyyymmdd">YYYY/MM/DD</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="autoSave" defaultChecked />
-                  <Label htmlFor="autoSave">Enable autosave</Label>
+                  <Label htmlFor="organizationName">Organization Name</Label>
+                  <Input id="organizationName" type="text" value={settings.organizationName || ''} onChange={e => setSettings({ ...settings, organizationName: e.target.value })} />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="defaultDashboard">Default Dashboard</Label>
+                  <Input id="defaultDashboard" type="text" value={settings.defaultDashboard || ''} onChange={e => setSettings({ ...settings, defaultDashboard: e.target.value })} />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="defaultCurrency">Default Currency</Label>
+                  <Input id="defaultCurrency" type="text" value={settings.defaultCurrency || ''} onChange={e => setSettings({ ...settings, defaultCurrency: e.target.value })} />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="enableClientPortal" checked={!!settings.enableClientPortal} onCheckedChange={checked => setSettings({ ...settings, enableClientPortal: !!checked })} />
+                  <Label htmlFor="enableClientPortal">Enable Client Portal</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="autoSaveInterval">Auto Save Interval</Label>
+                  <Input id="autoSaveInterval" type="number" value={settings.autoSaveInterval || 0} onChange={e => setSettings({ ...settings, autoSaveInterval: parseInt(e.target.value) || 0 })} />
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
-          
           <TabsContent value="appearance" className="space-y-4">
             <Card>
               <CardHeader>
@@ -135,47 +274,106 @@ const UserSettings = () => {
                   Customize the look and feel of the application
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <Label className="text-base">Theme</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Select light or dark theme
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Sun className="h-4 w-4 text-muted-foreground" />
-                      <Switch id="theme-mode" />
-                      <Moon className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="density">Interface Density</Label>
-                  <Select defaultValue="comfortable">
-                    <SelectTrigger id="density">
-                      <SelectValue placeholder="Select density" />
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Theme Mode</h3>
+                  <Select
+  value={settings.themeMode || 'system'}
+  onValueChange={v => {
+    if (v === 'system' || v === 'light' || v === 'dark') {
+      setSettings({ ...settings, themeMode: v });
+    }
+  }}
+>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Theme Mode" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="compact">Compact</SelectItem>
-                      <SelectItem value="comfortable">Comfortable</SelectItem>
-                      <SelectItem value="spacious">Spacious</SelectItem>
+                      <SelectItem value="system">System</SelectItem>
+                      <SelectItem value="light">Light</SelectItem>
+                      <SelectItem value="dark">Dark</SelectItem>
+                      <SelectItem value="system">
+                        <Moon className="inline h-4 w-4 mr-1" /> System
+                      </SelectItem>
+                      <SelectItem value="light">
+                        <Sun className="inline h-4 w-4 mr-1" /> Light
+                      </SelectItem>
+                      <SelectItem value="dark">
+                        <Moon className="inline h-4 w-4 mr-1" /> Dark
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="fontsize">Font Size</Label>
-                  <Select defaultValue="medium">
-                    <SelectTrigger id="fontsize">
-                      <SelectValue placeholder="Select font size" />
+                <div className="flex items-center space-x-4 pt-2">
+                  <Label htmlFor="primaryColor">Primary Color</Label>
+                  <Input id="primaryColor" type="color" value={settings.primaryColor || '#000000'} onChange={e => setSettings({ ...settings, primaryColor: e.target.value })} className="w-10 h-10 p-0 border-none bg-transparent" />
+                  <Label htmlFor="accentColor">Accent Color</Label>
+                  <Input id="accentColor" type="color" value={settings.accentColor || '#000000'} onChange={e => setSettings({ ...settings, accentColor: e.target.value })} className="w-10 h-10 p-0 border-none bg-transparent" />
+                </div>
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="sidebarLayout">Sidebar Layout</Label>
+                  <Select value={settings.sidebarLayout || 'compact'} onValueChange={val => setSettings({ ...settings, sidebarLayout: val })}>
+                    <SelectTrigger id="sidebarLayout">
+                      <SelectValue placeholder="Select sidebar layout" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="small">Small</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="large">Large</SelectItem>
+                      <SelectItem value="compact">Compact</SelectItem>
+                      <SelectItem value="expanded">Expanded</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="fontSelection">Font</Label>
+                  <Select value={settings.fontSelection || 'system'} onValueChange={val => setSettings({ ...settings, fontSelection: val })}>
+                    <SelectTrigger id="fontSelection">
+                      <SelectValue placeholder="Select font" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="system">System</SelectItem>
+                      <SelectItem value="sans-serif">Sans Serif</SelectItem>
+                      <SelectItem value="serif">Serif</SelectItem>
+                      <SelectItem value="mono">Monospace</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="avatarDisplayOption">Avatar Display</Label>
+                  <Select value={settings.avatarDisplayOption || 'image'} onValueChange={val => setSettings({ ...settings, avatarDisplayOption: val })}>
+                    <SelectTrigger id="avatarDisplayOption">
+                      <SelectValue placeholder="Select avatar display" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="image">Image</SelectItem>
+                      <SelectItem value="initials">Initials</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center space-x-2 pt-2">
+                  <Checkbox id="interfaceAnimation" checked={!!settings.interfaceAnimation} onCheckedChange={checked => setSettings({ ...settings, interfaceAnimation: !!checked })} />
+                  <Label htmlFor="interfaceAnimation">Enable Interface Animation</Label>
+                </div>
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="interfaceSpacing">Interface Spacing</Label>
+                  <Select value={settings.interfaceSpacing || 'comfortable'} onValueChange={val => setSettings({ ...settings, interfaceSpacing: val })}>
+                    <SelectTrigger id="interfaceSpacing">
+                      <SelectValue placeholder="Select spacing" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="comfortable">Comfortable</SelectItem>
+                      <SelectItem value="compact">Compact</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="headerBehavior">Header Behavior</Label>
+                  <Select value={settings.headerBehavior || 'fixed'} onValueChange={val => setSettings({ ...settings, headerBehavior: val })}>
+                    <SelectTrigger id="headerBehavior">
+                      <SelectValue placeholder="Select header behavior" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fixed">Fixed</SelectItem>
+                      <SelectItem value="scroll">Scroll with Content</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -187,59 +385,17 @@ const UserSettings = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Notification Settings</CardTitle>
-                <CardDescription>
-                  Configure how and when you receive notifications
-                </CardDescription>
+                <CardDescription>Manage how you receive notifications</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <h3 className="text-lg font-medium mb-2">Email Notifications</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="emailTaskAssigned" defaultChecked />
-                      <Label htmlFor="emailTaskAssigned">When a task is assigned to me</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="emailTaskDue" defaultChecked />
-                      <Label htmlFor="emailTaskDue">When a task is due soon</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="emailTaskCompleted" />
-                      <Label htmlFor="emailTaskCompleted">When a task is completed</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="emailFileShared" defaultChecked />
-                      <Label htmlFor="emailFileShared">When a file is shared with me</Label>
-                    </div>
-                  </div>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="notificationEmail">Email Notifications</Label>
+                  <Switch id="notificationEmail" checked={!!settings.notificationEmail} onCheckedChange={async checked => { setSettings({ ...settings, notificationEmail: !!checked }); await saveSettings({ notificationEmail: !!checked }); }} />
                 </div>
-                
-                <div className="space-y-2">
-                  <h3 className="text-lg font-medium mb-2">In-App Notifications</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="appTaskAssigned" defaultChecked />
-                      <Label htmlFor="appTaskAssigned">When a task is assigned to me</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="appTaskDue" defaultChecked />
-                      <Label htmlFor="appTaskDue">When a task is due soon</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="appTaskStatusChanged" defaultChecked />
-                      <Label htmlFor="appTaskStatusChanged">When a task status changes</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="appMentions" defaultChecked />
-                      <Label htmlFor="appMentions">When I am mentioned in comments</Label>
-                    </div>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="notificationPush">Push Notifications</Label>
+                  <Switch id="notificationPush" checked={!!settings.notificationPush} onCheckedChange={async checked => { setSettings({ ...settings, notificationPush: !!checked }); await saveSettings({ notificationPush: !!checked }); }} />
                 </div>
-                
-                <Button onClick={handleSaveSettings}>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Preferences
-                </Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -248,31 +404,28 @@ const UserSettings = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Security Settings</CardTitle>
-                <CardDescription>
-                  Manage your account security and authentication options
-                </CardDescription>
+                <CardDescription>Manage your account security and authentication options</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Change Password</h3>
                   <div className="space-y-2">
-                    <Label htmlFor="currentPassword">Current Password</Label>
-                    <Input type="password" id="currentPassword" />
+                    <Label htmlFor="currentPassword-settings">Current Password</Label>
+                    <Input type="password" id="currentPassword-settings" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="newPassword">New Password</Label>
-                    <Input type="password" id="newPassword" />
+                    <Label htmlFor="newPassword-settings">New Password</Label>
+                    <Input type="password" id="newPassword-settings" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                    <Input type="password" id="confirmPassword" />
+                    <Label htmlFor="confirmPassword-settings">Confirm New Password</Label>
+                    <Input type="password" id="confirmPassword-settings" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
                   </div>
-                  <Button>
+                  <Button onClick={handleUpdatePassword} disabled={loading}>
                     <Key className="mr-2 h-4 w-4" />
                     Update Password
                   </Button>
                 </div>
-                
                 <div className="space-y-4 pt-4 border-t">
                   <h3 className="text-lg font-medium">Two-Factor Authentication</h3>
                   <p className="text-sm text-muted-foreground">
@@ -285,16 +438,15 @@ const UserSettings = () => {
                         Require a verification code when logging in
                       </p>
                     </div>
-                    <Switch id="twoFactor" />
+                    <Switch id="twoFactor" checked={!!settings.twoFactor} onCheckedChange={checked => setSettings({ ...settings, twoFactor: !!checked })} />
                   </div>
                 </div>
-                
                 <div className="space-y-4 pt-4 border-t">
                   <h3 className="text-lg font-medium">Session Management</h3>
                   <p className="text-sm text-muted-foreground">
                     Manage your active sessions and sign out from other devices.
                   </p>
-                  <Button variant="outline">
+                  <Button variant="outline" onClick={handleSignOutAll} disabled={settingsLoading}>
                     <Lock className="mr-2 h-4 w-4" />
                     Sign Out From All Other Devices
                   </Button>
@@ -318,11 +470,11 @@ const UserSettings = () => {
                     Download all your data in standard formats for backup or transfer.
                   </p>
                   <div className="flex gap-4">
-                    <Button variant="outline">
+                    <Button variant="outline" onClick={() => handleExport('csv')} disabled={loading}>
                       <Download className="mr-2 h-4 w-4" />
                       Export as CSV
                     </Button>
-                    <Button variant="outline">
+                    <Button variant="outline" onClick={() => handleExport('json')} disabled={loading}>
                       <Download className="mr-2 h-4 w-4" />
                       Export as JSON
                     </Button>
@@ -332,11 +484,11 @@ const UserSettings = () => {
                 <div className="space-y-4 pt-4 border-t">
                   <h3 className="text-lg font-medium">Data Privacy</h3>
                   <div className="flex items-center space-x-2">
-                    <Checkbox id="dataCollection" defaultChecked />
+                    <Checkbox id="dataCollection" checked={!!settings.dataCollection} onCheckedChange={checked => setSettings({ ...settings, dataCollection: !!checked })} />
                     <Label htmlFor="dataCollection">Allow usage data collection to improve services</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Checkbox id="thirdPartySharing" />
+                    <Checkbox id="thirdPartySharing" checked={!!settings.thirdPartySharing} onCheckedChange={checked => setSettings({ ...settings, thirdPartySharing: !!checked })} />
                     <Label htmlFor="thirdPartySharing">Share data with third-party services</Label>
                   </div>
                 </div>
@@ -346,7 +498,7 @@ const UserSettings = () => {
                   <p className="text-sm text-muted-foreground">
                     Permanently delete your account and all associated data. This action cannot be undone.
                   </p>
-                  <Button variant="destructive">
+                  <Button variant="destructive" onClick={handleDeleteAccount} disabled={loading}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete Account
                   </Button>

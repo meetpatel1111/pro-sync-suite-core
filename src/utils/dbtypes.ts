@@ -233,6 +233,7 @@ export interface UserProfile {
   location?: string;
   created_at: string;
   updated_at: string;
+  deleted?: boolean;
 }
 
 export interface UserSettings {

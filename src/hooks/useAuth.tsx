@@ -14,6 +14,7 @@ export const useAuth = () => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      // getUserProfile now uses the users table
       const { data, error } = await dbService.getUserProfile(userId);
       if (!error && data) {
         setProfile(data);
@@ -35,6 +36,21 @@ export const useAuth = () => {
 
         // Fetch user profile if session exists
         if (session?.user) {
+          // Ensure user is present in the application's users table
+          await dbService.upsertAppUser(session.user);
+
+          // Ensure user_settings exists for this user
+          const settings = await dbService.getUserSettings(session.user.id);
+          if (!settings) {
+            await dbService.createUserSettings(session.user.id, {
+              theme: 'system',
+              language: 'en',
+              notifications_enabled: true,
+              // Add other default settings as needed
+            });
+          }
+
+          // Fetch user profile from users table
           await fetchUserProfile(session.user.id);
         }
       } catch (error) {
@@ -55,7 +71,22 @@ export const useAuth = () => {
 
         // Fetch or update profile when auth state changes
         if (session?.user) {
-          // Use setTimeout to avoid potential Supabase auth deadlock
+          // Ensure user is present in the application's users table
+          dbService.upsertAppUser(session.user);
+
+          // Ensure user_settings exists for this user
+          dbService.getUserSettings(session.user.id).then(settings => {
+            if (!settings) {
+              dbService.createUserSettings(session.user.id, {
+                theme: 'system',
+                language: 'en',
+                notifications_enabled: true,
+                // Add other default settings as needed
+              });
+            }
+          });
+
+          // Fetch user profile from users table
           setTimeout(() => {
             fetchUserProfile(session.user.id);
           }, 0);

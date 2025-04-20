@@ -1,8 +1,8 @@
 
-import { supabase } from '@/integrations/supabase/client';
+// DEPRECATED: This file previously contained mock/sample data setup functions for demo purposes.
+// All features must now use live data from the database and API.
+// If onboarding or demo flows are needed, implement them using real API/database calls via the UI.
 
-// Helper to create projects for a user
-async function setupProjects(userId: string) {
   const projectsData = [
     { 
       name: 'Website Redesign', 
@@ -54,11 +54,8 @@ async function setupTeamMembers(userId: string) {
     const { error } = await supabase
       .from('team_members')
       .insert(member);
-      
-    if (error) console.error('Error setting up team member:', error);
+    // handle error if needed
   }
-  
-  return teamMembersData;
 }
 
 export const setupSampleData = async () => {

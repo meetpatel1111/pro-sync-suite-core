@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { dbService } from '@/services/dbService';
-
+import { uploadFile } from '@/services/filevault';
 interface FileItem {
   id: string;
   name: string;
@@ -86,7 +86,6 @@ const FileVault = () => {
 
   const handleUpload = async (event: React.FormEvent) => {
     event.preventDefault();
-    
     if (!selectedFile) {
       toast({
         title: "No file selected",
@@ -95,7 +94,6 @@ const FileVault = () => {
       });
       return;
     }
-
     setIsUploading(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -107,54 +105,21 @@ const FileVault = () => {
         });
         return;
       }
-
-      // Generate a unique path for the file
-      const fileExt = selectedFile.name.split('.').pop();
-      const filePath = `${userData.user.id}/${Date.now()}.${fileExt}`;
-
-      // Upload file to Supabase storage
-      const { error: uploadError } = await supabase.storage
-        .from('files')
-        .upload(filePath, selectedFile);
-
-      if (uploadError) throw uploadError;
-
-      // Save file metadata to database
-      const fileData = {
-        name: fileName || selectedFile.name,
-        description: fileDescription,
-        file_type: selectedFile.type,
-        size_bytes: selectedFile.size,
-        storage_path: filePath,
-        is_public: false,
-        is_archived: false,
-        user_id: userData.user.id
-      };
-
-      const { error: dbError } = await supabase
-        .from('files')
-        .insert(fileData);
-
-      if (dbError) throw dbError;
-
+      await uploadFile(userData.user.id, selectedFile, fileName, fileDescription);
       toast({
         title: "File uploaded",
         description: "Your file has been uploaded successfully",
       });
-
-      // Reset form
       setFileName('');
       setFileDescription('');
       setSelectedFile(null);
       setUploadDialogOpen(false);
-      
-      // Refresh files list
       fetchFiles();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading file:', error);
       toast({
         title: "Upload failed",
-        description: "An error occurred while uploading your file",
+        description: error?.message || "An error occurred while uploading your file",
         variant: "destructive",
       });
     } finally {

@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import RiskRadarChart from '@/components/RiskRadarChart';
 import RiskTable from '@/components/RiskTable';
+import { dbService } from '@/services/dbService';
 import {
   DropdownMenu,
   DropdownMenuContent,

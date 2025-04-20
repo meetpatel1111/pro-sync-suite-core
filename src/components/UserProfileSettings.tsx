@@ -21,6 +21,7 @@ interface UserProfile {
   email?: string;
   phone?: string;
   location?: string;
+  deleted?: boolean;
 }
 
 const UserProfileSettings = () => {

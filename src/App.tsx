@@ -25,6 +25,7 @@ import ProfileSettings from "./pages/ProfileSettings";
 import UserSettings from "./pages/UserSettings";
 import Notifications from "./pages/Notifications";
 import { useState, useEffect } from "react";
+import { SettingsProvider } from "@/contexts/SettingsContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -86,47 +87,45 @@ const App = () => {
       <AuthProvider>
         <TooltipProvider>
           <IntegrationProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/auth" element={<Auth />} />
-                
-                {/* Make Index route protected */}
-                <Route 
-                  path="/" 
-                  element={
-                    <ProtectedRoute>
-                      <Index />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                <Route 
-                  path="/taskmaster" 
-                  element={
-                    <ProtectedRoute>
-                      <TaskMaster />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                <Route path="/timetrackpro" element={<ProtectedRoute><TimeTrackPro /></ProtectedRoute>} />
-                <Route path="/collabspace" element={<ProtectedRoute><CollabSpace /></ProtectedRoute>} />
-                <Route path="/planboard" element={<ProtectedRoute><PlanBoard /></ProtectedRoute>} />
-                <Route path="/filevault" element={<ProtectedRoute><FileVault /></ProtectedRoute>} />
-                <Route path="/budgetbuddy" element={<ProtectedRoute><BudgetBuddy /></ProtectedRoute>} />
-                <Route path="/insightiq" element={<ProtectedRoute><InsightIQ /></ProtectedRoute>} />
-                <Route path="/clientconnect" element={<ProtectedRoute><ClientConnect /></ProtectedRoute>} />
-                <Route path="/riskradar" element={<ProtectedRoute><RiskRadar /></ProtectedRoute>} />
-                <Route path="/resourcehub" element={<ProtectedRoute><ResourceHub /></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
-                <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
+            <SettingsProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/auth" element={<Auth />} />
+                  {/* Make Index route protected */}
+                  <Route 
+                    path="/" 
+                    element={
+                      <ProtectedRoute>
+                        <Index />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/taskmaster" 
+                    element={
+                      <ProtectedRoute>
+                        <TaskMaster />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route path="/timetrackpro" element={<ProtectedRoute><TimeTrackPro /></ProtectedRoute>} />
+                  <Route path="/collabspace" element={<ProtectedRoute><CollabSpace /></ProtectedRoute>} />
+                  <Route path="/planboard" element={<ProtectedRoute><PlanBoard /></ProtectedRoute>} />
+                  <Route path="/filevault" element={<ProtectedRoute><FileVault /></ProtectedRoute>} />
+                  <Route path="/budgetbuddy" element={<ProtectedRoute><BudgetBuddy /></ProtectedRoute>} />
+                  <Route path="/insightiq" element={<ProtectedRoute><InsightIQ /></ProtectedRoute>} />
+                  <Route path="/clientconnect" element={<ProtectedRoute><ClientConnect /></ProtectedRoute>} />
+                  <Route path="/riskradar" element={<ProtectedRoute><RiskRadar /></ProtectedRoute>} />
+                  <Route path="/resourcehub" element={<ProtectedRoute><ResourceHub /></ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
+                  <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </SettingsProvider>
           </IntegrationProvider>
         </TooltipProvider>
       </AuthProvider>

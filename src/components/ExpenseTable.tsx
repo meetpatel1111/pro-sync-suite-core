@@ -19,61 +19,37 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-// Sample expense data
-const expenses = [
-  {
-    id: 1,
-    description: 'Developer Licenses',
-    category: 'Development',
-    date: '2025-04-10',
-    amount: 1250.00,
-    status: 'Approved',
-    approvedBy: { name: 'Alex Kim', avatar: '/avatar-1.png', initials: 'AK' },
-    receipt: true,
-  },
-  {
-    id: 2,
-    description: 'Social Media Campaign',
-    category: 'Marketing',
-    date: '2025-04-08',
-    amount: 3600.00,
-    status: 'Approved',
-    approvedBy: { name: 'Jamie Rivera', avatar: '/avatar-6.png', initials: 'JR' },
-    receipt: true,
-  },
-  {
-    id: 3,
-    description: 'Server Hosting (Q2)',
-    category: 'Operations',
-    date: '2025-04-05',
-    amount: 2150.00,
-    status: 'Approved',
-    approvedBy: { name: 'Alex Kim', avatar: '/avatar-1.png', initials: 'AK' },
-    receipt: true,
-  },
-  {
-    id: 4,
-    description: 'Design Software Subscription',
-    category: 'Development',
-    date: '2025-04-03',
-    amount: 980.00,
-    status: 'Approved',
-    approvedBy: { name: 'Morgan Lee', avatar: '/avatar-2.png', initials: 'ML' },
-    receipt: true,
-  },
-  {
-    id: 5,
-    description: 'Team Lunch',
-    category: 'Operations',
-    date: '2025-04-12',
-    amount: 345.00,
-    status: 'Pending',
-    approvedBy: null,
-    receipt: true,
-  },
-];
+import { useEffect, useState } from 'react';
+import { getAllTransactions, getAllCategories, Transaction, Category } from '@/services/budgetbuddy';
+import { useAuth } from '@/hooks/useAuth';
+
+// ExpenseTable now fetches live data from the backend
+
 
 const ExpenseTable = () => {
+  const { user } = useAuth();
+  const [expenses, setExpenses] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    setLoading(true);
+    Promise.all([
+      getAllTransactions(user.id),
+      getAllCategories(user.id)
+    ]).then(([txRes, catRes]) => {
+      setExpenses(txRes.data || []);
+      setCategories(catRes.data || []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [user]);
+
+  const getCategoryName = (categoryId: string) => {
+    const cat = categories.find(c => c.id === categoryId);
+    return cat ? cat.name : 'Unknown';
+  };
+
   // Format date to a more readable format
   const formatDate = (dateString) => {
     const date = new Date(dateString);
