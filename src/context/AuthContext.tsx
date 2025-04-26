@@ -9,6 +9,7 @@ interface AuthContextType {
   profile: any;
   loading: boolean;
   signOut: () => Promise<boolean>;
+  setProfile: (profile: any) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -16,7 +17,8 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
   loading: true,
-  signOut: async () => false
+  signOut: async () => false,
+  setProfile: () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

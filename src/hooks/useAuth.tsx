@@ -26,40 +26,86 @@ export const useAuth = () => {
     }
   };
 
-  useEffect(() => {
-    // Initial session check
-    const checkSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        setUser(session?.user ?? null);
+  const checkSession = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      setUser(session?.user ?? null);
 
-        // Fetch user profile if session exists
-        if (session?.user) {
-          // Ensure user is present in the application's users table
-          await dbService.upsertAppUser(session.user);
+      // Fetch user profile if session exists
+      if (session?.user) {
+        // Ensure user is present in the application's users table
+        await dbService.upsertAppUser(session.user);
 
-          // Ensure user_settings exists for this user
-          const settings = await dbService.getUserSettings(session.user.id);
-          if (!settings) {
-            await dbService.createUserSettings(session.user.id, {
-              theme: 'system',
-              language: 'en',
-              notifications_enabled: true,
-              // Add other default settings as needed
-            });
+        // Ensure user_settings exists for this user
+        const settings = await dbService.getUserSettings(session.user.id);
+        if (!settings) {
+          await dbService.createUserSettings(session.user.id, {
+            theme: 'system',
+            language: 'en',
+            notifications_enabled: true,
+            // Add other default settings as needed
+          });
+        }
+
+        // Fetch user profile from users table
+        await fetchUserProfile(session.user.id);
+      } else {
+        // If no Supabase session, check for custom user in localStorage
+        const customUser = typeof window !== 'undefined' ? localStorage.getItem('customUser') : null;
+        if (customUser) {
+          const userObj = JSON.parse(customUser);
+          setUser(userObj);
+          setProfile(userObj);
+          setSession(null);
+
+          // Ensure user is present in the application's users table (required for FK)
+          try {
+            const upsertResult = await dbService.upsertAppUser(userObj);
+            console.debug('[CustomUser] upsertAppUser result:', upsertResult);
+            if (upsertResult?.error) {
+              console.error('[CustomUser] Failed to upsert user:', upsertResult.error);
+              setLoading(false);
+              return;
+            }
+          } catch (err) {
+            console.error('[CustomUser] Exception during upsertAppUser:', err);
+            setLoading(false);
+            return;
           }
 
-          // Fetch user profile from users table
-          await fetchUserProfile(session.user.id);
-        }
-      } catch (error) {
-        console.error('Error checking session:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+          // Ensure user_settings exists for this custom user
+          try {
+            const settings = await dbService.getUserSettings(userObj.id);
+            console.debug('[CustomUser] getUserSettings result:', settings);
+            if (!settings) {
+              const createResult = await dbService.createUserSettings(userObj.id, {
+                theme: 'system',
+                language: 'en',
+                notifications_enabled: true,
+                // Add other default settings as needed
+              });
+              console.debug('[CustomUser] createUserSettings result:', createResult);
+              if (createResult?.error) {
+                console.error('[CustomUser] Failed to create user_settings:', createResult.error);
+              }
+            }
+          } catch (err) {
+            console.error('[CustomUser] Exception during createUserSettings:', err);
+          }
 
+          setLoading(false);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error checking session:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     checkSession();
 
     // Listen for auth changes
@@ -103,6 +149,10 @@ export const useAuth = () => {
 
   const signOut = async () => {
     try {
+      // Clear custom user on sign out
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('customUser');
+      }
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('Error signing out:', error);
@@ -131,6 +181,7 @@ export const useAuth = () => {
     session, 
     profile, 
     loading, 
-    signOut 
+    signOut, 
+    setProfile
   };
 };

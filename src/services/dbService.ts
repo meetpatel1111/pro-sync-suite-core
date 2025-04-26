@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { checkTableExists, safeQueryTable } from '@/utils/db-helpers';
 import { User } from '@supabase/supabase-js';
+import bcrypt from 'bcryptjs';
 
 // Service to handle database checking and creation
 /**
@@ -94,6 +95,53 @@ export async function getDashboardStats(userId: string) {
   }
 }
 
+// --- Custom Password Utilities ---
+/**
+ * Hash a plain password using bcryptjs.
+ */
+async function hashPassword(plainPassword: string): Promise<string> {
+  const salt = await bcrypt.genSalt(10);
+  return await bcrypt.hash(plainPassword, salt);
+}
+
+/**
+ * Compare a plain password with a hash.
+ */
+async function comparePassword(plainPassword: string, hash: string): Promise<boolean> {
+  return await bcrypt.compare(plainPassword, hash);
+}
+
+/**
+ * Set a custom password for a user (hashes and stores it).
+ * Updates custom_password_hash and password_last_changed.
+ */
+async function setCustomPassword(userId: string, plainPassword: string) {
+  const hash = await hashPassword(plainPassword);
+  return await safeQueryTable('users', (query) =>
+    query.update({
+      custom_password_hash: hash,
+      password_last_changed: new Date().toISOString(),
+    }).eq('id', userId)
+  );
+}
+
+/**
+ * Verify a user's custom password by email (returns user if valid, null if not).
+ */
+async function verifyCustomPassword(email: string, plainPassword: string) {
+  // Fetch user by email
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', email)
+    .single();
+  console.log('[verifyCustomPassword] user fetched:', user, 'error:', error);
+  if (error || !user || !user.custom_password_hash) return null;
+  const valid = await comparePassword(plainPassword, user.custom_password_hash);
+  console.log('[verifyCustomPassword] password valid:', valid);
+  return valid ? user : null;
+}
+
 // --- User Settings CRUD ---
 async function createUserSettings(userId: string, defaults: Record<string, any> = {}) {
   return await safeQueryTable('user_settings', (query) =>
@@ -105,6 +153,11 @@ async function createUserSettings(userId: string, defaults: Record<string, any> 
 }
 
 export const dbService = {
+  createUserSettings,
+  // Custom password helpers
+  setCustomPassword,
+  verifyCustomPassword,
+  hashPassword,
   getInsights,
   getUserById,
   getAllTeamMembers,

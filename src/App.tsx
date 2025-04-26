@@ -21,9 +21,12 @@ import ClientConnect from "./pages/ClientConnect";
 import RiskRadar from "./pages/RiskRadar";
 import ResourceHub from "./pages/ResourceHub";
 import NotFound from "./pages/NotFound";
+import TermsOfService from "./pages/Terms";
+import PrivacyPolicy from "./pages/Privacy";
 import ProfileSettings from "./pages/ProfileSettings";
 import UserSettings from "./pages/UserSettings";
 import Notifications from "./pages/Notifications";
+import ForgotPassword from "./pages/ForgotPassword";
 import { useState, useEffect } from "react";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 
@@ -93,6 +96,7 @@ const App = () => {
               <BrowserRouter>
                 <Routes>
                   <Route path="/auth" element={<Auth />} />
+<Route path="/forgot-password" element={<ForgotPassword />} />
                   {/* Make Index route protected */}
                   <Route 
                     path="/" 
@@ -122,6 +126,8 @@ const App = () => {
                   <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
                   <Route path="/settings" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
                   <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>
