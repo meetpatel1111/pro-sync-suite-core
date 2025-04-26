@@ -108,7 +108,7 @@ export const dbService = {
   getInsights,
   getUserById,
   getAllTeamMembers,
-  createUserSettings,
+
   /**
    * Get all time logs for a user (alias for getTimeEntries with no filters)
    * @param userId The user's UUID
@@ -192,15 +192,7 @@ export const dbService = {
         }
       ], { onConflict: 'id' });
   },
-  // --- User Settings CRUD ---
-  async createUserSettings(userId: string, defaults: Record<string, any> = {}) {
-    return await safeQueryTable('user_settings', (query) =>
-      query.insert({
-        user_id: userId,
-        ...defaults
-      }).single()
-    );
-  },
+
   // --- Task Settings CRUD ---
   async getTaskSettings(userId: string) {
     return await safeQueryTable('task_settings', (query) =>
