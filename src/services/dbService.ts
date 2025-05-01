@@ -499,7 +499,7 @@ export const dbService = {
   },
 
   // Add updateNotification function
-  export const updateNotification = async (id: string, updates: Partial<{ read: boolean }>) => {
+  updateNotification: async (id: string, updates: Partial<{ read: boolean }>) => {
     try {
       return await supabase
         .from('notifications')
