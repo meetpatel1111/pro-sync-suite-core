@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 
@@ -518,5 +517,71 @@ export const dbService = {
       lastReview: new Date().toISOString(),
       nextReview: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
     };
+  },
+
+  // Add this new function to fix the missing export
+  async getDashboardStats(userId: string): Promise<any> {
+    try {
+      // Get completed tasks count
+      const { data: completedTasks, error: tasksError } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('status', 'completed');
+      
+      if (tasksError) {
+        console.error('Error fetching completed tasks:', tasksError);
+      }
+      
+      // Get time entries to calculate hours tracked
+      const { data: timeEntries, error: timeError } = await supabase
+        .from('time_entries')
+        .select('time_spent')
+        .eq('user_id', userId);
+      
+      if (timeError) {
+        console.error('Error fetching time entries:', timeError);
+      }
+      
+      // Get open issues (tasks with status not completed)
+      const { data: openIssues, error: issuesError } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('user_id', userId)
+        .neq('status', 'completed');
+      
+      if (issuesError) {
+        console.error('Error fetching open issues:', issuesError);
+      }
+      
+      // Get team members
+      const { data: teamMembers, error: teamError } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('user_id', userId);
+      
+      if (teamError) {
+        console.error('Error fetching team members:', teamError);
+      }
+      
+      // Calculate hours from minutes
+      const totalMinutes = timeEntries?.reduce((sum, entry) => sum + (entry.time_spent || 0), 0) || 0;
+      const hoursTracked = Math.round(totalMinutes / 60 * 10) / 10; // Round to 1 decimal place
+      
+      return {
+        completedTasks: completedTasks?.length || 0,
+        hoursTracked: hoursTracked,
+        openIssues: openIssues?.length || 0,
+        teamMembers: teamMembers?.length || 0
+      };
+    } catch (error) {
+      console.error('Error in getDashboardStats:', error);
+      return {
+        completedTasks: 0,
+        hoursTracked: 0,
+        openIssues: 0,
+        teamMembers: 0
+      };
+    }
   }
 };

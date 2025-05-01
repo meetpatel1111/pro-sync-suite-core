@@ -1,30 +1,55 @@
-// InsightIQ Service API
-// Provides frontend CRUD functions for InsightIQ entities using backend endpoints
-// Example entity:
-import axios from 'axios';
 
-export interface Report {
-  report_id?: string;
-  user_id: string;
-  report_type: string;
-  generated_at?: string;
+// Implementation for InsightIQ functionality
+export interface AnalyticsData {
+  id: string;
+  title: string;
+  value: number;
+  change?: number;
+  period?: string;
 }
 
-export async function getAllReports(userId: string) {
-  return axios.get<{ data: Report[] }>(`/api/insightiq/reports?userId=${userId}`);
+export interface ReportConfig {
+  id: string;
+  name: string;
+  type: string;
+  filters: Record<string, any>;
 }
+
+export const insightiqService = {
+  async getAnalytics(userId: string): Promise<AnalyticsData[]> {
+    // This would connect to Supabase in a real implementation
+    return [
+      {
+        id: '1',
+        title: 'Productivity Score',
+        value: 87,
+        change: 3,
+        period: 'vs last week'
+      },
+      {
+        id: '2',
+        title: 'Tasks Completed',
+        value: 42,
+        change: 5,
+        period: 'vs last week'
+      }
+    ];
+  },
+
+  async getReports(userId: string): Promise<ReportConfig[]> {
+    return [
+      {
+        id: '1',
+        name: 'Weekly Performance',
+        type: 'bar',
+        filters: { period: 'week' }
+      },
+      {
+        id: '2',
+        name: 'Resource Allocation',
+        type: 'pie', 
+        filters: { period: 'month' }
+      }
+    ];
+  }
 };
-
-export async function createReport(report: Omit<Report, 'report_id' | 'generated_at'>) {
-  return axios.post<{ data: Report }>(`/api/insightiq/reports`, report);
-}
-export async function getReportById(report_id: string) {
-  return axios.get<{ data: Report }>(`/api/insightiq/reports/${report_id}`);
-}
-export async function updateReport(report_id: string, updates: Partial<Report>) {
-  return axios.put<{ data: Report }>(`/api/insightiq/reports/${report_id}`, updates);
-}
-export async function deleteReport(report_id: string) {
-  return axios.delete<{ data: Report }>(`/api/insightiq/reports/${report_id}`);
-}
-// Repeat for charts, dashboards, etc.

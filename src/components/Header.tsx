@@ -1,8 +1,7 @@
 
 import React from 'react';
-import { Bell, Search, Settings, User, LogOut } from 'lucide-react';
+import { Settings, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   DropdownMenu, 
@@ -15,6 +14,8 @@ import {
 import { useAuthContext } from '@/context/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import UniversalSearch from './UniversalSearch';
+import NotificationCenter from './NotificationCenter';
 
 const Header = () => {
   const { user, profile, signOut } = useAuthContext();
@@ -36,23 +37,13 @@ const Header = () => {
       <div className="flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-4 lg:gap-6">
           <h2 className="text-xl font-bold text-prosync-700 hidden md:block">ProSync Suite</h2>
-          <div className="hidden md:flex md:w-80 lg:w-96">
-            <div className="relative w-full">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search..."
-                className="w-full pl-8 bg-background"
-              />
-            </div>
+          <div className="hidden md:flex md:w-auto lg:w-auto">
+            <UniversalSearch />
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <Link to="/notifications">
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-              <Bell className="h-5 w-5" />
-            </Button>
-          </Link>
+          <NotificationCenter />
+          
           <Link to="/settings">
             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
               <Settings className="h-5 w-5" />
