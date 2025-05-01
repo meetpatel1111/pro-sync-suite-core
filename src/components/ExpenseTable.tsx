@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Table,
@@ -25,6 +24,20 @@ import { useAuth } from '@/hooks/useAuth';
 
 // ExpenseTable now fetches live data from the backend
 
+
+// Update the Transaction interface to include missing properties
+interface Transaction {
+  id: string;
+  amount: number;
+  description: string;
+  date: string;
+  merchant: string;
+  category: string; // Add missing property
+  status: string; // Add missing property
+  approvedBy?: string; // Add missing property
+  receipt?: string; // Add missing property
+  // Add other properties as needed
+}
 
 const ExpenseTable = () => {
   const { user } = useAuth();

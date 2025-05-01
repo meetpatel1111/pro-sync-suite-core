@@ -1,35 +1,99 @@
-import React, { useState } from 'react';
-import { collabService } from '../services/collabService';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
-interface ProjectChannelAutoCreateProps {
-  projectId: string;
-  currentUserId: string;
-  onCreated?: (channel: any) => void;
+interface Project {
+  id: string;
+  name: string;
+  description: string;
 }
 
-export const ProjectChannelAutoCreate: React.FC<ProjectChannelAutoCreateProps> = ({ projectId, currentUserId, onCreated }) => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+interface Channel {
+  id: string;
+  name: string;
+  description: string;
+}
 
-  const handleCreate = async () => {
-    setLoading(true);
-    setError(null);
+interface ProjectChannelAutoCreateProps {
+  project: Project | null;
+}
+
+const ProjectChannelAutoCreate: React.FC<ProjectChannelAutoCreateProps> = ({ project }) => {
+  const { user } = useAuth();
+  const [channel, setChannel] = useState<Channel | null>(null);
+
+  useEffect(() => {
+    createChannel();
+  }, [project, user]);
+
+  const createChannel = async () => {
+    if (!project) return;
+  
     try {
-      const result = await collabService.autoCreateProjectChannel(projectId, currentUserId);
-      if (result.error) setError(result.error.message);
-      else if (onCreated) onCreated(result.data || result);
-    } catch (e: any) {
-      setError(e.message);
+      const channelName = `project-${project.name.toLowerCase().replace(/\s+/g, '-')}`;
+    
+      // Check if channel already exists
+      const { data: existingChannels, error: checkError } = await supabase
+        .from('channels')
+        .select('id')
+        .eq('name', channelName)
+        .limit(1);
+      
+      if (checkError) {
+        console.error('Error checking for existing channel:', checkError);
+        return;
+      }
+    
+      if (existingChannels && existingChannels.length > 0) {
+        // Channel already exists
+        setChannel(existingChannels[0]);
+        return;
+      }
+    
+      // Create new channel
+      const { data: newChannel, error: createError } = await supabase
+        .from('channels')
+        .insert({
+          name: channelName,
+          description: `Channel for ${project.name} project`,
+          type: 'project',
+          created_by: user?.id
+        })
+        .select()
+        .single();
+      
+      if (createError) {
+        console.error('Error creating channel:', createError);
+        return;
+      }
+    
+      if (newChannel) {
+        setChannel(newChannel);
+      
+        // Add current user as member
+        await supabase
+          .from('channel_members')
+          .insert({
+            channel_id: newChannel.id,
+            user_id: user?.id
+          });
+      }
+    } catch (error) {
+      console.error('Error in createChannel:', error);
     }
-    setLoading(false);
   };
 
   return (
     <div>
-      <button onClick={handleCreate} disabled={loading}>
-        {loading ? 'Creating Channel...' : 'Create Project Channel'}
-      </button>
-      {error && <div style={{ color: 'red' }}>{error}</div>}
+      {channel ? (
+        <p>
+          Channel "{channel.name}" created for this project.
+        </p>
+      ) : (
+        <p>Creating channel...</p>
+      )}
     </div>
   );
 };
+
+export default ProjectChannelAutoCreate;

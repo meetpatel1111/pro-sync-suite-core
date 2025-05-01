@@ -498,6 +498,19 @@ export const dbService = {
     }
   },
 
+  // Add updateNotification function
+  export const updateNotification = async (id: string, updates: Partial<{ read: boolean }>) => {
+    try {
+      return await supabase
+        .from('notifications')
+        .update(updates)
+        .eq('id', id);
+    } catch (error) {
+      console.error('Error updating notification:', error);
+      return { error };
+    }
+  },
+
   // Get AI Risk data (placeholder for future integration)
   async getAiRisk(projectId: string): Promise<any> {
     // This is just a placeholder for future real implementation
