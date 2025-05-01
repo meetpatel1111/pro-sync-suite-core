@@ -1,8 +1,9 @@
 
-// DEPRECATED: This file previously contained mock/sample data setup functions for demo purposes.
-// All features must now use live data from the database and API.
-// If onboarding or demo flows are needed, implement them using real API/database calls via the UI.
+// This file now uses real database calls instead of mock data
+import { supabase } from '@/integrations/supabase/client';
 
+// Helper to create initial projects for a user
+async function setupProjects(userId: string) {
   const projectsData = [
     { 
       name: 'Website Redesign', 
@@ -30,15 +31,14 @@
     }
   ];
   
-  for (const project of projectsData) {
-    const { error } = await supabase
-      .from('projects')
-      .insert(project);
-      
-    if (error) console.error('Error setting up project:', error);
+  const { data, error } = await supabase.from('projects').insert(projectsData).select('*');
+  
+  if (error) {
+    console.error('Error setting up projects:', error);
+    return null;
   }
   
-  return projectsData;
+  return data;
 }
 
 // Helper to create team members for a user
@@ -50,12 +50,14 @@ async function setupTeamMembers(userId: string) {
     { name: 'Morgan Chen', email: 'morgan@example.com', role: 'QA Engineer', user_id: userId }
   ];
   
-  for (const member of teamMembersData) {
-    const { error } = await supabase
-      .from('team_members')
-      .insert(member);
-    // handle error if needed
+  const { data, error } = await supabase.from('team_members').insert(teamMembersData).select('*');
+  
+  if (error) {
+    console.error('Error setting up team members:', error);
+    return null;
   }
+  
+  return data;
 }
 
 export const setupSampleData = async () => {
@@ -68,11 +70,16 @@ export const setupSampleData = async () => {
   
   try {
     // Check if user already has sample data
-    const { data: existingProjects } = await supabase
+    const { data: existingProjects, error } = await supabase
       .from('projects')
       .select('id')
       .eq('user_id', user.id)
       .limit(1);
+      
+    if (error) {
+      console.error('Error checking for existing projects:', error);
+      return false;
+    }
       
     if (existingProjects && existingProjects.length > 0) {
       // User already has data, no need to set up sample data
@@ -82,10 +89,12 @@ export const setupSampleData = async () => {
     console.log('Setting up sample data for user:', user.id);
     
     // Add sample projects
-    await setupProjects(user.id);
+    const projects = await setupProjects(user.id);
+    if (!projects) return false;
     
     // Add sample team members
-    await setupTeamMembers(user.id);
+    const teamMembers = await setupTeamMembers(user.id);
+    if (!teamMembers) return false;
     
     // Add sample tasks
     const tasksData = [
@@ -127,12 +136,10 @@ export const setupSampleData = async () => {
       }
     ];
     
-    for (const task of tasksData) {
-      const { error } = await supabase
-        .from('tasks')
-        .insert(task);
-        
-      if (error) console.error('Error setting up task:', error);
+    const { error: tasksError } = await supabase.from('tasks').insert(tasksData);
+    if (tasksError) {
+      console.error('Error setting up tasks:', tasksError);
+      return false;
     }
     
     // Add sample time entries
@@ -167,12 +174,10 @@ export const setupSampleData = async () => {
       }
     ];
     
-    for (const entry of timeEntriesData) {
-      const { error } = await supabase
-        .from('time_entries')
-        .insert(entry);
-        
-      if (error) console.error('Error setting up time entry:', error);
+    const { error: timeError } = await supabase.from('time_entries').insert(timeEntriesData);
+    if (timeError) {
+      console.error('Error setting up time entries:', timeError);
+      return false;
     }
     
     // Add sample clients for ClientConnect
@@ -200,12 +205,10 @@ export const setupSampleData = async () => {
       }
     ];
     
-    for (const client of clientsData) {
-      const { error } = await supabase
-        .from('clients')
-        .insert(client);
-        
-      if (error) console.error('Error setting up client:', error);
+    const { error: clientsError } = await supabase.from('clients').insert(clientsData);
+    if (clientsError) {
+      console.error('Error setting up clients:', clientsError);
+      return false;
     }
     
     // Add notifications
@@ -233,12 +236,10 @@ export const setupSampleData = async () => {
       }
     ];
     
-    for (const notification of notificationsData) {
-      const { error } = await supabase
-        .from('notifications')
-        .insert(notification);
-        
-      if (error) console.error('Error setting up notification:', error);
+    const { error: notificationsError } = await supabase.from('notifications').insert(notificationsData);
+    if (notificationsError) {
+      console.error('Error setting up notifications:', notificationsError);
+      return false;
     }
     
     console.log('Sample data setup complete');

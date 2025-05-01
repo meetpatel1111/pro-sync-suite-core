@@ -22,10 +22,8 @@ const Header = () => {
   const { toast } = useToast();
 
   const handleSignOut = async () => {
-    const success = await signOut();
-    if (success) {
-      navigate('/auth');
-    }
+    await signOut();
+    navigate('/auth');
   };
 
   const getInitials = (name: string) => {

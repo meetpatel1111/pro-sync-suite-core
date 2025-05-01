@@ -147,7 +147,7 @@ export const useAuth = () => {
     };
   }, []);
 
-  const signOut = async () => {
+  const signOut = async (): Promise<void> => {
     try {
       // Clear custom user on sign out
       if (typeof window !== 'undefined') {
@@ -161,18 +161,15 @@ export const useAuth = () => {
           description: error.message,
           variant: 'destructive',
         });
-        return false;
+        return;
       }
       
       toast({
         title: 'Signed out successfully',
         description: 'You have been signed out of your account',
       });
-      
-      return true;
     } catch (error) {
       console.error('Exception during sign out:', error);
-      return false;
     }
   };
 

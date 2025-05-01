@@ -8,7 +8,7 @@ interface AuthContextType {
   session: Session | null;
   profile: any;
   loading: boolean;
-  signOut: () => Promise<boolean>;
+  signOut: () => Promise<void>;
   setProfile: (profile: any) => void;
 }
 
@@ -17,7 +17,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
   loading: true,
-  signOut: async () => false,
+  signOut: async () => {},
   setProfile: () => {},
 });
 

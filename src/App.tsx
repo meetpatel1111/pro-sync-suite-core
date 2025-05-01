@@ -96,8 +96,7 @@ const App = () => {
               <BrowserRouter>
                 <Routes>
                   <Route path="/auth" element={<Auth />} />
-<Route path="/forgot-password" element={<ForgotPassword />} />
-                  {/* Make Index route protected */}
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route 
                     path="/" 
                     element={
