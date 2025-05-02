@@ -294,7 +294,7 @@ const removeReaction = async (messageId: string, userId: string, reaction: strin
     // Use any type to avoid deep type instantiation issues
     const { data, error } = await supabase
       .from('messages')
-      .update({ reactions })
+      .update({ reactions: reactions as any })
       .eq('id', messageId)
       .select();
     

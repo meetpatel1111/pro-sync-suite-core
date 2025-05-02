@@ -383,7 +383,7 @@ const createTimeEntry = async (userId: string, timeEntryData: Partial<TimeEntry>
     }
 
     // Format date properly with null checking
-    let entryDate: string;
+    let entryDate: string = new Date().toISOString(); // Default to current date
     
     if (timeEntryData.date) {
       if (typeof timeEntryData.date === 'object' && timeEntryData.date !== null && 
@@ -391,11 +391,7 @@ const createTimeEntry = async (userId: string, timeEntryData: Partial<TimeEntry>
         entryDate = timeEntryData.date.toISOString();
       } else if (typeof timeEntryData.date === 'string') {
         entryDate = timeEntryData.date;
-      } else {
-        entryDate = new Date().toISOString();
       }
-    } else {
-      entryDate = new Date().toISOString();
     }
 
     // Create an entry with all required fields
