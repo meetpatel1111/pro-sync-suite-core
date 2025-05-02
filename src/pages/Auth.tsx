@@ -177,20 +177,18 @@ const Auth = () => {
         return;
       }
 
-      // Create a new user in the users table
-      const { data, error } = await supabase
-        .from('users')
-        .insert([{
+      // Create a new user in the profiles table
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
           id: email.split('@')[0],
-          email: email,
-          full_name: email.split('@')[0],
-          custom_password_hash: hashedPassword,
-        }]);
+          full_name: email.split('@')[0]
+        });
 
-      if (error) {
+      if (profileError) {
         toast({
           title: 'Sign up failed',
-          description: error.message,
+          description: profileError.message,
           variant: 'destructive',
         });
         setLoading(false);
