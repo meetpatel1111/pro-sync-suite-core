@@ -254,10 +254,10 @@ const addReaction = async (messageId: string, userId: string, reaction: string) 
     // Update the reactions object with the modified array
     reactions[reaction] = reactionUsers;
     
-    // Update the message with new reactions object
+    // Use type assertion to avoid deep type instantiation
     const { data, error } = await supabase
       .from('messages')
-      .update({ reactions })
+      .update({ reactions: reactions as any })
       .eq('id', messageId)
       .select();
     

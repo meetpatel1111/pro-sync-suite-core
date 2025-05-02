@@ -369,13 +369,42 @@ const getTimeEntries = async (userId: string, filters: {
 // Fixed createTimeEntry function
 const createTimeEntry = async (userId: string, timeEntryData: Partial<TimeEntry>) => {
   try {
-    // Create a new entry object with required fields
+    // Ensure required fields are provided
+    if (!timeEntryData.description) {
+      return { error: new Error('Description is required'), data: null };
+    }
+    
+    if (!timeEntryData.time_spent) {
+      return { error: new Error('Time spent is required'), data: null };
+    }
+    
+    if (!timeEntryData.project) {
+      return { error: new Error('Project is required'), data: null };
+    }
+
+    // Format date properly
+    let entryDate = timeEntryData.date;
+    if (timeEntryData.date && typeof timeEntryData.date === 'object' && 'toISOString' in timeEntryData.date) {
+      entryDate = timeEntryData.date.toISOString();
+    } else if (!entryDate) {
+      entryDate = new Date().toISOString();
+    }
+
+    // Create an entry with all required fields
     const entry = {
-      ...timeEntryData,
-      date: typeof timeEntryData.date === 'string' ? 
-        timeEntryData.date : 
-        (timeEntryData.date && typeof timeEntryData.date.toISOString === 'function' ? 
-          timeEntryData.date.toISOString() : new Date().toISOString())
+      user_id: userId,
+      description: timeEntryData.description,
+      time_spent: timeEntryData.time_spent,
+      project: timeEntryData.project,
+      date: entryDate,
+      // Optional fields
+      billable: timeEntryData.billable,
+      hourly_rate: timeEntryData.hourly_rate,
+      notes: timeEntryData.notes,
+      tags: timeEntryData.tags,
+      manual: timeEntryData.manual ?? false,
+      project_id: timeEntryData.project_id,
+      task_id: timeEntryData.task_id
     };
 
     const { data, error } = await supabase

@@ -12,7 +12,7 @@ const handleError = (error: any) => {
 // Get reports
 export const getReports = async (userId: string) => {
   try {
-    // Use safeQueryTable instead of direct query since the reports table might not be in types
+    // Use safeQueryTable instead of direct query
     const { data, error } = await safeQueryTable<Report>('reports', query =>
       query.select('*').eq('user_id', userId)
     );

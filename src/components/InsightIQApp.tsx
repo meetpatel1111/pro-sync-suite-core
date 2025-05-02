@@ -5,7 +5,7 @@ import {
   createReport,
 } from '../services/insightiq';
 import { Report } from '@/utils/dbtypes';
-import { supabase } from '@/integrations/supabase/client';
+import { safeQueryTable } from '@/utils/db-helpers';
 
 const userId = 'CURRENT_USER_ID'; // TODO: Replace with real user context
 
@@ -35,10 +35,11 @@ const InsightIQApp: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    // Since deleteReport is not available, we'll implement it differently
-    // Using a direct call to supabase in this component for now
+    // Use safeQueryTable instead of direct supabase access
     try {
-      await supabase.from('reports').delete().eq('id', id);
+      await safeQueryTable('reports', query => 
+        query.delete().eq('id', id)
+      );
       fetchReports();
     } catch (error) {
       console.error("Error deleting report:", error);
