@@ -29,6 +29,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import { useState, useEffect } from "react";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ThemeProvider } from "next-themes";
+import "./pages/auth-modern.css";  // Import auth styles
 
 const queryClient = new QueryClient({
   defaultOptions: {
