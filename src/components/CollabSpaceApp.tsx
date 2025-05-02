@@ -147,34 +147,41 @@ const CollabSpaceApp = () => {
     fetchChannelData();
 
     // Set up realtime subscription for new messages
-    const channel = collabService.onNewMessageForChannel(selectedChannel, (newMessage) => {
-      setMessages(prevMessages => {
-        // Convert the newMessage to match our Message interface
-        const typedMessage: Message = {
-          id: newMessage.id,
-          channel_id: newMessage.channel_id,
-          user_id: newMessage.user_id,
-          content: newMessage.content || '',
-          created_at: newMessage.created_at,
-          username: newMessage.username || '',
-          edited_at: newMessage.edited_at || '',
-          reactions: newMessage.reactions || {},
-          parent_id: newMessage.parent_id || '',
-          file_url: newMessage.file_url || '',
-          scheduled_for: newMessage.scheduled_for || '',
-          type: newMessage.type || 'text',
-          is_pinned: newMessage.is_pinned || false,
-          read_by: Array.isArray(newMessage.read_by) ? newMessage.read_by : []
-        };
-        return [...prevMessages, typedMessage];
-      });
-    });
+    const channel = supabase.channel('public:messages')
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'messages',
+          filter: `channel_id=eq.${selectedChannel}`
+        }, 
+        (payload) => {
+          setMessages(prevMessages => {
+            // Convert the newMessage to match our Message interface
+            const typedMessage: Message = {
+              id: payload.new.id,
+              channel_id: payload.new.channel_id,
+              user_id: payload.new.user_id,
+              content: payload.new.content || '',
+              created_at: payload.new.created_at,
+              username: payload.new.username || '',
+              edited_at: payload.new.edited_at || '',
+              reactions: payload.new.reactions || {},
+              parent_id: payload.new.parent_id || '',
+              file_url: payload.new.file_url || '',
+              scheduled_for: payload.new.scheduled_for || '',
+              type: payload.new.type || 'text',
+              is_pinned: payload.new.is_pinned || false,
+              read_by: Array.isArray(payload.new.read_by) ? payload.new.read_by : []
+            };
+            return [...prevMessages, typedMessage];
+          });
+        })
+      .subscribe();
 
     return () => {
       // Remove the channel properly with supabase's removeChannel method
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      supabase.removeChannel(channel);
     };
   }, [selectedChannel]);
 

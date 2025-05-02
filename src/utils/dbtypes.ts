@@ -1,4 +1,3 @@
-
 // Database type definitions for application entities
 
 export interface User {
@@ -186,4 +185,13 @@ export interface Approval {
   approval_type: string;
   status: string;
   created_at: string;
+}
+
+export interface Report {
+  id?: string;
+  report_id?: string;
+  report_type: string;
+  user_id: string;
+  created_at?: string;
+  config?: Record<string, any>;
 }

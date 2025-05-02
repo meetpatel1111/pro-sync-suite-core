@@ -4,9 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 export interface Timesheet {
   id: string;
   user_id: string;
-  date: string;
+  date: string; // Changed to match the expected property
   hours: number;
   created_at?: string;
+  // We'll adapt from log_date in the query results
 }
 
 export interface TimeEntry {
@@ -28,23 +29,45 @@ export async function getAllTimesheets(userId: string) {
       .eq('user_id', userId);
     
     if (error) throw error;
-    return { data: data as Timesheet[] };
+    
+    // Transform data to match Timesheet interface
+    const transformedData = data?.map(item => ({
+      ...item,
+      date: item.log_date // Ensure date field exists by mapping from log_date
+    }));
+    
+    return { data: transformedData as Timesheet[] };
   } catch (error) {
     console.error('Error fetching timesheets:', error);
     throw error;
   }
 }
 
-export async function createTimesheet(timesheet: Omit<Timesheet, 'id' | 'created_at'>) {
+export async function createTimesheet(timesheetData: Omit<Timesheet, 'id' | 'created_at'>) {
   try {
+    // Create an adapted object that matches the database schema
+    const dbTimesheet = {
+      user_id: timesheetData.user_id,
+      log_date: timesheetData.date, // Map date to log_date
+      hours: timesheetData.hours,
+      id: crypto.randomUUID() // Generate ID since it's required
+    };
+    
     const { data, error } = await supabase
       .from('time_logs')
-      .insert(timesheet)
+      .insert(dbTimesheet)
       .select()
       .single();
     
     if (error) throw error;
-    return { data: data as Timesheet };
+    
+    // Transform back to Timesheet interface
+    const transformedData = {
+      ...data,
+      date: data.log_date // Ensure date field exists
+    };
+    
+    return { data: transformedData as Timesheet };
   } catch (error) {
     console.error('Error creating timesheet:', error);
     throw error;

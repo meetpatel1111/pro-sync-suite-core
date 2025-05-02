@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Report } from '@/utils/dbtypes';
+import { safeQueryTable } from '@/utils/db-helpers';
 
 // Helper function for error handling
 const handleError = (error: any) => {
@@ -11,11 +12,10 @@ const handleError = (error: any) => {
 // Get reports
 export const getReports = async (userId: string) => {
   try {
-    // Use a direct query instead of RPC since the RPC might not be set up
-    const { data, error } = await supabase
-      .from('reports')
-      .select('*')
-      .eq('user_id', userId);
+    // Use safeQueryTable instead of direct query since the reports table might not be in types
+    const { data, error } = await safeQueryTable<Report>('reports', query =>
+      query.select('*').eq('user_id', userId)
+    );
     
     if (error) return handleError(error);
     
@@ -28,11 +28,10 @@ export const getReports = async (userId: string) => {
 // Create report
 export const createReport = async (reportData: any) => {
   try {
-    // Use direct insert instead of RPC
-    const { data, error } = await supabase
-      .from('reports')
-      .insert(reportData)
-      .select();
+    // Use safeQueryTable for insert operation
+    const { data, error } = await safeQueryTable<Report>('reports', query =>
+      query.insert(reportData).select()
+    );
     
     if (error) return handleError(error);
     return { data };
@@ -44,12 +43,10 @@ export const createReport = async (reportData: any) => {
 // Get report by ID
 export const getReportById = async (reportId: string) => {
   try {
-    // Use direct query instead of RPC
-    const { data, error } = await supabase
-      .from('reports')
-      .select('*')
-      .eq('id', reportId)
-      .single();
+    // Use safeQueryTable for select by ID
+    const { data, error } = await safeQueryTable<Report>('reports', query =>
+      query.select('*').eq('id', reportId).single()
+    );
     
     if (error) return handleError(error);
     return { data };

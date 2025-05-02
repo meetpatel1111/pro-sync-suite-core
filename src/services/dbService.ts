@@ -370,20 +370,14 @@ const getTimeEntries = async (userId: string, filters: {
 const createTimeEntry = async (userId: string, timeEntryData: Partial<TimeEntry>) => {
   try {
     // Create a new entry object with required fields
-    const entry: any = {
-      user_id: userId,
-      description: timeEntryData.description || 'Time entry',
-      project: timeEntryData.project || 'Unassigned',
-      time_spent: timeEntryData.time_spent || 0,
-      date: new Date().toISOString(),
-      ...timeEntryData
+    const entry = {
+      ...timeEntryData,
+      date: typeof timeEntryData.date === 'string' ? 
+        timeEntryData.date : 
+        (timeEntryData.date && typeof timeEntryData.date.toISOString === 'function' ? 
+          timeEntryData.date.toISOString() : new Date().toISOString())
     };
 
-    // Handle date conversion if it exists
-    if (typeof entry.date === 'object' && entry.date instanceof Date) {
-      entry.date = entry.date.toISOString();
-    }
-    
     const { data, error } = await supabase
       .from('time_entries')
       .insert(entry)
@@ -856,7 +850,7 @@ const dbService = {
   getTimeEntries,
   createTimeEntry,
   createResourceAllocation,
-  getResourceAllocations,
+  getResourceAllocations, // Only include this once
   deleteResourceAllocation,
   getFiles,
   createFileRecord,

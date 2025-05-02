@@ -5,6 +5,7 @@ import {
   createReport,
 } from '../services/insightiq';
 import { Report } from '@/utils/dbtypes';
+import { supabase } from '@/integrations/supabase/client';
 
 const userId = 'CURRENT_USER_ID'; // TODO: Replace with real user context
 

@@ -220,6 +220,7 @@ const uploadFile = async (file: File, channelId: string, userId: string) => {
 // Add reaction to message - Fix type checks for reactions
 const addReaction = async (messageId: string, userId: string, reaction: string) => {
   try {
+    // Get the current message
     const { data: message, error: fetchError } = await supabase
       .from('messages')
       .select('reactions')
@@ -231,20 +232,29 @@ const addReaction = async (messageId: string, userId: string, reaction: string) 
     // Initialize reactions safely
     let reactions = message?.reactions || {};
     
+    if (typeof reactions !== 'object') {
+      reactions = {};
+    }
+    
     if (!reactions[reaction]) {
       reactions[reaction] = [];
     }
     
-    // Safely check if reactions[reaction] is an array before using includes and push
-    if (Array.isArray(reactions[reaction])) {
-      if (!reactions[reaction].includes(userId)) {
-        reactions[reaction].push(userId);
-      }
-    } else {
-      // Initialize as array with the user ID if it wasn't an array
-      reactions[reaction] = [userId];
+    // Safely check if reactions[reaction] is array and handle accordingly
+    let reactionUsers = reactions[reaction];
+    if (!Array.isArray(reactionUsers)) {
+      reactionUsers = [];
     }
     
+    // Only add userId if it's not already in the array
+    if (!reactionUsers.includes(userId)) {
+      reactionUsers.push(userId);
+    }
+    
+    // Update the reactions object with the modified array
+    reactions[reaction] = reactionUsers;
+    
+    // Update the message with new reactions object
     const { data, error } = await supabase
       .from('messages')
       .update({ reactions })

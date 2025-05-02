@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import collabService from '@/services/collabService';
 import { Input } from '@/components/ui/input';
@@ -21,7 +20,7 @@ export const CollabSearchBar: React.FC<CollabSearchBarProps> = ({ onResults, fil
     setError(null);
     try {
       // Fix the function call to match the signature in collabService
-      const res = await collabService.searchMessages(query, filters);
+      const res = await collabService.searchMessages(query);
       if (res.error) setError(typeof res.error === 'string' ? res.error : 'Search failed');
       else onResults(res.data || []);
     } catch (e: any) {
