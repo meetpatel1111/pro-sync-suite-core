@@ -366,7 +366,7 @@ const getTimeEntries = async (userId: string, filters: {
   }
 };
 
-// Fixed createTimeEntry function
+// Fixed createTimeEntry function with proper null checks
 const createTimeEntry = async (userId: string, timeEntryData: Partial<TimeEntry>) => {
   try {
     // Ensure required fields are provided
@@ -382,11 +382,18 @@ const createTimeEntry = async (userId: string, timeEntryData: Partial<TimeEntry>
       return { error: new Error('Project is required'), data: null };
     }
 
-    // Format date properly
-    let entryDate = timeEntryData.date;
-    if (timeEntryData.date && typeof timeEntryData.date === 'object' && 'toISOString' in timeEntryData.date) {
-      entryDate = timeEntryData.date.toISOString();
-    } else if (!entryDate) {
+    // Format date properly with null checking
+    let entryDate: string;
+    
+    if (timeEntryData.date) {
+      if (typeof timeEntryData.date === 'object' && timeEntryData.date !== null && 'toISOString' in timeEntryData.date) {
+        entryDate = timeEntryData.date.toISOString();
+      } else if (typeof timeEntryData.date === 'string') {
+        entryDate = timeEntryData.date;
+      } else {
+        entryDate = new Date().toISOString();
+      }
+    } else {
       entryDate = new Date().toISOString();
     }
 

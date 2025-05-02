@@ -257,7 +257,7 @@ const addReaction = async (messageId: string, userId: string, reaction: string) 
     // Use type assertion to avoid deep type instantiation
     const { data, error } = await supabase
       .from('messages')
-      .update({ reactions: reactions as any })
+      .update({ reactions: reactions as Record<string, unknown> })
       .eq('id', messageId)
       .select();
     
