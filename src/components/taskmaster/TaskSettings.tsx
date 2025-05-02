@@ -8,19 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { dbService } from '@/services/dbService';
+import dbService from '@/services/dbService';
 import { useAuth } from '@/hooks/useAuth';
 import { Trash2, Plus, Save, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-
-interface TaskSettings {
-  default_view: 'board' | 'list';
-  show_completed: boolean;
-  auto_archive: boolean;
-  default_priority: 'low' | 'medium' | 'high';
-  default_project: string;
-  reminder_time: string;
-}
 
 const TaskSettings = () => {
   const { toast } = useToast();
@@ -41,18 +32,18 @@ const TaskSettings = () => {
     if (!user?.id) return;
     setLoading(true);
     setError(null);
-    dbService.getUserSettings(user.id)
+    dbService.getTaskSettings(user.id)
       .then(({ data, error }) => {
         if (error && error.code === 'PGRST116') {
           // Row does not exist: create default
-          dbService.createUserSettings(user.id, {
+          dbService.createTaskSettings(user.id, {
             default_view: 'board',
             show_completed: true,
             auto_archive: false,
             default_priority: 'medium',
             default_project: 'project1',
             reminder_time: '1day',
-          } as TaskSettings);
+          });
         } else if (data) {
           setDefaultView(data.default_view === 'list' ? 'list' : 'board');
           setShowCompleted(!!data.show_completed);
@@ -81,7 +72,7 @@ const TaskSettings = () => {
       default_project: defaultProject,
       reminder_time: reminderTime,
     };
-    const { error } = await dbService.updateUserSettings(user.id, updates);
+    const { error } = await dbService.updateTaskSettings(user.id, updates);
     setLoading(false);
     if (error) {
       setError('Failed to save settings.');
@@ -138,27 +129,15 @@ const TaskSettings = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="defaultView" 
-                    checked={defaultView === 'board'} 
-                    onCheckedChange={(val) => setDefaultView(val ? 'board' : 'list')}
-                  />
+                  <Checkbox id="defaultView" checked={defaultView === 'board'} onCheckedChange={val => setDefaultView(val ? 'board' : 'list')} />
                   <Label htmlFor="defaultView">Use board view as default</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="showCompleted" 
-                    checked={showCompleted} 
-                    onCheckedChange={(val) => setShowCompleted(!!val)}
-                  />
+                  <Checkbox id="showCompleted" checked={showCompleted} onCheckedChange={setShowCompleted} />
                   <Label htmlFor="showCompleted">Show completed tasks</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="autoArchive" 
-                    checked={autoArchive} 
-                    onCheckedChange={(val) => setAutoArchive(!!val)}
-                  />
+                  <Checkbox id="autoArchive" checked={autoArchive} onCheckedChange={setAutoArchive} />
                   <Label htmlFor="autoArchive">Auto-archive completed tasks after 30 days</Label>
                 </div>
               </div>

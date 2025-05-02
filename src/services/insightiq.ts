@@ -1,37 +1,30 @@
-
-import { supabase } from '@/integrations/supabase/client';
+// InsightIQ Service API
+// Provides frontend CRUD functions for InsightIQ entities using backend endpoints
+// Example entity:
+import axios from 'axios';
 
 export interface Report {
   report_id?: string;
   user_id: string;
   report_type: string;
-  created_at?: string;
+  generated_at?: string;
 }
 
-export const getAllReports = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('reports')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-
-  return { data, error };
+export async function getAllReports(userId: string) {
+  return axios.get<{ data: Report[] }>(`/api/insightiq/reports?userId=${userId}`);
+}
 };
 
-export const createReport = async (report: Partial<Report>) => {
-  const { data, error } = await supabase
-    .from('reports')
-    .insert([report])
-    .select();
-
-  return { data, error };
-};
-
-export const deleteReport = async (reportId: string) => {
-  const { data, error } = await supabase
-    .from('reports')
-    .delete()
-    .eq('report_id', reportId);
-
-  return { data, error };
-};
+export async function createReport(report: Omit<Report, 'report_id' | 'generated_at'>) {
+  return axios.post<{ data: Report }>(`/api/insightiq/reports`, report);
+}
+export async function getReportById(report_id: string) {
+  return axios.get<{ data: Report }>(`/api/insightiq/reports/${report_id}`);
+}
+export async function updateReport(report_id: string, updates: Partial<Report>) {
+  return axios.put<{ data: Report }>(`/api/insightiq/reports/${report_id}`, updates);
+}
+export async function deleteReport(report_id: string) {
+  return axios.delete<{ data: Report }>(`/api/insightiq/reports/${report_id}`);
+}
+// Repeat for charts, dashboards, etc.

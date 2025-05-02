@@ -23,6 +23,9 @@ import { useEffect, useState } from 'react';
 import { getAllTransactions, getAllCategories, Transaction, Category } from '@/services/budgetbuddy';
 import { useAuth } from '@/hooks/useAuth';
 
+// ExpenseTable now fetches live data from the backend
+
+
 const ExpenseTable = () => {
   const { user } = useAuth();
   const [expenses, setExpenses] = useState<Transaction[]>([]);
@@ -48,13 +51,13 @@ const ExpenseTable = () => {
   };
 
   // Format date to a more readable format
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
   
   // Format currency
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -81,7 +84,7 @@ const ExpenseTable = () => {
             <TableCell>{formatDate(expense.date)}</TableCell>
             <TableCell>{formatCurrency(expense.amount)}</TableCell>
             <TableCell>
-              {expense.status === 'Approved' && expense.approvedBy ? (
+              {expense.status === 'Approved' ? (
                 <div className="flex items-center gap-2">
                   <Badge className="bg-emerald-600">Approved</Badge>
                   <Avatar className="h-6 w-6">

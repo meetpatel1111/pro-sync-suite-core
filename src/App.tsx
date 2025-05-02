@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -28,8 +29,6 @@ import Notifications from "./pages/Notifications";
 import ForgotPassword from "./pages/ForgotPassword";
 import { useState, useEffect } from "react";
 import { SettingsProvider } from "@/contexts/SettingsContext";
-import { ThemeProvider } from "next-themes";
-import "./pages/auth-modern.css";  // Import auth styles
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -92,47 +91,46 @@ const App = () => {
         <TooltipProvider>
           <IntegrationProvider>
             <SettingsProvider>
-              <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <Routes>
-                    <Route path="/auth" element={<Auth />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route 
-                      path="/" 
-                      element={
-                        <ProtectedRoute>
-                          <Index />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/taskmaster" 
-                      element={
-                        <ProtectedRoute>
-                          <TaskMaster />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route path="/timetrackpro" element={<ProtectedRoute><TimeTrackPro /></ProtectedRoute>} />
-                    <Route path="/collabspace" element={<ProtectedRoute><CollabSpace /></ProtectedRoute>} />
-                    <Route path="/planboard" element={<ProtectedRoute><PlanBoard /></ProtectedRoute>} />
-                    <Route path="/filevault" element={<ProtectedRoute><FileVault /></ProtectedRoute>} />
-                    <Route path="/budgetbuddy" element={<ProtectedRoute><BudgetBuddy /></ProtectedRoute>} />
-                    <Route path="/insightiq" element={<ProtectedRoute><InsightIQ /></ProtectedRoute>} />
-                    <Route path="/clientconnect" element={<ProtectedRoute><ClientConnect /></ProtectedRoute>} />
-                    <Route path="/riskradar" element={<ProtectedRoute><RiskRadar /></ProtectedRoute>} />
-                    <Route path="/resourcehub" element={<ProtectedRoute><ResourceHub /></ProtectedRoute>} />
-                    <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
-                    <Route path="/settings" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
-                    <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                    <Route path="/terms" element={<TermsOfService />} />
-                    <Route path="/privacy" element={<PrivacyPolicy />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </BrowserRouter>
-              </ThemeProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/auth" element={<Auth />} />
+<Route path="/forgot-password" element={<ForgotPassword />} />
+                  {/* Make Index route protected */}
+                  <Route 
+                    path="/" 
+                    element={
+                      <ProtectedRoute>
+                        <Index />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/taskmaster" 
+                    element={
+                      <ProtectedRoute>
+                        <TaskMaster />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route path="/timetrackpro" element={<ProtectedRoute><TimeTrackPro /></ProtectedRoute>} />
+                  <Route path="/collabspace" element={<ProtectedRoute><CollabSpace /></ProtectedRoute>} />
+                  <Route path="/planboard" element={<ProtectedRoute><PlanBoard /></ProtectedRoute>} />
+                  <Route path="/filevault" element={<ProtectedRoute><FileVault /></ProtectedRoute>} />
+                  <Route path="/budgetbuddy" element={<ProtectedRoute><BudgetBuddy /></ProtectedRoute>} />
+                  <Route path="/insightiq" element={<ProtectedRoute><InsightIQ /></ProtectedRoute>} />
+                  <Route path="/clientconnect" element={<ProtectedRoute><ClientConnect /></ProtectedRoute>} />
+                  <Route path="/riskradar" element={<ProtectedRoute><RiskRadar /></ProtectedRoute>} />
+                  <Route path="/resourcehub" element={<ProtectedRoute><ResourceHub /></ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
+                  <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
             </SettingsProvider>
           </IntegrationProvider>
         </TooltipProvider>

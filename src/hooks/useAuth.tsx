@@ -1,5 +1,4 @@
 
-// Fix imports to ensure they use correct paths
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
@@ -148,7 +147,7 @@ export const useAuth = () => {
     };
   }, []);
 
-  const signOut = async (): Promise<void> => {
+  const signOut = async () => {
     try {
       // Clear custom user on sign out
       if (typeof window !== 'undefined') {
@@ -162,15 +161,18 @@ export const useAuth = () => {
           description: error.message,
           variant: 'destructive',
         });
-        return;
+        return false;
       }
       
       toast({
         title: 'Signed out successfully',
         description: 'You have been signed out of your account',
       });
+      
+      return true;
     } catch (error) {
       console.error('Exception during sign out:', error);
+      return false;
     }
   };
 
