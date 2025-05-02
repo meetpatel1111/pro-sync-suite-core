@@ -255,7 +255,7 @@ const addReaction = async (messageId: string, userId: string, reaction: string) 
     // Update the reactions object with the modified array
     reactions[reaction] = reactionUsers;
     
-    // Use any type to avoid deep type instantiation issues
+    // Use type assertion to avoid deep type instantiation issues
     const { data, error } = await supabase
       .from('messages')
       .update({ reactions: reactions as any })
@@ -291,7 +291,7 @@ const removeReaction = async (messageId: string, userId: string, reaction: strin
       }
     }
     
-    // Use any type to avoid deep type instantiation issues
+    // Use type assertion to avoid deep type instantiation issues
     const { data, error } = await supabase
       .from('messages')
       .update({ reactions: reactions as any })
