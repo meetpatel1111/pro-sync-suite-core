@@ -254,3 +254,40 @@ export async function getDashboardStats(userId: string): Promise<DashboardStats>
     };
   }
 }
+
+// Create a dbService object that contains all our functions
+export const dbService = {
+  getUserProfile,
+  updateUserProfile,
+  getUserSettings,
+  createUserSettings,
+  updateUserSettings,
+  createTask,
+  getTasks,
+  updateTask,
+  deleteTask,
+  createProject,
+  getProjects,
+  updateProject,
+  deleteProject,
+  createTimeEntry,
+  getTimeEntries,
+  updateTimeEntry,
+  deleteTimeEntry,
+  getDashboardStats,
+  
+  // Add a function to upsert app users (used in useAuth.tsx)
+  upsertAppUser: async (user: any) => {
+    const { data, error } = await supabase
+      .from('users')
+      .upsert({ 
+        id: user.id, 
+        email: user.email,
+        full_name: user.user_metadata?.full_name || user.full_name || '',
+        avatar_url: user.user_metadata?.avatar_url || user.avatar_url || ''
+      })
+      .select();
+    
+    return { data, error };
+  },
+};

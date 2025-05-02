@@ -1,8 +1,8 @@
-
 // DEPRECATED: This file previously contained mock/sample data setup functions for demo purposes.
 // All features must now use live data from the database and API.
 // If onboarding or demo flows are needed, implement them using real API/database calls via the UI.
 
+async function setupProjects(userId: string) {
   const projectsData = [
     { 
       name: 'Website Redesign', 
