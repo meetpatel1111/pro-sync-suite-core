@@ -43,6 +43,34 @@ const UserSettings = () => {
   // Debug logging
   // console.log('UserSettings context:', { settings, loading });
 
+  useEffect(() => {
+    // Replace getTaskSettings with getUserSettings
+    const fetchSettings = async () => {
+      try {
+        const { data, error } = await dbService.getUserSettings(user?.id || '');
+        if (error) {
+          setError('Failed to load settings.');
+          toast({
+            title: 'Load failed',
+            description: 'Could not load your settings.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        setSettings(data || {});
+      } catch (error) {
+        setError('Failed to load settings.');
+        toast({
+          title: 'Load failed',
+          description: 'Could not load your settings.',
+          variant: 'destructive',
+        });
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
   if (settingsLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>

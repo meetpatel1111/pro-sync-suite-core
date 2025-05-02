@@ -479,7 +479,7 @@ const InsightIQ = () => {
       
       return Object.entries(groupedData).map(([name, value]) => ({ 
         name, 
-        value: parseFloat(value.toFixed(1))
+        value: typeof value === 'number' ? parseFloat(value.toFixed(1)) : value
       }));
     }
     

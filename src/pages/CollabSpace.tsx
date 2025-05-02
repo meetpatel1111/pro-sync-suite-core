@@ -34,6 +34,7 @@ const CollabSpace = () => {
   const [channelMembers, setChannelMembers] = useState<any[]>([]);
   const [fileList, setFileList] = useState<any[]>([]);
   const [showSidebar, setShowSidebar] = useState(true);
+  const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
 
   // Simulate a user ID for development
   const userId = 'sample-user-id';
@@ -214,7 +215,7 @@ const CollabSpace = () => {
   };
 
   // Send a message
-  const handleSendMessage = async (content: string, file: File | null = null, scheduledFor: Date | null = null, parentId: string | null = null) => {
+  const handleSendMessage = async (content: string, file: File | null = null, scheduledFor: Date | null = null, parentId: string = '') => {
     if (!selectedChannel || (!content.trim() && !file)) {
       return;
     }
@@ -283,7 +284,8 @@ const CollabSpace = () => {
     }
   };
 
-  const handleChannelSelect = (channel: Channel) => {
+  const handleSelectChannel = (channel: Channel) => {
+    setActiveChannelId(channel.id);
     setSelectedChannel(channel);
     setShowSidebar(false);
     
@@ -385,7 +387,7 @@ const CollabSpace = () => {
               className={`flex justify-between items-center px-2 py-1 rounded cursor-pointer ${
                 selectedChannel === channel.id ? 'bg-accent' : 'hover:bg-accent/50'
               }`}
-              onClick={() => handleChannelSelect(channel)}
+              onClick={() => handleSelectChannel(channel)}
             >
               <span className="truncate"># {channel.name}</span>
               <button 
@@ -406,7 +408,7 @@ const CollabSpace = () => {
               className={`px-2 py-1 rounded cursor-pointer ${
                 selectedChannel === dm.id ? 'bg-accent' : 'hover:bg-accent/50'
               }`}
-              onClick={() => handleChannelSelect(dm)}
+              onClick={() => handleSelectChannel(dm)}
             >
               <span className="truncate">@ {dm.name}</span>
             </li>

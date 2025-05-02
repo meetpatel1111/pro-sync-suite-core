@@ -1,568 +1,515 @@
-import { supabase } from "@/integrations/supabase/client";
-import { PostgrestSingleResponse } from '@supabase/supabase-js';
-import { Client, ClientNote } from '@/utils/dbtypes';
+import { supabase } from '@/integrations/supabase/client';
+import { Client, ClientNote, ResourceAllocation } from '@/utils/dbtypes';
 
-// Get user profile data
-async function getUserProfile(userId: string) {
-  return await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
-}
-
-// Update user profile data
-async function updateUserProfile(userId: string, updates: any) {
-  return await supabase
-    .from('user_profiles')
-    .update(updates)
-    .eq('id', userId);
-}
-
-// Get all tasks for a user
-async function getTasks(userId: string) {
-  return await supabase
-    .from('tasks')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-}
-
-// Create a new task
-async function createTask(userId: string, taskData: any) {
-  return await supabase
-    .from('tasks')
-    .insert([{ ...taskData, user_id: userId }]);
-}
-
-// Update an existing task
-async function updateTask(taskId: string, userId: string, updates: any) {
-  return await supabase
-    .from('tasks')
-    .update(updates)
-    .eq('id', taskId)
-    .eq('user_id', userId);
-}
-
-// Delete a task
-async function deleteTask(taskId: string, userId: string) {
-  return await supabase
-    .from('tasks')
-    .delete()
-    .eq('id', taskId)
-    .eq('user_id', userId);
-}
-
-// Get dashboard statistics
-async function getDashboardStats(userId: string) {
-  // For the dashboard, we'll need to get:
-  // 1. Count of completed tasks
-  // 2. Count of open issues/tasks
-  // 3. Total hours tracked
-  // 4. Team members count
-
-  const completedTasksPromise = supabase
-    .from('tasks')
-    .select('id', { count: 'exact' })
-    .eq('user_id', userId)
-    .eq('status', 'completed');
-
-  const openTasksPromise = supabase
-    .from('tasks')
-    .select('id', { count: 'exact' })
-    .eq('user_id', userId)
-    .not('status', 'eq', 'completed');
-
-  const hoursPromise = supabase
-    .from('time_entries')
-    .select('time_spent')
-    .eq('user_id', userId);
-
-  const teamMembersPromise = supabase
-    .from('team_members')
-    .select('id', { count: 'exact' })
-    .eq('user_id', userId);
-
-  const [completedTasks, openTasks, hours, teamMembers] = await Promise.all([
-    completedTasksPromise,
-    openTasksPromise,
-    hoursPromise,
-    teamMembersPromise
-  ]);
-
-  // Calculate total hours
-  let totalHours = 0;
-  if (hours.data) {
-    totalHours = hours.data.reduce((total: number, entry: any) => {
-      return total + (entry.time_spent || 0) / 60; // Convert minutes to hours
-    }, 0);
-  }
-
-  return {
-    data: {
-      completedTasks: completedTasks.count || 0,
-      openIssues: openTasks.count || 0,
-      hoursTracked: parseFloat(totalHours.toFixed(1)),
-      teamMembers: teamMembers.count || 0
-    },
-    error: completedTasks.error || openTasks.error || hours.error || teamMembers.error
-  };
-}
-
-// Get clients
-const getClients = async (userId: string) => {
+// Function to get user profile by ID
+const getUserProfile = async (userId: string) => {
   try {
     const { data, error } = await supabase
-      .from('clients')
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching user profile:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Unexpected error fetching user profile:', error);
+    return { data: null, error: { message: 'Unexpected error occurred' } };
+  }
+};
+
+// Function to update user profile
+const updateUserProfile = async (userId: string, updates: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating user profile:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Unexpected error updating user profile:', error);
+    return { data: null, error: { message: 'Unexpected error occurred' } };
+  }
+};
+
+// Function to get user settings
+const getUserSettings = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('user_settings')
       .select('*')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    
-    return data as Client[];
+      .single();
+
+    if (error) {
+      console.error('Error fetching user settings:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
   } catch (error) {
-    console.error('Error fetching clients:', error);
-    return [];
+    console.error('Unexpected error fetching user settings:', error);
+    return { data: null, error: { message: 'Unexpected error occurred' } };
   }
 };
 
-// Create a client
-const createClient = async (clientData: Partial<Client>) => {
+// Function to update user settings
+const updateUserSettings = async (userId: string, updates: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('user_settings')
+      .update(updates)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating user settings:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Unexpected error updating user settings:', error);
+    return { data: null, error: { message: 'Unexpected error occurred' } };
+  }
+};
+
+// Function to get projects for a user
+const getProjects = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error fetching projects:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Unexpected error fetching projects:', error);
+    return { data: null, error: { message: 'Unexpected error occurred' } };
+  }
+};
+
+// Function to create a new project
+const createProject = async (projectData: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .insert([projectData])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating project:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Unexpected error creating project:', error);
+    return { data: null, error: { message: 'Unexpected error occurred' } };
+  }
+};
+
+// Function to update an existing project
+const updateProject = async (projectId: string, updates: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .update(updates)
+      .eq('id', projectId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating project:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Unexpected error updating project:', error);
+    return { data: null, error: { message: 'Unexpected error occurred' } };
+  }
+};
+
+// Function to delete a project
+const deleteProject = async (projectId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', projectId);
+
+    if (error) {
+      console.error('Error deleting project:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Unexpected error deleting project:', error);
+    return { data: null, error: { message: 'Unexpected error occurred' } };
+  }
+};
+
+// Function to get time entries for a user
+const getTimeEntries = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('time_entries')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error fetching time entries:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Unexpected error fetching time entries:', error);
+    return { data: null, error: { message: 'Unexpected error occurred' } };
+  }
+};
+
+// Function to create a new time entry
+const createTimeEntry = async (userId: string, timeEntryData: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('time_entries')
+      .insert([{ ...timeEntryData, user_id: userId }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating time entry:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Unexpected error creating time entry:', error);
+    return { data: null, error: { message: 'Unexpected error occurred' } };
+  }
+};
+
+// Function to update an existing time entry
+const updateTimeEntry = async (entryId: string, updates: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('time_entries')
+      .update(updates)
+      .eq('id', entryId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating time entry:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Unexpected error updating time entry:', error);
+    return { data: null, error: { message: 'Unexpected error occurred' } };
+  }
+};
+
+// Function to delete a time entry
+const deleteTimeEntry = async (entryId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('time_entries')
+      .delete()
+      .eq('id', entryId);
+
+    if (error) {
+      console.error('Error deleting time entry:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Unexpected error deleting time entry:', error);
+    return { data: null, error: { message: 'Unexpected error occurred' } };
+  }
+};
+
+// Function to hash a password
+const hashPassword = async (password: string) => {
+  try {
+    const { data, error } = await supabase.functions.invoke('hash-password', {
+      body: { password },
+    });
+
+    if (error) {
+      console.error('Error hashing password:', error);
+      return { data: null, error };
+    }
+
+    return { data: data.hashedPassword, error: null };
+  } catch (error) {
+    console.error('Unexpected error hashing password:', error);
+    return { data: null, error: { message: 'Unexpected error occurred' } };
+  }
+};
+
+// Function to verify a custom password
+const verifyCustomPassword = async (userId: string, passwordPlain: string) => {
+  try {
+    const { data, error } = await supabase.functions.invoke('verify-password', {
+      body: { user_id: userId, password_plain: passwordPlain },
+    });
+
+    if (error) {
+      console.error('Error verifying custom password:', error);
+      return { data: null, error };
+    }
+
+    return { data: data.isValid, error: null };
+  } catch (error) {
+    console.error('Unexpected error verifying custom password:', error);
+    return { data: null, error: { message: 'Unexpected error occurred' } };
+  }
+};
+
+// Function to get notifications for a user
+const getNotifications = async (userId: string) => {
+    try {
+        const { data, error } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', userId);
+
+        if (error) {
+            console.error('Error fetching notifications:', error);
+            return { data: null, error };
+        }
+
+        return { data, error: null };
+    } catch (error) {
+        console.error('Unexpected error fetching notifications:', error);
+        return { data: null, error: { message: 'Unexpected error occurred' } };
+    }
+};
+
+// Function to create a new client
+const createClient = async (client: Partial<Client>) => {
   try {
     const { data, error } = await supabase
       .from('clients')
-      .insert([clientData])
+      .insert([client])
       .select()
       .single();
-    
-    if (error) throw error;
-    
-    return data as Client;
+
+    return { data, error };
   } catch (error) {
     console.error('Error creating client:', error);
-    return null;
+    return { error };
   }
 };
 
-// Update a client
-const updateClient = async (clientId: string, clientData: Partial<Client>) => {
+// Fix the batch upsert clients function
+const createClients = async (clients: Partial<Client>[]) => {
   try {
+    // Make sure name and user_id are required
+    const validClients = clients.filter(client => client.name && client.user_id);
+    if (validClients.length === 0) {
+      return { error: { message: 'No valid clients to insert' } };
+    }
+    
     const { data, error } = await supabase
       .from('clients')
-      .update(clientData)
-      .eq('id', clientId)
-      .select()
-      .single();
+      .upsert(validClients as Client[]);
     
-    if (error) throw error;
-    
-    return data as Client;
+    return { data, error };
   } catch (error) {
-    console.error('Error updating client:', error);
-    return null;
+    console.error('Error creating clients:', error);
+    return { error };
   }
 };
 
-// Delete a client
-const deleteClient = async (clientId: string) => {
+// Fix the createClientNote function
+const createClientNote = async (clientNote: Partial<ClientNote>) => {
   try {
-    const { error } = await supabase
-      .from('clients')
-      .delete()
-      .eq('id', clientId);
+    // Make sure required fields are present
+    if (!clientNote.client_id || !clientNote.user_id || !clientNote.content) {
+      return { error: { message: 'Missing required fields in client note' } };
+    }
     
-    if (error) throw error;
+    const { data, error } = await supabase
+      .from('client_notes')
+      .insert(clientNote as ClientNote);
     
-    return true;
+    return { data, error };
   } catch (error) {
-    console.error('Error deleting client:', error);
-    return false;
+    console.error('Error creating client note:', error);
+    return { error };
   }
 };
 
-// Get client notes by client ID
+// Add missing functions for resource allocations
+const createResourceAllocation = async (allocation: Partial<ResourceAllocation>) => {
+  try {
+    if (!allocation.user_id || !allocation.team || allocation.allocation === undefined) {
+      return { error: { message: 'Missing required fields for resource allocation' } };
+    }
+    
+    const { data, error } = await supabase
+      .from('resource_allocations')
+      .insert(allocation);
+    
+    return { data, error };
+  } catch (error) {
+    console.error('Error creating resource allocation:', error);
+    return { error };
+  }
+};
+
+const deleteResourceAllocation = async (id: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('resource_allocations')
+      .delete()
+      .eq('id', id);
+    
+    return { data, error };
+  } catch (error) {
+    console.error('Error deleting resource allocation:', error);
+    return { error };
+  }
+};
+
+// Add functions for file operations
+const getFiles = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('files')
+      .select('*')
+      .eq('user_id', userId);
+    
+    return { data, error };
+  } catch (error) {
+    console.error('Error getting files:', error);
+    return { error };
+  }
+};
+
+const createFileRecord = async (file: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('files')
+      .insert(file);
+    
+    return { data, error };
+  } catch (error) {
+    console.error('Error creating file record:', error);
+    return { error };
+  }
+};
+
+// Add functions for user operations
+const getUsers = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*');
+    
+    return { data, error };
+  } catch (error) {
+    console.error('Error getting users:', error);
+    return { error };
+  }
+};
+
+const getUserSkills = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('user_skills')
+      .select('*')
+      .eq('user_id', userId);
+    
+    return { data, error };
+  } catch (error) {
+    console.error('Error getting user skills:', error);
+    return { error };
+  }
+};
+
+// Add missing function to get client notes by client ID
 const getClientNotesByClientId = async (clientId: string) => {
   try {
     const { data, error } = await supabase
       .from('client_notes')
       .select('*')
-      .eq('client_id', clientId)
-      .order('created_at', { ascending: false });
+      .eq('client_id', clientId);
     
-    if (error) throw error;
-    
-    return data as ClientNote[];
+    return { data, error };
   } catch (error) {
-    console.error('Error fetching client notes:', error);
-    return [];
+    console.error('Error getting client notes:', error);
+    return { error };
   }
 };
 
-// Create a client note
-const createClientNote = async (noteData: Partial<ClientNote>) => {
+// Add missing function to update client
+const updateClient = async (id: string, updates: Partial<Client>) => {
   try {
     const { data, error } = await supabase
-      .from('client_notes')
-      .insert([noteData])
-      .select()
-      .single();
+      .from('clients')
+      .update(updates)
+      .eq('id', id)
+      .select();
     
-    if (error) throw error;
-    
-    return data as ClientNote;
+    return { data, error };
   } catch (error) {
-    console.error('Error creating client note:', error);
-    return null;
+    console.error('Error updating client:', error);
+    return { error };
   }
 };
 
-// Delete a client note
-const deleteClientNote = async (noteId: string) => {
-  try {
-    const { error } = await supabase
-      .from('client_notes')
-      .delete()
-      .eq('id', noteId);
-    
-    if (error) throw error;
-    
-    return true;
-  } catch (error) {
-    console.error('Error deleting client note:', error);
-    return false;
-  }
-};
-
-// Get projects
-async function getProjects(userId: string) {
-  return await supabase
-    .from('projects')
-    .select('*')
-    .eq('user_id', userId)
-    .order('name');
-}
-
-// Create a project
-async function createProject(userId: string, projectData: any) {
-  return await supabase
-    .from('projects')
-    .insert([{ ...projectData, user_id: userId }]);
-}
-
-// Get time entries
-async function getTimeEntries(userId: string, filters?: any) {
-  let query = supabase
-    .from('time_entries')
-    .select('*')
-    .eq('user_id', userId);
-
-  if (filters) {
-    if (filters.project_id) {
-      query = query.eq('project_id', filters.project_id);
-    }
-    if (filters.start_date) {
-      query = query.gte('date', filters.start_date);
-    }
-    if (filters.end_date) {
-      query = query.lte('date', filters.end_date);
-    }
-  }
-
-  return await query.order('date', { ascending: false });
-}
-
-// Create a time entry
-async function createTimeEntry(userId: string, entryData: any) {
-  return await supabase
-    .from('time_entries')
-    .insert([{ ...entryData, user_id: userId }]);
-}
-
-// Get user settings
-async function getUserSettings(userId: string) {
-  return await supabase
-    .from('user_settings')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
-}
-
-// Update user settings
-async function updateUserSettings(userId: string, updates: any) {
-  return await supabase
-    .from('user_settings')
-    .update(updates)
-    .eq('user_id', userId);
-}
-
-// Create user settings
-async function createUserSettings(userId: string, settings: any) {
-  return await supabase
-    .from('user_settings')
-    .insert([{ ...settings, user_id: userId }]);
-}
-
-// Upsert application user
-async function upsertAppUser(userData: any) {
-  const { data: existingUser, error: fetchError } = await supabase
-    .from('users')
-    .select('id')
-    .eq('id', userData.id)
-    .single();
-
-  if (fetchError && fetchError.code !== 'PGRST116') {
-    return { error: fetchError };
-  }
-
-  if (existingUser) {
-    return await supabase
-      .from('users')
-      .update(userData)
-      .eq('id', userData.id);
-  } else {
-    return await supabase.from('users').insert([userData]);
-  }
-}
-
-// Hash password for custom authentication
-async function hashPassword(password: string): Promise<string> {
-  // This is a simplified example - in a real app, use proper password hashing
-  // such as bcrypt, which would typically be done on the server side
-  // Here we're just using a basic hash for demonstration
-  
-  // In a real application, we'd use bcrypt
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hashHex;
-}
-
-// Verify custom password
-async function verifyCustomPassword(userId: string, password: string): Promise<boolean> {
-  try {
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('custom_password_hash')
-      .eq('id', userId)
-      .single();
-    
-    if (error) throw error;
-    if (!user || !user.custom_password_hash) return false;
-    
-    const hashedPassword = await hashPassword(password);
-    return hashedPassword === user.custom_password_hash;
-  } catch (error) {
-    console.error('Error verifying password:', error);
-    return false;
-  }
-}
-
-// Get risks
-async function getRisks(userId: string) {
-  return await supabase
-    .from('risks')
-    .select('*')
-    .order('created_at', { ascending: false });
-}
-
-// Create a risk
-async function createRisk(riskData: any) {
-  return await supabase
-    .from('risks')
-    .insert([riskData]);
-}
-
-// Update a risk
-async function updateRisk(riskId: string, updates: any) {
-  return await supabase
-    .from('risks')
-    .update(updates)
-    .eq('id', riskId);
-}
-
-// Delete a risk
-async function deleteRisk(riskId: string) {
-  return await supabase
-    .from('risks')
-    .delete()
-    .eq('id', riskId);
-}
-
-// Get notifications for a user
-async function getNotifications(userId: string) {
-  return await supabase
-    .from('notifications')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-}
-
-// Update notification
-async function updateNotification(notificationId: string, userId: string, updates: any) {
-  return await supabase
-    .from('notifications')
-    .update(updates)
-    .eq('id', notificationId)
-    .eq('user_id', userId);
-}
-
-// Get resource allocations
-async function getResourceAllocations() {
-  try {
-    const { data, error } = await supabase
-      .from('resource_allocations')
-      .select('*');
-    
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching resource allocations:', error);
-    return [];
-  }
-}
-
-// Get utilization history
-async function getUtilizationHistory() {
-  try {
-    const { data, error } = await supabase
-      .from('utilization_history')
-      .select('*');
-    
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching utilization history:', error);
-    return [];
-  }
-}
-
-// Get unavailability
-async function getUnavailability() {
-  try {
-    const { data, error } = await supabase
-      .from('unavailability')
-      .select('*');
-    
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching unavailability:', error);
-    return [];
-  }
-}
-
-// Delete skills by resource ID
-async function deleteSkillsByResourceId(resourceId: string) {
-  try {
-    const { error } = await supabase
-      .from('resource_skills')
-      .delete()
-      .eq('resource_id', resourceId);
-    
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error('Error deleting skills:', error);
-    return false;
-  }
-}
-
-// Create user skill
-async function createUserSkill(skill: string, userId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('user_skills')
-      .insert([{ skill, user_id: userId }])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error creating skill:', error);
-    return null;
-  }
-}
-
-// Export all functions
-const dbService = {
+export default {
   getUserProfile,
   updateUserProfile,
-  getTasks,
-  createTask,
-  updateTask,
-  deleteTask,
-  getDashboardStats,
-  getClients,
-  createClient,
-  updateClient,
-  deleteClient,
-  getClientNotesByClientId,
-  createClientNote,
-  deleteClientNote,
-  getProjects,
-  createProject,
-  getTimeEntries,
-  createTimeEntry,
   getUserSettings,
   updateUserSettings,
-  createUserSettings,
-  upsertAppUser,
-  hashPassword,
-  verifyCustomPassword,
-  getRisks,
-  createRisk,
-  updateRisk,
-  deleteRisk,
-  getNotifications,
-  updateNotification,
-  getResourceAllocations,
-  getUtilizationHistory,
-  getUnavailability,
-  deleteSkillsByResourceId,
-  createUserSkill
-};
-
-export default dbService;
-
-// Export individual functions for direct importing
-export {
-  getUserProfile,
-  updateUserProfile,
-  getTasks,
-  createTask,
-  updateTask,
-  deleteTask,
-  getDashboardStats,
-  getClients,
-  createClient,
-  updateClient,
-  deleteClient,
-  getClientNotesByClientId,
-  createClientNote,
-  deleteClientNote,
   getProjects,
   createProject,
+  updateProject,
+  deleteProject,
   getTimeEntries,
   createTimeEntry,
-  getUserSettings,
-  updateUserSettings,
-  createUserSettings,
-  upsertAppUser,
+  updateTimeEntry,
+  deleteTimeEntry,
   hashPassword,
   verifyCustomPassword,
-  getRisks,
-  createRisk,
-  updateRisk,
-  deleteRisk,
   getNotifications,
-  updateNotification,
-  getResourceAllocations,
-  getUtilizationHistory,
-  getUnavailability,
-  deleteSkillsByResourceId,
-  createUserSkill
+  createClient,
+  createClients,
+  createClientNote,
+  getClientNotesByClientId,
+  updateClient,
+  createResourceAllocation,
+  deleteResourceAllocation,
+  getFiles,
+  createFileRecord,
+  getUsers,
+  getUserSkills,
 };
