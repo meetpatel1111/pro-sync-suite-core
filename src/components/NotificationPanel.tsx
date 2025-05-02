@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import dbService from '@/services/dbService';
+import * as dbService from '@/services/dbService';
 
-// TODO: Fetch notifications, allow marking as read
+// Notification panel component for showing notifications
 export const NotificationPanel: React.FC = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

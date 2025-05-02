@@ -1,7 +1,8 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Json } from '@/integrations/supabase/types';
 
-// Define proper interfaces for the component
+// Define proper interfaces for the components
 export interface Channel {
   id: string;
   name: string;
@@ -60,8 +61,9 @@ const collabService = {
   },
   getChannelFiles: async (channelId: string) => {
     try {
+      // Checking if table exists in the database
       const { data, error } = await supabase
-        .from('channel_files')
+        .from('files')
         .select('*')
         .eq('channel_id', channelId);
       return { data, error };
@@ -108,7 +110,8 @@ const collabService = {
 
       if (error) throw error;
 
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${data.bucket}/${data.path}`;
+      // Fix bucket reference
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/files/${filePath}`;
       return { data: { url }, error: null };
     } catch (error: any) {
       console.error('Error uploading file:', error);
@@ -258,8 +261,8 @@ const collabService = {
         .from('tasks')
         .insert([{
           ...taskDetails,
-          channel_id: message.channel_id,
-          user_id: message.user_id,
+          channel_id: message?.channel_id || null,
+          user_id: message?.user_id || null,
           message_id: messageId,
           status: 'new',
           priority: 'medium'
@@ -298,12 +301,12 @@ const collabService = {
         { event: '*', schema: 'public', table: 'messages', filter: `channel_id=eq.${channelId}` },
         async (payload) => {
           if (payload.new) {
-            const newMessage = payload.new;
+            const newMessage = payload.new as any;
             // Fetch additional user information
             const { data: user, error: userError } = await supabase
               .from('users')
               .select('username, full_name')
-              .eq('id', newMessage.user_id)
+              .eq('id', newMessage.user_id || '')
               .single();
 
             if (userError) {
@@ -311,12 +314,24 @@ const collabService = {
             }
 
             const messageWithUserInfo: Message = {
-              ...newMessage,
+              id: newMessage.id || '',
+              channel_id: newMessage.channel_id || '',
+              user_id: newMessage.user_id || '',
+              content: newMessage.content || '',
+              created_at: newMessage.created_at || new Date().toISOString(),
+              updated_at: newMessage.updated_at || new Date().toISOString(),
+              file_url: newMessage.file_url || undefined,
               reactions: typeof newMessage.reactions === 'object' ? newMessage.reactions : {},
               is_pinned: Boolean(newMessage.is_pinned),
               type: (newMessage.type as string) as 'text' | 'image' | 'file' | 'poll',
               username: user?.username || 'Unknown User',
               name: user?.full_name || 'Unknown User',
+              parent_id: newMessage.parent_id || undefined,
+              mentions: newMessage.mentions || undefined,
+              read_by: newMessage.read_by || undefined,
+              channel_name: newMessage.channel_name || undefined,
+              edited_at: newMessage.edited_at || undefined,
+              scheduled_for: newMessage.scheduled_for || undefined
             };
             callback(messageWithUserInfo);
           }
@@ -448,70 +463,173 @@ const collabService = {
       return { data: null, error };
     }
   },
-};
-
-// Update getChannels function to ensure proper typing
-export const getChannels = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('channels')
-      .select('*');
-
-    if (error) throw error;
-
-    // Ensure the data conforms to the Channel interface
-    const typedChannels: Channel[] = (data || []).map((channel: any) => ({
-      ...channel,
-      type: (channel.type as string) as 'public' | 'private' | 'direct'
-    }));
-
-    return { data: typedChannels, error: null };
-  } catch (error) {
-    console.error('Error fetching channels:', error);
-    return { data: null, error };
+  // Additional functions for reactions/pins
+  addReaction: async (messageId: string, userId: string, emoji: string) => {
+    try {
+      // First get the current message
+      const { data: message, error: fetchError } = await supabase
+        .from('messages')
+        .select('reactions')
+        .eq('id', messageId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      // Update the reactions
+      let updatedReactions;
+      if (message && message.reactions) {
+        updatedReactions = { ...message.reactions };
+        if (updatedReactions[emoji]) {
+          updatedReactions[emoji] = [...updatedReactions[emoji], userId];
+        } else {
+          updatedReactions[emoji] = [userId];
+        }
+      } else {
+        updatedReactions = { [emoji]: [userId] };
+      }
+      
+      // Save back to database
+      const { data, error } = await supabase
+        .from('messages')
+        .update({ reactions: updatedReactions })
+        .eq('id', messageId)
+        .select()
+        .single();
+        
+      return { data, error };
+    } catch (error) {
+      console.error('Error adding reaction:', error);
+      return { data: null, error };
+    }
+  },
+  removeReaction: async (messageId: string, userId: string, emoji: string) => {
+    try {
+      // First get the current message
+      const { data: message, error: fetchError } = await supabase
+        .from('messages')
+        .select('reactions')
+        .eq('id', messageId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      // Update the reactions
+      let updatedReactions = { ...message?.reactions };
+      if (updatedReactions[emoji]) {
+        updatedReactions[emoji] = updatedReactions[emoji].filter(id => id !== userId);
+        if (updatedReactions[emoji].length === 0) {
+          delete updatedReactions[emoji];
+        }
+      }
+      
+      // Save back to database
+      const { data, error } = await supabase
+        .from('messages')
+        .update({ reactions: updatedReactions })
+        .eq('id', messageId)
+        .select()
+        .single();
+        
+      return { data, error };
+    } catch (error) {
+      console.error('Error removing reaction:', error);
+      return { data: null, error };
+    }
+  },
+  pinMessage: async (messageId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .update({ is_pinned: true })
+        .eq('id', messageId)
+        .select()
+        .single();
+        
+      return { data, error };
+    } catch (error) {
+      console.error('Error pinning message:', error);
+      return { data: null, error };
+    }
+  },
+  unpinMessage: async (messageId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .update({ is_pinned: false })
+        .eq('id', messageId)
+        .select()
+        .single();
+        
+      return { data, error };
+    } catch (error) {
+      console.error('Error unpinning message:', error);
+      return { data: null, error };
+    }
+  },
+  markAsRead: async (messageId: string, userId: string) => {
+    try {
+      const { data: message, error: fetchError } = await supabase
+        .from('messages')
+        .select('read_by')
+        .eq('id', messageId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      let readBy = Array.isArray(message?.read_by) ? [...message.read_by] : [];
+      if (!readBy.includes(userId)) {
+        readBy.push(userId);
+      }
+      
+      const { data, error } = await supabase
+        .from('messages')
+        .update({ read_by: readBy })
+        .eq('id', messageId)
+        .select()
+        .single();
+        
+      return { data, error };
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+      return { data: null, error };
+    }
+  },
+  editMessage: async (messageId: string, newContent: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .update({ 
+          content: newContent,
+          edited_at: new Date().toISOString()
+        })
+        .eq('id', messageId)
+        .select()
+        .single();
+        
+      return { data, error };
+    } catch (error) {
+      console.error('Error editing message:', error);
+      return { data: null, error };
+    }
+  },
+  deleteMessage: async (messageId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .delete()
+        .eq('id', messageId);
+        
+      return { data, error };
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      return { data: null, error };
+    }
   }
 };
 
-// Update the getMessages function to ensure proper typing
-export const getMessages = async (channelId: string) => {
-  try {
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('channel_id', channelId)
-      .order('created_at', { ascending: true });
-
-    if (error) throw error;
-
-    // Ensure the data conforms to the Message interface
-    const typedMessages: Message[] = (data || []).map((msg: any) => ({
-      ...msg,
-      reactions: typeof msg.reactions === 'object' ? msg.reactions : {},
-      is_pinned: Boolean(msg.is_pinned),
-      type: (msg.type as string) as 'text' | 'image' | 'file' | 'poll'
-    }));
-
-    return { data: typedMessages, error: null };
-  } catch (error) {
-    console.error('Error fetching messages:', error);
-    return { data: null, error };
-  }
-};
-
-// Add the createTask function
-export const createTask = async (taskData: any) => {
-  try {
-    const { data, error } = await supabase
-      .from('tasks')
-      .insert(taskData)
-      .select()
-      .single();
-
-    return { data, error };
-  } catch (error) {
-    console.error('Error creating task:', error);
-    return { data: null, error };
-  }
-};
+// Export named functions for specific components
+export const getChannels = collabService.getChannels;
+export const getMessages = collabService.getMessages;
+export const createTask = collabService.createTask;
 
 export default collabService;

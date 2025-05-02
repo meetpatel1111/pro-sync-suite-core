@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { collabService } from '@/services/collabService';
+import collabService from '@/services/collabService';
 
 interface ApprovalActionsProps {
   messageId: string;

@@ -19,10 +19,9 @@ export const QuickTaskCreate: React.FC<QuickTaskCreateProps> = ({ messageId, onC
     const taskDetails = { title };
     
     try {
-      // Add this function to collabService if it doesn't exist
-      const res = await collabService.createTask({
+      // Using the createTaskFromMessage method
+      const res = await collabService.createTaskFromMessage(messageId, {
         title: title,
-        message_id: messageId,
         status: 'new',
         priority: 'medium'
       });
