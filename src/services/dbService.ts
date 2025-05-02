@@ -185,6 +185,22 @@ const updateNotification = async (notificationId: string, updateData: any) => {
   }
 };
 
+// Mark a notification as read
+export const markNotificationAsRead = async (notificationId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', notificationId)
+      .select();
+      
+    return { data, error };
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    return { error };
+  }
+};
+
 // Client Functions
 const getClients = async (userId: string) => {
   try {
@@ -611,7 +627,7 @@ const getDashboardStats = async (userId: string) => {
   }
 };
 
-export default {
+const dbService = {
   getUserProfile,
   updateUserProfile,
   getUserSettings,
@@ -645,5 +661,8 @@ export default {
   getUnavailability,
   getTasks,
   getProjects,
-  getDashboardStats
+  getDashboardStats,
+  markNotificationAsRead
 };
+
+export default dbService;

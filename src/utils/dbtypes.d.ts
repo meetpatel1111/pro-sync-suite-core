@@ -49,3 +49,33 @@ export interface Task {
   user_id: string;
   created_at: string;
 }
+
+export interface Channel {
+  id: string;
+  name: string;
+  description?: string;
+  type: 'public' | 'private' | 'dm' | 'group_dm';
+  created_at: string;
+  updated_at?: string;
+  created_by?: string;
+  user_id?: string;
+  about?: string;
+}
+
+export interface Message {
+  id: string;
+  channel_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  username?: string;
+  edited_at?: string;
+  reactions?: Record<string, any>;
+  parent_id?: string;
+  file_url?: string;
+  scheduled_for?: string;
+  type?: string;
+  is_pinned?: boolean;
+  read_by: string[];
+  mentions?: string[];
+}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
 import collabService from '@/services/collabService';
@@ -178,7 +177,7 @@ const CollabSpaceApp = () => {
   // Create a new channel
   const handleCreateChannel = async (channelData: any) => {
     // Make sure the type is one of the allowed values
-    const newChannel: Channel = {
+    const newChannel = {
       id: crypto.randomUUID(), // Generate a new UUID for the channel
       name: channelData.name,
       type: channelData.type as 'public' | 'private' | 'dm' | 'group_dm',

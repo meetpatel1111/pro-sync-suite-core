@@ -1,29 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { Button } from '@/components/ui/button';
+import { useAuthContext } from '@/context/AuthContext';
+import { Button, Card, CardContent, CardHeader, CardTitle } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  ScatterChart, Scatter,
-  LineChart as RechartLineChart, Line,
-  BarChart, Bar,
-  PieChart as RechartsPieChart, 
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell 
-} from 'recharts';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from '@/components/ui/textarea';
-import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { LineChart, BarChart, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Line } from 'recharts';
+import { PieChart, Pie, Cell } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import dbService from '@/services/dbService';
-import { useAuthContext } from '@/context/AuthContext';
-import { Task, TimeEntry, Project } from '@/utils/dbtypes';
-import { Dashboard, Widget } from '@/utils/dbtypes';
-import { Plus, Trash2, Pencil, Activity, BarChart2, TrendingUp } from 'lucide-react';
+import { Dashboard, Widget, Project, Task } from '@/utils/dbtypes';
+import { Activity, BarChart2, TrendingUp, Pencil, Plus, Trash2 } from 'lucide-react';
 
 const InsightIQ = () => {
   const { toast } = useToast();
@@ -489,14 +476,13 @@ const InsightIQ = () => {
       case 'pie_chart':
         return (
           <ResponsiveContainer width="100%" height={300}>
-            <RechartsPieChart>
+            <PieChart>
               <Pie
                 data={data}
                 cx="50%"
                 cy="50%"
-                labelLine={true}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                outerRadius={100}
+                labelLine={false}
+                outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
               >
@@ -505,7 +491,8 @@ const InsightIQ = () => {
                 ))}
               </Pie>
               <Tooltip />
-            </RechartsPieChart>
+              <Legend />
+            </PieChart>
           </ResponsiveContainer>
         );
       default:

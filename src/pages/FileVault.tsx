@@ -1,278 +1,274 @@
 
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { useAuthContext } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuthContext } from '@/context/AuthContext';
+import { FilePlus, Lock, Unlock, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import FileVaultApp from '@/components/FileVaultApp';
 import dbService from '@/services/dbService';
-import { fileVaultService } from '@/services/fileVaultService';
-import { FileIcon, FilePlus, Loader2, Lock, Unlock } from 'lucide-react';
-// Import File as a type to avoid conflict with DOM File
 import type { File as FileType } from '@/utils/dbtypes';
-
-interface FileRecord {
-  id: string;
-  name: string;
-  storage_path: string;
-  description?: string;
-  file_type: string;
-  size_bytes: number;
-  is_public: boolean;
-  created_at: string;
-}
 
 const FileVault = () => {
   const { user } = useAuthContext();
   const { toast } = useToast();
-  const [files, setFiles] = useState<FileRecord[]>([]);
+  const [files, setFiles] = useState<FileType[]>([]);
+  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [uploadError, setUploadError] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+  const [file, setFile] = useState<File | null>(null);
   const [fileDescription, setFileDescription] = useState('');
   const [isPublic, setIsPublic] = useState(false);
-  const [fileUrl, setFileUrl] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [fileId, setFileId] = useState<string | null>(null);
-  const [file, setFile] = useState<FileType | null>(null);
 
   useEffect(() => {
-    if (!user) return;
-    fetchFiles();
+    if (user) {
+      fetchFiles();
+    }
   }, [user]);
 
   const fetchFiles = async () => {
-    if (!user) return;
-    
     setLoading(true);
     try {
-      // Update to match dbService implementation
-      const { data, error } = await dbService.getFiles(user.id);
-      if (error) throw error;
-      setFiles(data || []);
+      const response = await dbService.getFiles(user?.id);
+      if (response && response.data) {
+        setFiles(response.data);
+      }
     } catch (error) {
       console.error('Error fetching files:', error);
       toast({
-        title: "Failed to load files",
-        description: "An error occurred while loading your files",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to load files',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFileDownload = (filePath: string) => {
-    const { data } = supabase.storage.from('files').getPublicUrl(filePath);
-    setFileUrl(data.publicUrl);
-    window.open(data.publicUrl, '_blank');
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
   };
 
-  const handleFileUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0 || !user) return;
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!file) {
+      toast({
+        title: 'No file selected',
+        description: 'Please select a file to upload',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     setUploading(true);
+    setUploadProgress(0);
     
     try {
-      const file = files[0];
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from('files')
-        .upload(filePath, file);
-      
-      if (uploadError) throw uploadError;
-      
-      const { data: publicURL } = supabase.storage.from('files').getPublicUrl(filePath);
-      
-      const fileData = {
-        name: file.name,
-        storage_path: filePath,
-        description: fileDescription,
-        file_type: file.type,
-        size_bytes: file.size,
-        is_public: isPublic
-      };
-      
       // Fix: Pass only user.id
-      await dbService.createFileRecord(user.id, fileData);
+      const result = await dbService.uploadFile(user?.id, {
+        file,
+        description: fileDescription,
+        isPublic: isPublic,
+      });
       
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      
+      toast({
+        title: 'File uploaded',
+        description: 'Your file has been uploaded successfully',
+      });
+      
+      // Reset form
+      setFile(null);
       setFileDescription('');
       setIsPublic(false);
-      setUploading(false);
-      setUploadSuccess(true);
       
+      // Refresh files list
       fetchFiles();
-    } catch (error) {
-      console.error('Error uploading file:', error);
+      
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast({
+        title: 'Upload failed',
+        description: error.message || 'Failed to upload file',
+        variant: 'destructive',
+      });
+    } finally {
       setUploading(false);
-      setUploadError(true);
     }
   };
 
-  const loadFile = async () => {
-    if (fileId) {
-      try {
-        const result = await fileVaultService.getFile(fileId);
-        if (result && result.data) {
-          setFile(result.data);
-        }
-      } catch (error) {
-        console.error('Error loading file:', error);
-      }
+  const filteredFiles = files.filter(file => {
+    if (searchQuery && !file.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
     }
-  };
-
-  useEffect(() => {
-    loadFile();
-  }, [fileId]);
+    
+    if (activeTab === 'public' && !file.is_public) {
+      return false;
+    }
+    
+    if (activeTab === 'private' && file.is_public) {
+      return false;
+    }
+    
+    if (activeTab === 'archived' && !file.is_archived) {
+      return false;
+    }
+    
+    if (activeTab !== 'archived' && file.is_archived) {
+      return false;
+    }
+    
+    return true;
+  });
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">File Vault</h1>
-          <p className="text-muted-foreground">
-            Securely store and manage your files
-          </p>
-        </div>
-        
-        <Tabs defaultValue="files" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="files">My Files</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="files" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>File Storage</CardTitle>
-                <CardDescription>
-                  Upload, manage, and share your files securely
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-4">
-                  <Input 
-                    type="file" 
-                    id="upload" 
-                    className="hidden" 
-                    onChange={(e) => handleFileUpload(e.target.files)} 
-                  />
-                  <Label htmlFor="upload" className="cursor-pointer">
-                    <Button variant="outline" asChild>
-                      <label htmlFor="upload" className="flex items-center space-x-2">
-                        <FilePlus className="h-4 w-4" />
-                        <span>Upload File</span>
-                      </label>
-                    </Button>
-                  </Label>
-                  {uploading && <Loader2 className="h-5 w-5 animate-spin" />}
-                  {uploadSuccess && <span className="text-green-500">Upload successful!</span>}
-                  {uploadError && <span className="text-red-500">Upload failed. Please try again.</span>}
-                </div>
-                
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {loading ? (
-                    <div className="col-span-3 text-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin inline-block mr-2" />
-                      Loading files...
-                    </div>
-                  ) : files.length === 0 ? (
-                    <div className="col-span-3 text-center py-8">
-                      No files found. Upload your first file!
-                    </div>
-                  ) : (
-                    files.map((file) => (
-                      <Card key={file.id} className="bg-muted">
-                        <CardHeader>
-                          <CardTitle className="text-sm font-medium">{file.name}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="text-sm text-muted-foreground">
-                          <p>Type: {file.file_type}</p>
-                          <p>Size: {(file.size_bytes / 1024).toFixed(2)} KB</p>
-                          <p>Uploaded: {new Date(file.created_at).toLocaleDateString()}</p>
-                          {file.description && <p>Description: {file.description}</p>}
-                        </CardContent>
-                        <CardFooter className="justify-between">
-                          <Button size="sm" onClick={() => handleFileDownload(file.storage_path)}>
-                            <FileIcon className="h-4 w-4 mr-2" />
-                            Download
-                          </Button>
-                          {file.is_public ? (
-                            <Button variant="ghost" size="sm">
-                              <Unlock className="h-4 w-4 mr-2" />
-                              Public
-                            </Button>
+      <div className="container mx-auto py-6">
+        <div className="flex flex-col space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">FileVault</h1>
+            <p className="text-muted-foreground">
+              Securely store and manage your important files
+            </p>
+          </div>
+
+          <div className="flex justify-between">
+            <Input 
+              className="max-w-sm" 
+              placeholder="Search files..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList>
+              <TabsTrigger value="all">All Files</TabsTrigger>
+              <TabsTrigger value="public">Public</TabsTrigger>
+              <TabsTrigger value="private">Private</TabsTrigger>
+              <TabsTrigger value="archived">Archived</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="all" className="space-y-4">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Upload New File</CardTitle>
+                    <CardDescription>Add a new file to your vault</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleUpload} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="file">File</Label>
+                        <div className="flex">
+                          <Input 
+                            id="file" 
+                            type="file" 
+                            onChange={handleFileChange} 
+                            disabled={uploading}
+                          />
+                          {file && <FilePlus className="ml-2 h-5 w-5 text-muted-foreground" />}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="description">Description (Optional)</Label>
+                        <Input 
+                          id="description" 
+                          placeholder="Describe this file..." 
+                          value={fileDescription}
+                          onChange={(e) => setFileDescription(e.target.value)}
+                          disabled={uploading || !file}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Input 
+                          id="is-public" 
+                          type="checkbox" 
+                          className="w-4 h-4"
+                          checked={isPublic}
+                          onChange={(e) => setIsPublic(e.target.checked)}
+                          disabled={uploading || !file}
+                        />
+                        <Label htmlFor="is-public" className="cursor-pointer">
+                          {isPublic ? (
+                            <>
+                              <Unlock className="inline-block mr-1 h-4 w-4" /> Public
+                            </>
                           ) : (
-                            <Button variant="ghost" size="sm">
-                              <Lock className="h-4 w-4 mr-2" />
-                              Private
-                            </Button>
+                            <>
+                              <Lock className="inline-block mr-1 h-4 w-4" /> Private
+                            </>
                           )}
-                        </CardFooter>
-                      </Card>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline">Add File Description</Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                      <DialogTitle>Add File Description</DialogTitle>
-                      <DialogDescription>
-                        Add a description to your file for better organization.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="description" className="text-right">
-                          Description
                         </Label>
-                        <Input id="description" value={fileDescription} className="col-span-3" onChange={(e) => setFileDescription(e.target.value)} />
                       </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="public" className="text-right">
-                          Public
-                        </Label>
-                        <input type="checkbox" id="public" className="col-span-3" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button type="submit">Save</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="settings" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>File Vault Settings</CardTitle>
-                <CardDescription>
-                  Manage your file vault settings and preferences
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p>Settings will be implemented soon.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                    </form>
+                  </CardContent>
+                  <CardFooter>
+                    <Button 
+                      onClick={handleUpload} 
+                      disabled={uploading || !file} 
+                      className="w-full"
+                    >
+                      {uploading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...
+                        </>
+                      ) : 'Upload File'}
+                    </Button>
+                  </CardFooter>
+                </Card>
+                
+                {loading ? (
+                  <Card className="col-span-full flex justify-center items-center p-6">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </Card>
+                ) : filteredFiles.length === 0 ? (
+                  <Card className="col-span-full">
+                    <CardHeader>
+                      <CardTitle>No files found</CardTitle>
+                      <CardDescription>
+                        {searchQuery 
+                          ? `No files match "${searchQuery}"`
+                          : `Upload your first file to get started`}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p>Start building your secure file repository today.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <FileVaultApp />
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="public" className="space-y-4">
+              <FileVaultApp filter="public" />
+            </TabsContent>
+            
+            <TabsContent value="private" className="space-y-4">
+              <FileVaultApp filter="private" />
+            </TabsContent>
+            
+            <TabsContent value="archived" className="space-y-4">
+              <FileVaultApp filter="archived" />
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </AppLayout>
   );

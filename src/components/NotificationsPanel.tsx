@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import dbService from '@/services/dbService';
 
@@ -29,17 +28,18 @@ export const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ userId }
 
   const markAsRead = async (notificationId: string) => {
     try {
-      // Implement a markAsRead status change in frontend first
-      setNotifications(notifications.map(notification => 
-        notification.id === notificationId 
-          ? { ...notification, read: true } 
-          : notification
-      ));
-      
-      // Then update in backend
-      await dbService.updateNotification(notificationId, { read: true });
+      const result = await dbService.markNotificationAsRead(notificationId);
+      if (!result.error) {
+        setNotifications(prevNotifications =>
+          prevNotifications.map(notification =>
+            notification.id === notificationId
+              ? { ...notification, read: true }
+              : notification
+          )
+        );
+      }
     } catch (error) {
-      console.error(`Error marking notification ${notificationId} as read:`, error);
+      console.error('Error marking notification as read:', error);
     }
   };
 
