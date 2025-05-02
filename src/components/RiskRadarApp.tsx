@@ -1,6 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
 import {
-  // Assuming these exist in your service file
   getAllRisks,
   createRisk,
   deleteRisk,
@@ -18,7 +18,7 @@ const RiskRadarApp: React.FC = () => {
   const fetchRisks = async () => {
     setLoading(true);
     const res = await getAllRisks(userId);
-    setRisks(res.data);
+    setRisks(res.data as Risk[]);
     setLoading(false);
   };
 
@@ -58,9 +58,9 @@ const RiskRadarApp: React.FC = () => {
       {loading ? <p>Loading...</p> : (
         <ul>
           {risks.map(risk => (
-            <li key={risk.risk_id}>
+            <li key={risk.id}>
               {risk.title} (Project: {risk.project_id})
-              <button onClick={() => risk.risk_id && handleDelete(risk.risk_id)}>Delete</button>
+              <button onClick={() => risk.id && handleDelete(risk.id)}>Delete</button>
             </li>
           ))}
         </ul>

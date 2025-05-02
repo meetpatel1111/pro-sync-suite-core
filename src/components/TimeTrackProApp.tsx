@@ -1,6 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
 import {
-  // Assuming these exist in your service file
   getAllTimesheets,
   createTimesheet,
   deleteTimesheet,
@@ -18,7 +18,7 @@ const TimeTrackProApp: React.FC = () => {
   const fetchTimesheets = async () => {
     setLoading(true);
     const res = await getAllTimesheets(userId);
-    setTimesheets(res.data);
+    setTimesheets(res.data as Timesheet[]);
     setLoading(false);
   };
 
@@ -59,9 +59,9 @@ const TimeTrackProApp: React.FC = () => {
       {loading ? <p>Loading...</p> : (
         <ul>
           {timesheets.map(timesheet => (
-            <li key={timesheet.timesheet_id}>
+            <li key={timesheet.id}>
               {timesheet.date}: {timesheet.hours} hours
-              <button onClick={() => timesheet.timesheet_id && handleDelete(timesheet.timesheet_id)}>Delete</button>
+              <button onClick={() => timesheet.id && handleDelete(timesheet.id)}>Delete</button>
             </li>
           ))}
         </ul>

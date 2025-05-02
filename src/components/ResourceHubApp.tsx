@@ -1,6 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
 import {
-  // Assuming these exist in your service file
   getAllResources,
   createResource,
   deleteResource,
@@ -12,13 +12,13 @@ const userId = 'CURRENT_USER_ID'; // TODO: Replace with real user context
 const ResourceHubApp: React.FC = () => {
   const [resources, setResources] = useState<Resource[]>([]);
   const [resourceName, setResourceName] = useState('');
-  const [resourceType, setResourceType] = useState('');
+  const [resourceRole, setResourceRole] = useState('');
   const [loading, setLoading] = useState(false);
 
   const fetchResources = async () => {
     setLoading(true);
     const res = await getAllResources(userId);
-    setResources(res.data);
+    setResources(res.data as Resource[]);
     setLoading(false);
   };
 
@@ -26,9 +26,16 @@ const ResourceHubApp: React.FC = () => {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createResource({ name: resourceName, type: resourceType });
+    await createResource({ 
+      name: resourceName, 
+      role: resourceRole,
+      user_id: userId,
+      availability: 'available',
+      utilization: 0,
+      skills: []
+    });
     setResourceName('');
-    setResourceType('');
+    setResourceRole('');
     fetchResources();
   };
 
@@ -48,18 +55,18 @@ const ResourceHubApp: React.FC = () => {
           required
         />
         <input
-          value={resourceType}
-          onChange={e => setResourceType(e.target.value)}
-          placeholder="Resource type"
+          value={resourceRole}
+          onChange={e => setResourceRole(e.target.value)}
+          placeholder="Resource role"
         />
         <button type="submit">Add Resource</button>
       </form>
       {loading ? <p>Loading...</p> : (
         <ul>
           {resources.map(resource => (
-            <li key={resource.resource_id}>
-              {resource.name} ({resource.type})
-              <button onClick={() => resource.resource_id && handleDelete(resource.resource_id)}>Delete</button>
+            <li key={resource.id}>
+              {resource.name} ({resource.role})
+              <button onClick={() => resource.id && handleDelete(resource.id)}>Delete</button>
             </li>
           ))}
         </ul>

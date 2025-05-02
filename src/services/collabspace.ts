@@ -1,5 +1,4 @@
 
-// CollabSpace Service API
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Workspace {
@@ -8,7 +7,6 @@ export interface Workspace {
   owner_id: string;
   description?: string;
   created_at?: string;
-  members?: string[];
 }
 
 export async function getAllWorkspaces(userId: string) {
@@ -19,7 +17,7 @@ export async function getAllWorkspaces(userId: string) {
       .eq('owner_id', userId);
     
     if (error) throw error;
-    return { data };
+    return { data: data as Workspace[] };
   } catch (error) {
     console.error('Error fetching workspaces:', error);
     throw error;
@@ -35,7 +33,7 @@ export async function createWorkspace(workspace: Omit<Workspace, 'id' | 'created
       .single();
     
     if (error) throw error;
-    return { data };
+    return { data: data as Workspace };
   } catch (error) {
     console.error('Error creating workspace:', error);
     throw error;
@@ -52,7 +50,7 @@ export async function updateWorkspace(id: string, updates: Partial<Workspace>) {
       .single();
     
     if (error) throw error;
-    return { data };
+    return { data: data as Workspace };
   } catch (error) {
     console.error('Error updating workspace:', error);
     throw error;

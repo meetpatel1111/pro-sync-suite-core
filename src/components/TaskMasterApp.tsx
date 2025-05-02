@@ -1,6 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
 import {
-  // Assuming these exist in your service file
   getAllTasks,
   createTask,
   deleteTask,
@@ -12,14 +12,14 @@ const userId = 'CURRENT_USER_ID'; // TODO: Replace with real user context
 const TaskMasterApp: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskTitle, setTaskTitle] = useState('');
-  const [assignedTo, setAssignedTo] = useState('');
+  const [assignee, setAssignee] = useState('');
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
 
   const fetchTasks = async () => {
     setLoading(true);
     const res = await getAllTasks(userId);
-    setTasks(res.data);
+    setTasks(res.data as Task[]);
     setLoading(false);
   };
 
@@ -27,9 +27,15 @@ const TaskMasterApp: React.FC = () => {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createTask({ title: taskTitle, assigned_to: assignedTo, status });
+    await createTask({ 
+      title: taskTitle, 
+      assignee: assignee,
+      status: status || 'todo',
+      priority: 'medium',
+      user_id: userId
+    });
     setTaskTitle('');
-    setAssignedTo('');
+    setAssignee('');
     setStatus('');
     fetchTasks();
   };
@@ -50,8 +56,8 @@ const TaskMasterApp: React.FC = () => {
           required
         />
         <input
-          value={assignedTo}
-          onChange={e => setAssignedTo(e.target.value)}
+          value={assignee}
+          onChange={e => setAssignee(e.target.value)}
           placeholder="Assigned to"
         />
         <input
@@ -64,9 +70,9 @@ const TaskMasterApp: React.FC = () => {
       {loading ? <p>Loading...</p> : (
         <ul>
           {tasks.map(task => (
-            <li key={task.task_id}>
-              {task.title} (Assigned: {task.assigned_to}, Status: {task.status})
-              <button onClick={() => task.task_id && handleDelete(task.task_id)}>Delete</button>
+            <li key={task.id}>
+              {task.title} (Assigned: {task.assignee}, Status: {task.status})
+              <button onClick={() => task.id && handleDelete(task.id)}>Delete</button>
             </li>
           ))}
         </ul>

@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -7,197 +6,230 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Shield, MoreHorizontal, AlertTriangle, ShieldAlert, Calendar } from 'lucide-react';
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
+import {
+  ChevronDown,
+  Copy,
+  Edit,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Trash,
+} from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { dbService } from "@/services/dbService";
 
-import { useEffect, useState } from 'react';
-import { dbService } from '@/services/dbService';
-
-// Risk type definition (adjust as needed)
-type Risk = {
+interface Risk {
   id: string;
   name: string;
   description: string;
   category: string;
   probability: number;
   impact: number;
-  owner: { name: string; avatar: string; initials: string };
+  owner: {
+    name: string;
+    avatar: string;
+    initials: string;
+  };
   status: string;
   lastReview: string;
   nextReview: string;
-};
-
+}
 
 const RiskTable = () => {
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [risks, setRisks] = useState<Risk[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [projectId, setProjectId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Fetch risks data
+  const fetchRisks = async () => {
+    if (!user?.id) return;
+    
+    setLoading(true);
+    try {
+      const { data } = await dbService.getRisks(user.id);
+      // Map the data to match the expected Risk interface
+      if (data) {
+        const formattedRisks = data.map((risk: any) => ({
+          id: risk.id,
+          name: risk.title || 'Untitled Risk',
+          description: risk.description || '',
+          category: risk.category || 'General',
+          probability: risk.probability || 0.5,
+          impact: risk.impact || 0.5, 
+          owner: {
+            name: 'Unassigned',
+            avatar: '',
+            initials: 'UN'
+          },
+          status: risk.status || 'Open',
+          lastReview: risk.last_review || new Date().toISOString(),
+          nextReview: risk.next_review || new Date().toISOString()
+        }));
+        
+        setRisks(formattedRisks);
+      }
+    } catch (error) {
+      console.error("Error fetching risks:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load risks data.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchRisks = async () => {
-      setLoading(true);
-      try {
-        if (!projectId) {
-          setRisks([]);
-          setLoading(false);
-          return;
-        }
-        const data = await dbService.getAiRisk(projectId);
-        setRisks(data ? [data] : []);
-      } catch (error) {
-        // Optionally handle error
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchRisks();
-  }, []);
+  }, [user]);
 
-  // Calculate risk level
-  const getRiskLevel = (probability, impact) => {
-    const riskScore = probability * impact;
-    if (riskScore >= 15) return { label: 'High', color: 'bg-red-500' };
-    if (riskScore >= 8) return { label: 'Medium', color: 'bg-amber-500' };
-    return { label: 'Low', color: 'bg-emerald-500' };
-  };
-  
-  // Format date
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-  
+  const categories = ["All", "Category 1", "Category 2", "Category 3"];
+  const statuses = ["All", "Open", "In Progress", "Closed"];
+
+  const filteredRisks = risks.filter((risk) => {
+    const searchMatch = risk.name.toLowerCase().includes(search.toLowerCase());
+    const categoryMatch =
+      categoryFilter === "All" || risk.category === categoryFilter;
+    const statusMatch = statusFilter === "All" || risk.status === statusFilter;
+    return searchMatch && categoryMatch && statusMatch;
+  });
+
   return (
     <div>
-      <div style={{ marginBottom: 16 }}>
-        <label htmlFor="projectIdInput" style={{ marginRight: 8 }}>Project ID:</label>
-        <input
-          id="projectIdInput"
-          type="text"
-          value={projectId}
-          onChange={e => setProjectId(e.target.value)}
-          placeholder="Enter project ID"
-          style={{ padding: 4, border: '1px solid #ccc', borderRadius: 4 }}
-        />
-      </div>
-      {!projectId && (
-        <div style={{ marginBottom: 16, color: '#d97706' }}>
-          Please enter a Project ID to view risks.
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center">
+          <div className="relative w-80 mr-4">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search risks..."
+              className="pl-8"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                Category <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {categories.map((category) => (
+                <DropdownMenuItem
+                  key={category}
+                  onClick={() => setCategoryFilter(category)}
+                >
+                  {category}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu className="ml-2">
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                Status <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {statuses.map((status) => (
+                <DropdownMenuItem
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                >
+                  {status}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      )}
-      <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-[250px]">Risk</TableHead>
-          <TableHead>Category</TableHead>
-          <TableHead>Level</TableHead>
-          <TableHead>Owner</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Next Review</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {loading ? (
-          <TableRow>
-            <TableCell colSpan={7} className="text-center">Loading risks...</TableCell>
-          </TableRow>
-        ) : risks.length === 0 ? (
-          <TableRow>
-            <TableCell colSpan={7} className="text-center">No risks found.</TableCell>
-          </TableRow>
-        ) : risks.map((risk) => {
-          const riskLevel = getRiskLevel(risk.probability, risk.impact);
-          
-          return (
-            <TableRow key={risk.id}>
-              <TableCell>
-                <div>
-                  <div className="font-medium">{risk.name}</div>
-                  <div className="text-sm text-muted-foreground">{risk.description}</div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline">{risk.category}</Badge>
-              </TableCell>
-              <TableCell>
-                <Badge className={riskLevel.color}>{riskLevel.label}</Badge>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={risk.owner.avatar} alt={risk.owner.name} />
-                    <AvatarFallback>{risk.owner.initials}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm">{risk.owner.name}</span>
-                </div>
-              </TableCell>
-              <TableCell>
-                {risk.status === 'Open' ? (
-                  <Badge variant="outline" className="text-amber-500 border-amber-200 bg-amber-50">
-                    Open
-                  </Badge>
-                ) : risk.status === 'Mitigated' ? (
-                  <Badge variant="outline" className="text-emerald-500 border-emerald-200 bg-emerald-50">
-                    Mitigated
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-blue-500 border-blue-200 bg-blue-50">
-                    Closed
-                  </Badge>
-                )}
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span>{formatDate(risk.nextReview)}</span>
-                </div>
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end">
-                  <Button variant="ghost" size="sm" className="h-8 flex gap-1">
-                    {riskLevel.label === 'High' ? (
-                      <ShieldAlert className="h-4 w-4" />
-                    ) : riskLevel.label === 'Medium' ? (
-                      <AlertTriangle className="h-4 w-4" />
-                    ) : (
-                      <Shield className="h-4 w-4" />
-                    )}
-                    <span>Manage</span>
-                  </Button>
+        <Button size="sm">
+          <Plus className="h-4 w-4 mr-2" /> Add Risk
+        </Button>
+      </div>
+      <ScrollArea>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[200px]">Name</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Probability</TableHead>
+              <TableHead>Impact</TableHead>
+              <TableHead>Owner</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Last Review</TableHead>
+              <TableHead>Next Review</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredRisks.map((risk) => (
+              <TableRow key={risk.id}>
+                <TableCell className="font-medium">{risk.name}</TableCell>
+                <TableCell>{risk.category}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{risk.probability}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{risk.impact}</Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center">
+                    <Avatar className="h-8 w-8 mr-2">
+                      <AvatarImage src={risk.owner.avatar} />
+                      <AvatarFallback>{risk.owner.initials}</AvatarFallback>
+                    </Avatar>
+                    {risk.owner.name}
+                  </div>
+                </TableCell>
+                <TableCell>{risk.status}</TableCell>
+                <TableCell>{risk.lastReview}</TableCell>
+                <TableCell>{risk.nextReview}</TableCell>
+                <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>View Details</DropdownMenuItem>
-                      <DropdownMenuItem>Edit Risk</DropdownMenuItem>
-                      <DropdownMenuItem>Add Mitigation</DropdownMenuItem>
-                      <DropdownMenuItem>Assign Owner</DropdownMenuItem>
-                      <DropdownMenuItem>Close Risk</DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Edit className="h-4 w-4 mr-2" /> Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Copy className="h-4 w-4 mr-2" /> Copy
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Trash className="h-4 w-4 mr-2" /> Delete
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </div>
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </ScrollArea>
     </div>
   );
 };

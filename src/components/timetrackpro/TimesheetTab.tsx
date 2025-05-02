@@ -81,10 +81,14 @@ async function updateTimesheet(timesheetId: string, updates: any) {
 }
 
 export const TimesheetTab = () => {
-  const { user } = useAuthContext();
+  const { user, currentUser } = useAuthContext();
   const { toast } = useToast();
   const [timesheets, setTimesheets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [timeEntries, setTimeEntries] = useState([]);
+  const [totalHours, setTotalHours] = useState(0);
+  const [billableHours, setBillableHours] = useState(0);
+  const [nonBillableHours, setNonBillableHours] = useState(0);
 
   useEffect(() => {
     if (user) {
@@ -133,7 +137,11 @@ export const TimesheetTab = () => {
     
     try {
       // Get time entries for the selected period
-      const { data: timeEntries, error: entriesError } = await dbService.getTimeEntries(user.id);
+      const { data: timeEntries, error: entriesError } = await dbService.getTimeEntries(user.id, {
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0]
+      });
+
       if (entriesError) throw entriesError;
       
       // Filter entries for the selected time period
@@ -211,6 +219,42 @@ export const TimesheetTab = () => {
         description: "Failed to submit timesheet",
         variant: "destructive"
       });
+    }
+  };
+
+  const fetchEntries = async () => {
+    if (!currentUser?.id) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await dbService.getTimeEntries(currentUser.id, {
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0]
+      });
+
+      if (error) throw error;
+      if (data) {
+        setTimeEntries(data);
+
+        // Calculate totals
+        const totalHoursAll = data.reduce((sum, entry) => sum + entry.time_spent, 0);
+        const totalHoursBillable = data
+          .filter(entry => entry.billable)
+          .reduce((sum, entry) => sum + entry.time_spent, 0);
+
+        setTotalHours(totalHoursAll);
+        setBillableHours(totalHoursBillable);
+        setNonBillableHours(totalHoursAll - totalHoursBillable);
+      }
+    } catch (error) {
+      console.error('Error fetching time entries:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load time entries',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
