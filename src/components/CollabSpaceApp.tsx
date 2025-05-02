@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { collabService, Channel, Message } from '@/services/collabService';
+import { collabService } from '@/services/collabService';
+import type { Channel, Message } from '@/services/collabService';
 import { useAuthContext } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -124,7 +125,7 @@ const CollabSpace = () => {
         if (!data || data.length === 0) {
           // No channels, create default
           const defaultChannel = { name: 'general', type: 'public', created_by: user?.id };
-          const { error: createError } = await collabService.createChannel(defaultChannel.name, defaultChannel.type as any, defaultChannel.created_by!);
+          const { error: createError } = await collabService.createChannel(defaultChannel);
           if (createError) throw createError;
           // Refetch
           const { data: newData, error: refetchError } = await collabService.getChannels();
@@ -215,6 +216,7 @@ const CollabSpace = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Fix the handleSend function
   const handleSend = async (content: string, file?: File | null, scheduledFor?: Date | null, parentId?: string) => {
     if (!content.trim() || !selectedChannel || !user) return;
     try {
@@ -252,11 +254,19 @@ const CollabSpace = () => {
     }
   };
 
+  // Fix the handleKeyDown function to properly call handleSend
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       handleSend(messageInput);
       setMessageInput('');
     }
+  };
+
+  // Function to handle button click for sending messages
+  const handleSendButtonClick = () => {
+    handleSend(messageInput);
+    setMessageInput('');
   };
 
   if (!user) {
@@ -471,7 +481,10 @@ const CollabSpace = () => {
               <Button variant="ghost" size="icon">
                 <Smile className="h-4 w-4" />
               </Button>
-              <Button size="icon" onClick={handleSend} disabled={!selectedChannel || !messageInput.trim()}>
+              <Button 
+                size="icon" 
+                onClick={handleSendButtonClick}
+                disabled={!selectedChannel || !messageInput.trim()}>
                 <Send className="h-4 w-4" />
               </Button>
             </div>
