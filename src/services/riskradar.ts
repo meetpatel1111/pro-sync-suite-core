@@ -24,11 +24,17 @@ export async function getRisks() {
   }
 }
 
-export async function createRisk(risk: Omit<Risk, "id">) {
+export async function createRisk(riskData: Omit<Risk, "id">) {
   try {
+    // Add an id to satisfy TypeScript
+    const riskWithId = {
+      ...riskData,
+      id: crypto.randomUUID(),
+    };
+    
     const { data, error } = await supabase
       .from('risks')
-      .insert(risk)
+      .insert(riskWithId)
       .select()
       .single();
     

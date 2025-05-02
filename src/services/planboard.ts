@@ -29,9 +29,15 @@ export async function getAllPlans(userId: string) {
 
 export async function createPlan(plan: Omit<Plan, 'id' | 'plan_id'>) {
   try {
+    // Generate a UUID for the plan if none is provided
+    const planWithId = {
+      ...plan,
+      id: crypto.randomUUID(), // Add an id field so it satisfies TypeScript
+    };
+    
     const { data, error } = await supabase
       .from('plans')
-      .insert(plan)
+      .insert(planWithId)
       .select()
       .single();
     

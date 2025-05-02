@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface ProjectChannelAutoCreateProps {
   projectId: string;
-  projectName: string; // Added projectName as required prop
+  projectName: string;
 }
 
 const ProjectChannelAutoCreate: React.FC<ProjectChannelAutoCreateProps> = ({ projectId, projectName }) => {
@@ -20,7 +20,12 @@ const ProjectChannelAutoCreate: React.FC<ProjectChannelAutoCreateProps> = ({ pro
       if (!user) return;
 
       try {
-        const response = await collabService.autoCreateProjectChannel(projectId, projectName, user.id);
+        const response = await collabService.autoCreateProjectChannel(
+          projectId, 
+          projectName, 
+          user.id
+        );
+        
         if (response.data) {
           setChannelCreated(true);
           toast({

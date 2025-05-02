@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Send, Upload, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Channel, Message } from '@/utils/dbtypes';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface Workspace {
   id: string;
@@ -170,7 +171,10 @@ const CollabSpaceApp = () => {
     });
 
     return () => {
-      supabase.removeChannel(channel);
+      // Remove the channel properly with supabase's removeChannel method
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, [selectedChannel]);
 

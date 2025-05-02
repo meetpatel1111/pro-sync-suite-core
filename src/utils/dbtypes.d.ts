@@ -1,4 +1,3 @@
-
 export interface Dashboard {
   id: string;
   title: string;
@@ -144,7 +143,7 @@ export interface Risk {
 }
 
 export interface Report {
-  id: string;
+  id?: string;
   report_id?: string;
   report_type: string;
   user_id: string;

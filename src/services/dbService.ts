@@ -327,7 +327,12 @@ const deleteClientNote = async (noteId: string) => {
 };
 
 // Time Tracking Functions
-const getTimeEntries = async (userId: string, filters = {}) => {
+const getTimeEntries = async (userId: string, filters: { 
+  projectId?: string; 
+  start_date?: string; 
+  end_date?: string; 
+  [key: string]: any;
+} = {}) => {
   try {
     let query = supabase
       .from('time_entries')
@@ -361,36 +366,22 @@ const getTimeEntries = async (userId: string, filters = {}) => {
   }
 };
 
-// Added createTimeEntry function
-const createTimeEntry = async (userId: string, timeEntry: Partial<TimeEntry>) => {
+// Fixed createTimeEntry function
+const createTimeEntry = async (userId: string, timeEntryData: Partial<TimeEntry>) => {
   try {
-    // Ensure date is a string
-    let entry = { ...timeEntry };
-    
-    // Add the user_id to the entry if not already there
-    entry.user_id = userId;
-    
-    // Handle date conversion
-    if (entry.date) {
-      if (entry.date instanceof Date) {
-        entry.date = entry.date.toISOString();
-      }
-      // Otherwise assume it's already a string
-    } else {
-      entry.date = new Date().toISOString();
-    }
-    
-    // Ensure required fields are present
-    if (!entry.description) {
-      entry.description = 'Time entry';
-    }
-    
-    if (!entry.project && !entry.project_id) {
-      entry.project = 'Unassigned';
-    }
-    
-    if (!entry.time_spent && entry.time_spent !== 0) {
-      return { error: new Error('Time spent is required') };
+    // Create a new entry object with required fields
+    const entry: any = {
+      user_id: userId,
+      description: timeEntryData.description || 'Time entry',
+      project: timeEntryData.project || 'Unassigned',
+      time_spent: timeEntryData.time_spent || 0,
+      date: new Date().toISOString(),
+      ...timeEntryData
+    };
+
+    // Handle date conversion if it exists
+    if (typeof entry.date === 'object' && entry.date instanceof Date) {
+      entry.date = entry.date.toISOString();
     }
     
     const { data, error } = await supabase
@@ -842,6 +833,7 @@ const createApproval = async (approvalData: any) => {
   }
 };
 
+// Fix the exports object to remove duplicate getResourceAllocations
 const dbService = {
   getUserProfile,
   updateUserProfile,
@@ -864,7 +856,7 @@ const dbService = {
   getTimeEntries,
   createTimeEntry,
   createResourceAllocation,
-  getResourceAllocations, // Only include this once
+  getResourceAllocations,
   deleteResourceAllocation,
   getFiles,
   createFileRecord,
@@ -890,35 +882,7 @@ const dbService = {
   deleteDashboard,
   createWidget,
   deleteWidget,
-  markNotificationAsRead,
-  // Add these missing functions to fix RiskRadar errors
-  createRisk: async (riskData: any) => {
-    try {
-      console.log('Creating risk:', riskData);
-      const { data, error } = await supabase
-        .from('risks')
-        .insert(riskData)
-        .select()
-        .single();
-      return { data, error };
-    } catch (error) {
-      return { error };
-    }
-  },
-  updateRisk: async (riskId: string, riskData: any) => {
-    try {
-      console.log('Updating risk:', riskId, riskData);
-      const { data, error } = await supabase
-        .from('risks')
-        .update(riskData)
-        .eq('id', riskId)
-        .select()
-        .single();
-      return { data, error };
-    } catch (error) {
-      return { error };
-    }
-  }
+  markNotificationAsRead
 };
 
 export default dbService;

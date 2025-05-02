@@ -1,11 +1,10 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  getAllReports,
+  getReports,
   createReport,
-  deleteReport,
-  Report
 } from '../services/insightiq';
+import { Report } from '@/utils/dbtypes';
 
 const userId = 'CURRENT_USER_ID'; // TODO: Replace with real user context
 
@@ -16,7 +15,7 @@ const InsightIQApp: React.FC = () => {
 
   const fetchReports = async () => {
     setLoading(true);
-    const res = await getAllReports(userId);
+    const res = await getReports(userId);
     if (res.data) {
       setReports(res.data);
     } else {
@@ -35,8 +34,14 @@ const InsightIQApp: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    await deleteReport(id);
-    fetchReports();
+    // Since deleteReport is not available, we'll implement it differently
+    // Using a direct call to supabase in this component for now
+    try {
+      await supabase.from('reports').delete().eq('id', id);
+      fetchReports();
+    } catch (error) {
+      console.error("Error deleting report:", error);
+    }
   };
 
   return (

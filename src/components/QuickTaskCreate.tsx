@@ -17,12 +17,14 @@ export const QuickTaskCreate: React.FC<QuickTaskCreateProps> = ({ messageId, onC
     setError(null);
     
     try {
-      // Using the createTaskFromMessage method with task data object
-      const res = await collabService.createTaskFromMessage(messageId, {
+      const taskData = {
         title: title,
         status: 'new',
         priority: 'medium'
-      });
+      };
+      
+      // Using the createTaskFromMessage method with the correct signature
+      const res = await collabService.createTaskFromMessage(messageId, taskData);
       
       if (res && 'error' in res && res.error) {
         setError(typeof res.error === 'string' ? res.error : 'Task creation failed');

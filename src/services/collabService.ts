@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // Type definitions
@@ -218,7 +217,7 @@ const uploadFile = async (file: File, channelId: string, userId: string) => {
   }
 };
 
-// Add reaction to message
+// Add reaction to message - Fix type checks for reactions
 const addReaction = async (messageId: string, userId: string, reaction: string) => {
   try {
     const { data: message, error: fetchError } = await supabase
@@ -229,15 +228,21 @@ const addReaction = async (messageId: string, userId: string, reaction: string) 
     
     if (fetchError) return { error: fetchError };
     
-    const reactions = message?.reactions || {};
+    // Initialize reactions safely
+    let reactions = message?.reactions || {};
     
     if (!reactions[reaction]) {
       reactions[reaction] = [];
     }
     
-    // Only add user if not already reacted with this emoji
-    if (!reactions[reaction].includes(userId)) {
-      reactions[reaction].push(userId);
+    // Safely check if reactions[reaction] is an array before using includes and push
+    if (Array.isArray(reactions[reaction])) {
+      if (!reactions[reaction].includes(userId)) {
+        reactions[reaction].push(userId);
+      }
+    } else {
+      // Initialize as array with the user ID if it wasn't an array
+      reactions[reaction] = [userId];
     }
     
     const { data, error } = await supabase

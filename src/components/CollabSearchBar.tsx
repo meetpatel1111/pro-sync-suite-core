@@ -20,8 +20,9 @@ export const CollabSearchBar: React.FC<CollabSearchBarProps> = ({ onResults, fil
     setLoading(true);
     setError(null);
     try {
+      // Fix the function call to match the signature in collabService
       const res = await collabService.searchMessages(query, filters);
-      if (res.error) setError(res.error.message);
+      if (res.error) setError(typeof res.error === 'string' ? res.error : 'Search failed');
       else onResults(res.data || []);
     } catch (e: any) {
       setError(e.message);

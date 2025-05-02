@@ -11,15 +11,15 @@ const handleError = (error: any) => {
 // Get reports
 export const getReports = async (userId: string) => {
   try {
-    // We need to use a direct SQL query since 'reports' table isn't recognized
-    // by the type system
+    // Use a direct query instead of RPC since the RPC might not be set up
     const { data, error } = await supabase
-      .rpc('get_user_reports', { user_id_param: userId });
+      .from('reports')
+      .select('*')
+      .eq('user_id', userId);
     
     if (error) return handleError(error);
     
-    // Cast the data to Report type
-    return { data: data as unknown as Report[] };
+    return { data: data as Report[] };
   } catch (error) {
     return handleError(error);
   }
@@ -28,9 +28,11 @@ export const getReports = async (userId: string) => {
 // Create report
 export const createReport = async (reportData: any) => {
   try {
-    // Same approach here using an RPC call
+    // Use direct insert instead of RPC
     const { data, error } = await supabase
-      .rpc('create_report', reportData);
+      .from('reports')
+      .insert(reportData)
+      .select();
     
     if (error) return handleError(error);
     return { data };
@@ -42,9 +44,12 @@ export const createReport = async (reportData: any) => {
 // Get report by ID
 export const getReportById = async (reportId: string) => {
   try {
-    // Same approach with RPC
+    // Use direct query instead of RPC
     const { data, error } = await supabase
-      .rpc('get_report_by_id', { report_id_param: reportId });
+      .from('reports')
+      .select('*')
+      .eq('id', reportId)
+      .single();
     
     if (error) return handleError(error);
     return { data };
