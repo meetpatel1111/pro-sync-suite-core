@@ -234,6 +234,26 @@ const handleSignIn = async (e: React.FormEvent) => {
   }
 };
 
+// Update the verifyPassword function to use the dbService.verifyCustomPassword method
+const verifyPassword = async () => {
+  if (!currentPassword) {
+    setPasswordVerificationError("Please enter your current password");
+    return false;
+  }
+  
+  if (user?.id) {
+    const { data, error } = await dbService.verifyCustomPassword(user.id, currentPassword);
+    
+    if (error || !data?.verified) {
+      setPasswordVerificationError("Current password is incorrect");
+      return false;
+    }
+    
+    return true;
+  }
+  
+  return false;
+};
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">

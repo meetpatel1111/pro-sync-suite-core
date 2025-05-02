@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { collabService } from '../services/collabService';
+import { collabService } from '@/services/collabService';
 
 interface ProjectChannelAutoCreateProps {
   projectId: string;

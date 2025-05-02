@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Table, 
@@ -15,8 +16,13 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, MoreVertical, FileEdit, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input"; 
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AlertCircle, MoreVertical, FileEdit, Trash2, ChevronDown, Plus, Search } from "lucide-react";
 import * as dbService from '@/services/dbService';
+import { useAuthContext } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 export interface Risk {
   id: string;
@@ -68,7 +74,7 @@ const RiskTable = () => {
   const [risks, setRisks] = useState<Risk[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user } = useAuthContext();
 
   // Fetch risks data
   const fetchRisks = async () => {
@@ -156,23 +162,25 @@ const RiskTable = () => {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <DropdownMenu className="ml-2">
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                Status <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {statuses.map((status) => (
-                <DropdownMenuItem
-                  key={status}
-                  onClick={() => setStatusFilter(status)}
-                >
-                  {status}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="ml-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Status <ChevronDown className="h-4 w-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {statuses.map((status) => (
+                  <DropdownMenuItem
+                    key={status}
+                    onClick={() => setStatusFilter(status)}
+                  >
+                    {status}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
         <Button size="sm">
           <Plus className="h-4 w-4 mr-2" /> Add Risk
@@ -207,17 +215,21 @@ const RiskTable = () => {
                 <TableCell>
                   <div className="flex items-center">
                     <Avatar className="h-8 w-8 mr-2">
-                      <AvatarImage src={risk.owner.avatar} />
-                      <AvatarFallback>{risk.owner.initials}</AvatarFallback>
+                      <AvatarImage src={risk.owner?.avatar} />
+                      <AvatarFallback>{risk.owner?.initials}</AvatarFallback>
                     </Avatar>
-                    {risk.owner.name}
+                    {risk.owner?.name}
                   </div>
                 </TableCell>
                 <TableCell>{risk.status}</TableCell>
                 <TableCell>{risk.lastReview}</TableCell>
                 <TableCell>{risk.nextReview}</TableCell>
                 <TableCell className="text-right">
-                  <RiskActionsMenu risk={risk} onEdit={(risk) => console.log("Edit risk:", risk)} onDelete={(riskId) => console.log("Delete risk:", riskId)} />
+                  <RiskActionsMenu 
+                    risk={risk} 
+                    onEdit={(risk) => console.log("Edit risk:", risk)} 
+                    onDelete={(riskId) => console.log("Delete risk:", riskId)}
+                  />
                 </TableCell>
               </TableRow>
             ))}

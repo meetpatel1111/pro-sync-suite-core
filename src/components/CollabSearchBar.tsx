@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { collabService } from '../services/collabService';
+import { collabService } from '@/services/collabService';
 
 interface CollabSearchBarProps {
   onResults: (results: any[]) => void;

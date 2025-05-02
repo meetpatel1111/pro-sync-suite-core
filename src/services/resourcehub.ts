@@ -1,186 +1,157 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-export interface ResourceAllocation {
-  id: string;
-  user_id: string;
-  team: string; 
-  allocation: number;
-  created_at?: string;
-}
-
 export interface Resource {
-  id: string;
+  id?: string;
   name: string;
   role: string;
   user_id: string;
   availability?: string;
   utilization?: number;
   allocation?: number;
-  created_at?: string;
   current_project_id?: string;
+  created_at?: string;
+  schedule?: any;
 }
 
 export interface ResourceSkill {
-  id: string;
-  resource_id?: string;
-  user_id?: string;
+  id?: string;
+  resource_id: string;
   skill: string;
+  user_id: string;
   created_at?: string;
 }
 
-// Get all resource allocations
-export async function getAllResourceAllocations() {
-  try {
-    const { data, error } = await supabase
-      .from('resource_allocations')
-      .select('*');
-    
-    if (error) throw error;
-    return { data };
-  } catch (error) {
-    console.error('Error fetching resource allocations:', error);
-    // Return sample data for development
-    return { 
-      data: [
-        { id: '1', user_id: 'user1', team: 'Engineering', allocation: 80, created_at: new Date().toISOString() },
-        { id: '2', user_id: 'user2', team: 'Design', allocation: 60, created_at: new Date().toISOString() },
-        { id: '3', user_id: 'user3', team: 'Marketing', allocation: 100, created_at: new Date().toISOString() }
-      ] 
-    };
-  }
-}
-
-// Create resource allocation
-export async function createResourceAllocation(allocation: Omit<ResourceAllocation, 'id' | 'created_at'>) {
-  try {
-    const { data, error } = await supabase
-      .from('resource_allocations')
-      .insert(allocation)
-      .select();
-    
-    if (error) throw error;
-    return { data };
-  } catch (error) {
-    console.error('Error creating resource allocation:', error);
-    // Return mock data for development
-    return { 
-      data: { 
-        id: Math.random().toString(), 
-        ...allocation, 
-        created_at: new Date().toISOString() 
-      } 
-    };
-  }
-}
-
-// Get all resources
-export async function getAllResources() {
+export const getAllResources = async () => {
   try {
     const { data, error } = await supabase
       .from('resources')
       .select('*');
     
-    if (error) throw error;
-    return { data };
+    return { data, error };
   } catch (error) {
     console.error('Error fetching resources:', error);
-    // Return sample data for development
-    return { 
-      data: [
-        { 
-          id: '1', 
-          name: 'John Doe', 
-          role: 'Developer', 
-          user_id: 'user1',
-          availability: 'Available', 
-          utilization: 75, 
-          allocation: 100,
-          created_at: new Date().toISOString() 
-        },
-        { 
-          id: '2', 
-          name: 'Jane Smith', 
-          role: 'Designer', 
-          user_id: 'user2',
-          availability: 'Partial', 
-          utilization: 50, 
-          allocation: 80,
-          created_at: new Date().toISOString() 
-        }
-      ] 
-    };
+    return { error };
   }
-}
+};
 
-// Create resource
-export async function createResource(resource: Omit<Resource, 'id' | 'created_at'>) {
+export const getResourceById = async (id: string) => {
   try {
     const { data, error } = await supabase
       .from('resources')
-      .insert(resource)
-      .select();
+      .select('*')
+      .eq('id', id)
+      .single();
     
-    if (error) throw error;
-    return { data };
+    return { data, error };
+  } catch (error) {
+    console.error('Error fetching resource:', error);
+    return { error };
+  }
+};
+
+export const createResource = async (resourceData: Omit<Resource, 'created_at' | 'id'>) => {
+  try {
+    const { data, error } = await supabase
+      .from('resources')
+      .insert(resourceData)
+      .select()
+      .single();
+    
+    return { data, error };
   } catch (error) {
     console.error('Error creating resource:', error);
-    // Return mock data for development
-    return { 
-      data: { 
-        id: Math.random().toString(), 
-        ...resource, 
-        created_at: new Date().toISOString() 
-      } 
-    };
+    return { error };
   }
-}
+};
 
-// Update resource
-export async function updateResource(id: string, updates: Partial<Resource>) {
+export const updateResource = async (id: string, updates: Partial<Resource>) => {
   try {
     const { data, error } = await supabase
       .from('resources')
       .update(updates)
       .eq('id', id)
-      .select();
+      .select()
+      .single();
     
-    if (error) throw error;
-    return { data };
+    return { data, error };
   } catch (error) {
     console.error('Error updating resource:', error);
     return { error };
   }
-}
+};
 
-// Get resource skills
-export async function getResourceSkills(resourceId: string) {
+export const deleteResource = async (id: string) => {
+  try {
+    // First delete any skills associated with this resource
+    await supabase
+      .from('resource_skills')
+      .delete()
+      .eq('resource_id', id);
+    
+    // Then delete the resource
+    const { data, error } = await supabase
+      .from('resources')
+      .delete()
+      .eq('id', id);
+    
+    return { data, error };
+  } catch (error) {
+    console.error('Error deleting resource:', error);
+    return { error };
+  }
+};
+
+export const getResourceSkills = async (resourceId: string) => {
   try {
     const { data, error } = await supabase
       .from('resource_skills')
       .select('*')
       .eq('resource_id', resourceId);
     
-    if (error) throw error;
-    return { data };
+    return { data, error };
   } catch (error) {
     console.error('Error fetching resource skills:', error);
-    // Return mock skills for development
-    return { 
-      data: [
-        { id: '1', resource_id: resourceId, skill: 'React', created_at: new Date().toISOString() },
-        { id: '2', resource_id: resourceId, skill: 'TypeScript', created_at: new Date().toISOString() },
-        { id: '3', resource_id: resourceId, skill: 'Tailwind CSS', created_at: new Date().toISOString() }
-      ] 
-    };
+    return { error };
   }
-}
+};
+
+export const addResourceSkill = async (skillData: Omit<ResourceSkill, 'created_at' | 'id'>) => {
+  try {
+    const { data, error } = await supabase
+      .from('resource_skills')
+      .insert(skillData)
+      .select()
+      .single();
+    
+    return { data, error };
+  } catch (error) {
+    console.error('Error adding resource skill:', error);
+    return { error };
+  }
+};
+
+export const removeResourceSkill = async (skillId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('resource_skills')
+      .delete()
+      .eq('id', skillId);
+    
+    return { data, error };
+  } catch (error) {
+    console.error('Error removing resource skill:', error);
+    return { error };
+  }
+};
 
 export default {
-  getAllResourceAllocations,
-  createResourceAllocation,
   getAllResources,
+  getResourceById,
   createResource,
   updateResource,
-  getResourceSkills
+  deleteResource,
+  getResourceSkills,
+  addResourceSkill,
+  removeResourceSkill
 };

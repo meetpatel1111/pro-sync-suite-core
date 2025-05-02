@@ -16,6 +16,12 @@ export interface Message {
   parent_id?: string;
   type?: 'text' | 'image' | 'file' | 'poll';
   mentions?: string[];
+  read_by?: string[];
+  name?: string;
+  username?: string;
+  channel_name?: string;
+  edited_at?: string;
+  scheduled_for?: string;
 }
 
 export interface Channel {
@@ -46,7 +52,7 @@ export interface Approval {
 }
 
 // Collabspace service object
-const collabService = {
+export const collabService = {
   // Helper function to create a project channel automatically
   async autoCreateProjectChannel(projectId: string, userId: string) {
     try {
@@ -94,44 +100,9 @@ const collabService = {
     }
   },
 
-  // Create a task from a message
-  async createTaskFromMessage(messageId: string, taskDetails: {title: string, description?: string, priority: string, status: string}) {
-    try {
-      // Get message data
-      const { data: message, error: messageError } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('id', messageId)
-        .single();
-      
-      if (messageError) throw messageError;
-      
-      // Create task
-      const { data: task, error: taskError } = await supabase
-        .from('tasks')
-        .insert({
-          title: taskDetails.title,
-          description: taskDetails.description || message.content,
-          priority: taskDetails.priority,
-          status: taskDetails.status,
-          user_id: message.user_id
-        })
-        .select()
-        .single();
-      
-      if (taskError) throw taskError;
-      
-      return { data: task };
-    } catch (error) {
-      console.error('Error creating task from message:', error);
-      return { error };
-    }
-  },
-
   // Get channels for a user
   async getChannels() {
     try {
-      // Use 'channels' which is a valid table in the database
       const { data, error } = await supabase
         .from('channels')
         .select('*');
@@ -229,40 +200,6 @@ const collabService = {
     }
   },
 
-  // Edit a message
-  async editMessage(messageId: string, content: string) {
-    try {
-      const { data, error } = await supabase
-        .from('messages')
-        .update({ content, updated_at: new Date().toISOString() })
-        .eq('id', messageId)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return { data };
-    } catch (error) {
-      console.error('Error editing message:', error);
-      return { error };
-    }
-  },
-
-  // Delete a message
-  async deleteMessage(messageId: string) {
-    try {
-      const { data, error } = await supabase
-        .from('messages')
-        .delete()
-        .eq('id', messageId);
-      
-      if (error) throw error;
-      return { data };
-    } catch (error) {
-      console.error('Error deleting message:', error);
-      return { error };
-    }
-  },
-
   // Get channel members
   async getChannelMembers(channelId: string) {
     try {
@@ -291,176 +228,6 @@ const collabService = {
       return { data };
     } catch (error) {
       console.error('Error fetching channel files:', error);
-      return { error };
-    }
-  },
-
-  // Add reaction to a message
-  async addReaction(messageId: string, userId: string, reaction: string) {
-    try {
-      // Get current message
-      const { data: message, error: fetchError } = await supabase
-        .from('messages')
-        .select('reactions')
-        .eq('id', messageId)
-        .single();
-      
-      if (fetchError) throw fetchError;
-      
-      // Update reactions
-      const currentReactions = message.reactions || {};
-      
-      // Safely handle the reactions
-      if (!currentReactions[reaction]) {
-        currentReactions[reaction] = [userId];
-      } else if (Array.isArray(currentReactions[reaction]) && 
-                !currentReactions[reaction].includes(userId)) {
-        currentReactions[reaction].push(userId);
-      }
-      
-      // Update the message
-      const { data: updatedMessage, error: updateError } = await supabase
-        .from('messages')
-        .update({ reactions: currentReactions })
-        .eq('id', messageId)
-        .select()
-        .single();
-      
-      if (updateError) throw updateError;
-      return { data: updatedMessage };
-    } catch (error) {
-      console.error('Error adding reaction:', error);
-      return { error };
-    }
-  },
-
-  // Remove reaction from a message
-  async removeReaction(messageId: string, userId: string, reaction: string) {
-    try {
-      // Get current message
-      const { data: message, error: fetchError } = await supabase
-        .from('messages')
-        .select('reactions')
-        .eq('id', messageId)
-        .single();
-      
-      if (fetchError) throw fetchError;
-      
-      // Update reactions
-      const currentReactions = message.reactions || {};
-      
-      if (currentReactions[reaction] && Array.isArray(currentReactions[reaction])) {
-        currentReactions[reaction] = currentReactions[reaction].filter((id: string) => id !== userId);
-        
-        if (currentReactions[reaction].length === 0) {
-          delete currentReactions[reaction];
-        }
-      }
-      
-      // Update the message
-      const { data: updatedMessage, error: updateError } = await supabase
-        .from('messages')
-        .update({ reactions: currentReactions })
-        .eq('id', messageId)
-        .select()
-        .single();
-      
-      if (updateError) throw updateError;
-      return { data: updatedMessage };
-    } catch (error) {
-      console.error('Error removing reaction:', error);
-      return { error };
-    }
-  },
-
-  // Pin a message
-  async pinMessage(messageId: string) {
-    try {
-      const { data, error } = await supabase
-        .from('messages')
-        .update({ is_pinned: true })
-        .eq('id', messageId)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return { data };
-    } catch (error) {
-      console.error('Error pinning message:', error);
-      return { error };
-    }
-  },
-
-  // Unpin a message
-  async unpinMessage(messageId: string) {
-    try {
-      const { data, error } = await supabase
-        .from('messages')
-        .update({ is_pinned: false })
-        .eq('id', messageId)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return { data };
-    } catch (error) {
-      console.error('Error unpinning message:', error);
-      return { error };
-    }
-  },
-
-  // Mark message as read
-  async markAsRead(messageId: string, userId: string) {
-    try {
-      // Get current message
-      const { data: message, error: fetchError } = await supabase
-        .from('messages')
-        .select('read_by')
-        .eq('id', messageId)
-        .single();
-      
-      if (fetchError) throw fetchError;
-      
-      // Update read_by
-      const readBy = message.read_by || [];
-      if (!readBy.includes(userId)) {
-        readBy.push(userId);
-      }
-      
-      // Update the message
-      const { data, error } = await supabase
-        .from('messages')
-        .update({ read_by: readBy })
-        .eq('id', messageId)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return { data };
-    } catch (error) {
-      console.error('Error marking message as read:', error);
-      return { error };
-    }
-  },
-
-  // Search messages
-  async searchMessages(query: string, channelId?: string) {
-    try {
-      let searchQuery = supabase
-        .from('messages')
-        .select('*')
-        .ilike('content', `%${query}%`);
-      
-      if (channelId) {
-        searchQuery = searchQuery.eq('channel_id', channelId);
-      }
-      
-      const { data, error } = await searchQuery;
-      
-      if (error) throw error;
-      return { data };
-    } catch (error) {
-      console.error('Error searching messages:', error);
       return { error };
     }
   },
@@ -581,7 +348,7 @@ const collabService = {
   },
 
   // Create an approval request
-  async createApproval(messageId: string, approverId: string, approvalType: string) {
+  async createApproval(messageId: string, approvalType: string, approverId: string) {
     try {
       const { data, error } = await supabase
         .from('approvals')
@@ -598,6 +365,212 @@ const collabService = {
       return { data };
     } catch (error) {
       console.error('Error creating approval:', error);
+      return { error };
+    }
+  },
+
+  // Mark message as read
+  async markAsRead(messageId: string, userId: string) {
+    try {
+      // Get current message
+      const { data: message, error: fetchError } = await supabase
+        .from('messages')
+        .select('read_by')
+        .eq('id', messageId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      // Update read_by
+      let readBy = message.read_by || [];
+      if (Array.isArray(readBy) && !readBy.includes(userId)) {
+        readBy.push(userId);
+      } else if (!readBy) {
+        readBy = [userId];
+      }
+      
+      // Update the message
+      const { data, error } = await supabase
+        .from('messages')
+        .update({ read_by: readBy })
+        .eq('id', messageId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return { data };
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+      return { error };
+    }
+  },
+
+  // Add reaction to a message
+  async addReaction(messageId: string, userId: string, reaction: string) {
+    try {
+      // Get current message
+      const { data: message, error: fetchError } = await supabase
+        .from('messages')
+        .select('reactions')
+        .eq('id', messageId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      // Update reactions
+      const currentReactions = message.reactions || {};
+      
+      // Safely handle the reactions
+      if (!currentReactions[reaction]) {
+        currentReactions[reaction] = [userId];
+      } else if (Array.isArray(currentReactions[reaction]) && 
+                !currentReactions[reaction].includes(userId)) {
+        currentReactions[reaction].push(userId);
+      }
+      
+      // Update the message
+      const { data: updatedMessage, error: updateError } = await supabase
+        .from('messages')
+        .update({ reactions: currentReactions })
+        .eq('id', messageId)
+        .select()
+        .single();
+      
+      if (updateError) throw updateError;
+      return { data: updatedMessage };
+    } catch (error) {
+      console.error('Error adding reaction:', error);
+      return { error };
+    }
+  },
+
+  // Remove reaction from a message
+  async removeReaction(messageId: string, userId: string, reaction: string) {
+    try {
+      // Get current message
+      const { data: message, error: fetchError } = await supabase
+        .from('messages')
+        .select('reactions')
+        .eq('id', messageId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      // Update reactions
+      const currentReactions = message.reactions || {};
+      
+      if (currentReactions[reaction] && Array.isArray(currentReactions[reaction])) {
+        currentReactions[reaction] = currentReactions[reaction].filter((id: string) => id !== userId);
+        
+        if (currentReactions[reaction].length === 0) {
+          delete currentReactions[reaction];
+        }
+      }
+      
+      // Update the message
+      const { data: updatedMessage, error: updateError } = await supabase
+        .from('messages')
+        .update({ reactions: currentReactions })
+        .eq('id', messageId)
+        .select()
+        .single();
+      
+      if (updateError) throw updateError;
+      return { data: updatedMessage };
+    } catch (error) {
+      console.error('Error removing reaction:', error);
+      return { error };
+    }
+  },
+
+  // Pin a message
+  async pinMessage(messageId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .update({ is_pinned: true })
+        .eq('id', messageId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return { data };
+    } catch (error) {
+      console.error('Error pinning message:', error);
+      return { error };
+    }
+  },
+
+  // Unpin a message
+  async unpinMessage(messageId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .update({ is_pinned: false })
+        .eq('id', messageId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return { data };
+    } catch (error) {
+      console.error('Error unpinning message:', error);
+      return { error };
+    }
+  },
+
+  // Edit a message
+  async editMessage(messageId: string, content: string) {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .update({ content, updated_at: new Date().toISOString() })
+        .eq('id', messageId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return { data };
+    } catch (error) {
+      console.error('Error editing message:', error);
+      return { error };
+    }
+  },
+
+  // Delete a message
+  async deleteMessage(messageId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .delete()
+        .eq('id', messageId);
+      
+      if (error) throw error;
+      return { data };
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      return { error };
+    }
+  },
+
+  // Search messages
+  async searchMessages(query: string, filters: any = {}) {
+    try {
+      let searchQuery = supabase
+        .from('messages')
+        .select('*')
+        .ilike('content', `%${query}%`);
+      
+      if (filters.channel_id) {
+        searchQuery = searchQuery.eq('channel_id', filters.channel_id);
+      }
+      
+      const { data, error } = await searchQuery;
+      
+      if (error) throw error;
+      return { data };
+    } catch (error) {
+      console.error('Error searching messages:', error);
       return { error };
     }
   },

@@ -5,7 +5,7 @@ import {
   createResource,
   deleteResource,
   Resource
-} from '../services/resourcehub';
+} from '@/services/resourcehub';
 
 const userId = 'CURRENT_USER_ID'; // TODO: Replace with real user context
 
@@ -17,9 +17,14 @@ const ResourceHubApp: React.FC = () => {
 
   const fetchResources = async () => {
     setLoading(true);
-    const res = await getAllResources(userId);
-    setResources(res.data as Resource[]);
-    setLoading(false);
+    try {
+      const res = await getAllResources();
+      setResources(res.data as Resource[]);
+    } catch (error) {
+      console.error('Error fetching resources:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchResources(); }, []);
@@ -31,8 +36,7 @@ const ResourceHubApp: React.FC = () => {
       role: resourceRole,
       user_id: userId,
       availability: 'available',
-      utilization: 0,
-      skills: []
+      utilization: 0
     });
     setResourceName('');
     setResourceRole('');

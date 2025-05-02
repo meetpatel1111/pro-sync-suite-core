@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -11,6 +10,10 @@ import { FileText, Image, MoreHorizontal, Heart, Reply, Smile } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { toast } from '@/components/ui/use-toast';
+import { useState } from 'react';
+import { collabService } from '../services/collabService';
 
 // Sample chat messages for demonstration
 interface ChatInterfaceProps {
@@ -19,11 +22,6 @@ interface ChatInterfaceProps {
   onSendMessage?: (content: string, file?: File | null, scheduledFor?: Date | null, parentId?: string) => Promise<void>;
   channelMembers?: any[];
 }
-
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { toast } from '@/components/ui/use-toast';
-import { useState } from 'react';
-import { collabService } from '../services/collabService';
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages: initialMessages, currentUserId, onSendMessage, channelMembers }) => {
 
@@ -83,9 +81,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages: initialMessages
     await collabService.markAsRead(msg.id, currentUserId);
     setMessages(messages.map((m: any) => m.id === msg.id ? { ...m, read_by: [...(msg.read_by || []), currentUserId] } : m));
   };
-
-
-
 
   // Threaded replies
   const openThread = (msg: any) => {

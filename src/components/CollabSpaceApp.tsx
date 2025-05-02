@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import collabService, { Channel, Message } from '@/services/collabService';
@@ -65,7 +66,18 @@ const CollabSpaceApp = () => {
       try {
         const response = await collabService.getChannels();
         if (response.data) {
-          setChannels(response.data);
+          // Ensure data conforms to Channel interface
+          const typedChannels: Channel[] = response.data.map((channel: any) => ({
+            id: channel.id,
+            name: channel.name,
+            description: channel.description,
+            created_at: channel.created_at,
+            updated_at: channel.updated_at,
+            created_by: channel.created_by,
+            type: channel.type as 'public' | 'private' | 'direct',
+            about: channel.about
+          }));
+          setChannels(typedChannels);
         }
       } catch (error) {
         console.error('Error fetching channels:', error);
@@ -103,7 +115,28 @@ const CollabSpaceApp = () => {
         // Fetch messages
         const messagesResponse = await collabService.getMessages(selectedChannel);
         if (messagesResponse.data) {
-          setMessages(messagesResponse.data);
+          // Ensure data conforms to Message interface
+          const typedMessages: Message[] = messagesResponse.data.map((msg: any) => ({
+            id: msg.id,
+            channel_id: msg.channel_id,
+            user_id: msg.user_id,
+            content: msg.content,
+            created_at: msg.created_at,
+            updated_at: msg.updated_at,
+            file_url: msg.file_url,
+            reactions: msg.reactions || {},
+            is_pinned: msg.is_pinned || false,
+            parent_id: msg.parent_id,
+            type: msg.type as 'text' | 'image' | 'file' | 'poll',
+            mentions: msg.mentions,
+            read_by: msg.read_by,
+            name: msg.name,
+            username: msg.username,
+            channel_name: msg.channel_name,
+            edited_at: msg.edited_at,
+            scheduled_for: msg.scheduled_for
+          }));
+          setMessages(typedMessages);
         }
       } catch (error) {
         console.error('Error fetching channel data:', error);
@@ -142,7 +175,18 @@ const CollabSpaceApp = () => {
       });
 
       if (response.data) {
-        setChannels(prev => [...prev, response.data]);
+        const newChannel: Channel = {
+          id: response.data.id,
+          name: response.data.name,
+          description: response.data.description,
+          created_at: response.data.created_at,
+          updated_at: response.data.updated_at,
+          created_by: response.data.created_by,
+          type: response.data.type as 'public' | 'private' | 'direct',
+          about: response.data.about
+        };
+        
+        setChannels(prev => [...prev, newChannel]);
         setChannelName('');
         setChannelDescription('');
         setShowNewChannelForm(false);
@@ -437,7 +481,7 @@ const CollabSpaceApp = () => {
                   </Button>
                   <Button
                     size="icon"
-                    onClick={() => handleSend()}
+                    onClick={handleSend}
                   >
                     <Send className="h-4 w-4" />
                   </Button>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { collabService } from '../services/collabService';
+import { collabService } from '@/services/collabService';
 
 interface PollMessageProps {
   pollId: string;
