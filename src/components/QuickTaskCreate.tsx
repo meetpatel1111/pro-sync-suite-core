@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { collabService } from '../services/collabService';
 
@@ -18,8 +19,12 @@ export const QuickTaskCreate: React.FC<QuickTaskCreateProps> = ({ messageId, onC
     const taskDetails = { title };
     const res = await collabService.createTaskFromMessage(messageId, taskDetails);
     setLoading(false);
-    if (res.error) setError(res.error.message || 'Task creation failed');
-    else if (onCreated) onCreated(res.data || res);
+    if (res && 'error' in res) {
+      setError(typeof res.error === 'string' ? res.error : 'Task creation failed');
+    } 
+    else if (onCreated) {
+      onCreated(res && 'data' in res ? res.data : res);
+    }
   };
 
   return (

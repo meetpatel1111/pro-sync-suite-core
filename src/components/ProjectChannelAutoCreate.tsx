@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { collabService } from '../services/collabService';
 
@@ -16,8 +17,12 @@ export const ProjectChannelAutoCreate: React.FC<ProjectChannelAutoCreateProps> =
     setError(null);
     try {
       const result = await collabService.autoCreateProjectChannel(projectId, currentUserId);
-      if (result.error) setError(result.error.message);
-      else if (onCreated) onCreated(result.data || result);
+      if (result && 'error' in result && result.error) {
+        setError(result.error as string);
+      }
+      else if (onCreated) {
+        onCreated(result && 'data' in result ? result.data : result);
+      }
     } catch (e: any) {
       setError(e.message);
     }

@@ -1,9 +1,10 @@
 
 // ClientConnect Service API
 import axios from 'axios';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface Client {
-  id?: string;
+  id: string;
   name: string;
   user_id: string;
   email?: string;
@@ -13,7 +14,7 @@ export interface Client {
 }
 
 export interface ClientNote {
-  id?: string;
+  id: string;
   client_id: string;
   user_id: string;
   content: string;
@@ -22,38 +23,145 @@ export interface ClientNote {
 
 // Client Functions
 export async function getAllClients(userId: string) {
-  return axios.get<{ data: Client[] }>(`/api/clientconnect/clients?userId=${userId}`);
+  try {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error fetching clients:', error);
+    throw error;
+  }
 }
 
 export async function createClient(client: Omit<Client, 'id' | 'created_at'>) {
-  return axios.post<{ data: Client }>(`/api/clientconnect/clients`, client);
+  try {
+    const { data, error } = await supabase
+      .from('clients')
+      .insert(client)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error creating client:', error);
+    throw error;
+  }
 }
 
 export async function getClientById(client_id: string) {
-  return axios.get<{ data: Client }>(`/api/clientconnect/clients/${client_id}`);
+  try {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('id', client_id)
+      .single();
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error fetching client:', error);
+    throw error;
+  }
 }
 
 export async function updateClient(client_id: string, updates: Partial<Client>) {
-  return axios.put<{ data: Client }>(`/api/clientconnect/clients/${client_id}`, updates);
+  try {
+    const { data, error } = await supabase
+      .from('clients')
+      .update(updates)
+      .eq('id', client_id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error updating client:', error);
+    throw error;
+  }
 }
 
 export async function deleteClient(client_id: string) {
-  return axios.delete<{ data: Client }>(`/api/clientconnect/clients/${client_id}`);
+  try {
+    const { data, error } = await supabase
+      .from('clients')
+      .delete()
+      .eq('id', client_id);
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error deleting client:', error);
+    throw error;
+  }
 }
 
 // ClientNote Functions
 export async function getClientNotes(client_id: string) {
-  return axios.get<{ data: ClientNote[] }>(`/api/clientconnect/clients/${client_id}/notes`);
+  try {
+    const { data, error } = await supabase
+      .from('client_notes')
+      .select('*')
+      .eq('client_id', client_id)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error fetching client notes:', error);
+    throw error;
+  }
 }
 
 export async function createClientNote(note: Omit<ClientNote, 'id' | 'created_at'>) {
-  return axios.post<{ data: ClientNote }>(`/api/clientconnect/notes`, note);
+  try {
+    const { data, error } = await supabase
+      .from('client_notes')
+      .insert(note)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error creating client note:', error);
+    throw error;
+  }
 }
 
 export async function updateClientNote(note_id: string, updates: Partial<ClientNote>) {
-  return axios.put<{ data: ClientNote }>(`/api/clientconnect/notes/${note_id}`, updates);
+  try {
+    const { data, error } = await supabase
+      .from('client_notes')
+      .update(updates)
+      .eq('id', note_id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error updating client note:', error);
+    throw error;
+  }
 }
 
 export async function deleteClientNote(note_id: string) {
-  return axios.delete<{ data: ClientNote }>(`/api/clientconnect/notes/${note_id}`);
+  try {
+    const { data, error } = await supabase
+      .from('client_notes')
+      .delete()
+      .eq('id', note_id);
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error deleting client note:', error);
+    throw error;
+  }
 }

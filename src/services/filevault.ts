@@ -1,17 +1,17 @@
 
 // InsightIQ Service API
-import axios from 'axios';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface Folder {
-  folder_id?: string;
+  id: string;
   name: string;
   user_id: string;
-  parent_folder_id?: string;
+  parent_id?: string;
   created_at?: string;
 }
 
 export interface File {
-  file_id?: string;
+  id: string;
   name: string;
   user_id: string;
   folder_id?: string;
@@ -23,42 +23,155 @@ export interface File {
 
 // Folder Functions
 export async function getAllFolders(userId: string) {
-  return axios.get<{ data: Folder[] }>(`/api/filevault/folders?userId=${userId}`);
+  try {
+    const { data, error } = await supabase
+      .from('folders')
+      .select('*')
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error fetching folders:', error);
+    throw error;
+  }
 }
 
-export async function createFolder(folder: Omit<Folder, 'folder_id' | 'created_at'>) {
-  return axios.post<{ data: Folder }>(`/api/filevault/folders`, folder);
+export async function createFolder(folder: Omit<Folder, 'id' | 'created_at'>) {
+  try {
+    const { data, error } = await supabase
+      .from('folders')
+      .insert(folder)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error creating folder:', error);
+    throw error;
+  }
 }
 
-export async function deleteFolder(folder_id: string) {
-  return axios.delete<{ data: Folder }>(`/api/filevault/folders/${folder_id}`);
+export async function deleteFolder(id: string) {
+  try {
+    const { data, error } = await supabase
+      .from('folders')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error deleting folder:', error);
+    throw error;
+  }
 }
 
 // File Functions
 export async function getAllFiles(userId: string, folder_id?: string) {
-  let url = `/api/filevault/files?userId=${userId}`;
-  if (folder_id) {
-    url += `&folderId=${folder_id}`;
-  }
-  return axios.get<{ data: File[] }>(url);
-}
-
-export async function uploadFile(file: File, fileData: Blob) {
-  const formData = new FormData();
-  formData.append('file', fileData);
-  formData.append('metadata', JSON.stringify(file));
-  
-  return axios.post<{ data: File }>('/api/filevault/files', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
+  try {
+    let query = supabase
+      .from('files')
+      .select('*')
+      .eq('user_id', userId);
+    
+    if (folder_id) {
+      query = query.eq('folder_id', folder_id);
     }
-  });
+    
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error fetching files:', error);
+    throw error;
+  }
 }
 
-export async function deleteFile(file_id: string) {
-  return axios.delete<{ data: File }>(`/api/filevault/files/${file_id}`);
+export async function uploadFile(file: Omit<File, 'id' | 'created_at'>, fileData: Blob) {
+  try {
+    // Upload file to storage
+    const filePath = `${file.user_id}/${Date.now()}_${file.name}`;
+    const { error: storageError } = await supabase.storage
+      .from('files')
+      .upload(filePath, fileData);
+    
+    if (storageError) throw storageError;
+    
+    // Create file record in database
+    const fileRecord = {
+      ...file,
+      storage_path: filePath
+    };
+    
+    const { data, error } = await supabase
+      .from('files')
+      .insert(fileRecord)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    throw error;
+  }
 }
 
-export async function getFileDownloadUrl(file_id: string) {
-  return axios.get<{ url: string }>(`/api/filevault/files/${file_id}/url`);
+export async function deleteFile(id: string) {
+  try {
+    // Get file record
+    const { data: fileData, error: fetchError } = await supabase
+      .from('files')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (fetchError) throw fetchError;
+    
+    // Delete from storage
+    const { error: storageError } = await supabase.storage
+      .from('files')
+      .remove([fileData.storage_path]);
+    
+    if (storageError) throw storageError;
+    
+    // Delete file record
+    const { data, error } = await supabase
+      .from('files')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error deleting file:', error);
+    throw error;
+  }
+}
+
+export async function getFileDownloadUrl(id: string) {
+  try {
+    // Get file record
+    const { data: fileData, error: fetchError } = await supabase
+      .from('files')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (fetchError) throw fetchError;
+    
+    // Get download URL
+    const { data, error } = await supabase.storage
+      .from('files')
+      .createSignedUrl(fileData.storage_path, 60 * 60); // 1 hour expiry
+    
+    if (error) throw error;
+    return { url: data.signedUrl };
+  } catch (error) {
+    console.error('Error getting file download URL:', error);
+    throw error;
+  }
 }

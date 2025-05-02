@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import {
   getAllFolders,
@@ -5,6 +6,7 @@ import {
   deleteFolder,
   Folder
 } from '../services/filevault';
+import { supabase } from '@/integrations/supabase/client';
 
 const userId = 'CURRENT_USER_ID'; // TODO: Replace with real user context
 
@@ -15,16 +17,26 @@ const FileVaultApp: React.FC = () => {
 
   const fetchFolders = async () => {
     setLoading(true);
-    const res = await getAllFolders(userId);
-    setFolders(res.data);
-    setLoading(false);
+    try {
+      const response = await getAllFolders(userId);
+      if (response && response.data) {
+        setFolders(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching folders:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchFolders(); }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createFolder({ folder_name: folderName });
+    await createFolder({ 
+      name: folderName, 
+      user_id: userId 
+    });
     setFolderName('');
     fetchFolders();
   };
@@ -49,9 +61,9 @@ const FileVaultApp: React.FC = () => {
       {loading ? <p>Loading...</p> : (
         <ul>
           {folders.map(folder => (
-            <li key={folder.folder_id}>
-              {folder.folder_name}
-              <button onClick={() => folder.folder_id && handleDelete(folder.folder_id)}>Delete</button>
+            <li key={folder.id}>
+              {folder.name}
+              <button onClick={() => folder.id && handleDelete(folder.id)}>Delete</button>
             </li>
           ))}
         </ul>

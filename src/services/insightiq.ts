@@ -1,33 +1,91 @@
 
 // InsightIQ Service API
-// Provides frontend CRUD functions for InsightIQ entities using backend endpoints
-// Example entity:
-import axios from 'axios';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface Report {
-  report_id?: string;
+  id: string;
   user_id: string;
   report_type: string;
-  generated_at?: string;
+  created_at?: string;
+  data?: any;
 }
 
+// Report Functions
 export async function getAllReports(userId: string) {
-  return axios.get<{ data: Report[] }>(`/api/insightiq/reports?userId=${userId}`);
+  try {
+    const { data, error } = await supabase
+      .from('reports')
+      .select('*')
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error fetching reports:', error);
+    throw error;
+  }
 }
 
-export async function createReport(report: Omit<Report, 'report_id' | 'generated_at'>) {
-  return axios.post<{ data: Report }>(`/api/insightiq/reports`, report);
+export async function createReport(report: Omit<Report, 'id' | 'created_at'>) {
+  try {
+    const { data, error } = await supabase
+      .from('reports')
+      .insert(report)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error creating report:', error);
+    throw error;
+  }
 }
 
-export async function getReportById(report_id: string) {
-  return axios.get<{ data: Report }>(`/api/insightiq/reports/${report_id}`);
+export async function getReportById(id: string) {
+  try {
+    const { data, error } = await supabase
+      .from('reports')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error fetching report:', error);
+    throw error;
+  }
 }
 
-export async function updateReport(report_id: string, updates: Partial<Report>) {
-  return axios.put<{ data: Report }>(`/api/insightiq/reports/${report_id}`, updates);
+export async function updateReport(id: string, updates: Partial<Report>) {
+  try {
+    const { data, error } = await supabase
+      .from('reports')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error updating report:', error);
+    throw error;
+  }
 }
 
-export async function deleteReport(report_id: string) {
-  return axios.delete<{ data: Report }>(`/api/insightiq/reports/${report_id}`);
+export async function deleteReport(id: string) {
+  try {
+    const { data, error } = await supabase
+      .from('reports')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error deleting report:', error);
+    throw error;
+  }
 }
-// Repeat for charts, dashboards, etc.

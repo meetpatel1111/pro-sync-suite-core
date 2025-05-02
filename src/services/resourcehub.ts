@@ -1,94 +1,134 @@
+
 // ResourceHub Service API
-// Provides frontend CRUD functions for ResourceHub entities using backend endpoints
-// Example entity:
-import axios from 'axios';
-
-export interface Resource {
-  resource_id?: string;
-  name: string;
-  type?: string;
-  role?: string;
-  availability?: string;
-  utilization?: number;
-  user_id?: string;
-  created_at?: string;
-  schedule?: Record<string, string>; // e.g. { monday: "09:00-17:00", ... }
-  allocation?: number; // percent allocated to current project
-  current_project_id?: string;
-  allocation_history?: Array<{
-    project_id: string;
-    percent: number;
-    from: string;
-    to: string | null;
-  }>;
-  utilization_history?: Array<{
-    date: string;
-    utilization_percent: number;
-  }>;
-}
-
 import { supabase } from '@/integrations/supabase/client';
 
+export interface Resource {
+  id: string;
+  name: string;
+  role: string;
+  availability?: string;
+  utilization?: number;
+  user_id: string;
+  allocation?: number;
+  schedule?: Record<string, string>;
+  created_at?: string;
+}
+
+// Resource Functions
 export async function getAllResources(userId: string) {
-  // Fetch all resources for a user, including schedule, allocation, etc.
-  return supabase
-    .from('resources')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from('resources')
+      .select('*')
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+    
+    const resources = data.map(item => ({
+      id: item.id,
+      name: item.name,
+      role: item.role,
+      availability: item.availability,
+      utilization: item.utilization,
+      user_id: item.user_id,
+      allocation: item.allocation,
+      schedule: item.schedule ? JSON.parse(JSON.stringify(item.schedule)) : {},
+      created_at: item.created_at
+    }));
+    
+    return { data: resources };
+  } catch (error) {
+    console.error('Error fetching resources:', error);
+    throw error;
+  }
 }
 
-export async function createResource(resource: Omit<Resource, 'resource_id'>) {
-  // Insert a new resource with all fields
-  return supabase
-    .from('resources')
-    .insert([resource])
-    .select();
+export async function createResource(resource: Omit<Resource, 'id' | 'created_at'>) {
+  try {
+    const { data, error } = await supabase
+      .from('resources')
+      .insert(resource)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error creating resource:', error);
+    throw error;
+  }
 }
 
-export async function getResourceById(resource_id: string) {
-  return supabase
-    .from('resources')
-    .select('*')
-    .eq('id', resource_id)
-    .single();
+export async function getResourceById(id: string) {
+  try {
+    const { data, error } = await supabase
+      .from('resources')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    
+    const resource = {
+      id: data.id,
+      name: data.name,
+      role: data.role,
+      availability: data.availability,
+      utilization: data.utilization,
+      user_id: data.user_id,
+      allocation: data.allocation,
+      schedule: data.schedule ? JSON.parse(JSON.stringify(data.schedule)) : {},
+      created_at: data.created_at
+    };
+    
+    return { data: resource };
+  } catch (error) {
+    console.error('Error fetching resource:', error);
+    throw error;
+  }
 }
 
-export async function updateResource(resource_id: string, updates: Partial<Resource>) {
-  return supabase
-    .from('resources')
-    .update(updates)
-    .eq('id', resource_id)
-    .select();
+export async function updateResource(id: string, updates: Partial<Resource>) {
+  try {
+    const { data, error } = await supabase
+      .from('resources')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    const resource = {
+      id: data.id,
+      name: data.name,
+      role: data.role,
+      availability: data.availability,
+      utilization: data.utilization,
+      user_id: data.user_id,
+      allocation: data.allocation,
+      schedule: data.schedule ? JSON.parse(JSON.stringify(data.schedule)) : {},
+      created_at: data.created_at
+    };
+    
+    return { data: resource };
+  } catch (error) {
+    console.error('Error updating resource:', error);
+    throw error;
+  }
 }
 
-export async function deleteResource(resource_id: string) {
-  return supabase
-    .from('resources')
-    .delete()
-    .eq('id', resource_id);
+export async function deleteResource(id: string) {
+  try {
+    const { data, error } = await supabase
+      .from('resources')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return { data };
+  } catch (error) {
+    console.error('Error deleting resource:', error);
+    throw error;
+  }
 }
-
-// Assign a resource to a task for a given assignee
-export async function assignResourceToTask(taskId: string, assigneeId: string) {
-  // 1. Get all resources for the assignee
-  const { data: resources, error } = await getAllResources(assigneeId);
-  if (error) throw error;
-
-  // 2. Find a resource that is available (customize this logic as needed)
-  const availableResource = resources?.find((r: any) => r.availability === 'available');
-  if (!availableResource) throw new Error('No available resource found');
-
-  // 3. Update resource allocation to assign to this task/project
-  const updateResult = await updateResource(availableResource.resource_id, {
-    current_project_id: taskId,
-    allocation: 100 // or whatever makes sense for your logic
-  });
-
-  return {
-    assignedResource: availableResource,
-    updateResult
-  };
-}
-
-// Additional CRUD for allocation_history, utilization_history, schedule, etc. can be handled via updateResource

@@ -8,9 +8,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Users, Plus, Search, Phone, Mail, Building, Edit, Trash2, MessageSquare, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import dbService from '@/services/dbService';
+import { dbService } from '@/services/dbService';
 import { format } from 'date-fns';
 import { Client, ClientNote } from '@/utils/dbtypes';
+import { supabase } from '@/integrations/supabase/client';
 
 const ClientConnect = () => {
   const { toast } = useToast();

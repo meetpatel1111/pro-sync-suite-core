@@ -1,365 +1,370 @@
 
-import { supabase } from './supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
+import { UserProfile } from '@/utils/dbtypes';
+import { PostgrestError } from '@supabase/supabase-js';
 
-export interface UserProfile {
-  id: string;
-  full_name: string;
-  avatar_url: string;
-  bio: string;
-  job_title: string;
-  location: string;
-  phone: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface DashboardStats {
-  completedTasks: number | null;
-  hoursTracked: number | null;
-  openIssues: number | null;
-  teamMembers: number | null;
-}
-
-// User Profile Functions
-export async function getUserProfile(userId: string) {
-  const { data, error } = await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
+export const dbService = {
+  // User Profile Functions
+  getUserProfile: async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-export async function updateUserProfile(userId: string, updates: Partial<UserProfile>) {
-  const { data, error } = await supabase
-    .from('user_profiles')
-    .update(updates)
-    .eq('id', userId)
-    .select()
-    .single();
+  updateUserProfile: async (userId: string, updates: Partial<UserProfile>) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .update(updates)
+        .eq('id', userId)
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-// User Settings Functions
-export async function getUserSettings(userId: string) {
-  const { data, error } = await supabase
-    .from('user_settings')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
+  // User Settings Functions
+  getUserSettings: async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching user settings:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-export async function createUserSettings(userId: string, settings: any) {
-  const { data, error } = await supabase
-    .from('user_settings')
-    .insert([{ user_id: userId, ...settings }])
-    .select()
-    .single();
+  createUserSettings: async (userId: string, settings: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_settings')
+        .insert({
+          user_id: userId,
+          ...settings
+        })
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error creating user settings:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-export async function updateUserSettings(userId: string, settings: any) {
-  const { data, error } = await supabase
-    .from('user_settings')
-    .update(settings)
-    .eq('user_id', userId)
-    .select()
-    .single();
+  updateUserSettings: async (userId: string, updates: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_settings')
+        .update(updates)
+        .eq('user_id', userId)
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error updating user settings:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-// Task Functions
-export async function createTask(userId: string, task: any) {
-  const { data, error } = await supabase
-    .from('tasks')
-    .insert([{ user_id: userId, ...task }])
-    .select()
-    .single();
+  // Project Functions
+  getProjects: async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', userId);
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-export async function getTasks(userId: string) {
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+  createProject: async (userId: string, project: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .insert({
+          ...project,
+          user_id: userId
+        })
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error creating project:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-export async function updateTask(taskId: string, updates: any) {
-  const { data, error } = await supabase
-    .from('tasks')
-    .update(updates)
-    .eq('id', taskId)
-    .select()
-    .single();
+  // Task Functions
+  getTasks: async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', userId);
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-export async function deleteTask(taskId: string) {
-  const { data, error } = await supabase
-    .from('tasks')
-    .delete()
-    .eq('id', taskId);
+  // Time Entry Functions
+  createTimeEntry: async (userId: string, timeEntry: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('time_entries')
+        .insert({
+          ...timeEntry,
+          user_id: userId
+        })
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error creating time entry:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-// Project Functions
-export async function createProject(userId: string, project: any) {
-  const { data, error } = await supabase
-    .from('projects')
-    .insert([{ user_id: userId, ...project }])
-    .select()
-    .single();
+  // Client Functions
+  getClients: async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('user_id', userId);
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-export async function getProjects(userId: string) {
-  const { data, error } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+  createClient: async (client: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .insert(client)
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error creating client:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-export async function updateProject(projectId: string, updates: any) {
-  const { data, error } = await supabase
-    .from('projects')
-    .update(updates)
-    .eq('id', projectId)
-    .select()
-    .single();
+  updateClient: async (clientId: string, updates: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .update(updates)
+        .eq('id', clientId)
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error updating client:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-export async function deleteProject(projectId: string) {
-  const { data, error } = await supabase
-    .from('projects')
-    .delete()
-    .eq('id', projectId);
+  deleteClient: async (clientId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', clientId);
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-// TimeEntry Functions
-export async function createTimeEntry(userId: string, entry: any) {
-  const { data, error } = await supabase
-    .from('time_entries')
-    .insert([{ user_id: userId, ...entry }])
-    .select()
-    .single();
+  // Client Note Functions
+  getClientNotesByClientId: async (clientId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('client_notes')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching client notes:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-export async function getTimeEntries(userId: string) {
-  const { data, error } = await supabase
-    .from('time_entries')
-    .select('*')
-    .eq('user_id', userId)
-    .order('date', { ascending: false });
+  createClientNote: async (note: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('client_notes')
+        .insert(note)
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error creating client note:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-export async function updateTimeEntry(entryId: string, updates: any) {
-  const { data, error } = await supabase
-    .from('time_entries')
-    .update(updates)
-    .eq('id', entryId)
-    .select()
-    .single();
+  deleteClientNote: async (noteId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('client_notes')
+        .delete()
+        .eq('id', noteId);
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error deleting client note:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-export async function deleteTimeEntry(entryId: string) {
-  const { data, error } = await supabase
-    .from('time_entries')
-    .delete()
-    .eq('id', entryId);
+  // Notification Functions
+  getNotifications: async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-// Dashboard Stats Function
-export async function getDashboardStats(userId: string): Promise<DashboardStats> {
-  try {
-    // Get completed tasks count
-    const { data: completedTasksData, error: completedTasksError } = await supabase
-      .from('tasks')
-      .select('count', { count: 'exact' })
-      .eq('user_id', userId)
-      .eq('status', 'completed');
-
-    if (completedTasksError) throw completedTasksError;
-
-    // Get hours tracked
-    const { data: timeEntriesData, error: timeEntriesError } = await supabase
-      .from('time_entries')
-      .select('time_spent')
-      .eq('user_id', userId);
-
-    if (timeEntriesError) throw timeEntriesError;
-
-    // Get open issues count
-    const { data: openIssuesData, error: openIssuesError } = await supabase
-      .from('tasks')
-      .select('count', { count: 'exact' })
-      .eq('user_id', userId)
-      .eq('priority', 'high')
-      .not('status', 'eq', 'completed');
-
-    if (openIssuesError) throw openIssuesError;
-
-    // Get team members count
-    const { data: teamMembersData, error: teamMembersError } = await supabase
-      .from('team_members')
-      .select('count', { count: 'exact' })
-      .eq('user_id', userId);
-
-    if (teamMembersError) throw teamMembersError;
-
-    // Calculate total hours
-    const hoursTracked = timeEntriesData?.reduce((total, entry) => total + (entry.time_spent || 0), 0) || 0;
-
-    return {
-      completedTasks: completedTasksData?.count || 0,
-      hoursTracked: hoursTracked,
-      openIssues: openIssuesData?.count || 0,
-      teamMembers: teamMembersData?.count || 0
-    };
-  } catch (error) {
-    console.error("Error getting dashboard stats:", error);
-    return {
-      completedTasks: null,
-      hoursTracked: null,
-      openIssues: null,
-      teamMembers: null
-    };
-  }
-}
-
-// Notification Functions
-export async function getNotifications(userId: string) {
-  const { data, error } = await supabase
-    .from('notifications')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+  updateNotification: async (notificationId: string, userId: string, updates: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .update(updates)
+        .eq('id', notificationId)
+        .eq('user_id', userId)
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error updating notification:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-export async function updateNotification(notificationId: string, updates: any) {
-  const { data, error } = await supabase
-    .from('notifications')
-    .update(updates)
-    .eq('id', notificationId)
-    .select()
-    .single();
+  deleteNotification: async (notificationId: string, userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId)
+        .eq('user_id', userId);
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  },
   
-  return { data, error };
-}
-
-export async function deleteNotification(notificationId: string) {
-  const { data, error } = await supabase
-    .from('notifications')
-    .delete()
-    .eq('id', notificationId);
-  
-  return { data, error };
-}
-
-// User authentication helper functions
-export async function hashPassword(password: string): Promise<string> {
-  // In a real application, use a proper hashing library like bcrypt
-  // For this demo, we're just doing a simple hash
-  return btoa(password + "salt123");
-}
-
-export async function verifyCustomPassword(email: string, password: string) {
-  try {
-    const { data: users, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single();
-    
-    if (error || !users) {
-      console.error('Error finding user:', error);
+  // Risk Functions
+  getAiRisk: async (projectId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('risks')
+        .select('*')
+        .eq('project_id', projectId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      // If no risk exists, create a mock AI-generated risk
+      if (!data) {
+        const mockRisk = {
+          id: `mock-${projectId}`,
+          name: 'Schedule Delay Risk',
+          description: 'AI-detected potential delay in project timeline based on current progress.',
+          category: 'Schedule',
+          probability: 7, // on scale of 1-10
+          impact: 8, // on scale of 1-10
+          owner: { 
+            name: 'Project Manager', 
+            avatar: '', 
+            initials: 'PM' 
+          },
+          status: 'Open',
+          lastReview: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          nextReview: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        };
+        
+        return mockRisk;
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error fetching AI risk:', error);
       return null;
     }
-    
-    // In a real app, use proper password verification with bcrypt
-    const hashedPassword = await hashPassword(password);
-    if (users.custom_password_hash === hashedPassword) {
-      return users;
-    }
-    
-    return null;
-  } catch (err) {
-    console.error('Error verifying password:', err);
-    return null;
-  }
-}
-
-// Create a dbService object that contains all our functions
-export const dbService = {
-  getUserProfile,
-  updateUserProfile,
-  getUserSettings,
-  createUserSettings,
-  updateUserSettings,
-  createTask,
-  getTasks,
-  updateTask,
-  deleteTask,
-  createProject,
-  getProjects,
-  updateProject,
-  deleteProject,
-  createTimeEntry,
-  getTimeEntries,
-  updateTimeEntry,
-  deleteTimeEntry,
-  getDashboardStats,
-  getNotifications,
-  updateNotification,
-  deleteNotification,
-  hashPassword,
-  verifyCustomPassword,
-  
-  // Add a function to upsert app users (used in useAuth.tsx)
-  upsertAppUser: async (user: any) => {
-    const { data, error } = await supabase
-      .from('users')
-      .upsert({ 
-        id: user.id, 
-        email: user.email,
-        full_name: user.user_metadata?.full_name || user.full_name || '',
-        avatar_url: user.user_metadata?.avatar_url || user.avatar_url || ''
-      })
-      .select();
-    
-    return { data, error };
   },
+  
+  // Auth Functions
+  upsertAppUser: async (user: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .upsert({
+          id: user.id,
+          full_name: user.full_name || user.email,
+          avatar_url: user.avatar_url || null
+        })
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Error upserting app user:', error);
+      return { data: null, error: error as PostgrestError };
+    }
+  }
 };
 
-// Export as default as well to support both import styles
 export default dbService;
