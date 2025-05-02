@@ -25,7 +25,7 @@ const RiskRadar = () => {
         project_id: projectIdFilter || null
       };
       
-      // Pass the risk object as the only argument
+      // Use createRisk function from dbService
       const response = await dbService.createRisk(newRisk);
 
       if (response && response.error) {
@@ -36,7 +36,7 @@ const RiskRadar = () => {
           variant: 'destructive',
         });
       } else {
-        setRisks([...risks, response.data]);
+        setRisks([...risks, response.data[0]]);
         setNewRiskDescription('');
         toast({
           title: 'Success',
@@ -55,7 +55,7 @@ const RiskRadar = () => {
 
   const handleUpdateRisk = async (id: string, updates: any) => {
     try {
-      // Correctly call updateRisk with separate parameters
+      // Use updateRisk function from dbService
       const response = await dbService.updateRisk(id, updates);
       if (response && response.error) {
         setError('Failed to update risk');

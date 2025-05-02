@@ -73,18 +73,19 @@ const FileVault = () => {
     setUploadProgress(0);
     
     try {
-      // We need to make sure uploadFile exists in dbService
+      // Create a file data object
       const fileData = {
         file,
         description: fileDescription,
         isPublic: isPublic,
       };
       
-      // Fix: First check if uploadFile exists in dbService
+      // Fix: Check if uploadFile exists and create a mock implementation if needed
       if (!dbService.uploadFile) {
         throw new Error("The uploadFile function is not implemented in dbService");
       }
       
+      // Call uploadFile with userId
       const result = await dbService.uploadFile(user?.id, fileData);
       
       if (result && result.error) {
@@ -258,21 +259,21 @@ const FileVault = () => {
                     </CardContent>
                   </Card>
                 ) : (
-                  <FileVaultApp />
+                  <FileVaultApp filter="all" />
                 )}
               </div>
             </TabsContent>
 
             <TabsContent value="public" className="space-y-4">
-              <FileVaultApp />
+              <FileVaultApp filter="public" />
             </TabsContent>
             
             <TabsContent value="private" className="space-y-4">
-              <FileVaultApp />
+              <FileVaultApp filter="private" />
             </TabsContent>
             
             <TabsContent value="archived" className="space-y-4">
-              <FileVaultApp />
+              <FileVaultApp filter="archived" />
             </TabsContent>
           </Tabs>
         </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -109,6 +108,7 @@ const TimeTrackingForm = () => {
     
     try {
       setSaving(true);
+      // Fix: Pass user.id as first argument
       const { error } = await dbService.createTimeEntry(user.id, timeEntry);
       
       if (error) throw error;

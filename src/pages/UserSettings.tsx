@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useAuthContext } from '@/context/AuthContext';
@@ -12,6 +13,9 @@ import { useToast } from '@/hooks/use-toast';
 import dbService from '@/services/dbService';
 import { Moon, Sun } from 'lucide-react';
 
+// Define a type for the theme
+type ThemeType = 'light' | 'dark' | 'system';
+
 const UserSettings = () => {
   const { user, profile, setProfile } = useAuthContext();
   const { toast } = useToast();
@@ -24,7 +28,7 @@ const UserSettings = () => {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [taskSettings, setTaskSettings] = useState<any>({});
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
+  const [theme, setTheme] = useState<ThemeType>('system');
   const [language, setLanguage] = useState('en');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
@@ -38,7 +42,7 @@ const UserSettings = () => {
   }, [profile]);
 
   useEffect(() => {
-    const storedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'system' | null;
+    const storedTheme = localStorage.getItem('theme') as ThemeType | null;
     if (storedTheme) {
       setTheme(storedTheme);
     }
@@ -103,6 +107,8 @@ const UserSettings = () => {
   };
 
   const fetchSettings = async () => {
+    if (!user) return;
+    
     setSettingsLoading(true);
     try {
       const response = await dbService.getUserSettings(user.id);
@@ -110,10 +116,10 @@ const UserSettings = () => {
         setTaskSettings(response.data || {});
       }
     } catch (error) {
-      console.error('Error loading task settings:', error);
+      console.error('Error loading user settings:', error);
       toast({
         title: 'Error',
-        description: 'Could not load task settings',
+        description: 'Could not load user settings',
         variant: 'destructive',
       });
     } finally {
@@ -128,7 +134,7 @@ const UserSettings = () => {
         setTaskSettings(settings);
         toast({
           title: 'Settings updated',
-          description: 'Your task management settings have been updated',
+          description: 'Your user settings have been updated',
         });
       } else {
         toast({
@@ -138,10 +144,10 @@ const UserSettings = () => {
         });
       }
     } catch (error) {
-      console.error('Error saving task settings:', error);
+      console.error('Error saving user settings:', error);
       toast({
         title: 'Error',
-        description: 'Could not save task settings',
+        description: 'Could not save user settings',
         variant: 'destructive',
       });
     }
@@ -152,6 +158,11 @@ const UserSettings = () => {
       fetchSettings();
     }
   }, [user]);
+
+  // Fix the theme handling by providing a type-safe handler
+  const handleThemeChange = (value: string) => {
+    setTheme(value as ThemeType);
+  };
 
   return (
     <AppLayout>
@@ -210,10 +221,10 @@ const UserSettings = () => {
                   onChange={(e) => setAvatarUrl(e.target.value)}
                 />
               </div>
+              <Button onClick={updateProfile} disabled={profileLoading}>
+                Update Profile
+              </Button>
             </CardContent>
-            <Button onClick={updateProfile} disabled={profileLoading}>
-              Update Profile
-            </Button>
           </Card>
 
           <Card>
@@ -224,18 +235,22 @@ const UserSettings = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="theme">Theme</Label>
-                <Select value={theme} onValueChange={setTheme}>
+                <Select value={theme} onValueChange={handleThemeChange}>
                   <SelectTrigger id="theme">
                     <SelectValue placeholder="Select theme" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="light">
-                      <Sun className="mr-2 h-4 w-4" />
-                      Light
+                      <div className="flex items-center">
+                        <Sun className="mr-2 h-4 w-4" />
+                        Light
+                      </div>
                     </SelectItem>
                     <SelectItem value="dark">
-                      <Moon className="mr-2 h-4 w-4" />
-                      Dark
+                      <div className="flex items-center">
+                        <Moon className="mr-2 h-4 w-4" />
+                        Dark
+                      </div>
                     </SelectItem>
                     <SelectItem value="system">System</SelectItem>
                   </SelectContent>

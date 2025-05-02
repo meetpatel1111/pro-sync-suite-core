@@ -334,17 +334,20 @@ const getTimeEntries = async (userId: string, filters = {}) => {
       .select('*')
       .eq('user_id', userId);
     
-    // Apply filters
-    if (filters.projectId) {
-      query = query.eq('project_id', filters.projectId);
-    }
-    
-    if (filters.start_date) {
-      query = query.gte('date', filters.start_date);
-    }
-    
-    if (filters.end_date) {
-      query = query.lte('date', filters.end_date);
+    // Apply filters - type safe way
+    if (filters && typeof filters === 'object') {
+      // Check for specific properties safely
+      if ('projectId' in filters && filters.projectId) {
+        query = query.eq('project_id', filters.projectId);
+      }
+      
+      if ('start_date' in filters && filters.start_date) {
+        query = query.gte('date', filters.start_date);
+      }
+      
+      if ('end_date' in filters && filters.end_date) {
+        query = query.lte('date', filters.end_date);
+      }
     }
     
     const { data, error } = await query.order('date', { ascending: false });
@@ -357,14 +360,18 @@ const getTimeEntries = async (userId: string, filters = {}) => {
 };
 
 // Added createTimeEntry function
-const createTimeEntry = async (timeEntry: Partial<TimeEntry>) => {
+const createTimeEntry = async (userId: string, timeEntryData: Partial<TimeEntry>) => {
   try {
-    // Ensure date is a string
+    // Ensure date is a string and description is always present
     const entry = {
-      ...timeEntry,
-      date: typeof timeEntry.date === 'string' ? 
-        timeEntry.date : 
-        (timeEntry.date instanceof Date ? timeEntry.date.toISOString() : new Date().toISOString())
+      ...timeEntryData,
+      user_id: userId,
+      description: timeEntryData.description || '',
+      project: timeEntryData.project || '',
+      time_spent: timeEntryData.time_spent || 0,
+      date: typeof timeEntryData.date === 'string' ? 
+        timeEntryData.date : 
+        (timeEntryData.date instanceof Date ? timeEntryData.date.toISOString() : new Date().toISOString())
     };
     
     const { data, error } = await supabase
@@ -648,16 +655,6 @@ const getResources = async (userId: string) => {
   }
 };
 
-const getResourceAllocations = async (userId: string) => {
-  try {
-    console.log('Getting resource allocations for user:', userId);
-    // Implementation would go here
-    return { data: [], error: null };
-  } catch (error) {
-    return { error };
-  }
-};
-
 const getResourceSkills = async (userId: string) => {
   try {
     console.log('Getting resource skills for user:', userId);
@@ -769,6 +766,33 @@ const deleteWidget = async (widgetId: string) => {
   }
 };
 
+const createRisk = async (riskData: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('risks')
+      .insert(riskData)
+      .select();
+    
+    return { data, error };
+  } catch (error) {
+    return { error };
+  }
+};
+
+const updateRisk = async (riskId: string, updates: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('risks')
+      .update(updates)
+      .eq('id', riskId)
+      .select();
+    
+    return { data, error };
+  } catch (error) {
+    return { error };
+  }
+};
+
 const dbService = {
   getUserProfile,
   updateUserProfile,
@@ -799,6 +823,8 @@ const dbService = {
   createUserSkill,
   getUsers,
   getRisks,
+  createRisk,
+  updateRisk,
   getUtilizationHistory,
   getUnavailability,
   getTasks,
@@ -806,7 +832,6 @@ const dbService = {
   getDashboardStats,
   uploadFile,
   getResources,
-  getResourceAllocations,
   getResourceSkills,
   getTeamMembers,
   getDashboards,
