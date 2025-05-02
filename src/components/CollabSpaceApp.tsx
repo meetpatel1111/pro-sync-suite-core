@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import collabService, { Channel, Message } from '@/services/collabService';
@@ -7,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Send, Upload, Clock } from 'lucide-react';
+import { Channel, Message } from '@/utils/dbtypes';
 
 export interface Workspace {
   id: string;
@@ -73,8 +73,9 @@ const CollabSpaceApp = () => {
             description: channel.description,
             created_at: channel.created_at,
             updated_at: channel.updated_at,
+            user_id: channel.created_by || userId, // Use created_by as user_id
+            type: channel.type === 'direct' ? 'dm' : channel.type as 'public' | 'private' | 'dm' | 'group_dm',
             created_by: channel.created_by,
-            type: channel.type as 'public' | 'private' | 'direct',
             about: channel.about
           }));
           setChannels(typedChannels);
@@ -120,7 +121,7 @@ const CollabSpaceApp = () => {
             id: msg.id,
             channel_id: msg.channel_id,
             user_id: msg.user_id,
-            content: msg.content,
+            content: msg.content || '',
             created_at: msg.created_at,
             updated_at: msg.updated_at,
             file_url: msg.file_url,
@@ -130,9 +131,7 @@ const CollabSpaceApp = () => {
             type: msg.type as 'text' | 'image' | 'file' | 'poll',
             mentions: msg.mentions,
             read_by: msg.read_by,
-            name: msg.name,
             username: msg.username,
-            channel_name: msg.channel_name,
             edited_at: msg.edited_at,
             scheduled_for: msg.scheduled_for
           }));
@@ -147,7 +146,26 @@ const CollabSpaceApp = () => {
 
     // Set up realtime subscription for new messages
     const unsubscribe = collabService.onNewMessageForChannel(selectedChannel, (newMessage) => {
-      setMessages(prevMessages => [...prevMessages, newMessage]);
+      setMessages(prevMessages => {
+        // Convert the newMessage to match our Message interface
+        const typedMessage: Message = {
+          id: newMessage.id,
+          channel_id: newMessage.channel_id,
+          user_id: newMessage.user_id,
+          content: newMessage.content || '',
+          created_at: newMessage.created_at,
+          username: newMessage.username,
+          edited_at: newMessage.edited_at,
+          reactions: newMessage.reactions,
+          parent_id: newMessage.parent_id,
+          file_url: newMessage.file_url,
+          scheduled_for: newMessage.scheduled_for,
+          type: newMessage.type,
+          is_pinned: newMessage.is_pinned,
+          read_by: newMessage.read_by
+        };
+        return [...prevMessages, typedMessage];
+      });
     });
 
     return () => {
@@ -181,8 +199,9 @@ const CollabSpaceApp = () => {
           description: response.data.description,
           created_at: response.data.created_at,
           updated_at: response.data.updated_at,
+          user_id: response.data.created_by || userId,
+          type: response.data.type as 'public' | 'private' | 'dm' | 'group_dm',
           created_by: response.data.created_by,
-          type: response.data.type as 'public' | 'private' | 'direct',
           about: response.data.about
         };
         
@@ -248,12 +267,11 @@ const CollabSpaceApp = () => {
         });
       } else {
         // Otherwise send immediately
-        await collabService.sendMessage({
-          channel_id: selectedChannel,
-          user_id: userId,
-          content: newMessage,
-          file_url: fileUrl
-        });
+        await collabService.sendMessage(
+          selectedChannel,
+          userId,
+          newMessage
+        );
       }
 
       // Reset form

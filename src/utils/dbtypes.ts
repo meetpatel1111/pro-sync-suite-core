@@ -26,12 +26,17 @@ export interface ClientNote {
   created_at: string;
 }
 
+// Updated Channel interface to match service definition
 export interface Channel {
   id: string;
   name: string;
   type: 'public' | 'private' | 'dm' | 'group_dm';
   created_at: string;
   user_id: string;
+  description?: string;
+  updated_at?: string;
+  created_by?: string;
+  about?: string;
 }
 
 export interface Message {
@@ -48,6 +53,8 @@ export interface Message {
   file_url?: string;
   scheduled_for?: string;
   type?: string;
+  is_pinned?: boolean;
+  read_by?: string[];
 }
 
 export interface Task {
@@ -60,7 +67,7 @@ export interface Task {
   assignee?: string;
   user_id: string;
   project_id?: string;
-  project?: string; // Added project field
+  project?: string;
   created_at: string;
 }
 
@@ -169,5 +176,14 @@ export interface Notification {
   related_to?: string;
   related_id?: string;
   read: boolean;
+  created_at: string;
+}
+
+export interface Approval {
+  id: string;
+  message_id: string;
+  approver_id: string;
+  approval_type: string;
+  status: string;
   created_at: string;
 }

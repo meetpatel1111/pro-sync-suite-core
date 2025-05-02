@@ -36,16 +36,20 @@ const CollabSpace = () => {
           name: ch.name,
           type: ch.type as 'public' | 'private' | 'dm' | 'group_dm',
           created_at: ch.created_at,
-          user_id: ch.created_by || user.id // Ensure user_id is set
+          user_id: ch.created_by || user.id, // Ensure user_id is set
+          description: ch.description,
+          updated_at: ch.updated_at,
+          created_by: ch.created_by,
+          about: ch.about
         }));
         setChannels(typedChannels);
       }
     };
 
     const fetchAllUsers = async () => {
-      const result = await collabService.getUsers(); // Changed from getAllUsers to getUsers
+      const result = await collabService.getUsers();
       if (result && result.data) {
-        setAllUsers(result.data.map(u => ({ id: u.id, name: u.full_name })));
+        setAllUsers(result.data.map(u => ({ id: u.id, name: u.full_name || u.id })));
       }
     };
 
@@ -64,7 +68,7 @@ const CollabSpace = () => {
           id: msg.id,
           channel_id: msg.channel_id,
           user_id: msg.user_id,
-          content: msg.content || '',  // Ensure content is not undefined
+          content: msg.content || '',
           created_at: msg.created_at,
           username: msg.username,
           edited_at: msg.edited_at,
@@ -72,7 +76,9 @@ const CollabSpace = () => {
           parent_id: msg.parent_id,
           file_url: msg.file_url,
           scheduled_for: msg.scheduled_for,
-          type: msg.type
+          type: msg.type,
+          is_pinned: msg.is_pinned,
+          read_by: msg.read_by
         }));
         setMessages(typedMessages);
       }
@@ -90,7 +96,7 @@ const CollabSpace = () => {
     setSelectedChannelId(channel.id);
   };
 
-  const sendMessage = async (content: string, fileId: string | null = null, planBoardId: string | null = null, meetingNotesId: string | null = null) => {
+  const sendMessage = async (content: string) => {
     if (!user || !selectedChannelId) return;
 
     const result = await collabService.sendMessage(selectedChannelId, user.id, content);
@@ -101,7 +107,16 @@ const CollabSpace = () => {
         channel_id: result.data.channel_id,
         user_id: result.data.user_id,
         content: result.data.content || '',
-        created_at: result.data.created_at
+        created_at: result.data.created_at,
+        username: result.data.username,
+        edited_at: result.data.edited_at,
+        reactions: result.data.reactions,
+        parent_id: result.data.parent_id,
+        file_url: result.data.file_url,
+        scheduled_for: result.data.scheduled_for,
+        type: result.data.type,
+        is_pinned: result.data.is_pinned,
+        read_by: result.data.read_by
       };
       
       setMessages(prevMessages => [...prevMessages, newMessage]);
@@ -120,7 +135,11 @@ const CollabSpace = () => {
       name: channel.name,
       type: channel.type as 'public' | 'private' | 'dm' | 'group_dm',
       created_at: channel.created_at,
-      user_id: channel.created_by || user?.id || ''
+      user_id: channel.created_by || user?.id || '',
+      description: channel.description,
+      updated_at: channel.updated_at,
+      created_by: channel.created_by,
+      about: channel.about
     };
     setChannels(prevChannels => [...prevChannels, newChannel]);
   };

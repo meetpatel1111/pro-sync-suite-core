@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
 import { Message } from '../services/collabService';
@@ -153,7 +154,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       <div className="flex-1 overflow-y-auto p-4">
         {messages.map((message) => (
           <div key={message.id} className="mb-2">
-            {replyingTo && (
+            {replyingTo && replyingTo.id === message.id && (
               <div className="p-2 mb-2 bg-gray-100 rounded-md">
                 Replying to: {replyingTo.content}
                 <Button variant="ghost" size="sm" onClick={handleCancelReply}>

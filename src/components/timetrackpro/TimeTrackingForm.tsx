@@ -262,7 +262,7 @@ const TimeTrackingForm = () => {
         task_id: selectedTask || null,
         description,
         time_spent: timeSpent,
-        date: entryDate || new Date().toISOString(),
+        date: entryDate ? entryDate.toISOString() : new Date().toISOString(),
         project: projects.find(p => p.id === selectedProject)?.name || '',
         billable: true
       };
