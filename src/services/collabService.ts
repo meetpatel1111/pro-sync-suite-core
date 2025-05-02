@@ -493,6 +493,155 @@ const collabService = {
       .subscribe();
       
     return channel;
+  },
+  
+  // Add missing methods
+  createApproval: async (messageId: string, approvalType: string, approverId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('approvals')
+        .insert({
+          message_id: messageId,
+          approval_type: approvalType,
+          approver_id: approverId,
+          status: 'pending'
+        })
+        .select()
+        .single();
+      
+      if (error) return { error };
+      return { data };
+    } catch (error) {
+      return { error };
+    }
+  },
+
+  searchMessages: async (query: string, filters: any = {}) => {
+    try {
+      let messagesQuery = supabase
+        .from('messages')
+        .select('*')
+        .ilike('content', `%${query}%`);
+      
+      // Apply filters if provided
+      if (filters.channel_id) {
+        messagesQuery = messagesQuery.eq('channel_id', filters.channel_id);
+      }
+      
+      if (filters.user_id) {
+        messagesQuery = messagesQuery.eq('user_id', filters.user_id);
+      }
+      
+      if (filters.from_date) {
+        messagesQuery = messagesQuery.gte('created_at', filters.from_date);
+      }
+      
+      if (filters.to_date) {
+        messagesQuery = messagesQuery.lte('created_at', filters.to_date);
+      }
+      
+      const { data, error } = await messagesQuery;
+      
+      if (error) return { error };
+      return { data };
+    } catch (error) {
+      return { error };
+    }
+  },
+  
+  createGroupDM: async (userIds: string[], creatorId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('channels')
+        .insert({
+          name: 'Group DM',
+          type: 'direct',
+          created_by: creatorId
+        })
+        .select()
+        .single();
+      
+      if (error) return { error };
+      
+      // Add all users (including creator) to channel members
+      const allMembers = [...userIds, creatorId];
+      
+      const memberPromises = allMembers.map(userId => 
+        supabase
+          .from('channel_members')
+          .insert({
+            channel_id: data.id,
+            user_id: userId
+          })
+      );
+      
+      await Promise.all(memberPromises);
+      
+      return { data };
+    } catch (error) {
+      return { error };
+    }
+  },
+  
+  autoCreateProjectChannel: async (projectId: string, userId: string) => {
+    try {
+      // First get project details
+      const { data: projectData, error: projectError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', projectId)
+        .single();
+      
+      if (projectError) return { error: projectError };
+      
+      // Create channel for project
+      const { data, error } = await supabase
+        .from('channels')
+        .insert({
+          name: `Project: ${projectData.name}`,
+          description: `Channel for project: ${projectData.name}`,
+          type: 'project',
+          created_by: userId
+        })
+        .select()
+        .single();
+      
+      if (error) return { error };
+      
+      return { data };
+    } catch (error) {
+      return { error };
+    }
+  },
+  
+  createTaskFromMessage: async (messageId: string, taskDetails: any) => {
+    try {
+      // First get message details
+      const { data: messageData, error: messageError } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('id', messageId)
+        .single();
+      
+      if (messageError) return { error: messageError };
+      
+      // Create task based on message
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert({
+          ...taskDetails,
+          description: messageData.content,
+          user_id: messageData.user_id
+        })
+        .select()
+        .single();
+      
+      if (error) return { error };
+      
+      return { data };
+    } catch (error) {
+      return { error };
+    }
   }
 };
 

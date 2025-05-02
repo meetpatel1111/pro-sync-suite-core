@@ -1,4 +1,6 @@
-import { supabase } from "../integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
+import { PostgrestSingleResponse } from '@supabase/supabase-js';
+import { Client, ClientNote } from '@/utils/dbtypes';
 
 // Get user profile data
 async function getUserProfile(userId: string) {
@@ -108,20 +110,129 @@ async function getDashboardStats(userId: string) {
 }
 
 // Get clients
-async function getClients(userId: string) {
-  return await supabase
-    .from('clients')
-    .select('*')
-    .eq('user_id', userId)
-    .order('name');
-}
+const getClients = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    return data as Client[];
+  } catch (error) {
+    console.error('Error fetching clients:', error);
+    return [];
+  }
+};
 
 // Create a client
-async function createClient(userId: string, clientData: any) {
-  return await supabase
-    .from('clients')
-    .insert([{ ...clientData, user_id: userId }]);
-}
+const createClient = async (clientData: Partial<Client>) => {
+  try {
+    const { data, error } = await supabase
+      .from('clients')
+      .insert([clientData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    return data as Client;
+  } catch (error) {
+    console.error('Error creating client:', error);
+    return null;
+  }
+};
+
+// Update a client
+const updateClient = async (clientId: string, clientData: Partial<Client>) => {
+  try {
+    const { data, error } = await supabase
+      .from('clients')
+      .update(clientData)
+      .eq('id', clientId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    return data as Client;
+  } catch (error) {
+    console.error('Error updating client:', error);
+    return null;
+  }
+};
+
+// Delete a client
+const deleteClient = async (clientId: string) => {
+  try {
+    const { error } = await supabase
+      .from('clients')
+      .delete()
+      .eq('id', clientId);
+    
+    if (error) throw error;
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting client:', error);
+    return false;
+  }
+};
+
+// Get client notes by client ID
+const getClientNotesByClientId = async (clientId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('client_notes')
+      .select('*')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    return data as ClientNote[];
+  } catch (error) {
+    console.error('Error fetching client notes:', error);
+    return [];
+  }
+};
+
+// Create a client note
+const createClientNote = async (noteData: Partial<ClientNote>) => {
+  try {
+    const { data, error } = await supabase
+      .from('client_notes')
+      .insert([noteData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    return data as ClientNote;
+  } catch (error) {
+    console.error('Error creating client note:', error);
+    return null;
+  }
+};
+
+// Delete a client note
+const deleteClientNote = async (noteId: string) => {
+  try {
+    const { error } = await supabase
+      .from('client_notes')
+      .delete()
+      .eq('id', noteId);
+    
+    if (error) throw error;
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting client note:', error);
+    return false;
+  }
+};
 
 // Get projects
 async function getProjects(userId: string) {
@@ -387,6 +498,11 @@ const dbService = {
   getDashboardStats,
   getClients,
   createClient,
+  updateClient,
+  deleteClient,
+  getClientNotesByClientId,
+  createClientNote,
+  deleteClientNote,
   getProjects,
   createProject,
   getTimeEntries,
@@ -423,6 +539,11 @@ export {
   getDashboardStats,
   getClients,
   createClient,
+  updateClient,
+  deleteClient,
+  getClientNotesByClientId,
+  createClientNote,
+  deleteClientNote,
   getProjects,
   createProject,
   getTimeEntries,

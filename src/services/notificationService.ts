@@ -1,3 +1,4 @@
+
 // notificationService.ts
 // Utility to send email and push notifications, respecting user settings
 // Uses Nodemailer for email and (simulated) push notification for demo
@@ -5,7 +6,7 @@
 // @ts-ignore
 let nodemailer: any = null;
 try { nodemailer = require('nodemailer'); } catch (e) { /* dev fallback */ }
-import { dbService } from './dbService';
+import dbService from './dbService';
 
 export type NotificationType = 'task_assigned' | 'generic';
 

@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import dbService from '@/services/dbService';
+import { Label } from "@/components/ui/label";
 
 const Auth = () => {
   const [type, setType] = useState("sign-in")

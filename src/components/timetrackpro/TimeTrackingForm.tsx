@@ -3,12 +3,19 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Play, Pause, StopCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, Play, Pause, StopCircle, Save } from 'lucide-react';
 import dbService from '@/services/dbService';
 import { useAuthContext } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from "@/lib/utils";
 import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Project {
   id: string;

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -58,7 +59,8 @@ const ClientConnect = () => {
   const fetchClients = async () => {
     setIsLoading(true);
     try {
-      const data = await dbService.getClients(user?.id);
+      if (!user?.id) return;
+      const data = await dbService.getClients(user.id);
       setClients(data as Client[]);
     } catch (error) {
       console.error('Error fetching clients:', error);
@@ -96,22 +98,30 @@ const ClientConnect = () => {
       return;
     }
 
+    if (!user?.id) return;
+
     try {
       if (isEditingClient && selectedClient) {
         // Update existing client
-        await dbService.updateClient(selectedClient.id, newClient);
-        setClients(clients.map(client =>
-          client.id === selectedClient.id
-            ? { ...client, ...newClient }
-            : client
-        ));
-        toast({
-          title: 'Client updated',
-          description: 'Client information has been updated successfully.'
-        });
+        const updatedClient = await dbService.updateClient(selectedClient.id, newClient);
+        if (updatedClient) {
+          setClients(clients.map(client =>
+            client.id === selectedClient.id
+              ? { ...client, ...updatedClient }
+              : client
+          ));
+          toast({
+            title: 'Client updated',
+            description: 'Client information has been updated successfully.'
+          });
+        }
       } else {
-        // Add new client
-        const created = await dbService.createClient(newClient);
+        // Add new client with user_id
+        const clientData = { 
+          ...newClient,
+          user_id: user.id
+        };
+        const created = await dbService.createClient(clientData);
         if (created) {
           setClients([created, ...clients]);
           toast({
@@ -135,7 +145,7 @@ const ClientConnect = () => {
   };
 
   const handleAddNote = async () => {
-    if (!selectedClient || !newNote.content) {
+    if (!selectedClient || !newNote.content || !user?.id) {
       toast({
         title: 'Missing information',
         description: 'Please select a client and provide note content.',
@@ -148,8 +158,9 @@ const ClientConnect = () => {
       const created = await dbService.createClientNote({
         client_id: selectedClient.id,
         content: newNote.content,
-        user_id: session.user.id
+        user_id: user.id
       });
+      
       if (created) {
         setClientNotes([created, ...clientNotes]);
         toast({
