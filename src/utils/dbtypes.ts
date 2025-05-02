@@ -1,4 +1,3 @@
-
 // Database type definitions for application entities
 
 export interface User {
@@ -32,7 +31,7 @@ export interface Channel {
   name: string;
   type: 'public' | 'private' | 'dm' | 'group_dm';
   created_at: string;
-  user_id: string;
+  user_id?: string;
   description?: string;
   updated_at?: string;
   created_by?: string;
@@ -68,6 +67,7 @@ export interface Task {
   user_id: string;
   project_id?: string;
   created_at: string;
+  project?: string; // Adding the missing project field
 }
 
 export interface TimeEntry {

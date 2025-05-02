@@ -1,68 +1,60 @@
 
 import React, { useState, useEffect } from 'react';
-import dbService from '@/services/dbService';
-import { useAuthContext } from '@/context/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, MapPin, PhoneCall, Briefcase } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import dbService from '@/services/dbService';
 
 interface UserProfileSettingsProps {
   userId: string;
-  showTitle?: boolean;
-  compact?: boolean;
 }
 
-const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ userId, showTitle = true, compact = false }) => {
-  const { user } = useAuthContext();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ userId }) => {
+  // Add missing state variables
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [profileData, setProfileData] = useState({
     full_name: '',
-    job_title: '',
+    avatar_url: '',
     bio: '',
+    job_title: '',
     phone: '',
-    location: '',
-    avatar_url: ''
+    location: ''
   });
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (!userId) return;
-    
-    const loadUserProfile = async () => {
-      setLoading(true);
-      setError(null);
+    const fetchUserProfile = async () => {
+      if (!userId) return;
+      
       try {
-        const response = await dbService.getUserProfile(userId);
-        if (response && response.data) {
+        const { data, error } = await dbService.getUserProfile(userId);
+        
+        if (error) throw error;
+        
+        if (data) {
           setProfileData({
-            full_name: response.data.full_name || '',
-            job_title: response.data.job_title || '',
-            bio: response.data.bio || '',
-            phone: response.data.phone || '',
-            location: response.data.location || '',
-            avatar_url: response.data.avatar_url || ''
+            full_name: data.full_name || '',
+            avatar_url: data.avatar_url || '',
+            bio: data.bio || '',
+            job_title: data.job_title || '',
+            phone: data.phone || '',
+            location: data.location || ''
           });
-        } else if (response && response.error) {
-          setError(response.error.message || 'Failed to load profile');
         }
-      } catch (error) {
-        console.error('Error loading profile:', error);
-        setError('An unexpected error occurred');
-      } finally {
-        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+        setError('Failed to load profile data');
       }
     };
     
-    loadUserProfile();
+    fetchUserProfile();
   }, [userId]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setProfileData(prev => ({
       ...prev,
@@ -70,168 +62,128 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ userId, showT
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
     setError(null);
+    setSuccess(false);
+    setSaving(true);
     
     try {
-      const response = await dbService.updateUserProfile(userId, {
+      const updateData = {
         full_name: profileData.full_name,
-        job_title: profileData.job_title,
+        avatar_url: profileData.avatar_url,
         bio: profileData.bio,
+        job_title: profileData.job_title,
         phone: profileData.phone,
-        location: profileData.location,
-      });
+        location: profileData.location
+      };
       
-      if (response && response.error) {
-        setError(response.error.message || 'Failed to update profile');
-      } else {
-        toast({
-          title: 'Profile updated',
-          description: 'Your profile has been updated successfully',
-        });
-      }
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      setError('An unexpected error occurred');
+      // Update to use dbService.updateUserProfile
+      const { error } = await dbService.updateUserProfile(userId, updateData);
+      
+      if (error) throw error;
+      
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      setError('Failed to update profile');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    
-    const file = e.target.files[0];
-    // Implement avatar upload logic
-    // This would typically upload to storage and then update the user profile
-    console.log('Avatar file:', file);
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
-
-  // Display a smaller version of the profile for sidebars etc.
-  if (compact) {
-    return (
-      <div className="flex items-center space-x-3 p-2">
-        <Avatar className="h-10 w-10">
-          <AvatarImage src={profileData.avatar_url || `https://avatar.vercel.sh/${userId}.png`} alt={profileData.full_name} />
-          <AvatarFallback>{profileData.full_name?.charAt(0) || 'U'}</AvatarFallback>
-        </Avatar>
-        <div>
-          <p className="text-sm font-medium">{profileData.full_name || 'User'}</p>
-          {profileData.job_title && <p className="text-xs text-muted-foreground">{profileData.job_title}</p>}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <Card>
-      {showTitle && (
-        <CardHeader>
-          <CardTitle>Profile Settings</CardTitle>
-        </CardHeader>
-      )}
+      <CardHeader>
+        <CardTitle>Profile Information</CardTitle>
+      </CardHeader>
       <CardContent>
-        {loading ? (
-          <div className="flex justify-center p-4">Loading...</div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="flex flex-col items-center mb-6">
-              <Avatar className="h-24 w-24 mb-2">
-                <AvatarImage src={profileData.avatar_url || `https://avatar.vercel.sh/${userId}.png`} alt={profileData.full_name} />
-                <AvatarFallback>{profileData.full_name?.charAt(0) || 'U'}</AvatarFallback>
-              </Avatar>
-              
-              <div>
-                <label htmlFor="avatar-upload" className="cursor-pointer text-sm text-blue-600">
-                  Change avatar
-                </label>
-                <input 
-                  id="avatar-upload" 
-                  type="file" 
-                  className="hidden" 
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
+        <form onSubmit={handleSaveProfile} className="space-y-4">
+          <div className="flex flex-col items-center mb-6">
+            <Avatar className="w-20 h-20 mb-2">
+              <AvatarImage src={profileData.avatar_url} alt={profileData.full_name} />
+              <AvatarFallback>{getInitials(profileData.full_name)}</AvatarFallback>
+            </Avatar>
+          </div>
+
+          <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="full_name">Full Name</Label>
+                <Input
+                  id="full_name"
+                  name="full_name"
+                  value={profileData.full_name}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="avatar_url">Avatar URL</Label>
+                <Input
+                  id="avatar_url"
+                  name="avatar_url"
+                  value={profileData.avatar_url}
+                  onChange={handleInputChange}
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="full_name">
-                <User className="inline mr-2 h-4 w-4" />
-                Full Name
-              </label>
-              <Input
-                id="full_name"
-                name="full_name"
-                value={profileData.full_name}
-                onChange={handleChange}
-                placeholder="Your full name"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="job_title">
-                <Briefcase className="inline mr-2 h-4 w-4" />
-                Job Title
-              </label>
-              <Input
-                id="job_title"
-                name="job_title"
-                value={profileData.job_title}
-                onChange={handleChange}
-                placeholder="Your job title"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="phone">
-                <PhoneCall className="inline mr-2 h-4 w-4" />
-                Phone Number
-              </label>
-              <Input
-                id="phone"
-                name="phone"
-                value={profileData.phone}
-                onChange={handleChange}
-                placeholder="Your phone number"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="location">
-                <MapPin className="inline mr-2 h-4 w-4" />
-                Location
-              </label>
-              <Input
-                id="location"
-                name="location"
-                value={profileData.location}
-                onChange={handleChange}
-                placeholder="Your location"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="bio">Bio</label>
+              <Label htmlFor="bio">Bio</Label>
               <Textarea
                 id="bio"
                 name="bio"
                 value={profileData.bio}
-                onChange={handleChange}
-                placeholder="Tell us about yourself"
+                onChange={handleInputChange}
                 rows={3}
               />
             </div>
-            
-            {error && <div className="text-sm text-red-500">{error}</div>}
-            
-            <Button type="submit" disabled={saving}>
-              {saving ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </form>
-        )}
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="job_title">Job Title</Label>
+                <Input
+                  id="job_title"
+                  name="job_title"
+                  value={profileData.job_title}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  value={profileData.phone}
+                  onChange={handleInputChange}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                name="location"
+                value={profileData.location}
+                onChange={handleInputChange}
+              />
+            </div>
+          </div>
+
+          {error && <p className="text-destructive">{error}</p>}
+          {success && <p className="text-green-500">Profile updated successfully!</p>}
+
+          <Button type="submit" className="w-full" disabled={saving}>
+            {saving ? 'Saving...' : 'Save Profile'}
+          </Button>
+        </form>
       </CardContent>
     </Card>
   );

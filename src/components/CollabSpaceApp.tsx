@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect, useRef } from 'react';
+import { useAuthContext } from '@/context/AuthContext';
 import collabService, { Channel, Message } from '@/services/collabService';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,6 +16,7 @@ export interface Workspace {
 
 const CollabSpaceApp = () => {
   const { toast } = useToast();
+  const { user } = useAuthContext();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
@@ -174,45 +175,29 @@ const CollabSpaceApp = () => {
   }, [selectedChannel]);
 
   // Create a new channel
-  const handleCreateChannel = async () => {
-    if (!channelName.trim()) {
-      toast({
-        title: 'Channel name required',
-        description: 'Please enter a channel name',
-        variant: 'destructive'
-      });
-      return;
-    }
-
+  const handleCreateChannel = async (channelData) => {
+    // Make sure the type is one of the allowed values: 'public', 'private', 'dm', 'group_dm'
+    const newChannel: Channel = {
+      name: channelData.name,
+      type: channelData.type as 'public' | 'private' | 'dm' | 'group_dm',
+      description: channelData.description,
+      created_at: new Date().toISOString(),
+      created_by: user?.id
+      // Don't include user_id if it doesn't exist in Channel interface
+    };
+    
     try {
-      const response = await collabService.createChannel({
-        name: channelName,
-        description: channelDescription,
-        created_by: userId,
-        type: 'public'
-      });
-
+      const response = await collabService.createChannel(newChannel);
+      
       if (response.data) {
-        const newChannel: Channel = {
-          id: response.data.id,
-          name: response.data.name,
-          description: response.data.description,
-          created_at: response.data.created_at,
-          updated_at: response.data.updated_at,
-          user_id: response.data.created_by || userId,
-          type: response.data.type as 'public' | 'private' | 'dm' | 'group_dm',
-          created_by: response.data.created_by,
-          about: response.data.about
-        };
-        
-        setChannels(prev => [...prev, newChannel]);
+        setChannels(prev => [...prev, response.data]);
         setChannelName('');
         setChannelDescription('');
         setShowNewChannelForm(false);
 
         toast({
           title: 'Channel created',
-          description: `Channel "${channelName}" created successfully`,
+          description: `Channel "${channelData.name}" created successfully`,
         });
       }
     } catch (error) {
@@ -367,7 +352,7 @@ const CollabSpaceApp = () => {
               </Button>
               <Button 
                 size="sm"
-                onClick={handleCreateChannel}
+                onClick={() => handleCreateChannel({ name: channelName, type: 'public', description: channelDescription })}
               >
                 Create
               </Button>

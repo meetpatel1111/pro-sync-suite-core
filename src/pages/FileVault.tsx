@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useAuthContext } from '@/context/AuthContext';
@@ -5,9 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { File } from '@/utils/dbtypes';
-import { fileVaultService } from '@/services/fileVaultService';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import dbService from '@/services/dbService';
+import { fileVaultService } from '@/services/fileVaultService';
+import { FileIcon, FilePlus, Loader2, Lock, Unlock } from 'lucide-react';
+import type { File as FileType } from '@/utils/dbtypes'; // Use type-only import to avoid conflict with DOM File
 
 interface FileRecord {
   id: string;
@@ -31,7 +40,8 @@ const FileVault = () => {
   const [isPublic, setIsPublic] = useState(false);
   const [fileUrl, setFileUrl] = useState('');
   const [loading, setLoading] = useState(true);
-  const [fileId, setFileId] = useState(null);
+  const [fileId, setFileId] = useState<string | null>(null);
+  const [file, setFile] = useState<FileType | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -43,6 +53,7 @@ const FileVault = () => {
     
     setLoading(true);
     try {
+      // Update to match dbService implementation
       const { data, error } = await dbService.getFiles(user.id);
       if (error) throw error;
       setFiles(data || []);
@@ -90,6 +101,7 @@ const FileVault = () => {
         is_public: isPublic
       };
       
+      // Update to match dbService implementation
       await dbService.createFileRecord(user.id, fileData);
       
       setFileDescription('');
@@ -191,7 +203,7 @@ const FileVault = () => {
                         </CardContent>
                         <CardFooter className="justify-between">
                           <Button size="sm" onClick={() => handleFileDownload(file.storage_path)}>
-                            <File className="h-4 w-4 mr-2" />
+                            <FileIcon className="h-4 w-4 mr-2" />
                             Download
                           </Button>
                           {file.is_public ? (

@@ -32,10 +32,10 @@ const updateUserProfile = async (userId: string, profileData: any) => {
       .update(profileData)
       .eq('id', userId)
       .select();
-
+    
     return { data, error };
   } catch (error) {
-    return { error };
+    return { error, data: null };
   }
 };
 

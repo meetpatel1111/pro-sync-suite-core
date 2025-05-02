@@ -4,7 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScatterChart, Scatter, LineChart, Line, BarChart, Bar, PieChart, Pie, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { 
+  ScatterChart, Scatter,
+  LineChart as RechartLineChart, Line,
+  BarChart, Bar,
+  PieChart as RechartsPieChart, 
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell 
+} from 'recharts';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,8 +21,9 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import dbService from '@/services/dbService';
 import { useAuthContext } from '@/context/AuthContext';
-import { Task, TimeEntry } from '@/utils/dbtypes';
-import { Plus, Trash2 } from 'lucide-react';
+import { Task, TimeEntry, Project } from '@/utils/dbtypes';
+import { Dashboard, Widget } from '@/utils/dbtypes';
+import { Plus, Trash2, Pencil, Activity, BarChart2, TrendingUp } from 'lucide-react';
 
 const InsightIQ = () => {
   const { toast } = useToast();
@@ -380,7 +387,7 @@ const InsightIQ = () => {
       
       toast({
         title: 'Widget deleted',
-        description: 'Widget has been deleted successfully.'
+        description: 'Widget has been deleted successfully'
       });
     } catch (error) {
       console.error('Error deleting widget:', error);
@@ -448,6 +455,7 @@ const InsightIQ = () => {
     return project ? project.name : projectId;
   };
 
+  // Fix the renderWidget function to use the correct chart components from recharts:
   const renderWidget = (widget: Widget) => {
     const data = getChartData(widget);
     

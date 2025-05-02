@@ -211,6 +211,7 @@ const TimeTrackingForm = () => {
         project: projects.find(p => p.id === activeSession.project_id)?.name || ''
       };
       
+      // Update to match dbService implementation - just pass user_id and timeEntry
       const { error: timeEntryError } = await dbService.createTimeEntry(user!.id, timeEntry);
       
       if (timeEntryError) throw timeEntryError;
@@ -230,7 +231,7 @@ const TimeTrackingForm = () => {
     }
   };
   
-  // Fix manual time entry creation to not include 'manual' property
+  // Fix manual time entry creation
   const createManualEntry = async () => {
     if (!user) return;
     
@@ -267,6 +268,7 @@ const TimeTrackingForm = () => {
         billable: true
       };
       
+      // Update to match dbService implementation - just pass user_id and timeEntry
       const { error } = await dbService.createTimeEntry(user.id, timeEntry);
       
       if (error) throw error;
