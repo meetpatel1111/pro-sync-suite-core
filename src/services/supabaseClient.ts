@@ -1,7 +1,8 @@
+
 import { createClient } from '@supabase/supabase-js';
+import { supabase as integrationSupabase } from '@/integrations/supabase/client';
 
-// TODO: Replace with your actual Supabase project URL and anon/public key
-const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
+// Instead of using process.env which is Node.js specific, we'll use the already 
+// configured Supabase client from the integrations folder
+export const supabase = integrationSupabase;
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
