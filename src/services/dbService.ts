@@ -532,7 +532,7 @@ export const dbService = {
     };
   },
 
-  // Add this new function to fix the missing export
+  // Fix the exported function here
   async getDashboardStats(userId: string): Promise<any> {
     try {
       // Get completed tasks count
@@ -598,3 +598,6 @@ export const dbService = {
     }
   }
 };
+
+// Export getDashboardStats directly so it can be imported individually
+export const { getDashboardStats } = dbService;
