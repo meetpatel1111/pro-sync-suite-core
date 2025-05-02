@@ -146,7 +146,7 @@ const CollabSpaceApp = () => {
     fetchChannelData();
 
     // Set up realtime subscription for new messages
-    const unsubscribe = collabService.onNewMessageForChannel(selectedChannel, (newMessage) => {
+    const channel = collabService.onNewMessageForChannel(selectedChannel, (newMessage) => {
       setMessages(prevMessages => {
         // Convert the newMessage to match our Message interface
         const typedMessage: Message = {
@@ -170,7 +170,7 @@ const CollabSpaceApp = () => {
     });
 
     return () => {
-      unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, [selectedChannel]);
 

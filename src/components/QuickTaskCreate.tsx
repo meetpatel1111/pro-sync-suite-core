@@ -15,11 +15,9 @@ export const QuickTaskCreate: React.FC<QuickTaskCreateProps> = ({ messageId, onC
   const handleCreate = async () => {
     setLoading(true);
     setError(null);
-    // Example task details; extend as needed
-    const taskDetails = { title };
     
     try {
-      // Using the createTaskFromMessage method
+      // Using the createTaskFromMessage method with task data object
       const res = await collabService.createTaskFromMessage(messageId, {
         title: title,
         status: 'new',

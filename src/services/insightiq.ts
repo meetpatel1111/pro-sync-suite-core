@@ -1,76 +1,146 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { Report } from '@/utils/dbtypes';
 
-export interface Report {
-  id: string;
-  report_id?: string;
-  report_type: string;
-  user_id: string;
-  created_at?: string;
-  data?: any;
-}
+// Helper function for error handling
+const handleError = (error: any) => {
+  console.error('InsightIQ service error:', error);
+  return { error, data: null };
+};
 
-export async function getAllReports(userId: string) {
+// Get reports
+export const getReports = async (userId: string) => {
   try {
+    // We need to use a direct SQL query since 'reports' table isn't recognized
+    // by the type system
     const { data, error } = await supabase
-      .from('reports')
+      .rpc('get_user_reports', { user_id_param: userId });
+    
+    if (error) return handleError(error);
+    
+    // Cast the data to Report type
+    return { data: data as unknown as Report[] };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+// Create report
+export const createReport = async (reportData: any) => {
+  try {
+    // Same approach here using an RPC call
+    const { data, error } = await supabase
+      .rpc('create_report', reportData);
+    
+    if (error) return handleError(error);
+    return { data };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+// Get report by ID
+export const getReportById = async (reportId: string) => {
+  try {
+    // Same approach with RPC
+    const { data, error } = await supabase
+      .rpc('get_report_by_id', { report_id_param: reportId });
+    
+    if (error) return handleError(error);
+    return { data };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+// Alternative implementations using custom types to bypass TypeScript errors
+// These would be used if RPC functions aren't available
+
+// Get time entries for report
+export const getTimeEntriesForReport = async (params: any) => {
+  try {
+    let query = supabase
+      .from('time_entries')
+      .select('*');
+    
+    if (params.userId) {
+      query = query.eq('user_id', params.userId);
+    }
+    
+    if (params.startDate) {
+      query = query.gte('date', params.startDate);
+    }
+    
+    if (params.endDate) {
+      query = query.lte('date', params.endDate);
+    }
+    
+    if (params.project) {
+      query = query.eq('project', params.project);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) return handleError(error);
+    return { data };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+// Get project metrics
+export const getProjectMetrics = async (projectId: string) => {
+  try {
+    // This would typically involve multiple queries
+    const metrics = {
+      totalHours: 0,
+      taskCompletion: 0,
+      recentActivities: []
+    };
+    
+    // Get time entries for the project
+    const { data: timeEntries, error: timeError } = await supabase
+      .from('time_entries')
+      .select('time_spent')
+      .eq('project_id', projectId);
+    
+    if (!timeError && timeEntries) {
+      metrics.totalHours = timeEntries.reduce((acc, entry) => acc + entry.time_spent, 0) / 60; // Convert minutes to hours
+    }
+    
+    // Get tasks for the project
+    const { data: tasks, error: tasksError } = await supabase
+      .from('tasks')
+      .select('status')
+      .eq('project', projectId);
+    
+    if (!tasksError && tasks && tasks.length > 0) {
+      const completed = tasks.filter(t => t.status === 'completed').length;
+      metrics.taskCompletion = (completed / tasks.length) * 100;
+    }
+    
+    // Get recent activities
+    const { data: activities, error: activitiesError } = await supabase
+      .from('time_entries')
       .select('*')
-      .eq('user_id', userId);
+      .eq('project_id', projectId)
+      .order('date', { ascending: false })
+      .limit(5);
     
-    if (error) throw error;
-    return { data: data as Report[] };
-  } catch (error) {
-    console.error('Error fetching reports:', error);
-    // Return sample reports for development
-    return { 
-      data: [
-        { id: '1', report_id: '1', report_type: 'Resource Utilization', user_id: userId, created_at: new Date().toISOString() },
-        { id: '2', report_id: '2', report_type: 'Project Performance', user_id: userId, created_at: new Date().toISOString() },
-        { id: '3', report_id: '3', report_type: 'Budget Analysis', user_id: userId, created_at: new Date().toISOString() }
-      ] as Report[] 
-    };
-  }
-}
-
-export async function createReport(report: Omit<Report, 'id'>) {
-  try {
-    const { data, error } = await supabase
-      .from('reports')
-      .insert(report)
-      .select();
+    if (!activitiesError && activities) {
+      metrics.recentActivities = activities;
+    }
     
-    if (error) throw error;
-    return { data };
+    return { data: metrics };
   } catch (error) {
-    console.error('Error creating report:', error);
-    // Return mock data for development
-    return { 
-      data: { 
-        id: Math.random().toString(), 
-        ...report, 
-        created_at: new Date().toISOString() 
-      } 
-    };
+    return handleError(error);
   }
-}
-
-export async function deleteReport(id: string) {
-  try {
-    const { data, error } = await supabase
-      .from('reports')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-    return { data };
-  } catch (error) {
-    console.error('Error deleting report:', error);
-    return { error };
-  }
-}
+};
 
 export default {
-  getAllReports,
+  getReports,
   createReport,
-  deleteReport
+  getReportById,
+  getTimeEntriesForReport,
+  getProjectMetrics
 };

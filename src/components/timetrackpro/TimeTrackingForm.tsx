@@ -108,7 +108,7 @@ const TimeTrackingForm = () => {
     
     try {
       setSaving(true);
-      // Fix: Pass user.id as first argument
+      // Fix: Pass only user.id
       const { error } = await dbService.createTimeEntry(user.id, timeEntry);
       
       if (error) throw error;

@@ -334,19 +334,21 @@ const getTimeEntries = async (userId: string, filters = {}) => {
       .select('*')
       .eq('user_id', userId);
     
-    // Apply filters - type safe way
+    // Apply filters with type checking
     if (filters && typeof filters === 'object') {
-      // Check for specific properties safely
       if ('projectId' in filters && filters.projectId) {
-        query = query.eq('project_id', filters.projectId);
+        const projectId = String(filters.projectId);
+        query = query.eq('project_id', projectId);
       }
       
       if ('start_date' in filters && filters.start_date) {
-        query = query.gte('date', filters.start_date);
+        const startDate = String(filters.start_date);
+        query = query.gte('date', startDate);
       }
       
       if ('end_date' in filters && filters.end_date) {
-        query = query.lte('date', filters.end_date);
+        const endDate = String(filters.end_date);
+        query = query.lte('date', endDate);
       }
     }
     
@@ -360,19 +362,36 @@ const getTimeEntries = async (userId: string, filters = {}) => {
 };
 
 // Added createTimeEntry function
-const createTimeEntry = async (userId: string, timeEntryData: Partial<TimeEntry>) => {
+const createTimeEntry = async (userId: string, timeEntry: Partial<TimeEntry>) => {
   try {
-    // Ensure date is a string and description is always present
-    const entry = {
-      ...timeEntryData,
-      user_id: userId,
-      description: timeEntryData.description || '',
-      project: timeEntryData.project || '',
-      time_spent: timeEntryData.time_spent || 0,
-      date: typeof timeEntryData.date === 'string' ? 
-        timeEntryData.date : 
-        (timeEntryData.date instanceof Date ? timeEntryData.date.toISOString() : new Date().toISOString())
-    };
+    // Ensure date is a string
+    let entry = { ...timeEntry };
+    
+    // Add the user_id to the entry if not already there
+    entry.user_id = userId;
+    
+    // Handle date conversion
+    if (entry.date) {
+      if (entry.date instanceof Date) {
+        entry.date = entry.date.toISOString();
+      }
+      // Otherwise assume it's already a string
+    } else {
+      entry.date = new Date().toISOString();
+    }
+    
+    // Ensure required fields are present
+    if (!entry.description) {
+      entry.description = 'Time entry';
+    }
+    
+    if (!entry.project && !entry.project_id) {
+      entry.project = 'Unassigned';
+    }
+    
+    if (!entry.time_spent && entry.time_spent !== 0) {
+      return { error: new Error('Time spent is required') };
+    }
     
     const { data, error } = await supabase
       .from('time_entries')
@@ -406,6 +425,7 @@ const createResourceAllocation = async (allocation: ResourceAllocation) => {
   }
 };
 
+// Keep only one version of getResourceAllocations
 const getResourceAllocations = async (userId: string) => {
   try {
     const { data, error } = await supabase
@@ -758,25 +778,27 @@ const createWidget = async (widgetData: any) => {
 
 const createRisk = async (riskData: any) => {
   try {
+    console.log('Creating risk:', riskData);
     const { data, error } = await supabase
       .from('risks')
       .insert(riskData)
-      .select();
-    
+      .select()
+      .single();
     return { data, error };
   } catch (error) {
     return { error };
   }
 };
 
-const updateRisk = async (riskId: string, updates: any) => {
+const updateRisk = async (riskId: string, riskData: any) => {
   try {
+    console.log('Updating risk:', riskId, riskData);
     const { data, error } = await supabase
       .from('risks')
-      .update(updates)
+      .update(riskData)
       .eq('id', riskId)
-      .select();
-    
+      .select()
+      .single();
     return { data, error };
   } catch (error) {
     return { error };
@@ -842,7 +864,7 @@ const dbService = {
   getTimeEntries,
   createTimeEntry,
   createResourceAllocation,
-  getResourceAllocations,
+  getResourceAllocations, // Only include this once
   deleteResourceAllocation,
   getFiles,
   createFileRecord,
@@ -869,9 +891,34 @@ const dbService = {
   createWidget,
   deleteWidget,
   markNotificationAsRead,
-  // Adding the collabService functions to fix unhandled build errors
-  getApprovalsForMessage,
-  createApproval
+  // Add these missing functions to fix RiskRadar errors
+  createRisk: async (riskData: any) => {
+    try {
+      console.log('Creating risk:', riskData);
+      const { data, error } = await supabase
+        .from('risks')
+        .insert(riskData)
+        .select()
+        .single();
+      return { data, error };
+    } catch (error) {
+      return { error };
+    }
+  },
+  updateRisk: async (riskId: string, riskData: any) => {
+    try {
+      console.log('Updating risk:', riskId, riskData);
+      const { data, error } = await supabase
+        .from('risks')
+        .update(riskData)
+        .eq('id', riskId)
+        .select()
+        .single();
+      return { data, error };
+    } catch (error) {
+      return { error };
+    }
+  }
 };
 
 export default dbService;

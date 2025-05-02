@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import collabService from '@/services/collabService';
 import { Input } from '@/components/ui/input';
@@ -19,7 +20,7 @@ export const CollabSearchBar: React.FC<CollabSearchBarProps> = ({ onResults, fil
     setLoading(true);
     setError(null);
     try {
-      const res = await collabService.searchMessages(query, filters || {});
+      const res = await collabService.searchMessages(query, filters);
       if (res.error) setError(res.error.message);
       else onResults(res.data || []);
     } catch (e: any) {

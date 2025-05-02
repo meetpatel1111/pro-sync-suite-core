@@ -266,7 +266,7 @@ const removeReaction = async (messageId: string, userId: string, reaction: strin
     
     const reactions = message?.reactions || {};
     
-    if (reactions[reaction]) {
+    if (reactions[reaction] && Array.isArray(reactions[reaction])) {
       reactions[reaction] = reactions[reaction].filter((id: string) => id !== userId);
       
       // Remove the reaction entirely if no users remain
@@ -355,13 +355,24 @@ const editMessage = async (messageId: string, content: string) => {
 };
 
 // Search messages
-const searchMessages = async (query: string) => {
+const searchMessages = async (query: string, filters = {}) => {
   try {
-    const { data, error } = await supabase
+    let queryBuilder = supabase
       .from('messages')
       .select('*')
       .textSearch('content', query)
       .order('created_at', { ascending: false });
+      
+    // Apply any additional filters if provided
+    if (filters && typeof filters === 'object') {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) {
+          queryBuilder = queryBuilder.eq(key, value);
+        }
+      });
+    }
+    
+    const { data, error } = await queryBuilder;
     
     if (error) return { error };
     return { data };
@@ -372,7 +383,7 @@ const searchMessages = async (query: string) => {
 
 // Setup realtime subscription for new messages
 const onNewMessageForChannel = (channelId: string, callback: (message: any) => void) => {
-  return supabase
+  const channel = supabase
     .channel('public:messages')
     .on('postgres_changes', 
       { 
@@ -385,27 +396,32 @@ const onNewMessageForChannel = (channelId: string, callback: (message: any) => v
         callback(payload.new);
       })
     .subscribe();
+  
+  return channel;
 };
 
 // Schedule message for later
-const scheduleMessage = async (channelId: string, userId: string, content: string, scheduledTime: string) => {
+const scheduleMessage = async (messageData: {
+  channel_id: string,
+  user_id: string,
+  content: string,
+  file_url?: string
+}, scheduledFor: Date) => {
   try {
-    const messageData = {
-      channel_id: channelId,
-      user_id: userId,
-      content,
-      scheduled_for: scheduledTime,
-      read_by: [userId]
+    const data = {
+      ...messageData,
+      scheduled_for: scheduledFor.toISOString(),
+      read_by: [messageData.user_id]
     };
     
-    const { data, error } = await supabase
+    const response = await supabase
       .from('messages')
-      .insert(messageData)
+      .insert(data)
       .select()
       .single();
     
-    if (error) return { error };
-    return { data };
+    if (response.error) return { error: response.error };
+    return { data: response.data };
   } catch (error) {
     return { error };
   }
@@ -490,7 +506,7 @@ const autoCreateProjectChannel = async (projectId: string, projectName: string, 
 };
 
 // Create task from message
-const createTaskFromMessage = async (messageId: string, userId: string, projectId?: string) => {
+const createTaskFromMessage = async (messageId: string, taskData: any) => {
   try {
     // Get the message content
     const { data: message, error: messageError } = await supabase
@@ -502,18 +518,56 @@ const createTaskFromMessage = async (messageId: string, userId: string, projectI
     if (messageError) return { error: messageError };
     
     // Create a task from the message
-    const taskData = {
-      title: message.content.substring(0, 100), // first 100 chars as title
+    const fullTaskData = {
+      title: taskData.title || message.content.substring(0, 100), // Use provided title or first 100 chars as title
       description: message.content,
-      status: 'new',
-      priority: 'medium',
-      user_id: userId,
-      project: projectId || null
+      status: taskData.status || 'new',
+      priority: taskData.priority || 'medium',
+      user_id: message.user_id,
+      project: taskData.project || null
     };
     
     const { data, error } = await supabase
       .from('tasks')
-      .insert(taskData)
+      .insert(fullTaskData)
+      .select()
+      .single();
+    
+    if (error) return { error };
+    return { data };
+  } catch (error) {
+    return { error };
+  }
+};
+
+// Get approvals for a message
+const getApprovalsForMessage = async (messageId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('approvals')
+      .select('*')
+      .eq('message_id', messageId);
+    
+    if (error) return { error };
+    return { data };
+  } catch (error) {
+    return { error };
+  }
+};
+
+// Create an approval
+const createApproval = async (messageId: string, approvalType: string, approverId: string) => {
+  try {
+    const approvalData = {
+      message_id: messageId,
+      approval_type: approvalType,
+      approver_id: approverId,
+      status: 'pending'
+    };
+    
+    const { data, error } = await supabase
+      .from('approvals')
+      .insert(approvalData)
       .select()
       .single();
     
@@ -545,7 +599,9 @@ const collabService = {
   deleteChannel,
   createGroupDM,
   autoCreateProjectChannel,
-  createTaskFromMessage
+  createTaskFromMessage,
+  getApprovalsForMessage,
+  createApproval
 };
 
 export default collabService;
