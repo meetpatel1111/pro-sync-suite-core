@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { GroupDMComposer } from '@/components/GroupDMComposer';
 import { PollComposer } from '@/components/PollComposer';
 import { MeetingNotesPanel } from '@/components/MeetingNotesPanel';
@@ -34,9 +34,9 @@ const CollabSpace = () => {
         const typedChannels = result.data.map(ch => ({
           id: ch.id,
           name: ch.name,
-          type: ch.type as 'public' | 'private' | 'dm' | 'group_dm',
+          type: ch.type === 'direct' ? 'dm' : ch.type as 'public' | 'private' | 'dm' | 'group_dm',
           created_at: ch.created_at,
-          user_id: ch.created_by || user.id, // Ensure user_id is set
+          user_id: ch.created_by || user.id, // Map created_by to user_id
           description: ch.description,
           updated_at: ch.updated_at,
           created_by: ch.created_by,
@@ -72,14 +72,14 @@ const CollabSpace = () => {
           created_at: msg.created_at,
           username: msg.username,
           edited_at: msg.edited_at,
-          reactions: msg.reactions,
+          reactions: msg.reactions || {},
           parent_id: msg.parent_id,
           file_url: msg.file_url,
           scheduled_for: msg.scheduled_for,
           type: msg.type,
           is_pinned: msg.is_pinned,
-          read_by: msg.read_by
-        }));
+          read_by: Array.isArray(msg.read_by) ? msg.read_by : [] // Ensure read_by is an array
+        } as Message));
         setMessages(typedMessages);
       }
     };
@@ -110,13 +110,13 @@ const CollabSpace = () => {
         created_at: result.data.created_at,
         username: result.data.username,
         edited_at: result.data.edited_at,
-        reactions: result.data.reactions,
+        reactions: result.data.reactions || {},
         parent_id: result.data.parent_id,
         file_url: result.data.file_url,
         scheduled_for: result.data.scheduled_for,
         type: result.data.type,
         is_pinned: result.data.is_pinned,
-        read_by: result.data.read_by
+        read_by: Array.isArray(result.data.read_by) ? result.data.read_by : [] // Ensure read_by is an array
       };
       
       setMessages(prevMessages => [...prevMessages, newMessage]);

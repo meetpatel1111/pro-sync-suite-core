@@ -73,9 +73,9 @@ const CollabSpaceApp = () => {
             description: channel.description,
             created_at: channel.created_at,
             updated_at: channel.updated_at,
-            user_id: channel.created_by || userId, // Use created_by as user_id
+            created_by: channel.created_by, 
+            user_id: channel.created_by || userId, // Map created_by to user_id
             type: channel.type === 'direct' ? 'dm' : channel.type as 'public' | 'private' | 'dm' | 'group_dm',
-            created_by: channel.created_by,
             about: channel.about
           }));
           setChannels(typedChannels);

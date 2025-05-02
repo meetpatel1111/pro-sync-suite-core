@@ -54,7 +54,7 @@ export interface Message {
   scheduled_for?: string;
   type?: string;
   is_pinned?: boolean;
-  read_by?: string[];
+  read_by: string[];
 }
 
 export interface Task {
@@ -67,7 +67,6 @@ export interface Task {
   assignee?: string;
   user_id: string;
   project_id?: string;
-  project?: string;
   created_at: string;
 }
 

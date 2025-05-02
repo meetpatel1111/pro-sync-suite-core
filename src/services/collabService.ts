@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // Type definitions
@@ -599,6 +598,37 @@ const getUsers = async () => {
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*');
+    
+    if (error) return { error };
+    return { data };
+  } catch (error) {
+    return { error };
+  }
+};
+
+// Add method to get channel members
+const getChannelMembers = async (channelId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('channel_members')
+      .select('*')
+      .eq('channel_id', channelId);
+    
+    if (error) return { error };
+    return { data };
+  } catch (error) {
+    return { error };
+  }
+};
+
+// Add method to get channel files
+const getChannelFiles = async (channelId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('files')
+      .select('*')
+      .eq('channel_id', channelId)
+      .order('created_at', { ascending: false });
     
     if (error) return { error };
     return { data };

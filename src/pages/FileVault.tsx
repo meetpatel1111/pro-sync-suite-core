@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
+import { useAuthContext } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useAuthContext } from '@/context/AuthContext';
+import { File } from '@/utils/dbtypes';
+import { fileVaultService } from '@/services/fileVaultService';
 import dbService from '@/services/dbService';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, File, FilePlus, Lock, Unlock } from 'lucide-react';
 
 interface FileRecord {
   id: string;
@@ -33,6 +31,7 @@ const FileVault = () => {
   const [isPublic, setIsPublic] = useState(false);
   const [fileUrl, setFileUrl] = useState('');
   const [loading, setLoading] = useState(true);
+  const [fileId, setFileId] = useState(null);
 
   useEffect(() => {
     if (!user) return;
@@ -105,6 +104,23 @@ const FileVault = () => {
       setUploadError(true);
     }
   };
+
+  const loadFile = async () => {
+    if (fileId) {
+      try {
+        const result = await fileVaultService.getFile(fileId);
+        if (result && result.data) {
+          setFile(result.data);
+        }
+      } catch (error) {
+        console.error('Error loading file:', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    loadFile();
+  }, [fileId]);
 
   return (
     <AppLayout>

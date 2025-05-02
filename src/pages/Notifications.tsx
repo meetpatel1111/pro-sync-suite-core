@@ -1,7 +1,7 @@
 
 import React from 'react';
 import AppLayout from '@/components/AppLayout';
-import NotificationsPanel from '@/components/NotificationsPanel';
+import { NotificationsPanel } from '@/components/NotificationsPanel';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import bcrypt from 'bcryptjs';
 import { Client, ClientNote, TimeEntry, ResourceAllocation, File, Task, Project } from '@/utils/dbtypes';
@@ -26,19 +25,17 @@ const getUserProfile = async (userId: string) => {
 };
 
 // Added updateUserProfile function
-const updateUserProfile = async (userId: string, updates: any) => {
+const updateUserProfile = async (userId: string, profileData: any) => {
   try {
     const { data, error } = await supabase
       .from('user_profiles')
-      .update(updates)
+      .update(profileData)
       .eq('id', userId)
-      .select()
-      .single();
-    
-    if (error) return handleError(error);
+      .select();
+
     return { data, error };
   } catch (error) {
-    return handleError(error);
+    return { error };
   }
 };
 
@@ -343,21 +340,24 @@ const getTimeEntries = async (userId: string, filters = {}) => {
 };
 
 // Added createTimeEntry function
-const createTimeEntry = async (userId: string, entry: Partial<TimeEntry>) => {
+const createTimeEntry = async (timeEntry: Partial<TimeEntry>) => {
   try {
+    // Ensure date is a string
+    const entry = {
+      ...timeEntry,
+      date: typeof timeEntry.date === 'string' ? 
+        timeEntry.date : 
+        (timeEntry.date instanceof Date ? timeEntry.date.toISOString() : new Date().toISOString())
+    };
+    
     const { data, error } = await supabase
       .from('time_entries')
-      .insert({
-        user_id: userId,
-        ...entry
-      })
-      .select()
-      .single();
-    
-    if (error) return handleError(error);
+      .insert(entry)
+      .select();
+
     return { data, error };
   } catch (error) {
-    return handleError(error);
+    return { error };
   }
 };
 
@@ -388,11 +388,10 @@ const getResourceAllocations = async (userId: string) => {
       .from('resource_allocations')
       .select('*')
       .eq('user_id', userId);
-    
-    if (error) return handleError(error);
+
     return { data, error };
   } catch (error) {
-    return handleError(error);
+    return { error };
   }
 };
 

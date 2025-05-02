@@ -1,51 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { SelectValue, SelectTrigger, SelectItem, SelectContent, Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { 
-  ChevronDown, 
-  Download, 
-  RefreshCw, 
-  Table as TableIcon, 
-  Layers, 
-  Calendar, 
-  BarChart as BarChartIcon, 
-  PieChart as PieChartIcon, 
-  Clock, 
-  Search, 
-  Filter, 
-  FileText,
-  CheckSquare,
-  AlertTriangle,
-  TrendingUp
-} from 'lucide-react';
-import { useAuthContext } from '@/context/AuthContext';
-import dbService from '@/services/dbService';
-import { Dashboard, Widget, Project, TimeEntry, Task } from '@/utils/dbtypes';
-import { supabase } from '@/integrations/supabase/client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScatterChart, Scatter, LineChart, Line, BarChart, Bar, PieChart, Pie, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from '@/components/ui/textarea';
+import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  LineChart as RechartLineChart, 
-  Line, 
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer 
-} from 'recharts';
-import { 
-  Activity,
-  BarChart2,
-  Pencil
-} from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import dbService from '@/services/dbService';
+import { useAuthContext } from '@/context/AuthContext';
+import { Task, TimeEntry } from '@/utils/dbtypes';
+import { Plus, Trash2 } from 'lucide-react';
 
 const InsightIQ = () => {
   const { toast } = useToast();
