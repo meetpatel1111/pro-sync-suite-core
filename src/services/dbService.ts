@@ -255,6 +255,70 @@ export async function getDashboardStats(userId: string): Promise<DashboardStats>
   }
 }
 
+// Notification Functions
+export async function getNotifications(userId: string) {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  
+  return { data, error };
+}
+
+export async function updateNotification(notificationId: string, updates: any) {
+  const { data, error } = await supabase
+    .from('notifications')
+    .update(updates)
+    .eq('id', notificationId)
+    .select()
+    .single();
+  
+  return { data, error };
+}
+
+export async function deleteNotification(notificationId: string) {
+  const { data, error } = await supabase
+    .from('notifications')
+    .delete()
+    .eq('id', notificationId);
+  
+  return { data, error };
+}
+
+// User authentication helper functions
+export async function hashPassword(password: string): Promise<string> {
+  // In a real application, use a proper hashing library like bcrypt
+  // For this demo, we're just doing a simple hash
+  return btoa(password + "salt123");
+}
+
+export async function verifyCustomPassword(email: string, password: string) {
+  try {
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
+    
+    if (error || !users) {
+      console.error('Error finding user:', error);
+      return null;
+    }
+    
+    // In a real app, use proper password verification with bcrypt
+    const hashedPassword = await hashPassword(password);
+    if (users.custom_password_hash === hashedPassword) {
+      return users;
+    }
+    
+    return null;
+  } catch (err) {
+    console.error('Error verifying password:', err);
+    return null;
+  }
+}
+
 // Create a dbService object that contains all our functions
 export const dbService = {
   getUserProfile,
@@ -275,6 +339,11 @@ export const dbService = {
   updateTimeEntry,
   deleteTimeEntry,
   getDashboardStats,
+  getNotifications,
+  updateNotification,
+  deleteNotification,
+  hashPassword,
+  verifyCustomPassword,
   
   // Add a function to upsert app users (used in useAuth.tsx)
   upsertAppUser: async (user: any) => {
@@ -291,3 +360,6 @@ export const dbService = {
     return { data, error };
   },
 };
+
+// Export as default as well to support both import styles
+export default dbService;

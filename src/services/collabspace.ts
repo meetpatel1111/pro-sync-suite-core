@@ -1,29 +1,99 @@
+
 // CollabSpace Service API
-// Provides frontend CRUD functions for CollabSpace entities using backend endpoints
-import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
+import axios from 'axios';
 
-type Workspace = Database['public']['Tables']['workspaces']['Row'];
-type WorkspaceInsert = Database['public']['Tables']['workspaces']['Insert'];
-type WorkspaceUpdate = Database['public']['Tables']['workspaces']['Update'];
-
-export async function getAllWorkspaces(userId: string) {
-  return supabase.from('workspaces').select('*').eq('owner_id', userId);
+export interface Message {
+  id?: string;
+  channel_id: string;
+  user_id: string;
+  content: string;
+  type?: string;
+  created_at?: string;
+  updated_at?: string;
+  reactions?: Record<string, string[]>;
+  mentions?: string[];
+  parent_id?: string;
 }
 
-export async function createWorkspace(workspace: WorkspaceInsert) {
-  return supabase.from('workspaces').insert([workspace]).select('*').single();
+export interface Channel {
+  id?: string;
+  name: string;
+  description?: string;
+  type: string;
+  created_by: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export async function getWorkspaceById(id: string) {
-  return supabase.from('workspaces').select('*').eq('id', id).single();
+export interface ChannelMember {
+  id?: string;
+  channel_id: string;
+  user_id: string;
+  joined_at?: string;
 }
 
-export async function updateWorkspace(id: string, updates: WorkspaceUpdate) {
-  return supabase.from('workspaces').update(updates).eq('id', id).select('*').single();
+export interface Workspace {
+  id?: string;
+  name: string;
+  description?: string;
+  owner_id: string;
+  created_at?: string;
 }
 
-export async function deleteWorkspace(id: string) {
-  return supabase.from('workspaces').delete().eq('id', id);
+// Message Functions
+export async function getMessages(channel_id: string) {
+  return axios.get<{ data: Message[] }>(`/api/collabspace/channels/${channel_id}/messages`);
 }
-// Repeat for channels, messages, etc.
+
+export async function sendMessage(message: Omit<Message, 'id' | 'created_at' | 'updated_at'>) {
+  return axios.post<{ data: Message }>(`/api/collabspace/messages`, message);
+}
+
+export async function updateMessage(message_id: string, updates: Partial<Message>) {
+  return axios.put<{ data: Message }>(`/api/collabspace/messages/${message_id}`, updates);
+}
+
+export async function deleteMessage(message_id: string) {
+  return axios.delete<{ data: Message }>(`/api/collabspace/messages/${message_id}`);
+}
+
+// Channel Functions
+export async function getChannels(workspace_id?: string) {
+  let url = `/api/collabspace/channels`;
+  if (workspace_id) {
+    url += `?workspaceId=${workspace_id}`;
+  }
+  return axios.get<{ data: Channel[] }>(url);
+}
+
+export async function createChannel(channel: Omit<Channel, 'id' | 'created_at' | 'updated_at'>) {
+  return axios.post<{ data: Channel }>(`/api/collabspace/channels`, channel);
+}
+
+export async function getChannelById(channel_id: string) {
+  return axios.get<{ data: Channel }>(`/api/collabspace/channels/${channel_id}`);
+}
+
+export async function updateChannel(channel_id: string, updates: Partial<Channel>) {
+  return axios.put<{ data: Channel }>(`/api/collabspace/channels/${channel_id}`, updates);
+}
+
+export async function deleteChannel(channel_id: string) {
+  return axios.delete<{ data: Channel }>(`/api/collabspace/channels/${channel_id}`);
+}
+
+// Channel Member Functions
+export async function getChannelMembers(channel_id: string) {
+  return axios.get<{ data: ChannelMember[] }>(`/api/collabspace/channels/${channel_id}/members`);
+}
+
+export async function addChannelMember(member: Omit<ChannelMember, 'id' | 'joined_at'>) {
+  return axios.post<{ data: ChannelMember }>(`/api/collabspace/channel-members`, member);
+}
+
+export async function removeChannelMember(channel_id: string, user_id: string) {
+  return axios.delete<{ data: ChannelMember }>(`/api/collabspace/channels/${channel_id}/members/${user_id}`);
+}
+
+// Export the Channel interface
+export { Channel };

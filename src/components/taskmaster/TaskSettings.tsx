@@ -1,453 +1,269 @@
-
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { useAuthContext } from '@/context/AuthContext';
+import { dbService } from '@/services/dbService';
 import { useToast } from '@/hooks/use-toast';
-import dbService from '@/services/dbService';
-import { useAuth } from '@/hooks/useAuth';
-import { Trash2, Plus, Save, AlertTriangle } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Loader2 } from 'lucide-react';
+
+const defaultSettings = {
+  auto_assign: true,
+  task_auto_numbering: true,
+  default_priority: 'medium',
+  default_view: 'kanban',
+  notifications_enabled: true,
+  due_date_reminders: true,
+  reminder_time: '1d',
+  show_completed_tasks: true,
+  task_sorting: 'priority',
+};
 
 const TaskSettings = () => {
+  const { user } = useAuthContext();
   const { toast } = useToast();
-  const { user, loading: authLoading } = useAuth();
-  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  // All settings state
-  const [defaultView, setDefaultView] = useState<'board' | 'list'>('board');
-  const [showCompleted, setShowCompleted] = useState(true);
-  const [autoArchive, setAutoArchive] = useState(false);
-  const [defaultPriority, setDefaultPriority] = useState<'low' | 'medium' | 'high'>('medium');
-  const [defaultProject, setDefaultProject] = useState<string>('project1');
-  const [reminderTime, setReminderTime] = useState<string>('1day');
+  const [settings, setSettings] = useState(defaultSettings);
+  const [isLoading, setIsLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  // Fetch settings from Supabase on mount
   useEffect(() => {
-    if (!user?.id) return;
-    setLoading(true);
-    setError(null);
-    dbService.getTaskSettings(user.id)
-      .then(({ data, error }) => {
-        if (error && error.code === 'PGRST116') {
-          // Row does not exist: create default
-          dbService.createTaskSettings(user.id, {
-            default_view: 'board',
-            show_completed: true,
-            auto_archive: false,
-            default_priority: 'medium',
-            default_project: 'project1',
-            reminder_time: '1day',
-          });
-        } else if (data) {
-          setDefaultView(data.default_view === 'list' ? 'list' : 'board');
-          setShowCompleted(!!data.show_completed);
-          setAutoArchive(!!data.auto_archive);
-          setDefaultPriority(data.default_priority || 'medium');
-          setDefaultProject(data.default_project || 'project1');
-          setReminderTime(data.reminder_time || '1day');
-        } else if (error) {
-          setError('Failed to load settings.');
-        }
-      })
-      .catch(() => setError('Failed to load settings.'))
-      .finally(() => setLoading(false));
-  }, [user?.id]);
+    if (user) {
+      fetchSettings();
+    }
+  }, [user]);
 
-  
-  const handleSaveSettings = async () => {
-    if (!user?.id) return;
-    setLoading(true);
-    setError(null);
-    const updates = {
-      default_view: defaultView,
-      show_completed: showCompleted,
-      auto_archive: autoArchive,
-      default_priority: defaultPriority,
-      default_project: defaultProject,
-      reminder_time: reminderTime,
-    };
-    const { error } = await dbService.updateTaskSettings(user.id, updates);
-    setLoading(false);
-    if (error) {
-      setError('Failed to save settings.');
+  const fetchSettings = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await dbService.getUserSettings(user.id);
+      if (error) throw error;
+      
+      if (data) {
+        setSettings(data);
+      } else {
+        const { data: newSettings, error: createError } = await dbService.createUserSettings(user.id, defaultSettings);
+        if (createError) throw createError;
+        setSettings(newSettings);
+      }
+    } catch (error) {
+      console.error("Error fetching task settings:", error);
       toast({
-        title: 'Save failed',
-        description: 'Could not save your task settings.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load settings",
+        variant: "destructive"
       });
-    } else {
-      toast({
-        title: 'Settings saved',
-        description: 'Your task settings have been saved successfully',
-      });
+    } finally {
+      setIsLoading(false);
     }
   };
-  
-  const handleResetData = () => {
-    localStorage.removeItem('tasks');
-    setIsResetDialogOpen(false);
+
+  const saveSettings = async () => {
+    if (!user || !settings) return;
     
-    toast({
-      title: "Data reset",
-      description: "All task data has been reset. Refresh the page to see the changes."
-    });
+    setSaving(true);
+    try {
+      const { error } = await dbService.updateUserSettings(user.id, settings);
+      if (error) throw error;
+      
+      toast({
+        title: "Settings saved",
+        description: "Your preferences have been updated"
+      });
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save settings",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
+    }
   };
-  
-  if (authLoading || loading) {
-    return <div className="p-8 text-center text-muted-foreground">Loading settings...</div>;
-  }
-  if (error) {
-    return <div className="p-8 text-center text-destructive">{error}</div>;
+
+  const updateSetting = (key: string, value: any) => {
+    setSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold">Settings</h2>
-      
-      <Tabs defaultValue="general" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="labels">Labels & Categories</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="data">Data Management</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="general" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>General Settings</CardTitle>
-              <CardDescription>
-                Configure your task management preferences
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="defaultView" checked={defaultView === 'board'} onCheckedChange={val => setDefaultView(val ? 'board' : 'list')} />
-                  <Label htmlFor="defaultView">Use board view as default</Label>
+    <Card>
+      <CardHeader>
+        <CardTitle>Task Settings</CardTitle>
+        <CardDescription>Configure your task management preferences</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-lg font-medium">General Settings</h3>
+            <p className="text-sm text-muted-foreground">Configure how tasks are created and displayed</p>
+            <Separator className="my-4" />
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium">Auto-assign to me</h3>
+                  <p className="text-sm text-muted-foreground">New tasks are automatically assigned to you</p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="showCompleted" checked={showCompleted} onCheckedChange={setShowCompleted} />
-                  <Label htmlFor="showCompleted">Show completed tasks</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="autoArchive" checked={autoArchive} onCheckedChange={setAutoArchive} />
-                  <Label htmlFor="autoArchive">Auto-archive completed tasks after 30 days</Label>
-                </div>
+                <Switch 
+                  checked={settings?.auto_assign || false}
+                  onCheckedChange={(checked: boolean) => updateSetting('auto_assign', checked)}
+                />
               </div>
-              
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium">Auto-number tasks</h3>
+                  <p className="text-sm text-muted-foreground">Tasks are automatically numbered sequentially</p>
+                </div>
+                <Switch 
+                  checked={settings?.task_auto_numbering || false}
+                  onCheckedChange={(checked: boolean) => updateSetting('task_auto_numbering', checked)}
+                />
+              </div>
               <div className="space-y-2">
-                <Label htmlFor="defaultPriority">Default task priority</Label>
-                <Select value={defaultPriority} onValueChange={val => setDefaultPriority(val as 'low' | 'medium' | 'high')}>
-                  <SelectTrigger id="defaultPriority">
+                <Label htmlFor="default-priority">Default Priority</Label>
+                <Select 
+                  value={settings?.default_priority || 'medium'} 
+                  onValueChange={(value) => updateSetting('default_priority', value)}
+                >
+                  <SelectTrigger id="default-priority">
                     <SelectValue placeholder="Select priority" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="low">Low</SelectItem>
                     <SelectItem value="medium">Medium</SelectItem>
                     <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              
               <div className="space-y-2">
-                <Label htmlFor="defaultProject">Default project</Label>
-                <Select value={defaultProject} onValueChange={val => setDefaultProject(val)}>
-                  <SelectTrigger id="defaultProject">
-                    <SelectValue placeholder="Select project" />
+                <Label htmlFor="default-view">Default View</Label>
+                <Select 
+                  value={settings?.default_view || 'kanban'} 
+                  onValueChange={(value) => updateSetting('default_view', value)}
+                >
+                  <SelectTrigger id="default-view">
+                    <SelectValue placeholder="Select view" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="project1">Website Redesign</SelectItem>
-                    <SelectItem value="project2">Mobile App</SelectItem>
-                    <SelectItem value="project3">Marketing Campaign</SelectItem>
-                    <SelectItem value="project4">Database Migration</SelectItem>
+                    <SelectItem value="list">List</SelectItem>
+                    <SelectItem value="kanban">Kanban</SelectItem>
+                    <SelectItem value="calendar">Calendar</SelectItem>
+                    <SelectItem value="gantt">Gantt</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleSaveSettings}>
-                <Save className="mr-2 h-4 w-4" />
-                Save Settings
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="labels" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Projects</CardTitle>
-              <CardDescription>
-                Manage your project categories
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-md border">
-                <div className="p-4 space-y-4">
-                  {/* Project list */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 rounded-full bg-blue-500"></div>
-                      <span>Website Redesign</span>
-                    </div>
-                    <Button variant="ghost" size="icon">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 rounded-full bg-purple-500"></div>
-                      <span>Mobile App</span>
-                    </div>
-                    <Button variant="ghost" size="icon">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 rounded-full bg-amber-500"></div>
-                      <span>Marketing Campaign</span>
-                    </div>
-                    <Button variant="ghost" size="icon">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 rounded-full bg-emerald-500"></div>
-                      <span>Database Migration</span>
-                    </div>
-                    <Button variant="ghost" size="icon">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex gap-2">
-                <Input placeholder="New project name" />
-                <Select defaultValue="blue">
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Color" />
+              <div className="space-y-2">
+                <Label htmlFor="task-sorting">Default Sorting</Label>
+                <Select 
+                  value={settings?.task_sorting || 'priority'} 
+                  onValueChange={(value) => updateSetting('task_sorting', value)}
+                >
+                  <SelectTrigger id="task-sorting">
+                    <SelectValue placeholder="Select sorting" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="blue">Blue</SelectItem>
-                    <SelectItem value="green">Green</SelectItem>
-                    <SelectItem value="purple">Purple</SelectItem>
-                    <SelectItem value="amber">Amber</SelectItem>
-                    <SelectItem value="red">Red</SelectItem>
+                    <SelectItem value="priority">Priority</SelectItem>
+                    <SelectItem value="due_date">Due Date</SelectItem>
+                    <SelectItem value="created_at">Creation Date</SelectItem>
+                    <SelectItem value="title">Title</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add
-                </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
           
-          <Card>
-            <CardHeader>
-              <CardTitle>Team Members</CardTitle>
-              <CardDescription>
-                Manage team members for task assignment
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-md border">
-                <div className="p-4 space-y-4">
-                  {/* Team member list */}
-                  <div className="flex items-center justify-between">
-                    <span>Alex Johnson</span>
-                    <Button variant="ghost" size="icon">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Jamie Smith</span>
-                    <Button variant="ghost" size="icon">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Taylor Lee</span>
-                    <Button variant="ghost" size="icon">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Morgan Chen</span>
-                    <Button variant="ghost" size="icon">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+          <div>
+            <h3 className="text-lg font-medium">Notifications</h3>
+            <p className="text-sm text-muted-foreground">Configure task notifications and reminders</p>
+            <Separator className="my-4" />
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium">Task notifications</h3>
+                  <p className="text-sm text-muted-foreground">Receive notifications for task updates</p>
                 </div>
+                <Switch 
+                  checked={settings?.notifications_enabled || false}
+                  onCheckedChange={(checked: boolean) => updateSetting('notifications_enabled', checked)}
+                />
               </div>
-              
-              <div className="flex gap-2">
-                <Input placeholder="New team member name" className="flex-1" />
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="notifications" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Settings</CardTitle>
-              <CardDescription>
-                Configure how and when you receive notifications
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium">Email Notifications</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="emailTaskAssigned" defaultChecked />
-                    <Label htmlFor="emailTaskAssigned">When a task is assigned to me</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="emailTaskDue" defaultChecked />
-                    <Label htmlFor="emailTaskDue">When a task is due soon</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="emailTaskCompleted" />
-                    <Label htmlFor="emailTaskCompleted">When a task is completed</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="emailTaskCommented" defaultChecked />
-                    <Label htmlFor="emailTaskCommented">When someone comments on my task</Label>
-                  </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium">Due date reminders</h3>
+                  <p className="text-sm text-muted-foreground">Receive reminders before tasks are due</p>
                 </div>
+                <Switch 
+                  checked={settings?.due_date_reminders || false}
+                  onCheckedChange={(checked: boolean) => updateSetting('due_date_reminders', checked)}
+                />
               </div>
-              
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium">In-App Notifications</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="appTaskAssigned" defaultChecked />
-                    <Label htmlFor="appTaskAssigned">When a task is assigned to me</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="appTaskDue" defaultChecked />
-                    <Label htmlFor="appTaskDue">When a task is due soon</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="appTaskStatusChanged" defaultChecked />
-                    <Label htmlFor="appTaskStatusChanged">When a task status changes</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="appTaskCommented" defaultChecked />
-                    <Label htmlFor="appTaskCommented">When someone comments on my task</Label>
-                  </div>
-                </div>
-              </div>
-              
               <div className="space-y-2">
-                <Label htmlFor="reminderTime">Task reminder time</Label>
-                <Select value={reminderTime} onValueChange={val => setReminderTime(val)}>
-                  <SelectTrigger id="reminderTime">
+                <Label htmlFor="reminder-time">Reminder Time</Label>
+                <Select 
+                  value={settings?.reminder_time || '1d'} 
+                  onValueChange={(value) => updateSetting('reminder_time', value)}
+                  disabled={!settings?.due_date_reminders}
+                >
+                  <SelectTrigger id="reminder-time">
                     <SelectValue placeholder="Select time" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="6hours">6 hours before due</SelectItem>
-                    <SelectItem value="12hours">12 hours before due</SelectItem>
-                    <SelectItem value="1day">1 day before due</SelectItem>
-                    <SelectItem value="2days">2 days before due</SelectItem>
-                    <SelectItem value="1week">1 week before due</SelectItem>
+                    <SelectItem value="30m">30 minutes before</SelectItem>
+                    <SelectItem value="1h">1 hour before</SelectItem>
+                    <SelectItem value="3h">3 hours before</SelectItem>
+                    <SelectItem value="1d">1 day before</SelectItem>
+                    <SelectItem value="2d">2 days before</SelectItem>
+                    <SelectItem value="1w">1 week before</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleSaveSettings}>
-                <Save className="mr-2 h-4 w-4" />
-                Save Settings
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="data" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Data Management</CardTitle>
-              <CardDescription>
-                Manage your task data and exports
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium">Export Data</h3>
-                <p className="text-sm text-muted-foreground">
-                  Download your task data in various formats for backup or analysis.
-                </p>
-                <div className="flex gap-4">
-                  <Button variant="outline">Export as CSV</Button>
-                  <Button variant="outline">Export as JSON</Button>
+            </div>
+          </div>
+          
+          <div>
+            <h3 className="text-lg font-medium">Display</h3>
+            <p className="text-sm text-muted-foreground">Configure how tasks are displayed</p>
+            <Separator className="my-4" />
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium">Show completed tasks</h3>
+                  <p className="text-sm text-muted-foreground">Display completed tasks in task lists</p>
                 </div>
+                <Switch 
+                  checked={settings?.show_completed_tasks || false}
+                  onCheckedChange={(checked: boolean) => updateSetting('show_completed_tasks', checked)}
+                />
               </div>
-              
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium">Import Data</h3>
-                <p className="text-sm text-muted-foreground">
-                  Import task data from CSV or JSON files.
-                </p>
-                <div className="flex gap-4">
-                  <Button variant="outline">Import Data</Button>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium">Reset Data</h3>
-                <p className="text-sm text-muted-foreground">
-                  Clear all task data and start fresh. This action cannot be undone.
-                </p>
-                <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="destructive">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Reset All Data
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
-                        <AlertTriangle className="h-5 w-5 text-destructive" />
-                        Confirm Data Reset
-                      </DialogTitle>
-                      <DialogDescription>
-                        Are you sure you want to reset all task data? This action cannot be undone.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsResetDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button variant="destructive" onClick={handleResetData}>
-                        Yes, Reset All Data
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={saveSettings} disabled={saving}>
+          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Save Settings
+        </Button>
+      </CardFooter>
+    </Card>
   );
 };
 
