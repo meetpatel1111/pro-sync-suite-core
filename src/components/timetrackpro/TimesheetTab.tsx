@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuthContext } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -81,7 +82,7 @@ async function updateTimesheet(timesheetId: string, updates: any) {
 }
 
 export const TimesheetTab = () => {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const { toast } = useToast();
   const [timesheets, setTimesheets] = useState([]);
   const [loading, setLoading] = useState(true);

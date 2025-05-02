@@ -7,8 +7,8 @@ import {
   AlertCircle,
   Users
 } from 'lucide-react';
-import { getDashboardStats } from '@/services/dbService';
-import { useAuth } from '@/hooks/useAuth';
+import * as dbService from '@/services/dbService';
+import { useAuthContext } from '@/context/AuthContext';
 
 interface StatCardProps {
   title: string;
@@ -16,6 +16,13 @@ interface StatCardProps {
   change?: string;
   icon: React.ReactNode;
   trend?: 'up' | 'down' | 'neutral';
+}
+
+interface DashboardStatsData {
+  completedTasks: number | null;
+  hoursTracked: number | null;
+  openIssues: number | null;
+  teamMembers: number | null;
 }
 
 const StatCard = ({ title, value, change, icon, trend }: StatCardProps) => {
@@ -45,8 +52,8 @@ const StatCard = ({ title, value, change, icon, trend }: StatCardProps) => {
 };
 
 const DashboardStats = () => {
-  const { user, loading } = useAuth();
-  const [stats, setStats] = useState({
+  const { user, loading } = useAuthContext();
+  const [stats, setStats] = useState<DashboardStatsData>({
     completedTasks: null,
     hoursTracked: null,
     openIssues: null,
@@ -58,15 +65,22 @@ const DashboardStats = () => {
   useEffect(() => {
     if (!loading && user?.id) {
       setIsLoading(true);
-      getDashboardStats(user.id)
+      dbService.getDashboardStats(user.id)
         .then((response) => {
           if (response.error) {
             throw response.error;
           }
           
-          // Use the correctly formatted data from getDashboardStats
           if (response.data) {
-            setStats(response.data);
+            // Map the response data to our stats structure
+            const mappedStats: DashboardStatsData = {
+              completedTasks: response.data.taskStats?.completed || 0,
+              hoursTracked: response.data.hoursTracked || 0,
+              openIssues: response.data.taskStats?.pending || 0,
+              teamMembers: response.data.teamMembers || 0
+            };
+            
+            setStats(mappedStats);
             setError(null);
           }
         })
