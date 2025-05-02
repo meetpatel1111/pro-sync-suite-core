@@ -1,6 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
 import {
-  // Assuming these exist in your service file
   getAllReports,
   createReport,
   deleteReport,
@@ -17,7 +17,7 @@ const InsightIQApp: React.FC = () => {
   const fetchReports = async () => {
     setLoading(true);
     const res = await getAllReports(userId);
-    setReports(res.data);
+    setReports(res.data as Report[] || []);
     setLoading(false);
   };
 
@@ -50,9 +50,9 @@ const InsightIQApp: React.FC = () => {
       {loading ? <p>Loading...</p> : (
         <ul>
           {reports.map(report => (
-            <li key={report.report_id}>
+            <li key={report.id || report.report_id}>
               {report.report_type}
-              <button onClick={() => report.report_id && handleDelete(report.report_id)}>Delete</button>
+              <button onClick={() => handleDelete(report.id || report.report_id || '')}>Delete</button>
             </li>
           ))}
         </ul>

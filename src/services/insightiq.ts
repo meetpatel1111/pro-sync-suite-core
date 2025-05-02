@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface Report {
   id: string;
+  report_id?: string;  // Handle both id formats
   user_id: string;
   report_type: string;
   created_at?: string;
@@ -26,7 +27,7 @@ export async function getAllReports(userId: string) {
   }
 }
 
-export async function createReport(report: Omit<Report, 'id' | 'created_at'>) {
+export async function createReport(report: Omit<Report, 'id' | 'report_id' | 'created_at'>) {
   try {
     const { data, error } = await supabase
       .from('reports')

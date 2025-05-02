@@ -1,46 +1,33 @@
 
-// PlanBoard Service API
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Plan {
   id: string;
+  plan_id?: string; // Handle both id formats
   project_id: string;
+  plan_type?: string;
   start_date?: string;
   end_date?: string;
-  plan_type?: string;
+  name?: string; // Add name field to handle API expectations
 }
 
-// Plan Functions
 export async function getAllPlans(userId: string) {
   try {
-    // Join with projects to get only plans for projects owned by this user
+    // Join with projects to get only plans for user's projects
     const { data, error } = await supabase
       .from('plans')
-      .select(`
-        *,
-        projects:project_id (user_id)
-      `)
+      .select('*, projects!inner(*)')
       .eq('projects.user_id', userId);
     
     if (error) throw error;
-    
-    // Extract just the plan data
-    const plans = data.map(item => ({
-      id: item.id,
-      project_id: item.project_id,
-      start_date: item.start_date,
-      end_date: item.end_date,
-      plan_type: item.plan_type
-    }));
-    
-    return { data: plans };
+    return { data };
   } catch (error) {
     console.error('Error fetching plans:', error);
     throw error;
   }
 }
 
-export async function createPlan(plan: Omit<Plan, 'id'>) {
+export async function createPlan(plan: Omit<Plan, 'id' | 'plan_id'>) {
   try {
     const { data, error } = await supabase
       .from('plans')

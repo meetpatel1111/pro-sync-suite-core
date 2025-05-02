@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile } from '@/utils/dbtypes';
 import { PostgrestError } from '@supabase/supabase-js';
@@ -363,6 +362,59 @@ export const dbService = {
     } catch (error) {
       console.error('Error upserting app user:', error);
       return { data: null, error: error as PostgrestError };
+    }
+  },
+  
+  // Add the missing getDashboardStats function
+  getDashboardStats: async (userId: string) => {
+    try {
+      // Get completed tasks count
+      const { data: completedTasks, error: tasksError } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('status', 'done');
+      
+      // Get hours tracked - sum of time entries
+      const { data: timeEntries, error: timeError } = await supabase
+        .from('time_entries')
+        .select('time_spent')
+        .eq('user_id', userId);
+      
+      // Get open issues/tasks count
+      const { data: openIssues, error: issuesError } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('user_id', userId)
+        .neq('status', 'done');
+      
+      // Get team members count
+      const { data: teamMembers, error: teamError } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('user_id', userId);
+      
+      if (tasksError || timeError || issuesError || teamError) {
+        console.error('Error fetching dashboard stats:', 
+          tasksError || timeError || issuesError || teamError
+        );
+        throw new Error('Failed to load dashboard statistics');
+      }
+      
+      // Calculate total hours from minutes
+      const hoursTracked = timeEntries ? 
+        Math.round(timeEntries.reduce((sum, entry) => sum + (entry.time_spent || 0), 0) / 60 * 10) / 10 : 
+        0;
+      
+      return {
+        completedTasks: completedTasks?.length || 0,
+        hoursTracked,
+        openIssues: openIssues?.length || 0,
+        teamMembers: teamMembers?.length || 0
+      };
+    } catch (error) {
+      console.error('Error in getDashboardStats:', error);
+      throw error;
     }
   }
 };

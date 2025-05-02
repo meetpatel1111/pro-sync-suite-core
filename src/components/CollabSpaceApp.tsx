@@ -21,7 +21,7 @@ const CollabSpaceApp: React.FC = () => {
     try {
       const response = await getAllWorkspaces(userId);
       if (response && response.data) {
-        setWorkspaces(response.data);
+        setWorkspaces(response.data as Workspace[]);
       }
     } catch (error) {
       console.error('Error fetching workspaces:', error);

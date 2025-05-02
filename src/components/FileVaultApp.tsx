@@ -20,7 +20,7 @@ const FileVaultApp: React.FC = () => {
     try {
       const response = await getAllFolders(userId);
       if (response && response.data) {
-        setFolders(response.data);
+        setFolders(response.data as Folder[]);
       }
     } catch (error) {
       console.error('Error fetching folders:', error);

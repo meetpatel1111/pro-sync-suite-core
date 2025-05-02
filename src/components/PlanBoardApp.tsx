@@ -21,7 +21,7 @@ const PlanBoardApp: React.FC = () => {
     try {
       const response = await getAllPlans(userId);
       if (response && response.data) {
-        setPlans(response.data);
+        setPlans(response.data as Plan[]);
       }
     } catch (error) {
       console.error('Error fetching plans:', error);
@@ -36,7 +36,8 @@ const PlanBoardApp: React.FC = () => {
     e.preventDefault();
     await createPlan({
       project_id: projectId,
-      plan_type: planType
+      plan_type: planType,
+      name: `Plan for ${projectId}`
     });
     setProjectId('');
     setPlanType('');
@@ -68,8 +69,8 @@ const PlanBoardApp: React.FC = () => {
       {loading ? <p>Loading...</p> : (
         <ul>
           {plans.map(plan => (
-            <li key={plan.id}>
-              Project: {plan.project_id}, Type: {plan.plan_type || 'N/A'}
+            <li key={plan.id || plan.plan_id}>
+              Project: {plan.project_id}, Type: {plan.plan_type || plan.name || 'N/A'}
               <button onClick={() => plan.id && handleDelete(plan.id)}>Delete</button>
             </li>
           ))}
