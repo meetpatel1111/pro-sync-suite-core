@@ -756,16 +756,6 @@ const createWidget = async (widgetData: any) => {
   }
 };
 
-const deleteWidget = async (widgetId: string) => {
-  try {
-    console.log('Deleting widget:', widgetId);
-    // Implementation would go here
-    return { data: { id: widgetId }, error: null };
-  } catch (error) {
-    return { error };
-  }
-};
-
 const createRisk = async (riskData: any) => {
   try {
     const { data, error } = await supabase
@@ -787,6 +777,43 @@ const updateRisk = async (riskId: string, updates: any) => {
       .eq('id', riskId)
       .select();
     
+    return { data, error };
+  } catch (error) {
+    return { error };
+  }
+};
+
+const deleteWidget = async (widgetId: string) => {
+  try {
+    console.log('Deleting widget:', widgetId);
+    // Implementation would go here
+    return { data: { id: widgetId }, error: null };
+  } catch (error) {
+    return { error };
+  }
+};
+
+// Also adding collabService related functions needed based on the unhandled errors
+const getApprovalsForMessage = async (messageId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('approvals')
+      .select('*')
+      .eq('message_id', messageId);
+      
+    return { data, error };
+  } catch (error) {
+    return { error };
+  }
+};
+
+const createApproval = async (approvalData: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('approvals')
+      .insert(approvalData)
+      .select();
+      
     return { data, error };
   } catch (error) {
     return { error };
@@ -841,7 +868,10 @@ const dbService = {
   deleteDashboard,
   createWidget,
   deleteWidget,
-  markNotificationAsRead
+  markNotificationAsRead,
+  // Adding the collabService functions to fix unhandled build errors
+  getApprovalsForMessage,
+  createApproval
 };
 
 export default dbService;
