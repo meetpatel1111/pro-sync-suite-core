@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -58,6 +57,19 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return () => clearTimeout(timeoutId);
   }, [loading]);
 
+  // Enhanced debugging for auth state
+  useEffect(() => {
+    console.log("ProtectedRoute auth state:", { user, loading, loadingTimedOut });
+  }, [user, loading, loadingTimedOut]);
+
+  // Check for custom user in localStorage when Supabase auth fails/times out
+  useEffect(() => {
+    if (!loading && !user && !loadingTimedOut) {
+      const customUser = localStorage.getItem('customUser');
+      console.log("Checking for custom user:", customUser ? "Found" : "Not found");
+    }
+  }, [user, loading, loadingTimedOut]);
+
   // If not loading or already timed out and no user, redirect to auth
   if ((!loading || loadingTimedOut) && !user) {
     console.log("No authenticated user, redirecting to /auth");
@@ -81,6 +93,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   // If we reach here, user is authenticated
+  console.log("User is authenticated, rendering children");
   return <>{children}</>;
 };
 

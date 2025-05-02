@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Channel, Message } from '@/utils/dbtypes';
 
@@ -379,18 +378,15 @@ const addReaction = async (messageId: string, userId: string, reaction: string) 
     reactions[userId] = reaction;
 
     // Update message with reactions
-    const { data: updatedMessage } = await supabase
+    const { data: updatedMessage, error: updateError } = await supabase
       .from('messages')
-      .update({ reactions }) // Using the reactions directly avoids type issues
+      .update({ reactions }) 
       .eq('id', messageId)
       .select('*')
       .single();
 
-    if (updatedMessage) {
-      return { data: updatedMessage, error: null };
-    } else {
-      return { data: null, error: new Error('Failed to update message') };
-    }
+    if (updateError) throw updateError;
+    return { data: updatedMessage, error: null };
   } catch (error) {
     console.error('Error adding reaction:', error);
     return { data: null, error };
@@ -398,40 +394,37 @@ const addReaction = async (messageId: string, userId: string, reaction: string) 
 };
 
 const removeReaction = async (messageId: string, userId: string) => {
-    try {
-      // Get the message
-      const { data: message, error: getError } = await supabase
-        .from('messages')
-        .select('reactions')
-        .eq('id', messageId)
-        .single();
-  
-      if (getError) throw getError;
-  
-      // Parse existing reactions or initialize an empty object
-      const reactions = message?.reactions ? JSON.parse(JSON.stringify(message.reactions)) : {};
-  
-      // Remove the user's reaction
-      delete reactions[userId];
-  
-      // Update message with reactions
-      const { data: updatedMessage } = await supabase
-        .from('messages')
-        .update({ reactions }) // Using the reactions directly avoids type issues
-        .eq('id', messageId)
-        .select('*')
-        .single();
-  
-      if (updatedMessage) {
-        return { data: updatedMessage, error: null };
-      } else {
-        return { data: null, error: new Error('Failed to update message') };
-      }
-    } catch (error) {
-      console.error('Error removing reaction:', error);
-      return { data: null, error };
-    }
-  };
+  try {
+    // Get the message
+    const { data: message, error: getError } = await supabase
+      .from('messages')
+      .select('reactions')
+      .eq('id', messageId)
+      .single();
+
+    if (getError) throw getError;
+
+    // Parse existing reactions or initialize an empty object
+    const reactions = message?.reactions ? JSON.parse(JSON.stringify(message.reactions)) : {};
+
+    // Remove the user's reaction
+    delete reactions[userId];
+
+    // Update message with reactions
+    const { data: updatedMessage, error: updateError } = await supabase
+      .from('messages')
+      .update({ reactions })
+      .eq('id', messageId)
+      .select('*')
+      .single();
+
+    if (updateError) throw updateError;
+    return { data: updatedMessage, error: null };
+  } catch (error) {
+    console.error('Error removing reaction:', error);
+    return { data: null, error };
+  }
+};
 
 // Add all the missing functions that are causing errors
 

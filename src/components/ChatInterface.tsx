@@ -1,7 +1,6 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
-import { Message } from '@/utils/dbtypes'; // Fix: Import Message from dbtypes instead of collabService
+import { Message } from '@/utils/dbtypes'; // Correct import from dbtypes
 import collabService from '../services/collabService';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';

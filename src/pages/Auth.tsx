@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,6 +27,25 @@ const Auth = () => {
   
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Check if user is already authenticated on mount and redirect if needed
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const customUser = localStorage.getItem('customUser');
+        
+        if (session || customUser) {
+          console.log('User already authenticated, redirecting to dashboard');
+          navigate('/');
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
   
   // Clear errors when switching between login/signup
   useEffect(() => {
@@ -102,6 +120,7 @@ const Auth = () => {
       if (error) {
         console.error('Auth error:', error);
         setFormError(error.message);
+        setLoading(false);
         return;
       }
       
@@ -109,11 +128,12 @@ const Auth = () => {
         title: 'Signed in successfully',
         description: 'You have been signed in to your account',
       });
-      navigate('/');
+      
+      // Ensure we navigate to the dashboard after successful sign-in
+      navigate('/', { replace: true });
     } catch (error: any) {
       console.error('Sign-in error:', error);
       setFormError('An unexpected error occurred');
-    } finally {
       setLoading(false);
     }
   }
@@ -217,11 +237,11 @@ const Auth = () => {
         description: 'You have been signed in to your account',
       });
 
-      navigate('/');
+      // Ensure we navigate to the dashboard after successful sign-in
+      navigate('/', { replace: true });
     } catch (error: any) {
       console.error('Custom sign-in error:', error);
       setFormError('An unexpected error occurred');
-    } finally {
       setLoading(false);
     }
   };
