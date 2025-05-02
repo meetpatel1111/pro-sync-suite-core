@@ -8,13 +8,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuthContext } from '@/context/AuthContext';
 import { dbService } from '@/services/dbService';
 import { useToast } from '@/hooks/use-toast';
-import { PlayCircle, PauseCircle, StopCircle, Save } from 'lucide-react';
+import { PlayCircle, PauseCircle, StopCircle, Save, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
-import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon } from "@radix-ui/react-icons"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-import { DateRange } from "react-day-picker"
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { supabase } from '@/integrations/supabase/client';
 
 interface Project {
@@ -352,27 +350,27 @@ const TimeTrackingForm = () => {
           />
         </div>
         <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant={"outline"}
-          className={cn(
-            "w-[240px] justify-start text-left font-normal",
-            !entryDate && "text-muted-foreground"
-          )}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {entryDate ? format(entryDate, "PPP") : <span>Pick a date</span>}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="center">
-        <Calendar
-          mode="single"
-          selected={entryDate}
-          onSelect={setEntryDate}
-          className="rounded-md border"
-        />
-      </PopoverContent>
-    </Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant={"outline"}
+              className={cn(
+                "w-[240px] justify-start text-left font-normal",
+                !entryDate && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {entryDate ? format(entryDate, "PPP") : <span>Pick a date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="center">
+            <Calendar
+              mode="single"
+              selected={entryDate}
+              onSelect={setEntryDate}
+              className="rounded-md border"
+            />
+          </PopoverContent>
+        </Popover>
         <Button onClick={createManualEntry} disabled={saving} className="w-full flex items-center justify-center gap-2" aria-busy={saving}>
           {saving && <span className="loader" aria-label="Loading"/>}
           <Save className="mr-2 h-4 w-4" />
