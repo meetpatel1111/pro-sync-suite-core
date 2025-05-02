@@ -1,53 +1,65 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, 
+  TableHeader, 
+  TableBody, 
+  TableRow, 
+  TableHead, 
+  TableCell 
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import {
+import { Badge } from "@/components/ui/badge";
+import { 
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import {
-  ChevronDown,
-  Copy,
-  Edit,
-  MoreHorizontal,
-  Plus,
-  Search,
-  Trash,
-} from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { dbService } from "@/services/dbService";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, MoreVertical, FileEdit, Trash2 } from "lucide-react";
+import * as dbService from '@/services/dbService';
 
-interface Risk {
+export interface Risk {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   category: string;
   probability: number;
   impact: number;
-  owner: {
+  owner?: {
     name: string;
-    avatar: string;
-    initials: string;
+    avatar?: string;
+    initials?: string;
   };
   status: string;
-  lastReview: string;
-  nextReview: string;
+  lastReview?: string;
+  nextReview?: string;
+  level?: string;
+  project_id?: string;
+  task_id?: string;
+  created_at?: string;
 }
+
+const RiskActionsMenu: React.FC<{ risk: Risk; onEdit: (risk: Risk) => void; onDelete: (riskId: string) => void }> = ({ risk, onEdit, onDelete }) => {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm">
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => onEdit(risk)}>
+          <FileEdit className="mr-2 h-4 w-4" />
+          Edit
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onDelete(risk.id)}>
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
 
 const RiskTable = () => {
   const [search, setSearch] = useState("");
@@ -205,25 +217,7 @@ const RiskTable = () => {
                 <TableCell>{risk.lastReview}</TableCell>
                 <TableCell>{risk.nextReview}</TableCell>
                 <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Edit className="h-4 w-4 mr-2" /> Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Copy className="h-4 w-4 mr-2" /> Copy
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Trash className="h-4 w-4 mr-2" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <RiskActionsMenu risk={risk} onEdit={(risk) => console.log("Edit risk:", risk)} onDelete={(riskId) => console.log("Delete risk:", riskId)} />
                 </TableCell>
               </TableRow>
             ))}

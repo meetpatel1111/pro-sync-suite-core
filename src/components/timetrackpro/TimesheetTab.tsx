@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthContext } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { format } from 'date-fns';
-import { dbService } from '@/services/dbService';
+import * as dbService from '@/services/dbService';
 import { useToast } from '@/hooks/use-toast';
 import { CalendarRange, Plus, FilePenLine, FileCheck, Send, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -81,7 +81,7 @@ async function updateTimesheet(timesheetId: string, updates: any) {
 }
 
 export const TimesheetTab = () => {
-  const { user, currentUser } = useAuthContext();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [timesheets, setTimesheets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -223,11 +223,11 @@ export const TimesheetTab = () => {
   };
 
   const fetchEntries = async () => {
-    if (!currentUser?.id) return;
+    if (!user?.id) return;
     
     setLoading(true);
     try {
-      const { data, error } = await dbService.getTimeEntries(currentUser.id, {
+      const { data, error } = await dbService.getTimeEntries(user.id, {
         start_date: startDate.toISOString().split('T')[0],
         end_date: endDate.toISOString().split('T')[0]
       });

@@ -17,7 +17,11 @@ const InsightIQApp: React.FC = () => {
   const fetchReports = async () => {
     setLoading(true);
     const res = await getAllReports(userId);
-    setReports(res.data as Report[] || []);
+    if (res.data) {
+      setReports(res.data);
+    } else {
+      setReports([]);
+    }
     setLoading(false);
   };
 

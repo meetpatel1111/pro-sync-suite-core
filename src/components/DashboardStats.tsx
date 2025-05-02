@@ -59,9 +59,16 @@ const DashboardStats = () => {
     if (!loading && user?.id) {
       setIsLoading(true);
       getDashboardStats(user.id)
-        .then((data) => {
-          setStats(data);
-          setError(null);
+        .then((response) => {
+          if (response.error) {
+            throw response.error;
+          }
+          
+          // Use the correctly formatted data from getDashboardStats
+          if (response.data) {
+            setStats(response.data);
+            setError(null);
+          }
         })
         .catch((e) => {
           setError('Failed to load dashboard stats');
