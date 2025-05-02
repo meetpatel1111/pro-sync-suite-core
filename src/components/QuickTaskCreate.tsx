@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { collabService } from '@/services/collabService';
+import collabService from '@/services/collabService';
 
 interface QuickTaskCreateProps {
   messageId: string;
@@ -16,13 +17,26 @@ export const QuickTaskCreate: React.FC<QuickTaskCreateProps> = ({ messageId, onC
     setError(null);
     // Example task details; extend as needed
     const taskDetails = { title };
-    const res = await collabService.createTaskFromMessage(messageId, taskDetails);
-    setLoading(false);
-    if (res && 'error' in res) {
-      setError(typeof res.error === 'string' ? res.error : 'Task creation failed');
-    } 
-    else if (onCreated) {
-      onCreated(res && 'data' in res ? res.data : res);
+    
+    try {
+      // Add this function to collabService if it doesn't exist
+      const res = await collabService.createTask({
+        title: title,
+        message_id: messageId,
+        status: 'new',
+        priority: 'medium'
+      });
+      
+      if (res && 'error' in res && res.error) {
+        setError(typeof res.error === 'string' ? res.error : 'Task creation failed');
+      } 
+      else if (onCreated) {
+        onCreated(res && 'data' in res ? res.data : res);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to create task');
+    } finally {
+      setLoading(false);
     }
   };
 

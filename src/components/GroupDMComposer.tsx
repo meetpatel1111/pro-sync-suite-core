@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { collabService } from '@/services/collabService';
+import collabService from '@/services/collabService';
 
 interface GroupDMComposerProps {
   allUsers: { id: string; name: string }[];
@@ -17,9 +18,16 @@ export const GroupDMComposer: React.FC<GroupDMComposerProps> = ({ allUsers, onCr
 
   const handleCreate = async () => {
     setLoading(true);
-    const { channel, error } = await collabService.createGroupDM(selected, currentUserId);
-    setLoading(false);
-    if (onCreated && channel) onCreated(channel);
+    try {
+      const result = await collabService.createGroupDM(selected, currentUserId);
+      setLoading(false);
+      if (result && result.data && onCreated) {
+        onCreated(result.data);
+      }
+    } catch (error) {
+      console.error("Error creating group DM:", error);
+      setLoading(false);
+    }
   };
 
   return (

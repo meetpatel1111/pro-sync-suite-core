@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { PostgrestError } from '@supabase/supabase-js';
 
@@ -327,6 +326,46 @@ export async function updateUserSettings(userId: string, settings: any) {
   }
 }
 
+export async function createUserSettings(userId: string, settings: any) {
+  try {
+    const { data, error } = await supabase
+      .from('user_settings')
+      .insert({ ...settings, user_id: userId })
+      .select()
+      .single();
+
+    return { data, error };
+  } catch (error) {
+    console.error('Error creating user settings:', error);
+    return { data: null, error };
+  }
+}
+
+export async function upsertAppUser(user: any) {
+  try {
+    const { id, email, user_metadata } = user;
+    const full_name = user_metadata?.full_name || email;
+
+    const { data, error } = await supabase
+      .from('users')
+      .upsert(
+        {
+          id,
+          email,
+          full_name,
+        },
+        { onConflict: 'id' }
+      )
+      .select()
+      .single();
+
+    return { data, error };
+  } catch (error) {
+    console.error('Error upserting app user:', error);
+    return { data: null, error };
+  }
+}
+
 // Password functions
 export async function hashPassword(password: string) {
   try {
@@ -427,7 +466,24 @@ export async function verifyCustomPassword(userId: string, password: string) {
   }
 }
 
-export default {
+// Add missing getNotifications function
+export async function getNotifications(userId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    return { data, error };
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    return { data: null, error };
+  }
+}
+
+// Export the functions as default and as named exports
+export {
   getUserProfile,
   updateUserProfile,
   getTasks,
@@ -443,10 +499,43 @@ export default {
   createTimeEntry,
   getUserSettings,
   updateUserSettings,
+  createUserSettings,
+  upsertAppUser,
   hashPassword,
   verifyCustomPassword,
   getRisks,
   createRisk,
   updateRisk,
-  deleteRisk
+  deleteRisk,
+  getNotifications
 };
+
+// Export the default object for backward compatibility
+const dbService = {
+  getUserProfile,
+  updateUserProfile,
+  getTasks,
+  createTask,
+  updateTask,
+  deleteTask,
+  getDashboardStats,
+  getClients,
+  createClient,
+  getProjects,
+  createProject,
+  getTimeEntries,
+  createTimeEntry,
+  getUserSettings,
+  updateUserSettings,
+  createUserSettings,
+  upsertAppUser,
+  hashPassword,
+  verifyCustomPassword,
+  getRisks,
+  createRisk,
+  updateRisk,
+  deleteRisk,
+  getNotifications
+};
+
+export default dbService;
