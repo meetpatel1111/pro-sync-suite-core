@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Type definitions
@@ -254,10 +255,10 @@ const addReaction = async (messageId: string, userId: string, reaction: string) 
     // Update the reactions object with the modified array
     reactions[reaction] = reactionUsers;
     
-    // Use type assertion to avoid deep type instantiation
+    // Use any type to avoid deep type instantiation issues
     const { data, error } = await supabase
       .from('messages')
-      .update({ reactions: reactions as Record<string, unknown> })
+      .update({ reactions: reactions as any })
       .eq('id', messageId)
       .select();
     
@@ -290,6 +291,7 @@ const removeReaction = async (messageId: string, userId: string, reaction: strin
       }
     }
     
+    // Use any type to avoid deep type instantiation issues
     const { data, error } = await supabase
       .from('messages')
       .update({ reactions })

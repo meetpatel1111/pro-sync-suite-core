@@ -386,7 +386,8 @@ const createTimeEntry = async (userId: string, timeEntryData: Partial<TimeEntry>
     let entryDate: string;
     
     if (timeEntryData.date) {
-      if (typeof timeEntryData.date === 'object' && timeEntryData.date !== null && 'toISOString' in timeEntryData.date) {
+      if (typeof timeEntryData.date === 'object' && timeEntryData.date !== null && 
+          'toISOString' in timeEntryData.date) {
         entryDate = timeEntryData.date.toISOString();
       } else if (typeof timeEntryData.date === 'string') {
         entryDate = timeEntryData.date;
