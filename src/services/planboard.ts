@@ -1,16 +1,18 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-export interface Report {
-  report_id?: string;
+export interface Plan {
+  plan_id?: string;
+  title: string;
+  description?: string;
   user_id: string;
-  report_type: string;
+  status: string;
   created_at?: string;
 }
 
-export const getAllReports = async (userId: string) => {
+export const getAllPlans = async (userId: string) => {
   const { data, error } = await supabase
-    .from('reports')
+    .from('plans')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
@@ -18,20 +20,20 @@ export const getAllReports = async (userId: string) => {
   return { data, error };
 };
 
-export const createReport = async (report: Partial<Report>) => {
+export const createPlan = async (plan: Partial<Plan>) => {
   const { data, error } = await supabase
-    .from('reports')
-    .insert([report])
+    .from('plans')
+    .insert([plan])
     .select();
 
   return { data, error };
 };
 
-export const deleteReport = async (reportId: string) => {
+export const deletePlan = async (planId: string) => {
   const { data, error } = await supabase
-    .from('reports')
+    .from('plans')
     .delete()
-    .eq('report_id', reportId);
+    .eq('plan_id', planId);
 
   return { data, error };
 };

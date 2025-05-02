@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Table,
@@ -21,23 +22,6 @@ import {
 import { useEffect, useState } from 'react';
 import { getAllTransactions, getAllCategories, Transaction, Category } from '@/services/budgetbuddy';
 import { useAuth } from '@/hooks/useAuth';
-
-// ExpenseTable now fetches live data from the backend
-
-
-// Update the Transaction interface to include missing properties
-interface Transaction {
-  id: string;
-  amount: number;
-  description: string;
-  date: string;
-  merchant: string;
-  category: string; // Add missing property
-  status: string; // Add missing property
-  approvedBy?: string; // Add missing property
-  receipt?: string; // Add missing property
-  // Add other properties as needed
-}
 
 const ExpenseTable = () => {
   const { user } = useAuth();
@@ -64,13 +48,13 @@ const ExpenseTable = () => {
   };
 
   // Format date to a more readable format
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
   
   // Format currency
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -97,7 +81,7 @@ const ExpenseTable = () => {
             <TableCell>{formatDate(expense.date)}</TableCell>
             <TableCell>{formatCurrency(expense.amount)}</TableCell>
             <TableCell>
-              {expense.status === 'Approved' ? (
+              {expense.status === 'Approved' && expense.approvedBy ? (
                 <div className="flex items-center gap-2">
                   <Badge className="bg-emerald-600">Approved</Badge>
                   <Avatar className="h-6 w-6">
