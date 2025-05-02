@@ -93,6 +93,7 @@ const Auth = () => {
     setFormError('');
     
     try {
+      console.log('Attempting to sign in with:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -163,7 +164,7 @@ const Auth = () => {
     setFormError('');
     
     try {
-      // Check if the user exists
+      // Check if the user exists using maybeSingle() instead of single() to avoid errors
       const { data: existingUser, error: fetchError } = await supabase
         .from('users')
         .select('id, email, full_name')
@@ -172,9 +173,16 @@ const Auth = () => {
 
       console.log('User lookup result:', existingUser, fetchError);
       
+      if (fetchError) {
+        console.error('Error fetching user:', fetchError);
+        setFormError('Failed to check credentials. Please try again.');
+        setLoading(false);
+        return;
+      }
+      
       if (!existingUser) {
         console.log('No user found with this email');
-        setFormError('Invalid credentials');
+        setFormError('Invalid email or password');
         setLoading(false);
         return;
       }
@@ -192,6 +200,17 @@ const Auth = () => {
       
       // Store the custom user in localStorage
       localStorage.setItem('customUser', JSON.stringify(customUser));
+
+      // Ensure user is present in the application's users table (required for FK)
+      try {
+        const upsertResult = await dbService.upsertAppUser(customUser);
+        console.debug('[CustomUser] upsertAppUser result:', upsertResult);
+        if (upsertResult?.error) {
+          console.error('[CustomUser] Failed to upsert user:', upsertResult.error);
+        }
+      } catch (err) {
+        console.error('[CustomUser] Exception during upsertAppUser:', err);
+      }
 
       toast({
         title: 'Signed in successfully',
@@ -214,15 +233,22 @@ const Auth = () => {
     setFormError('');
     
     try {
-      // Check if the user already exists
+      // Check if the user already exists using maybeSingle() instead of single()
       const { data: existingUser, error: fetchError } = await supabase
         .from('users')
         .select('id')
         .eq('email', email)
         .maybeSingle();
 
+      if (fetchError) {
+        console.error('Error checking if user exists:', fetchError);
+        setFormError('Error checking if user exists. Please try again.');
+        setLoading(false);
+        return;
+      }
+
       if (existingUser) {
-        setFormError('User already exists');
+        setFormError('User with this email already exists. Please sign in instead.');
         setLoading(false);
         return;
       }
@@ -236,7 +262,8 @@ const Auth = () => {
         .insert({
           id: userId,
           email: email,
-          full_name: fullName || email.split('@')[0]
+          full_name: fullName || email.split('@')[0],
+          username: email.split('@')[0] // Adding a username derived from email
         });
         
       if (insertError) {
@@ -575,21 +602,19 @@ const Auth = () => {
               </p>
             </form>
             
-            {/* Terms and Privacy Links for Sign In */}
-            {type === "sign-in" && (
-              <div className="mt-8 text-center text-xs text-gray-500">
-                <p>By signing in, you agree to our</p>
-                <div className="flex justify-center space-x-3 mt-1">
-                  <Link to="/terms" className="text-indigo-600 hover:text-indigo-500 inline-flex items-center">
-                    <ShieldCheck className="mr-1 h-3 w-3" /> Terms of Service
-                  </Link>
-                  <span>•</span>
-                  <Link to="/privacy" className="text-indigo-600 hover:text-indigo-500 inline-flex items-center">
-                    <Shield className="mr-1 h-3 w-3" /> Privacy Policy
-                  </Link>
-                </div>
+            {/* Terms and Privacy Links - Always show */}
+            <div className="mt-8 text-center text-xs text-gray-500">
+              <p>By signing {type === "sign-in" ? "in" : "up"}, you agree to our</p>
+              <div className="flex justify-center space-x-3 mt-1">
+                <Link to="/terms" className="text-indigo-600 hover:text-indigo-500 inline-flex items-center">
+                  <ShieldCheck className="mr-1 h-3 w-3" /> Terms of Service
+                </Link>
+                <span>•</span>
+                <Link to="/privacy" className="text-indigo-600 hover:text-indigo-500 inline-flex items-center">
+                  <Shield className="mr-1 h-3 w-3" /> Privacy Policy
+                </Link>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
