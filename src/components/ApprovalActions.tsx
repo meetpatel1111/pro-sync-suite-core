@@ -1,6 +1,6 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import collabService from '@/services/collabService';
+import { Button } from '@/components/ui/button';
 
 interface ApprovalActionsProps {
   messageId: string;
@@ -37,9 +37,9 @@ export const ApprovalActions: React.FC<ApprovalActionsProps> = ({ messageId, cur
       {status ? (
         <span>Status: {status}</span>
       ) : (
-        <button onClick={handleApprove} disabled={loading}>
+        <Button onClick={handleApprove} disabled={loading}>
           {loading ? 'Submitting...' : 'Approve'}
-        </button>
+        </Button>
       )}
       {error && <span style={{ color: 'red' }}>{error}</span>}
     </div>

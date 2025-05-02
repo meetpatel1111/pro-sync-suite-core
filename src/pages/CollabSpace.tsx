@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Send, Upload, Clock } from 'lucide-react';
 import ChatInterface from '@/components/ChatInterface';
+import { Button } from '@/components/ui/button';
 
 export interface Workspace {
   id: string;
@@ -322,6 +323,11 @@ const CollabSpace = () => {
     }
   };
 
+  const handleSendButtonClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    // Just call your message sending function with the user's input
+    handleSendMessage(newMessage);
+  };
+
   return (
     <AppLayout>
       {/* Sidebar */}
@@ -434,7 +440,7 @@ const CollabSpace = () => {
               <ChatInterface 
                 messages={messages}
                 currentUserId={userId}
-                onSendMessage={handleSendMessage}
+                onSendMessage={handleSendButtonClick}
                 channelMembers={channelMembers}
               />
             </div>

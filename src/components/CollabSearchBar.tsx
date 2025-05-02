@@ -1,6 +1,8 @@
-
 import React, { useState } from 'react';
 import collabService from '@/services/collabService';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Search } from 'lucide-react';
 
 interface CollabSearchBarProps {
   onResults: (results: any[]) => void;
@@ -28,7 +30,7 @@ export const CollabSearchBar: React.FC<CollabSearchBarProps> = ({ onResults, fil
 
   return (
     <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
-      <input
+      <Input
         type="text"
         placeholder="Search messages, files, tasks..."
         value={query}
@@ -36,9 +38,9 @@ export const CollabSearchBar: React.FC<CollabSearchBarProps> = ({ onResults, fil
         disabled={loading}
         style={{ flex: 1 }}
       />
-      <button type="submit" disabled={loading || !query}>
+      <Button type="submit" disabled={loading || !query}>
         {loading ? 'Searching...' : 'Search'}
-      </button>
+      </Button>
       {error && <span style={{ color: 'red' }}>{error}</span>}
     </form>
   );

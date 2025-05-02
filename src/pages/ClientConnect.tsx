@@ -10,10 +10,14 @@ import dbService from '@/services/dbService';
 import { format } from 'date-fns';
 import { Client, ClientNote } from '@/utils/dbtypes';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Users, MessageSquare, Mail, Phone, Clock, Edit, Trash2, Plus, Search } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 const ClientConnect = () => {
   const { toast } = useToast();
-  const { session } = useAuthContext();
+  const { session: authSession, user } = useAuthContext();
   const [activeTab, setActiveTab] = useState('clients');
   const [clients, setClients] = useState<Client[]>([]);
   const [clientNotes, setClientNotes] = useState<ClientNote[]>([]);
@@ -23,7 +27,6 @@ const ClientConnect = () => {
   const [showAddNoteDialog, setShowAddNoteDialog] = useState(false);
   const [isEditingClient, setIsEditingClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [session, setSession] = useState<any>(null);
   
   // Form states
   const [newClient, setNewClient] = useState({
@@ -38,22 +41,13 @@ const ClientConnect = () => {
   });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (session) {
+    // Using the session from AuthContext instead of managing it locally
+    if (user) {
       fetchClients();
+    } else {
+      setIsLoading(false);
     }
-  }, [session]);
+  }, [user]);
 
   useEffect(() => {
     if (selectedClient) {
@@ -64,7 +58,7 @@ const ClientConnect = () => {
   const fetchClients = async () => {
     setIsLoading(true);
     try {
-      const data = await dbService.getClients();
+      const data = await dbService.getClients(user?.id);
       setClients(data as Client[]);
     } catch (error) {
       console.error('Error fetching clients:', error);
@@ -233,7 +227,7 @@ const ClientConnect = () => {
     (client.company && client.company.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  if (!session) {
+  if (!authSession && !user) {
     return (
       <AppLayout>
         <div className="space-y-6">

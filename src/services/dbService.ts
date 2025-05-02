@@ -1,4 +1,3 @@
-
 import { supabase } from "../integrations/supabase/client";
 
 // Get user profile data
@@ -301,41 +300,83 @@ async function updateNotification(notificationId: string, userId: string, update
 
 // Get resource allocations
 async function getResourceAllocations() {
-  return await supabase
-    .from('resource_allocations')
-    .select('*');
+  try {
+    const { data, error } = await supabase
+      .from('resource_allocations')
+      .select('*');
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching resource allocations:', error);
+    return [];
+  }
 }
 
 // Get utilization history
 async function getUtilizationHistory() {
-  return await supabase
-    .from('utilization_history')
-    .select('*');
+  try {
+    const { data, error } = await supabase
+      .from('utilization_history')
+      .select('*');
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching utilization history:', error);
+    return [];
+  }
 }
 
 // Get unavailability
 async function getUnavailability() {
-  return await supabase
-    .from('unavailability')
-    .select('*');
+  try {
+    const { data, error } = await supabase
+      .from('unavailability')
+      .select('*');
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching unavailability:', error);
+    return [];
+  }
 }
 
 // Delete skills by resource ID
 async function deleteSkillsByResourceId(resourceId: string) {
-  return await supabase
-    .from('resource_skills')
-    .delete()
-    .eq('resource_id', resourceId);
+  try {
+    const { error } = await supabase
+      .from('resource_skills')
+      .delete()
+      .eq('resource_id', resourceId);
+    
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting skills:', error);
+    return false;
+  }
 }
 
 // Create user skill
-async function createUserSkill(skill: any) {
-  return await supabase
-    .from('user_skills')
-    .insert([skill]);
+async function createUserSkill(skill: string, userId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('user_skills')
+      .insert([{ skill, user_id: userId }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating skill:', error);
+    return null;
+  }
 }
 
-// Create default export object
+// Export all functions
 const dbService = {
   getUserProfile,
   updateUserProfile,

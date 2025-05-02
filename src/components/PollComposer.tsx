@@ -1,6 +1,8 @@
-
 import React, { useState } from 'react';
 import collabService from '@/services/collabService';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { PlusCircle, Trash } from 'lucide-react';
 
 interface PollComposerProps {
   channelId: string;
@@ -31,7 +33,7 @@ export const PollComposer: React.FC<PollComposerProps> = ({ channelId, messageCa
 
   return (
     <form onSubmit={handleSubmit}>
-      <input
+      <Input
         type="text"
         placeholder="Poll question"
         value={question}
@@ -39,7 +41,7 @@ export const PollComposer: React.FC<PollComposerProps> = ({ channelId, messageCa
         required
       />
       {options.map((opt, idx) => (
-        <input
+        <Input
           key={idx}
           type="text"
           placeholder={`Option ${idx + 1}`}
@@ -48,8 +50,12 @@ export const PollComposer: React.FC<PollComposerProps> = ({ channelId, messageCa
           required
         />
       ))}
-      <button type="button" onClick={addOption}>Add Option</button>
-      <button type="submit" disabled={loading}>Create Poll</button>
+      <Button type="button" onClick={addOption}>
+        <PlusCircle />
+      </Button>
+      <Button type="submit" disabled={loading}>
+        Create Poll
+      </Button>
     </form>
   );
 };

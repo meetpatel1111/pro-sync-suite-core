@@ -1,6 +1,8 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import collabService from '@/services/collabService';
+import { useAuthContext } from '@/context/AuthContext';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 
 interface MeetingNotesPanelProps {
   meetingId: string;

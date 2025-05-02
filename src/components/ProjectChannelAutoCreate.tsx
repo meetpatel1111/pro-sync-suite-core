@@ -1,40 +1,66 @@
-
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import collabService from '@/services/collabService';
+import { useAuthContext } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProjectChannelAutoCreateProps {
   projectId: string;
-  currentUserId: string;
-  onCreated?: (channel: any) => void;
 }
 
-export const ProjectChannelAutoCreate: React.FC<ProjectChannelAutoCreateProps> = ({ projectId, currentUserId, onCreated }) => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+const ProjectChannelAutoCreate: React.FC<ProjectChannelAutoCreateProps> = ({ projectId }) => {
+  const { user } = useAuthContext();
+  const { toast } = useToast();
+  const [channelCreated, setChannelCreated] = useState(false);
 
-  const handleCreate = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await collabService.autoCreateProjectChannel(projectId, currentUserId);
-      if (result && 'error' in result && result.error) {
-        setError(result.error as string);
+  useEffect(() => {
+    const createChannel = async () => {
+      if (!user) return;
+
+      try {
+        const response = await collabService.autoCreateProjectChannel(projectId, user.id);
+        if (response.data) {
+          setChannelCreated(true);
+          toast({
+            title: 'Project channel created',
+            description: 'A new channel has been created for this project.',
+          });
+        } else if (response.error) {
+          console.error('Error creating project channel:', response.error);
+          toast({
+            title: 'Error creating channel',
+            description: 'Failed to create a channel for this project.',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
+        console.error('Unexpected error creating project channel:', error);
+        toast({
+          title: 'Unexpected error',
+          description: 'An unexpected error occurred while creating the channel.',
+          variant: 'destructive',
+        });
       }
-      else if (onCreated) {
-        onCreated(result && 'data' in result ? result.data : result);
-      }
-    } catch (e: any) {
-      setError(e.message);
+    };
+
+    if (projectId && !channelCreated) {
+      createChannel();
     }
-    setLoading(false);
-  };
+  }, [projectId, user, channelCreated, toast]);
 
   return (
     <div>
-      <button onClick={handleCreate} disabled={loading}>
-        {loading ? 'Creating Channel...' : 'Create Project Channel'}
-      </button>
-      {error && <div style={{ color: 'red' }}>{error}</div>}
+      {channelCreated ? (
+        <Button variant="secondary" disabled>
+          Channel Created
+        </Button>
+      ) : (
+        <Button variant="outline" disabled>
+          Creating Channel...
+        </Button>
+      )}
     </div>
   );
 };
+
+export default ProjectChannelAutoCreate;

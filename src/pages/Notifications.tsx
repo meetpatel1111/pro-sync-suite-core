@@ -30,7 +30,7 @@ const Notifications = () => {
           </p>
         </div>
         
-        {user && <NotificationsPanel userId={user.id} />}
+        {user ? <NotificationsPanel userId={user.id} /> : <p>Loading user information...</p>}
       </div>
     </AppLayout>
   );
