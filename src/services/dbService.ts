@@ -141,12 +141,25 @@ async function createProject(userId: string, projectData: any) {
 }
 
 // Get time entries
-async function getTimeEntries(userId: string) {
-  return await supabase
+async function getTimeEntries(userId: string, filters?: any) {
+  let query = supabase
     .from('time_entries')
     .select('*')
-    .eq('user_id', userId)
-    .order('date', { ascending: false });
+    .eq('user_id', userId);
+
+  if (filters) {
+    if (filters.project_id) {
+      query = query.eq('project_id', filters.project_id);
+    }
+    if (filters.start_date) {
+      query = query.gte('date', filters.start_date);
+    }
+    if (filters.end_date) {
+      query = query.lte('date', filters.end_date);
+    }
+  }
+
+  return await query.order('date', { ascending: false });
 }
 
 // Create a time entry
@@ -322,7 +335,7 @@ async function createUserSkill(skill: any) {
     .insert([skill]);
 }
 
-// Bundle all functions into the dbService object
+// Create default export object
 const dbService = {
   getUserProfile,
   updateUserProfile,
@@ -357,3 +370,37 @@ const dbService = {
 };
 
 export default dbService;
+
+// Export individual functions for direct importing
+export {
+  getUserProfile,
+  updateUserProfile,
+  getTasks,
+  createTask,
+  updateTask,
+  deleteTask,
+  getDashboardStats,
+  getClients,
+  createClient,
+  getProjects,
+  createProject,
+  getTimeEntries,
+  createTimeEntry,
+  getUserSettings,
+  updateUserSettings,
+  createUserSettings,
+  upsertAppUser,
+  hashPassword,
+  verifyCustomPassword,
+  getRisks,
+  createRisk,
+  updateRisk,
+  deleteRisk,
+  getNotifications,
+  updateNotification,
+  getResourceAllocations,
+  getUtilizationHistory,
+  getUnavailability,
+  deleteSkillsByResourceId,
+  createUserSkill
+};

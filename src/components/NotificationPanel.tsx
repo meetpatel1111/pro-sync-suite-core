@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import * as dbService from '@/services/dbService';
+import dbService from '@/services/dbService';
 
 // Notification panel component for showing notifications
 export const NotificationPanel: React.FC = () => {
@@ -55,3 +55,5 @@ export const NotificationPanel: React.FC = () => {
     </div>
   );
 };
+
+export default NotificationPanel;

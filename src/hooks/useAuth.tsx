@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
-import { dbService } from '@/services/dbService';
+import dbService from '@/services/dbService';
 import { useToast } from '@/hooks/use-toast';
 
 export const useAuth = () => {

@@ -1,68 +1,53 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, FolderPlus, File, Upload, Search, Filter, Grid, List, Download, Trash2, Share, Settings } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useAuthContext } from '@/context/AuthContext';
+import dbService from '@/services/dbService';
 import { supabase } from '@/integrations/supabase/client';
-import { dbService } from '@/services/dbService';
-import { uploadFile } from '@/services/filevault';
-interface FileItem {
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, File, FilePlus, Lock, Unlock } from 'lucide-react';
+
+interface FileRecord {
   id: string;
   name: string;
+  storage_path: string;
   description?: string;
   file_type: string;
   size_bytes: number;
-  storage_path: string;
-  created_at: string;
   is_public: boolean;
-  is_archived: boolean;
+  created_at: string;
 }
 
 const FileVault = () => {
-  const navigate = useNavigate();
+  const { user } = useAuthContext();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('all');
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [files, setFiles] = useState<FileItem[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [fileName, setFileName] = useState('');
+  const [files, setFiles] = useState<FileRecord[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadError, setUploadError] = useState(false);
   const [fileDescription, setFileDescription] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
+  const [fileUrl, setFileUrl] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) return;
     fetchFiles();
-  }, []);
+  }, [user]);
 
   const fetchFiles = async () => {
-    setIsLoading(true);
+    if (!user) return;
+    
+    setLoading(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) {
-        toast({
-          title: "Authentication required",
-          description: "Please log in to view your files",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      const { data, error } = await dbService.getFiles(userData.user.id);
-
+      const { data, error } = await dbService.getFiles(user.id);
       if (error) throw error;
-      
-      setFiles(Array.isArray(data) ? data : []);
+      setFiles(data || []);
     } catch (error) {
       console.error('Error fetching files:', error);
       toast({
@@ -71,384 +56,193 @@ const FileVault = () => {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0]);
-      if (!fileName) {
-        setFileName(e.target.files[0].name);
-      }
-    }
+  const handleFileDownload = (filePath: string) => {
+    const { data } = supabase.storage.from('files').getPublicUrl(filePath);
+    setFileUrl(data.publicUrl);
+    window.open(data.publicUrl, '_blank');
   };
 
-  const handleUpload = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!selectedFile) {
-      toast({
-        title: "No file selected",
-        description: "Please select a file to upload",
-        variant: "destructive",
-      });
-      return;
-    }
-    setIsUploading(true);
+  const handleFileUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0 || !user) return;
+    
+    setUploading(true);
+    
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) {
-        toast({
-          title: "Authentication required",
-          description: "Please log in to upload files",
-          variant: "destructive",
-        });
-        return;
-      }
-      await uploadFile(userData.user.id, selectedFile, fileName, fileDescription);
-      toast({
-        title: "File uploaded",
-        description: "Your file has been uploaded successfully",
-      });
-      setFileName('');
+      const file = files[0];
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('files')
+        .upload(filePath, file);
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: publicURL } = supabase.storage.from('files').getPublicUrl(filePath);
+      
+      const fileData = {
+        name: file.name,
+        storage_path: filePath,
+        description: fileDescription,
+        file_type: file.type,
+        size_bytes: file.size,
+        is_public: isPublic
+      };
+      
+      await dbService.createFileRecord(user.id, fileData);
+      
       setFileDescription('');
-      setSelectedFile(null);
-      setUploadDialogOpen(false);
+      setIsPublic(false);
+      setUploading(false);
+      setUploadSuccess(true);
+      
       fetchFiles();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error uploading file:', error);
-      toast({
-        title: "Upload failed",
-        description: error?.message || "An error occurred while uploading your file",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUploading(false);
+      setUploading(false);
+      setUploadError(true);
     }
-  };
-
-  const handleDownload = async (file: FileItem) => {
-    try {
-      const { data, error } = await supabase.storage
-        .from('files')
-        .download(file.storage_path);
-
-      if (error) throw error;
-
-      // Create a download link
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file.name;
-      document.body.appendChild(a);
-      a.click();
-      
-      // Clean up
-      URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error('Error downloading file:', error);
-      toast({
-        title: "Download failed",
-        description: "An error occurred while downloading your file",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDelete = async (fileId: string) => {
-    try {
-      const fileToDelete = files.find(f => f.id === fileId);
-      if (!fileToDelete) return;
-
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) return;
-
-      // Delete from storage
-      const { error: storageError } = await supabase.storage
-        .from('files')
-        .remove([fileToDelete.storage_path]);
-
-      if (storageError) throw storageError;
-
-      // Delete from database
-      const { error: dbError } = await supabase
-        .from('files')
-        .delete()
-        .eq('id', fileId)
-        .eq('user_id', userData.user.id);
-
-      if (dbError) throw dbError;
-
-      toast({
-        title: "File deleted",
-        description: "Your file has been deleted successfully",
-      });
-
-      // Update files list
-      setFiles(files.filter(f => f.id !== fileId));
-    } catch (error) {
-      console.error('Error deleting file:', error);
-      toast({
-        title: "Delete failed",
-        description: "An error occurred while deleting your file",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getFilteredFiles = () => {
-    return files.filter(file => {
-      const matchesSearch = 
-        file.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (file.description && file.description.toLowerCase().includes(searchQuery.toLowerCase()));
-      
-      switch (activeTab) {
-        case 'documents':
-          return matchesSearch && 
-            (file.file_type.includes('document') || 
-             file.file_type.includes('pdf') || 
-             file.file_type.includes('word') ||
-             file.file_type.includes('text'));
-        case 'images':
-          return matchesSearch && file.file_type.includes('image');
-        case 'shared':
-          return matchesSearch && file.is_public;
-        case 'archived':
-          return matchesSearch && file.is_archived;
-        default:
-          return matchesSearch;
-      }
-    });
-  };
-
-  const filteredFiles = getFilteredFiles();
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
   };
 
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
-          <div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="mb-4 gap-1" 
-              onClick={() => navigate('/')}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
-            </Button>
-            <h1 className="text-3xl font-bold tracking-tight">FileVault</h1>
-            <p className="text-muted-foreground">
-              Secure document and file management system for your projects
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-1">
-                  <Upload className="h-4 w-4" />
-                  Upload File
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Upload File</DialogTitle>
-                  <DialogDescription>
-                    Upload a file to your secure vault
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleUpload} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="file">File</Label>
-                    <Input 
-                      id="file" 
-                      type="file" 
-                      onChange={handleFileChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fileName">File Name</Label>
-                    <Input 
-                      id="fileName" 
-                      placeholder="Enter file name" 
-                      value={fileName}
-                      onChange={(e) => setFileName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description (optional)</Label>
-                    <Textarea 
-                      id="description" 
-                      placeholder="Enter file description" 
-                      value={fileDescription}
-                      onChange={(e) => setFileDescription(e.target.value)}
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit" disabled={isUploading}>
-                      {isUploading ? 'Uploading...' : 'Upload'}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">File Vault</h1>
+          <p className="text-muted-foreground">
+            Securely store and manage your files
+          </p>
         </div>
-
-        <div className="flex flex-col md:flex-row gap-4 items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search files..." 
-              className="pl-8" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="icon">
-              <Filter className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => setViewMode('grid')}
-              className={viewMode === 'grid' ? "bg-muted" : ""}
-            >
-              <Grid className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => setViewMode('list')}
-              className={viewMode === 'list' ? "bg-muted" : ""}
-            >
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        
+        <Tabs defaultValue="files" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="all">All Files</TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="images">Images</TabsTrigger>
-            <TabsTrigger value="shared">Shared</TabsTrigger>
-            <TabsTrigger value="archived">Archived</TabsTrigger>
+            <TabsTrigger value="files">My Files</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
-
-          <TabsContent value={activeTab} className="space-y-4">
-            {isLoading ? (
-              <div className="flex justify-center p-8">
-                <p>Loading files...</p>
-              </div>
-            ) : filteredFiles.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center p-8 text-center">
-                  <FolderPlus className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium">No files yet</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Upload your first file to get started
-                  </p>
-                  <Button onClick={() => setUploadDialogOpen(true)}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload File
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : viewMode === 'grid' ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredFiles.map(file => (
-                  <Card key={file.id}>
-                    <CardContent className="p-4 space-y-3">
-                      <div className="bg-muted rounded-md p-4 flex justify-center items-center">
-                        <File className="h-12 w-12 text-muted-foreground" />
+          
+          <TabsContent value="files" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>File Storage</CardTitle>
+                <CardDescription>
+                  Upload, manage, and share your files securely
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <Input 
+                    type="file" 
+                    id="upload" 
+                    className="hidden" 
+                    onChange={(e) => handleFileUpload(e.target.files)} 
+                  />
+                  <Label htmlFor="upload" className="cursor-pointer">
+                    <Button variant="outline" asChild>
+                      <label htmlFor="upload" className="flex items-center space-x-2">
+                        <FilePlus className="h-4 w-4" />
+                        <span>Upload File</span>
+                      </label>
+                    </Button>
+                  </Label>
+                  {uploading && <Loader2 className="h-5 w-5 animate-spin" />}
+                  {uploadSuccess && <span className="text-green-500">Upload successful!</span>}
+                  {uploadError && <span className="text-red-500">Upload failed. Please try again.</span>}
+                </div>
+                
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {loading ? (
+                    <div className="col-span-3 text-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin inline-block mr-2" />
+                      Loading files...
+                    </div>
+                  ) : files.length === 0 ? (
+                    <div className="col-span-3 text-center py-8">
+                      No files found. Upload your first file!
+                    </div>
+                  ) : (
+                    files.map((file) => (
+                      <Card key={file.id} className="bg-muted">
+                        <CardHeader>
+                          <CardTitle className="text-sm font-medium">{file.name}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-sm text-muted-foreground">
+                          <p>Type: {file.file_type}</p>
+                          <p>Size: {(file.size_bytes / 1024).toFixed(2)} KB</p>
+                          <p>Uploaded: {new Date(file.created_at).toLocaleDateString()}</p>
+                          {file.description && <p>Description: {file.description}</p>}
+                        </CardContent>
+                        <CardFooter className="justify-between">
+                          <Button size="sm" onClick={() => handleFileDownload(file.storage_path)}>
+                            <File className="h-4 w-4 mr-2" />
+                            Download
+                          </Button>
+                          {file.is_public ? (
+                            <Button variant="ghost" size="sm">
+                              <Unlock className="h-4 w-4 mr-2" />
+                              Public
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" size="sm">
+                              <Lock className="h-4 w-4 mr-2" />
+                              Private
+                            </Button>
+                          )}
+                        </CardFooter>
+                      </Card>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">Add File Description</Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Add File Description</DialogTitle>
+                      <DialogDescription>
+                        Add a description to your file for better organization.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="description" className="text-right">
+                          Description
+                        </Label>
+                        <Input id="description" value={fileDescription} className="col-span-3" onChange={(e) => setFileDescription(e.target.value)} />
                       </div>
-                      <div>
-                        <h3 className="font-medium truncate">{file.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {formatFileSize(file.size_bytes)} • Added {formatDate(file.created_at)}
-                        </p>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="public" className="text-right">
+                          Public
+                        </Label>
+                        <input type="checkbox" id="public" className="col-span-3" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} />
                       </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-8 w-8"
-                          onClick={() => handleDownload(file)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" className="h-8 w-8">
-                          <Share className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => handleDelete(file.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {filteredFiles.map(file => (
-                  <Card key={file.id}>
-                    <CardContent className="p-3 flex items-center gap-4">
-                      <File className="h-8 w-8 text-muted-foreground" />
-                      <div className="flex-1">
-                        <h3 className="font-medium">{file.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {formatFileSize(file.size_bytes)} • Added {formatDate(file.created_at)}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-8 w-8"
-                          onClick={() => handleDownload(file)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" className="h-8 w-8">
-                          <Share className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => handleDelete(file.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit">Save</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="settings" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>File Vault Settings</CardTitle>
+                <CardDescription>
+                  Manage your file vault settings and preferences
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p>Settings will be implemented soon.</p>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

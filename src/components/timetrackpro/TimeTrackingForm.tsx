@@ -1,17 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { useAuthContext } from '@/context/AuthContext';
-import { dbService } from '@/services/dbService';
-import { useToast } from '@/hooks/use-toast';
-import { PlayCircle, PauseCircle, StopCircle, Save, Calendar as CalendarIcon } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { format } from 'date-fns';
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarIcon, Play, Pause, StopCircle } from 'lucide-react';
+import dbService from '@/services/dbService';
+import { useAuthContext } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from "@/lib/utils";
 import { supabase } from '@/integrations/supabase/client';
 
@@ -301,7 +296,7 @@ const TimeTrackingForm = () => {
         <div className="flex gap-2">
           {!isTracking ? (
             <Button onClick={startTracking} disabled={!selectedProject}>
-              <PlayCircle className="mr-2 h-4 w-4" />
+              <Play className="mr-2 h-4 w-4" />
               Start Tracking
             </Button>
           ) : (

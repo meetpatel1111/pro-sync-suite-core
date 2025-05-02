@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Table, 
@@ -20,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertCircle, MoreVertical, FileEdit, Trash2, ChevronDown, Plus, Search } from "lucide-react";
-import * as dbService from '@/services/dbService';
+import dbService from '@/services/dbService';
 import { useAuthContext } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -47,9 +46,13 @@ interface Milestone {
   completed: boolean;
 }
 
-interface ResourceAllocation {
-  team: string;
+// Define an interface that includes the id property
+interface ResourceAllocationWithId {
+  id: string;
   allocation: number;
+  user_id: string;
+  team: string;
+  created_at?: string;
 }
 
 const PlanBoard = () => {
@@ -129,65 +132,64 @@ const PlanBoard = () => {
     }
   };
 
+  const fetchResourceAllocations = async () => {
+    setIsLoading(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) return;
+      const data = await getResourceAllocations(userData.user.id);
+      setResources(data || []);
+    } catch (error) {
+      console.error('Error fetching resource allocations:', error);
+      setResources([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-const fetchResourceAllocations = async () => {
-  setIsLoading(true);
-  try {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return;
-    const data = await getResourceAllocations(userData.user.id);
-    setResources(data || []);
-  } catch (error) {
-    console.error('Error fetching resource allocations:', error);
-    setResources([]);
-  } finally {
-    setIsLoading(false);
-  }
-};
+  // Add Resource Allocation
+  const handleAddResource = async (team: string, allocation: number) => {
+    setIsLoading(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) return;
+      const newResource = await createResourceAllocation({ team, allocation }, userData.user.id);
+      setResources(prev => [...prev, newResource]);
+    } catch (error) {
+      console.error('Error adding resource allocation:', error);
+      toast({ title: 'Failed to add resource', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-// Add Resource Allocation
-const handleAddResource = async (team: string, allocation: number) => {
-  setIsLoading(true);
-  try {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return;
-    const newResource = await createResourceAllocation({ team, allocation }, userData.user.id);
-    setResources(prev => [...prev, newResource]);
-  } catch (error) {
-    console.error('Error adding resource allocation:', error);
-    toast({ title: 'Failed to add resource', variant: 'destructive' });
-  } finally {
-    setIsLoading(false);
-  }
-};
+  // Edit Resource Allocation
+  const handleEditResource = async (id: string, updates: Partial<ResourceAllocationType>) => {
+    setIsLoading(true);
+    try {
+      const updated = await updateResourceAllocation(id, updates);
+      setResources(prev => prev.map(r => (r.id === id ? updated : r)));
+    } catch (error) {
+      console.error('Error updating resource allocation:', error);
+      toast({ title: 'Failed to update resource', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-// Edit Resource Allocation
-const handleEditResource = async (id: string, updates: Partial<ResourceAllocationType>) => {
-  setIsLoading(true);
-  try {
-    const updated = await updateResourceAllocation(id, updates);
-    setResources(prev => prev.map(r => (r.id === id ? updated : r)));
-  } catch (error) {
-    console.error('Error updating resource allocation:', error);
-    toast({ title: 'Failed to update resource', variant: 'destructive' });
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-// Delete Resource Allocation
-const handleDeleteResource = async (id: string) => {
-  setIsLoading(true);
-  try {
-    await deleteResourceAllocation(id);
-    setResources(prev => prev.filter(r => r.id !== id));
-  } catch (error) {
-    console.error('Error deleting resource allocation:', error);
-    toast({ title: 'Failed to delete resource', variant: 'destructive' });
-  } finally {
-    setIsLoading(false);
-  }
-};
+  // Delete Resource Allocation
+  const handleDeleteResource = async (id: string) => {
+    setIsLoading(true);
+    try {
+      await deleteResourceAllocation(id);
+      setResources(prev => prev.filter(r => r.id !== id));
+    } catch (error) {
+      console.error('Error deleting resource allocation:', error);
+      toast({ title: 'Failed to delete resource', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleCreateProject = async () => {
     try {

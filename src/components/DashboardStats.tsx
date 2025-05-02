@@ -65,7 +65,7 @@ const DashboardStats = () => {
   useEffect(() => {
     if (!loading && user?.id) {
       setIsLoading(true);
-      dbService.getDashboardStats(user.id)
+      dbService.default.getDashboardStats(user.id)
         .then((response) => {
           if (response.error) {
             throw response.error;
@@ -74,9 +74,9 @@ const DashboardStats = () => {
           if (response.data) {
             // Map the response data to our stats structure
             const mappedStats: DashboardStatsData = {
-              completedTasks: response.data.taskStats?.completed || 0,
+              completedTasks: response.data.completedTasks || 0,
               hoursTracked: response.data.hoursTracked || 0,
-              openIssues: response.data.taskStats?.pending || 0,
+              openIssues: response.data.openIssues || 0,
               teamMembers: response.data.teamMembers || 0
             };
             

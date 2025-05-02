@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import * as dbService from '@/services/dbService';
+import dbService from '@/services/dbService';
 
 interface NotificationsPanelProps {
   userId: string;

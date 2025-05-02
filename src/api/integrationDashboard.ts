@@ -1,6 +1,6 @@
 
 import { Request, Response } from 'express';
-import * as dbService from '@/services/dbService';
+import dbService from '@/services/dbService';
 
 // Helper functions for the integration dashboard API
 export async function getIntegrationStats(req: Request, res: Response) {

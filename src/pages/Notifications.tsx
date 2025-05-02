@@ -5,9 +5,11 @@ import NotificationsPanel from '@/components/NotificationsPanel';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { useAuthContext } from '@/context/AuthContext';
 
 const Notifications = () => {
   const navigate = useNavigate();
+  const { user } = useAuthContext();
 
   return (
     <AppLayout>
@@ -28,7 +30,7 @@ const Notifications = () => {
           </p>
         </div>
         
-        <NotificationsPanel />
+        {user && <NotificationsPanel userId={user.id} />}
       </div>
     </AppLayout>
   );

@@ -274,52 +274,34 @@ const ResourceHub = () => {
   }, [session, toast]);
 
   // Fetch allocations for calendar & allocation board
-  useEffect(() => {
-    if (!session) {
-      setAllocationsLoading(false);
-      return;
+  const fetchAllocations = async () => {
+    setLoadingAllocations(true);
+    try {
+      const { data, error } = await dbService.getResourceAllocations();
+      if (error) throw error;
+      setAllocations(data);
+      setAllocationsError(null);
+    } catch (error) {
+      console.error("Error fetching allocations:", error);
+    } finally {
+      setLoadingAllocations(false);
     }
-    setAllocationsLoading(true);
-    dbService.getResourceAllocations(session.user.id)
-      .then((result: any) => {
-        if (result && result.data) {
-          setAllocations(result.data);
-          setAllocationsError(null);
-        } else {
-          setAllocations([]);
-          setAllocationsError(result?.error?.message || 'No allocation data');
-        }
-      })
-      .catch((err: any) => {
-        setAllocationsError(err?.message || err?.toString() || 'Unknown error');
-        setAllocations([]);
-      })
-      .finally(() => setAllocationsLoading(false));
-  }, [session]);
+  };
 
   // Fetch utilization history for reports
-  useEffect(() => {
-    if (!session) {
-      setUtilizationLoading(false);
-      return;
+  const fetchUtilization = async () => {
+    setLoadingUtilization(true);
+    try {
+      const { data, error } = await dbService.getUtilizationHistory();
+      if (error) throw error;
+      setUtilizationHistory(data);
+      setUtilizationError(null);
+    } catch (error) {
+      console.error("Error fetching utilization:", error);
+    } finally {
+      setLoadingUtilization(false);
     }
-    setUtilizationLoading(true);
-    // Use resourceId, not userId, for utilization history
-    dbService.getUtilizationHistory(session?.user?.id)
-      .then((result: any) => {
-        if (result && result.data) {
-          setUtilizationHistory(result.data);
-        } else {
-          setUtilizationHistory([]);
-        }
-        setUtilizationError(null);
-      })
-      .catch((err: any) => {
-        setUtilizationError(err?.message || err?.toString() || 'Unknown error');
-        setUtilizationHistory([]);
-      })
-      .finally(() => setUtilizationLoading(false));
-  }, [session]);
+  };
 
   // Fetch projects for allocation/calendar
   useEffect(() => {

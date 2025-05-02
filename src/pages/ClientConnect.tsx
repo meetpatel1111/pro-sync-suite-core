@@ -1,20 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, Plus, Search, Phone, Mail, Building, Edit, Trash2, MessageSquare, Clock } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { dbService } from '@/services/dbService';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuthContext } from '@/context/AuthContext';
+import dbService from '@/services/dbService';
 import { format } from 'date-fns';
 import { Client, ClientNote } from '@/utils/dbtypes';
 import { supabase } from '@/integrations/supabase/client';
 
 const ClientConnect = () => {
   const { toast } = useToast();
+  const { session } = useAuthContext();
   const [activeTab, setActiveTab] = useState('clients');
   const [clients, setClients] = useState<Client[]>([]);
   const [clientNotes, setClientNotes] = useState<ClientNote[]>([]);

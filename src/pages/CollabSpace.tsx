@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect, useRef } from 'react';
+import AppLayout from '@/components/AppLayout';
 import collabService, { Channel, Message } from '@/services/collabService';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -32,6 +32,7 @@ const CollabSpace = () => {
   const [scheduleTime, setScheduleTime] = useState('');
   const [channelMembers, setChannelMembers] = useState<any[]>([]);
   const [fileList, setFileList] = useState<any[]>([]);
+  const [showSidebar, setShowSidebar] = useState(true);
 
   // Simulate a user ID for development
   const userId = 'sample-user-id';
@@ -281,8 +282,14 @@ const CollabSpace = () => {
     }
   };
 
-  const handleChannelSelect = (channelId: string) => {
-    setSelectedChannel(channelId);
+  const handleChannelSelect = (channel: Channel) => {
+    setSelectedChannel(channel);
+    setShowSidebar(false);
+    
+    // Check if this is a private or direct message channel
+    if (channel.type === 'private' || channel.type === 'direct') {
+      // Handle private or direct message channel
+    }
   };
 
   const handleDeleteChannel = async (channelId: string, e: React.MouseEvent) => {
@@ -316,7 +323,7 @@ const CollabSpace = () => {
   };
 
   return (
-    <div className="flex h-full">
+    <AppLayout>
       {/* Sidebar */}
       <div className="w-64 bg-card border-r h-full overflow-y-auto p-4">
         <h2 className="text-xl font-semibold mb-4">CollabSpace</h2>
@@ -372,7 +379,7 @@ const CollabSpace = () => {
               className={`flex justify-between items-center px-2 py-1 rounded cursor-pointer ${
                 selectedChannel === channel.id ? 'bg-accent' : 'hover:bg-accent/50'
               }`}
-              onClick={() => handleChannelSelect(channel.id)}
+              onClick={() => handleChannelSelect(channel)}
             >
               <span className="truncate"># {channel.name}</span>
               <button 
@@ -393,7 +400,7 @@ const CollabSpace = () => {
               className={`px-2 py-1 rounded cursor-pointer ${
                 selectedChannel === dm.id ? 'bg-accent' : 'hover:bg-accent/50'
               }`}
-              onClick={() => handleChannelSelect(dm.id)}
+              onClick={() => handleChannelSelect(dm)}
             >
               <span className="truncate">@ {dm.name}</span>
             </li>
@@ -441,7 +448,7 @@ const CollabSpace = () => {
           </div>
         )}
       </div>
-    </div>
+    </AppLayout>
   );
 };
 
