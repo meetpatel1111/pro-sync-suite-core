@@ -168,19 +168,20 @@ const getUnreadNotifications = async (userId: string) => {
   }
 };
 
-const updateNotification = async (notificationId: string, updates: any) => {
+// Update notification
+const updateNotification = async (notificationId: string, updateData: any) => {
   try {
     const { data, error } = await supabase
       .from('notifications')
-      .update(updates)
+      .update(updateData)
       .eq('id', notificationId)
-      .select()
-      .single();
+      .select();
     
-    if (error) return handleError(error);
-    return { data, error };
+    if (error) throw error;
+    return { data, error: null };
   } catch (error) {
-    return handleError(error);
+    console.error('Error updating notification:', error);
+    return { data: null, error };
   }
 };
 

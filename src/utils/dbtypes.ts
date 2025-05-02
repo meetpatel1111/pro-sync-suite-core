@@ -1,3 +1,4 @@
+
 // Database type definitions for application entities
 
 export interface User {
@@ -31,7 +32,7 @@ export interface Channel {
   name: string;
   type: 'public' | 'private' | 'dm' | 'group_dm';
   created_at: string;
-  user_id?: string;
+  user_id: string;
   description?: string;
   updated_at?: string;
   created_by?: string;

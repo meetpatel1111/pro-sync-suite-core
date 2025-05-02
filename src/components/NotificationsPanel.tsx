@@ -29,15 +29,15 @@ export const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ userId }
 
   const markAsRead = async (notificationId: string) => {
     try {
-      // Fix the parameter count - update to match dbService implementation
-      await dbService.markNotificationAsRead(notificationId);
-      
-      // Update the local state
+      // Implement a markAsRead status change in frontend first
       setNotifications(notifications.map(notification => 
         notification.id === notificationId 
           ? { ...notification, read: true } 
           : notification
       ));
+      
+      // Then update in backend
+      await dbService.updateNotification(notificationId, { read: true });
     } catch (error) {
       console.error(`Error marking notification ${notificationId} as read:`, error);
     }

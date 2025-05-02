@@ -8,15 +8,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import dbService from '@/services/dbService';
 import { fileVaultService } from '@/services/fileVaultService';
 import { FileIcon, FilePlus, Loader2, Lock, Unlock } from 'lucide-react';
-import type { File as FileType } from '@/utils/dbtypes'; // Use type-only import to avoid conflict with DOM File
+// Import File as a type to avoid conflict with DOM File
+import type { File as FileType } from '@/utils/dbtypes';
 
 interface FileRecord {
   id: string;
@@ -101,7 +102,7 @@ const FileVault = () => {
         is_public: isPublic
       };
       
-      // Update to match dbService implementation
+      // Fix: Pass only user.id
       await dbService.createFileRecord(user.id, fileData);
       
       setFileDescription('');

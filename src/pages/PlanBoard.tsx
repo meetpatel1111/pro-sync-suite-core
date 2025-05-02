@@ -16,8 +16,9 @@ const PlanBoard = () => {
   const fetchResourceAllocations = async () => {
     try {
       if (!user) return;
+      // Fix: Pass user.id
       const response = await dbService.getResourceAllocations(user.id);
-      if (response.data) {
+      if (response && response.data) {
         setResourceAllocations(response.data as ResourceAllocation[]);
       } else {
         setResourceAllocations([]);

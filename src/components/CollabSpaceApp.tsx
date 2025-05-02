@@ -1,11 +1,13 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
-import collabService, { Channel, Message } from '@/services/collabService';
+import collabService from '@/services/collabService';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Send, Upload, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Channel, Message } from '@/utils/dbtypes';
 
 export interface Workspace {
@@ -71,13 +73,13 @@ const CollabSpaceApp = () => {
           const typedChannels: Channel[] = response.data.map((channel: any) => ({
             id: channel.id,
             name: channel.name,
-            description: channel.description,
+            description: channel.description || '',
             created_at: channel.created_at,
-            updated_at: channel.updated_at,
-            created_by: channel.created_by, 
-            user_id: channel.created_by || userId, // Map created_by to user_id
-            type: channel.type === 'direct' ? 'dm' : channel.type as 'public' | 'private' | 'dm' | 'group_dm',
-            about: channel.about
+            updated_at: channel.updated_at || channel.created_at,
+            created_by: channel.created_by || '', 
+            user_id: channel.created_by || userId,
+            type: (channel.type === 'direct' ? 'dm' : channel.type) as 'public' | 'private' | 'dm' | 'group_dm',
+            about: channel.about || ''
           }));
           setChannels(typedChannels);
         }
@@ -124,17 +126,16 @@ const CollabSpaceApp = () => {
             user_id: msg.user_id,
             content: msg.content || '',
             created_at: msg.created_at,
-            updated_at: msg.updated_at,
-            file_url: msg.file_url,
+            username: msg.username || '',
+            edited_at: msg.edited_at || '',
             reactions: msg.reactions || {},
             is_pinned: msg.is_pinned || false,
-            parent_id: msg.parent_id,
-            type: msg.type as 'text' | 'image' | 'file' | 'poll',
-            mentions: msg.mentions,
-            read_by: msg.read_by,
-            username: msg.username,
-            edited_at: msg.edited_at,
-            scheduled_for: msg.scheduled_for
+            parent_id: msg.parent_id || '',
+            file_url: msg.file_url || '',
+            scheduled_for: msg.scheduled_for || '',
+            type: msg.type || 'text',
+            mentions: msg.mentions || [],
+            read_by: Array.isArray(msg.read_by) ? msg.read_by : []
           }));
           setMessages(typedMessages);
         }
@@ -155,15 +156,15 @@ const CollabSpaceApp = () => {
           user_id: newMessage.user_id,
           content: newMessage.content || '',
           created_at: newMessage.created_at,
-          username: newMessage.username,
-          edited_at: newMessage.edited_at,
-          reactions: newMessage.reactions,
-          parent_id: newMessage.parent_id,
-          file_url: newMessage.file_url,
-          scheduled_for: newMessage.scheduled_for,
-          type: newMessage.type,
-          is_pinned: newMessage.is_pinned,
-          read_by: newMessage.read_by
+          username: newMessage.username || '',
+          edited_at: newMessage.edited_at || '',
+          reactions: newMessage.reactions || {},
+          parent_id: newMessage.parent_id || '',
+          file_url: newMessage.file_url || '',
+          scheduled_for: newMessage.scheduled_for || '',
+          type: newMessage.type || 'text',
+          is_pinned: newMessage.is_pinned || false,
+          read_by: Array.isArray(newMessage.read_by) ? newMessage.read_by : []
         };
         return [...prevMessages, typedMessage];
       });
@@ -175,22 +176,38 @@ const CollabSpaceApp = () => {
   }, [selectedChannel]);
 
   // Create a new channel
-  const handleCreateChannel = async (channelData) => {
-    // Make sure the type is one of the allowed values: 'public', 'private', 'dm', 'group_dm'
+  const handleCreateChannel = async (channelData: any) => {
+    // Make sure the type is one of the allowed values
     const newChannel: Channel = {
+      id: crypto.randomUUID(), // Generate a new UUID for the channel
       name: channelData.name,
       type: channelData.type as 'public' | 'private' | 'dm' | 'group_dm',
-      description: channelData.description,
+      description: channelData.description || '',
       created_at: new Date().toISOString(),
-      created_by: user?.id
-      // Don't include user_id if it doesn't exist in Channel interface
+      updated_at: new Date().toISOString(),
+      created_by: user?.id || '',
+      user_id: user?.id || '',
+      about: ''
     };
     
     try {
       const response = await collabService.createChannel(newChannel);
       
       if (response.data) {
-        setChannels(prev => [...prev, response.data]);
+        // Ensure the response data conforms to our Channel interface
+        const typedChannel: Channel = {
+          id: response.data.id,
+          name: response.data.name,
+          type: (response.data.type === 'direct' ? 'dm' : response.data.type) as 'public' | 'private' | 'dm' | 'group_dm',
+          description: response.data.description || '',
+          created_at: response.data.created_at,
+          updated_at: response.data.updated_at || response.data.created_at,
+          created_by: response.data.created_by || '',
+          user_id: response.data.created_by || user?.id || '',
+          about: response.data.about || ''
+        };
+        
+        setChannels(prev => [...prev, typedChannel]);
         setChannelName('');
         setChannelDescription('');
         setShowNewChannelForm(false);
@@ -373,14 +390,38 @@ const CollabSpaceApp = () => {
                 className={`flex justify-between items-center px-2 py-1.5 rounded cursor-pointer ${
                   selectedChannel === channel.id ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
                 }`}
-                onClick={() => handleChannelSelect(channel.id)}
+                onClick={() => setSelectedChannel(channel.id)}
               >
                 <span>{channel.name}</span>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="h-6 w-6 p-0 hidden group-hover:inline-flex"
-                  onClick={(e) => handleDeleteChannel(channel.id, e)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm('Are you sure you want to delete this channel?')) {
+                      collabService.deleteChannel(channel.id)
+                        .then(() => {
+                          setChannels(prev => prev.filter(c => c.id !== channel.id));
+                          if (selectedChannel === channel.id) {
+                            setSelectedChannel(null);
+                            setMessages([]);
+                          }
+                          toast({
+                            title: 'Channel deleted',
+                            description: 'Channel was deleted successfully',
+                          });
+                        })
+                        .catch(error => {
+                          console.error('Error deleting channel:', error);
+                          toast({
+                            title: 'Error deleting channel',
+                            description: 'Could not delete the channel. Please try again.',
+                            variant: 'destructive'
+                          });
+                        });
+                    }
+                  }}
                 >
                   &times;
                 </Button>
@@ -453,7 +494,32 @@ const CollabSpaceApp = () => {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
-                      handleSend();
+                      // Add here the message sending logic
+                      if (!newMessage.trim()) return;
+                      
+                      try {
+                        collabService.sendMessage(
+                          selectedChannel,
+                          userId,
+                          newMessage
+                        ).then(() => {
+                          setNewMessage('');
+                        }).catch(error => {
+                          console.error('Error sending message:', error);
+                          toast({
+                            title: 'Error sending message',
+                            description: 'Could not send your message. Please try again.',
+                            variant: 'destructive'
+                          });
+                        });
+                      } catch (error) {
+                        console.error('Error sending message:', error);
+                        toast({
+                          title: 'Error sending message',
+                          description: 'Could not send your message. Please try again.',
+                          variant: 'destructive'
+                        });
+                      }
                     }
                   }}
                 />
@@ -471,7 +537,11 @@ const CollabSpaceApp = () => {
                       id="file-upload"
                       type="file"
                       className="hidden"
-                      onChange={handleFileChange}
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setMessageFile(e.target.files[0]);
+                        }
+                      }}
                     />
                   </Button>
                   <Button
@@ -484,7 +554,33 @@ const CollabSpaceApp = () => {
                   </Button>
                   <Button
                     size="icon"
-                    onClick={handleSend}
+                    onClick={() => {
+                      if (!newMessage.trim() && !messageFile) return;
+                      
+                      try {
+                        collabService.sendMessage(
+                          selectedChannel,
+                          userId,
+                          newMessage
+                        ).then(() => {
+                          setNewMessage('');
+                        }).catch(error => {
+                          console.error('Error sending message:', error);
+                          toast({
+                            title: 'Error sending message',
+                            description: 'Could not send your message. Please try again.',
+                            variant: 'destructive'
+                          });
+                        });
+                      } catch (error) {
+                        console.error('Error sending message:', error);
+                        toast({
+                          title: 'Error sending message',
+                          description: 'Could not send your message. Please try again.',
+                          variant: 'destructive'
+                        });
+                      }
+                    }}
                   >
                     <Send className="h-4 w-4" />
                   </Button>

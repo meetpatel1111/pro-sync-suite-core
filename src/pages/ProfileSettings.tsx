@@ -5,9 +5,29 @@ import UserProfileSettings from '@/components/UserProfileSettings';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { useAuthContext } from '@/context/AuthContext';
 
 const ProfileSettings = () => {
   const navigate = useNavigate();
+  const { user } = useAuthContext();
+
+  if (!user) {
+    return (
+      <AppLayout>
+        <div className="flex justify-center items-center h-full">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold">Please sign in to access profile settings</h2>
+            <Button 
+              className="mt-4"
+              onClick={() => navigate('/auth')}
+            >
+              Go to Sign In
+            </Button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -28,7 +48,7 @@ const ProfileSettings = () => {
           </p>
         </div>
         
-        <UserProfileSettings />
+        <UserProfileSettings userId={user.id} />
       </div>
     </AppLayout>
   );
