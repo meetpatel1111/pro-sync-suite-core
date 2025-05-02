@@ -9,13 +9,16 @@ const handleError = (error: any) => {
 };
 
 // Channel Functions
-const getChannels = async (workspaceId: string) => {
+const getChannels = async (workspaceId?: string) => {
   try {
-    const { data, error } = await supabase
-      .from('channels')
-      .select('*')
-      .eq('workspace_id', workspaceId)
-      .order('created_at', { ascending: false });
+    let query = supabase.from('channels').select('*').order('created_at', { ascending: false });
+    
+    // Only filter by workspace if provided
+    if (workspaceId) {
+      query = query.eq('workspace_id', workspaceId);
+    }
+    
+    const { data, error } = await query;
     
     if (error) return handleError(error);
     return { data, error };
@@ -430,6 +433,382 @@ const removeReaction = async (messageId: string, userId: string) => {
     }
   };
 
+// Add all the missing functions that are causing errors
+
+// Messages
+const sendMessage = async (channelId: string, userId: string, content: string) => {
+  try {
+    const messageData = {
+      channel_id: channelId,
+      user_id: userId,
+      content,
+      type: 'text',
+      read_by: [userId]
+    };
+    
+    const { data, error } = await supabase
+      .from('messages')
+      .insert(messageData)
+      .select()
+      .single();
+    
+    if (error) return handleError(error);
+    return { data, error };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+const editMessage = async (messageId: string, content: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .update({
+        content,
+        edited_at: new Date().toISOString()
+      })
+      .eq('id', messageId)
+      .select()
+      .single();
+    
+    if (error) return handleError(error);
+    return { data, error };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+// Pin/Unpin
+const pinMessage = async (messageId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .update({ is_pinned: true })
+      .eq('id', messageId)
+      .select()
+      .single();
+    
+    if (error) return handleError(error);
+    return { data, error };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+const unpinMessage = async (messageId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .update({ is_pinned: false })
+      .eq('id', messageId)
+      .select()
+      .single();
+    
+    if (error) return handleError(error);
+    return { data, error };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+// Mark as read
+const markAsRead = async (messageId: string, userId: string) => {
+  try {
+    // Get the current message
+    const { data: message, error: getError } = await supabase
+      .from('messages')
+      .select('read_by')
+      .eq('id', messageId)
+      .single();
+    
+    if (getError) return handleError(getError);
+    
+    // Add the user to read_by if not already there
+    let readBy = message.read_by || [];
+    if (!Array.isArray(readBy)) {
+      readBy = [];
+    }
+    
+    if (!readBy.includes(userId)) {
+      readBy.push(userId);
+      
+      const { data, error } = await supabase
+        .from('messages')
+        .update({ read_by: readBy })
+        .eq('id', messageId)
+        .select()
+        .single();
+      
+      if (error) return handleError(error);
+      return { data, error };
+    }
+    
+    return { data: message, error: null };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+// File upload
+const uploadFile = async (file: File, channelId: string, userId: string) => {
+  try {
+    // Create a unique file path
+    const filePath = `${channelId}/${userId}/${Date.now()}_${file.name}`;
+    
+    // Upload to Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('channel-files')
+      .upload(filePath, file);
+    
+    if (uploadError) return handleError(uploadError);
+    
+    // Get public URL
+    const { data: publicUrlData } = supabase.storage
+      .from('channel-files')
+      .getPublicUrl(filePath);
+    
+    const fileUrl = publicUrlData.publicUrl;
+    
+    // Create file record in database
+    const { data: fileData, error: fileError } = await supabase
+      .from('files')
+      .insert({
+        name: file.name,
+        storage_path: filePath,
+        file_type: file.type,
+        size_bytes: file.size,
+        user_id: userId,
+        channel_id: channelId,
+        is_public: true
+      })
+      .select()
+      .single();
+    
+    if (fileError) return handleError(fileError);
+    
+    return { 
+      data: { 
+        ...fileData,
+        url: fileUrl 
+      }, 
+      error: null 
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+// Scheduled messages
+const scheduleMessage = async (messageData: Partial<Message>, scheduledFor: Date) => {
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        ...messageData,
+        scheduled_for: scheduledFor.toISOString(),
+        type: 'scheduled'
+      })
+      .select()
+      .single();
+    
+    if (error) return handleError(error);
+    return { data, error };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+// Search
+const searchMessages = async (query: string, filters?: { channel_id?: string, from_date?: string, to_date?: string }) => {
+  try {
+    let supabaseQuery = supabase
+      .from('messages')
+      .select('*')
+      .ilike('content', `%${query}%`);
+    
+    if (filters?.channel_id) {
+      supabaseQuery = supabaseQuery.eq('channel_id', filters.channel_id);
+    }
+    
+    if (filters?.from_date) {
+      supabaseQuery = supabaseQuery.gte('created_at', filters.from_date);
+    }
+    
+    if (filters?.to_date) {
+      supabaseQuery = supabaseQuery.lte('created_at', filters.to_date);
+    }
+    
+    const { data, error } = await supabaseQuery;
+    
+    if (error) return handleError(error);
+    return { data, error };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+// Group DM
+const createGroupDM = async (memberIds: string[], currentUserId: string) => {
+  try {
+    // Create a new channel of type group_dm
+    const { data: channel, error: channelError } = await supabase
+      .from('channels')
+      .insert({
+        name: `Group ${new Date().getTime()}`,
+        type: 'group_dm',
+        created_by: currentUserId
+      })
+      .select()
+      .single();
+    
+    if (channelError) return handleError(channelError);
+    
+    // Add all members to the channel
+    const allMembers = [...new Set([...memberIds, currentUserId])];
+    const memberData = allMembers.map(userId => ({
+      channel_id: channel.id,
+      user_id: userId
+    }));
+    
+    const { error: memberError } = await supabase
+      .from('channel_members')
+      .insert(memberData);
+    
+    if (memberError) return handleError(memberError);
+    
+    return { data: channel, error: null };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+// Project Channel
+const autoCreateProjectChannel = async (projectId: string, projectName: string, userId: string) => {
+  try {
+    // Create a channel for the project
+    const { data: channel, error: channelError } = await supabase
+      .from('channels')
+      .insert({
+        name: `Project: ${projectName}`,
+        description: `Channel for project ${projectName}`,
+        type: 'public',
+        created_by: userId
+      })
+      .select()
+      .single();
+    
+    if (channelError) return handleError(channelError);
+    
+    // Add the creator as a member
+    const { error: memberError } = await supabase
+      .from('channel_members')
+      .insert({
+        channel_id: channel.id,
+        user_id: userId
+      });
+    
+    if (memberError) return handleError(memberError);
+    
+    // Create a welcome message
+    const { error: messageError } = await supabase
+      .from('messages')
+      .insert({
+        channel_id: channel.id,
+        user_id: userId,
+        content: `Channel created for project ${projectName}`,
+        type: 'system'
+      });
+    
+    if (messageError) return handleError(messageError);
+    
+    return { data: channel, error: null };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+// Approvals
+const getApprovalsForMessage = async (messageId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('approvals')
+      .select('*')
+      .eq('message_id', messageId);
+    
+    if (error) return handleError(error);
+    return { data, error };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+const createApproval = async (messageId: string, approvalType: string, approverId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('approvals')
+      .insert({
+        message_id: messageId,
+        approval_type: approvalType,
+        approver_id: approverId,
+        status: 'pending'
+      })
+      .select()
+      .single();
+    
+    if (error) return handleError(error);
+    return { data, error };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+const updateApprovalStatus = async (approvalId: string, status: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('approvals')
+      .update({ status })
+      .eq('id', approvalId)
+      .select()
+      .single();
+    
+    if (error) return handleError(error);
+    return { data, error };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+// Tasks
+const createTaskFromMessage = async (messageId: string, taskData: any) => {
+  try {
+    // First get the message to reference the content
+    const { data: message, error: messageError } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('id', messageId)
+      .single();
+    
+    if (messageError) return handleError(messageError);
+    
+    // Create a task
+    const { data: task, error: taskError } = await supabase
+      .from('tasks')
+      .insert({
+        ...taskData,
+        description: `Created from message: ${message.content}`,
+        user_id: message.user_id
+      })
+      .select()
+      .single();
+    
+    if (taskError) return handleError(taskError);
+    
+    return { data: task, error: null };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
 const collabService = {
     getChannels,
     createChannel,
@@ -457,6 +836,21 @@ const collabService = {
     onMessageDelete,
     addReaction,
     removeReaction,
+    // Add newly implemented methods to the service export
+    sendMessage,
+    editMessage,
+    pinMessage,
+    unpinMessage,
+    markAsRead,
+    uploadFile,
+    scheduleMessage,
+    searchMessages,
+    createGroupDM,
+    autoCreateProjectChannel,
+    getApprovalsForMessage,
+    createApproval,
+    updateApprovalStatus,
+    createTaskFromMessage
 };
 
 export default collabService;

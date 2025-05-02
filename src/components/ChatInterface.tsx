@@ -1,7 +1,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
-import { Message } from '../services/collabService';
+import { Message } from '@/utils/dbtypes'; // Fix: Import Message from dbtypes instead of collabService
 import collabService from '../services/collabService';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -50,9 +50,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
-  const handleRemoveReaction = async (messageId: string, emoji: string) => {
+  const handleRemoveReaction = async (messageId: string) => { // Fix: Remove emoji parameter - not used in implementation
     try {
-      await collabService.removeReaction(messageId, currentUserId, emoji);
+      await collabService.removeReaction(messageId, currentUserId);
     } catch (error) {
       console.error('Error removing reaction:', error);
       toast({
