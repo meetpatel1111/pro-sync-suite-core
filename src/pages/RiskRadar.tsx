@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import RiskRadarChart from '@/components/RiskRadarChart';
 import RiskTable from '@/components/RiskTable';
-import { dbService } from '@/services/dbService';
+import dbService from '@/services/dbService'; // Fixed import statement
 import {
   DropdownMenu,
   DropdownMenuContent,

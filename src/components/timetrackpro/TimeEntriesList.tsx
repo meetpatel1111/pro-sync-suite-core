@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import dbService from '@/services/dbService';
@@ -32,7 +33,7 @@ const TimeEntriesList = () => {
     try {
       // Use the timetrackpro service to fetch time entries
       const { data: entriesData } = await dbService.getTimeEntries(user?.id, {
-        project_id: projectFilter,
+        projectId: projectFilter, // Fixed: Changed project_id to projectId
         start_date: startDateFilter,
         end_date: endDateFilter
       });

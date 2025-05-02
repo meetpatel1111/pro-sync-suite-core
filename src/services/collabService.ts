@@ -1,15 +1,14 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-// Define types
 export interface Channel {
   id: string;
   name: string;
-  type: "public" | "private" | "direct" | "project";
-  about?: string;
-  description?: string;
-  created_at?: string;
+  type: 'public' | 'private' | 'dm' | 'group_dm';
+  created_at: string;
   created_by?: string;
+  description?: string;
+  about?: string;
   updated_at?: string;
 }
 
@@ -19,451 +18,540 @@ export interface Message {
   user_id: string;
   content?: string;
   created_at: string;
-  updated_at: string;
-  reactions: Record<string, string[]>;
-  is_pinned: boolean;
-  type: 'text' | 'image' | 'file' | 'poll';
   username?: string;
+  edited_at?: string;
+  reactions?: any;
+  mentions?: any[];
+  read_by?: any[];
+  parent_id?: string;
+  is_pinned?: boolean;
+  scheduled_for?: string;
+  file_url?: string;
   name?: string;
   channel_name?: string;
-  parent_id?: string;
-  file_url?: string;
-  edited_at?: string;
-  read_by?: Record<string, boolean>;
-  mentions?: Record<string, string>;
-  scheduled_for?: string;
+  type?: string;
 }
 
-// Function to get channels
-async function getChannels() {
+// Get channels that user is a member of
+const getChannels = async () => {
   try {
     const { data, error } = await supabase
       .from('channels')
       .select('*')
-      .order('name');
-
-    if (error) {
-      return { error };
-    }
-
-    return { data: data as Channel[] };
-  } catch (error) {
-    return { error };
-  }
-}
-
-// Function to create a channel
-async function createChannel(channelData: Omit<Channel, 'id' | 'created_at' | 'updated_at'>) {
-  try {
-    const { data, error } = await supabase
-      .from('channels')
-      .insert([channelData])
-      .select()
-      .single();
-
-    if (error) {
-      return { error };
-    }
-
-    return { data: data as Channel };
-  } catch (error) {
-    return { error };
-  }
-}
-
-// Function to delete a channel
-async function deleteChannel(channelId: string) {
-  try {
-    const { error } = await supabase
-      .from('channels')
-      .delete()
-      .eq('id', channelId);
-      
-    if (error) throw error;
-    
-    return { success: true };
-  } catch (error) {
-    return { error };
-  }
-}
-
-// Function to get channel members
-async function getChannelMembers(channelId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('channel_members')
-      .select('*, profiles:user_id(full_name, avatar_url)')
-      .eq('channel_id', channelId);
-      
-    if (error) throw error;
-    
-    return { data };
-  } catch (error) {
-    return { error };
-  }
-}
-
-// Function to get channel files
-async function getChannelFiles(channelId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('files')
-      .select('*')
-      .eq('channel_id', channelId)
       .order('created_at', { ascending: false });
-      
-    if (error) throw error;
     
+    if (error) {
+      console.error('Error fetching channels:', error);
+      return { error };
+    }
     return { data };
   } catch (error) {
+    console.error('Exception in getChannels:', error);
     return { error };
   }
-}
+};
 
-// Function to get messages for a channel
-async function getMessages(channelId: string) {
+// Create a new channel
+const createChannel = async (channelData: Omit<Channel, 'created_at' | 'id' | 'updated_at'>) => {
+  try {
+    const { data, error } = await supabase
+      .from('channels')
+      .insert(channelData)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating channel:', error);
+      return { error };
+    }
+    return { data };
+  } catch (error) {
+    console.error('Exception in createChannel:', error);
+    return { error };
+  }
+};
+
+// Get all users for potential channel members
+const getUsers = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('id, full_name');
+    
+    if (error) {
+      console.error('Error fetching users:', error);
+      return { error };
+    }
+    return { data };
+  } catch (error) {
+    console.error('Exception in getUsers:', error);
+    return { error };
+  }
+};
+
+// Get messages for a channel
+const getMessages = async (channelId: string) => {
   try {
     const { data, error } = await supabase
       .from('messages')
       .select('*')
       .eq('channel_id', channelId)
-      .order('created_at');
-
+      .order('created_at', { ascending: true });
+    
     if (error) {
+      console.error('Error fetching messages:', error);
       return { error };
     }
-
-    return { data: data as Message[] };
-  } catch (error) {
-    return { error };
-  }
-}
-
-// Function to create a message
-async function sendMessage(messageData: {
-  channel_id: string;
-  user_id: string;
-  content?: string;
-  file_url?: string | null;
-  parent_id?: string | null;
-}) {
-  try {
-    const { data, error } = await supabase
-      .from('messages')
-      .insert([{
-        ...messageData,
-        reactions: {},
-        is_pinned: false,
-        type: 'text'
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      return { error };
-    }
-
-    return { data: data as Message };
-  } catch (error) {
-    return { error };
-  }
-}
-
-// Function to upload a file
-async function uploadFile(file: File, channelId: string, userId: string) {
-  try {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-    const filePath = `channel_files/${channelId}/${fileName}`;
-    
-    const { data: uploadData, error: uploadError } = await supabase
-      .storage
-      .from('uploads')
-      .upload(filePath, file);
-      
-    if (uploadError) throw uploadError;
-    
-    // Get public URL
-    const { data: urlData } = await supabase
-      .storage
-      .from('uploads')
-      .getPublicUrl(filePath);
-      
-    // Create file record in database
-    const { data: fileRecord, error: fileError } = await supabase
-      .from('files')
-      .insert([{
-        name: file.name,
-        storage_path: filePath,
-        user_id: userId,
-        channel_id: channelId,
-        file_type: file.type,
-        size_bytes: file.size
-      }])
-      .select()
-      .single();
-      
-    if (fileError) throw fileError;
-    
-    return { 
-      data: { 
-        url: urlData.publicUrl,
-        file: fileRecord
-      } 
-    };
-  } catch (error) {
-    return { error };
-  }
-}
-
-// Function to schedule a message
-async function scheduleMessage(
-  messageData: {
-    channel_id: string;
-    user_id: string;
-    content?: string;
-    file_url?: string | null;
-    parent_id?: string | null;
-  },
-  scheduledFor: Date
-) {
-  try {
-    const { data, error } = await supabase
-      .from('messages')
-      .insert([{
-        ...messageData,
-        reactions: {},
-        is_pinned: false,
-        type: 'text',
-        scheduled_for: scheduledFor.toISOString()
-      }])
-      .select()
-      .single();
-      
-    if (error) throw error;
-    
     return { data };
   } catch (error) {
+    console.error('Exception in getMessages:', error);
     return { error };
   }
-}
+};
 
-// Function to add reaction to message
-async function addReaction(messageId: string, userId: string, emoji: string) {
+// Send a message to a channel
+const sendMessage = async (channelId: string, userId: string, content: string) => {
   try {
-    // First get the message with existing reactions
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        channel_id: channelId,
+        user_id: userId,
+        content
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error sending message:', error);
+      return { error };
+    }
+    return { data };
+  } catch (error) {
+    console.error('Exception in sendMessage:', error);
+    return { error };
+  }
+};
+
+// Add reaction to a message
+const addReaction = async (messageId: string, userId: string, emoji: string) => {
+  try {
+    // First get the current reactions
     const { data: message, error: fetchError } = await supabase
       .from('messages')
       .select('reactions')
       .eq('id', messageId)
       .single();
-      
-    if (fetchError) throw fetchError;
     
-    // Update reactions
+    if (fetchError) {
+      console.error('Error fetching message reactions:', fetchError);
+      return { error: fetchError };
+    }
+    
+    // Update or create the reaction
     const reactions = message?.reactions || {};
-    
     if (!reactions[emoji]) {
-      reactions[emoji] = [userId];
-    } else if (!reactions[emoji].includes(userId)) {
+      reactions[emoji] = [];
+    }
+    
+    // Add user if not already reacted
+    if (!reactions[emoji].includes(userId)) {
       reactions[emoji].push(userId);
     }
     
-    // Update the message
-    const { error: updateError } = await supabase
+    const { data, error } = await supabase
       .from('messages')
       .update({ reactions })
-      .eq('id', messageId);
-      
-    if (updateError) throw updateError;
+      .eq('id', messageId)
+      .select()
+      .single();
     
-    return { success: true, reactions };
+    if (error) {
+      console.error('Error adding reaction:', error);
+      return { error };
+    }
+    return { data };
   } catch (error) {
+    console.error('Exception in addReaction:', error);
     return { error };
   }
-}
+};
 
-// Function to remove reaction from message
-async function removeReaction(messageId: string, userId: string, emoji: string) {
+// Remove reaction from a message
+const removeReaction = async (messageId: string, userId: string, emoji: string) => {
   try {
-    // First get the message with existing reactions
+    // First get the current reactions
     const { data: message, error: fetchError } = await supabase
       .from('messages')
       .select('reactions')
       .eq('id', messageId)
       .single();
-      
-    if (fetchError) throw fetchError;
     
-    // Update reactions
+    if (fetchError) {
+      console.error('Error fetching message reactions:', fetchError);
+      return { error: fetchError };
+    }
+    
+    // Update the reaction
     const reactions = message?.reactions || {};
-    
     if (reactions[emoji]) {
       reactions[emoji] = reactions[emoji].filter((id: string) => id !== userId);
+      
+      // Remove the emoji key if no users left
       if (reactions[emoji].length === 0) {
         delete reactions[emoji];
       }
     }
     
-    // Update the message
-    const { error: updateError } = await supabase
+    const { data, error } = await supabase
       .from('messages')
       .update({ reactions })
-      .eq('id', messageId);
-      
-    if (updateError) throw updateError;
+      .eq('id', messageId)
+      .select()
+      .single();
     
-    return { success: true, reactions };
+    if (error) {
+      console.error('Error removing reaction:', error);
+      return { error };
+    }
+    return { data };
   } catch (error) {
+    console.error('Exception in removeReaction:', error);
     return { error };
   }
-}
+};
 
-// Function to pin/unpin message
-async function pinMessage(messageId: string) {
+// Pin/unpin message
+const pinMessage = async (messageId: string) => {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('messages')
       .update({ is_pinned: true })
-      .eq('id', messageId);
-      
-    if (error) throw error;
+      .eq('id', messageId)
+      .select()
+      .single();
     
-    return { success: true };
+    if (error) {
+      console.error('Error pinning message:', error);
+      return { error };
+    }
+    return { data };
   } catch (error) {
+    console.error('Exception in pinMessage:', error);
     return { error };
   }
-}
+};
 
-async function unpinMessage(messageId: string) {
+const unpinMessage = async (messageId: string) => {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('messages')
       .update({ is_pinned: false })
-      .eq('id', messageId);
-      
-    if (error) throw error;
+      .eq('id', messageId)
+      .select()
+      .single();
     
-    return { success: true };
+    if (error) {
+      console.error('Error unpinning message:', error);
+      return { error };
+    }
+    return { data };
   } catch (error) {
+    console.error('Exception in unpinMessage:', error);
     return { error };
   }
-}
+};
 
-// Function to mark message as read
-async function markAsRead(messageId: string, userId: string) {
+// Mark message as read
+const markAsRead = async (messageId: string, userId: string) => {
   try {
-    // First get the current read_by status
+    // First get the current read_by
     const { data: message, error: fetchError } = await supabase
       .from('messages')
       .select('read_by')
       .eq('id', messageId)
       .single();
-      
-    if (fetchError) throw fetchError;
+    
+    if (fetchError) {
+      console.error('Error fetching message read status:', fetchError);
+      return { error: fetchError };
+    }
     
     // Update read_by
-    const readBy = message?.read_by || {};
-    readBy[userId] = true;
+    const readBy = message?.read_by || [];
+    if (!readBy.includes(userId)) {
+      readBy.push(userId);
+    }
     
-    // Update the message
-    const { error: updateError } = await supabase
+    const { data, error } = await supabase
       .from('messages')
       .update({ read_by: readBy })
-      .eq('id', messageId);
-      
-    if (updateError) throw updateError;
+      .eq('id', messageId)
+      .select()
+      .single();
     
-    return { success: true };
+    if (error) {
+      console.error('Error marking message as read:', error);
+      return { error };
+    }
+    return { data };
   } catch (error) {
+    console.error('Exception in markAsRead:', error);
     return { error };
   }
-}
+};
 
-// Function to delete message
-async function deleteMessage(messageId: string) {
+// Delete message
+const deleteMessage = async (messageId: string) => {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('messages')
       .delete()
       .eq('id', messageId);
-      
-    if (error) throw error;
     
-    return { success: true };
+    if (error) {
+      console.error('Error deleting message:', error);
+      return { error };
+    }
+    return { data };
   } catch (error) {
+    console.error('Exception in deleteMessage:', error);
     return { error };
   }
-}
+};
 
-// Function to edit message
-async function editMessage(messageId: string, content: string) {
+// Edit message
+const editMessage = async (messageId: string, content: string) => {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('messages')
-      .update({ 
-        content, 
-        edited_at: new Date().toISOString() 
+      .update({
+        content,
+        edited_at: new Date().toISOString()
       })
-      .eq('id', messageId);
-      
-    if (error) throw error;
+      .eq('id', messageId)
+      .select()
+      .single();
     
-    return { success: true };
+    if (error) {
+      console.error('Error editing message:', error);
+      return { error };
+    }
+    return { data };
   } catch (error) {
+    console.error('Exception in editMessage:', error);
     return { error };
   }
-}
+};
 
-// Function to get approvals for a message
-async function getApprovalsForMessage(messageId: string) {
+// Create approval for a message
+const createApproval = async (messageId: string, approvalType: string, userId: string) => {
   try {
     const { data, error } = await supabase
       .from('approvals')
-      .select('*, profiles:approver_id(full_name, avatar_url)')
+      .insert({
+        message_id: messageId,
+        approval_type: approvalType,
+        approver_id: userId,
+        status: 'pending'
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating approval:', error);
+      return { error };
+    }
+    return { data };
+  } catch (error) {
+    console.error('Exception in createApproval:', error);
+    return { error };
+  }
+};
+
+// Get approvals for a message
+const getApprovalsForMessage = async (messageId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('approvals')
+      .select('*')
       .eq('message_id', messageId);
-      
-    if (error) throw error;
+    
+    if (error) {
+      console.error('Error fetching approvals:', error);
+      return { error };
+    }
+    return { data };
+  } catch (error) {
+    console.error('Exception in getApprovalsForMessage:', error);
+    return { error };
+  }
+};
+
+// Create a group DM channel
+const createGroupDM = async (userIds: string[], channelName: string, createdBy: string) => {
+  try {
+    // Create the channel first
+    const { data: channelData, error: channelError } = await supabase
+      .from('channels')
+      .insert({
+        name: channelName,
+        type: 'group_dm',
+        created_by: createdBy
+      })
+      .select()
+      .single();
+    
+    if (channelError) {
+      console.error('Error creating group DM channel:', channelError);
+      return { error: channelError };
+    }
+    
+    // Add all members to the channel
+    const members = userIds.map(userId => ({
+      channel_id: channelData.id,
+      user_id: userId
+    }));
+    
+    const { error: membersError } = await supabase
+      .from('channel_members')
+      .insert(members);
+    
+    if (membersError) {
+      console.error('Error adding members to group DM:', membersError);
+      return { error: membersError };
+    }
+    
+    return { data: channelData };
+  } catch (error) {
+    console.error('Exception in createGroupDM:', error);
+    return { error };
+  }
+};
+
+// Search messages
+const searchMessages = async (query: string, filters: any = {}) => {
+  try {
+    let messageQuery = supabase
+      .from('messages')
+      .select('*')
+      .ilike('content', `%${query}%`);
+    
+    // Apply filters
+    if (filters.channel_id) {
+      messageQuery = messageQuery.eq('channel_id', filters.channel_id);
+    }
+    
+    if (filters.user_id) {
+      messageQuery = messageQuery.eq('user_id', filters.user_id);
+    }
+    
+    if (filters.from_date) {
+      messageQuery = messageQuery.gte('created_at', filters.from_date);
+    }
+    
+    if (filters.to_date) {
+      messageQuery = messageQuery.lte('created_at', filters.to_date);
+    }
+    
+    const { data, error } = await messageQuery.order('created_at', { ascending: false }).limit(20);
+    
+    if (error) {
+      console.error('Error searching messages:', error);
+      return { error };
+    }
     
     return { data };
   } catch (error) {
+    console.error('Exception in searchMessages:', error);
     return { error };
   }
-}
+};
 
-// Set up real-time subscription for new messages
-function onNewMessageForChannel(channelId: string, callback: (newMessage: Message) => void) {
-  const channel = supabase
-    .channel(`messages:channel_id=eq.${channelId}`)
-    .on('postgres_changes', 
-      { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'messages',
-        filter: `channel_id=eq.${channelId}`
-      }, 
-      payload => {
-        if (payload.new) {
-          callback(payload.new as Message);
-        }
-      }
-    )
-    .subscribe();
+// Auto create a project channel
+const autoCreateProjectChannel = async (projectId: string, projectName: string, createdBy: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('channels')
+      .insert({
+        name: `project-${projectName}`,
+        type: 'public',
+        created_by: createdBy,
+        description: `Channel for project: ${projectName}`
+      })
+      .select()
+      .single();
     
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}
+    if (error) {
+      console.error('Error auto-creating project channel:', error);
+      return { error };
+    }
+    
+    return { data };
+  } catch (error) {
+    console.error('Exception in autoCreateProjectChannel:', error);
+    return { error };
+  }
+};
 
-// Bundle all functions into the collabService object
-const collabService = {
+// Create a task from message
+const createTaskFromMessage = async (messageId: string, taskDetails: any) => {
+  try {
+    // Get the message first
+    const { data: message, error: messageError } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('id', messageId)
+      .single();
+    
+    if (messageError) {
+      console.error('Error fetching message for task creation:', messageError);
+      return { error: messageError };
+    }
+    
+    // Create the task
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert({
+        title: taskDetails.title || `Task from message`,
+        description: message.content || '',
+        status: taskDetails.status || 'todo',
+        priority: taskDetails.priority || 'medium',
+        user_id: message.user_id,
+        assignee: taskDetails.assignee || message.user_id,
+        due_date: taskDetails.due_date
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating task from message:', error);
+      return { error };
+    }
+    
+    return { data };
+  } catch (error) {
+    console.error('Exception in createTaskFromMessage:', error);
+    return { error };
+  }
+};
+
+// Subscribe to channel updates using Realtime
+const subscribeToChannel = (channelId: string, callback: (payload: any) => void) => {
+  const channel = supabase
+    .channel(`public:messages:channel_id=eq.${channelId}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `channel_id=eq.${channelId}` }, callback)
+    .subscribe();
+  
+  return channel;
+};
+
+// Export all functions
+export default {
   getChannels,
   createChannel,
-  deleteChannel,
   getMessages,
   sendMessage,
-  uploadFile,
-  scheduleMessage,
   addReaction,
   removeReaction,
   pinMessage,
@@ -471,178 +559,12 @@ const collabService = {
   markAsRead,
   deleteMessage,
   editMessage,
+  getUsers,
+  createApproval,
   getApprovalsForMessage,
-  getChannelMembers,
-  getChannelFiles,
-  onNewMessageForChannel,
-  subscribeToMessages: onNewMessageForChannel,
-  subscribeToChannel: (channelId: string, callback: (payload: any) => void) => {
-    const channel = supabase
-      .channel(`channels:id=eq.${channelId}`)
-      .on('postgres_changes', 
-        { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'channels',
-          filter: `id=eq.${channelId}`
-        }, 
-        payload => {
-          callback(payload.new);
-        }
-      )
-      .subscribe();
-      
-    return channel;
-  },
-  
-  // Add missing methods
-  createApproval: async (messageId: string, approvalType: string, approverId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('approvals')
-        .insert({
-          message_id: messageId,
-          approval_type: approvalType,
-          approver_id: approverId,
-          status: 'pending'
-        })
-        .select()
-        .single();
-      
-      if (error) return { error };
-      return { data };
-    } catch (error) {
-      return { error };
-    }
-  },
-
-  searchMessages: async (query: string, filters: any = {}) => {
-    try {
-      let messagesQuery = supabase
-        .from('messages')
-        .select('*')
-        .ilike('content', `%${query}%`);
-      
-      // Apply filters if provided
-      if (filters.channel_id) {
-        messagesQuery = messagesQuery.eq('channel_id', filters.channel_id);
-      }
-      
-      if (filters.user_id) {
-        messagesQuery = messagesQuery.eq('user_id', filters.user_id);
-      }
-      
-      if (filters.from_date) {
-        messagesQuery = messagesQuery.gte('created_at', filters.from_date);
-      }
-      
-      if (filters.to_date) {
-        messagesQuery = messagesQuery.lte('created_at', filters.to_date);
-      }
-      
-      const { data, error } = await messagesQuery;
-      
-      if (error) return { error };
-      return { data };
-    } catch (error) {
-      return { error };
-    }
-  },
-  
-  createGroupDM: async (userIds: string[], creatorId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('channels')
-        .insert({
-          name: 'Group DM',
-          type: 'direct',
-          created_by: creatorId
-        })
-        .select()
-        .single();
-      
-      if (error) return { error };
-      
-      // Add all users (including creator) to channel members
-      const allMembers = [...userIds, creatorId];
-      
-      const memberPromises = allMembers.map(userId => 
-        supabase
-          .from('channel_members')
-          .insert({
-            channel_id: data.id,
-            user_id: userId
-          })
-      );
-      
-      await Promise.all(memberPromises);
-      
-      return { data };
-    } catch (error) {
-      return { error };
-    }
-  },
-  
-  autoCreateProjectChannel: async (projectId: string, userId: string) => {
-    try {
-      // First get project details
-      const { data: projectData, error: projectError } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('id', projectId)
-        .single();
-      
-      if (projectError) return { error: projectError };
-      
-      // Create channel for project
-      const { data, error } = await supabase
-        .from('channels')
-        .insert({
-          name: `Project: ${projectData.name}`,
-          description: `Channel for project: ${projectData.name}`,
-          type: 'project',
-          created_by: userId
-        })
-        .select()
-        .single();
-      
-      if (error) return { error };
-      
-      return { data };
-    } catch (error) {
-      return { error };
-    }
-  },
-  
-  createTaskFromMessage: async (messageId: string, taskDetails: any) => {
-    try {
-      // First get message details
-      const { data: messageData, error: messageError } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('id', messageId)
-        .single();
-      
-      if (messageError) return { error: messageError };
-      
-      // Create task based on message
-      const { data, error } = await supabase
-        .from('tasks')
-        .insert({
-          ...taskDetails,
-          description: messageData.content,
-          user_id: messageData.user_id
-        })
-        .select()
-        .single();
-      
-      if (error) return { error };
-      
-      return { data };
-    } catch (error) {
-      return { error };
-    }
-  }
+  createGroupDM,
+  searchMessages,
+  autoCreateProjectChannel,
+  createTaskFromMessage,
+  subscribeToChannel
 };
-
-export default collabService;

@@ -1,13 +1,20 @@
 
-// Define types for database entities
+// Database type definitions for application entities
+
+export interface User {
+  id: string;
+  email: string;
+  full_name?: string;
+  avatar_url?: string;
+}
 
 export interface Client {
   id: string;
   name: string;
+  user_id: string;
   email?: string;
   phone?: string;
   company?: string;
-  user_id: string;
   created_at: string;
 }
 
@@ -19,11 +26,100 @@ export interface ClientNote {
   created_at: string;
 }
 
+export interface Channel {
+  id: string;
+  name: string;
+  type: 'public' | 'private' | 'dm' | 'group_dm';
+  created_at: string;
+  user_id: string;
+}
+
+export interface Message {
+  id: string;
+  channel_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  username?: string;
+  edited_at?: string;
+  reactions?: any;
+  mentions?: any[];
+  parent_id?: string;
+  file_url?: string;
+  scheduled_for?: string;
+  type?: string;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority: string;
+  due_date?: string;
+  assignee?: string;
+  user_id: string;
+  project_id?: string;
+  created_at: string;
+}
+
+export interface TimeEntry {
+  id: string;
+  user_id: string;
+  project_id?: string;
+  task_id?: string;
+  description: string;
+  date: string;
+  time_spent: number;
+  billable?: boolean;
+  hourly_rate?: number;
+  notes?: string;
+  tags?: string[];
+  manual?: boolean;
+  project?: string;
+  start_time?: string;
+  created_at?: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  status?: string;
+  start_date?: string;
+  end_date?: string;
+  user_id: string;
+  created_at: string;
+}
+
 export interface ResourceAllocation {
   id: string;
-  team: string;
-  allocation: number;
+  resource_id: string;
   user_id: string;
+  allocation: number;
+  team: string;
+  created_at?: string;
+}
+
+export interface Resource {
+  id: string;
+  name: string;
+  role: string;
+  user_id?: string;
+  utilization?: number;
+  availability?: string;
+  allocation?: number;
+  current_project_id?: string;
+  created_at?: string;
+}
+
+export interface Risk {
+  id: string;
+  project_id?: string;
+  task_id?: string;
+  description?: string;
+  level?: string;
+  status?: string;
   created_at?: string;
 }
 
@@ -38,45 +134,39 @@ export interface Dashboard {
 export interface Widget {
   id: string;
   dashboard_id: string;
-  title: string;
   widget_type: string;
-  config: Record<string, any>;
-  position: { x: number; y: number; w: number; h: number };
+  position: any;
+  config: any;
+  title: string;
   user_id: string;
   created_at: string;
 }
 
-export interface Project {
+export interface File {
   id: string;
   name: string;
   description?: string;
-  user_id: string;
-  created_at: string;
-}
-
-export interface TimeEntry {
-  id: string;
-  task_id?: string;
+  file_type: string;
+  storage_path: string;
+  size_bytes: number;
+  is_public: boolean;
+  is_archived: boolean;
   user_id: string;
   project_id?: string;
-  start_time: string;
-  end_time?: string;
-  duration?: number;
-  description?: string;
+  task_id?: string;
+  channel_id?: string;
   created_at: string;
+  updated_at: string;
 }
 
-export interface Task {
+export interface Notification {
   id: string;
-  title: string;
-  description?: string;
-  status: string;
-  priority: string;
-  due_date?: string;
-  assignee?: string;
-  project?: string;
   user_id: string;
+  title: string;
+  message: string;
+  type: string;
+  related_to?: string;
+  related_id?: string;
+  read: boolean;
   created_at: string;
 }
-
-// Add other database entity types as needed

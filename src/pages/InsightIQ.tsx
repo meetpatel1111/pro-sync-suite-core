@@ -1,67 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  BarChart2, 
-  ArrowLeft, 
-  Plus, 
-  Filter, 
-  PieChart, 
-  LineChart, 
-  CalendarDays, 
-  User, 
-  Users,
-  FileText,
-  Clock,
-  Download,
-  Activity,
-  TrendingUp,
-  Pencil,
-  Trash2
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { SelectValue, SelectTrigger, SelectItem, SelectContent, Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend,
-  LineChart as RechartLineChart,
-  Line,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell
-} from 'recharts';
-import type { Dashboard, Widget, Project, TimeEntry, Task } from '@/utils/dbtypes';
+  ChevronDown, 
+  Download, 
+  RefreshCw, 
+  Table as TableIcon, 
+  Layers, 
+  Calendar, 
+  BarChart as BarChartIcon, 
+  PieChart as PieChartIcon, 
+  Clock, 
+  Search, 
+  Filter, 
+  FileText,
+  CheckSquare,
+  AlertTriangle,
+  TrendingUp
+} from 'lucide-react';
+import { useAuthContext } from '@/context/AuthContext';
+import dbService from '@/services/dbService';
+import { Dashboard, Widget, Project, TimeEntry, Task } from '@/utils/dbtypes';
 
 const InsightIQ = () => {
   const { toast } = useToast();
@@ -204,7 +168,9 @@ const InsightIQ = () => {
       if (error) throw error;
       
       if (data) {
-        setTimeEntries(data as TimeEntry[]);
+        const entries = data as TimeEntry[];
+        const hoursWorked = getHoursWorked(entries);
+        setTimeEntries(entries);
       }
     } catch (error) {
       console.error('Error fetching time entries:', error);
@@ -502,7 +468,7 @@ const InsightIQ = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
-              <RechartsTooltip />
+              <Tooltip />
               <Legend />
               <Bar dataKey="value" fill="#8884d8" />
             </BarChart>
@@ -515,7 +481,7 @@ const InsightIQ = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
-              <RechartsTooltip />
+              <Tooltip />
               <Legend />
               <Line type="monotone" dataKey="value" stroke="#8884d8" />
             </RechartLineChart>
@@ -539,7 +505,7 @@ const InsightIQ = () => {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <RechartsTooltip />
+              <Tooltip />
             </RechartsPieChart>
           </ResponsiveContainer>
         );
@@ -553,6 +519,15 @@ const InsightIQ = () => {
     const completedTasks = tasks.filter(task => task.status === 'done').length;
     const percentage = (completedTasks / tasks.length) * 100;
     return Number(percentage.toFixed(1));
+  };
+
+  const getHoursWorked = (entries: any[]) => {
+    if (!entries || entries.length === 0) return 0;
+    return entries.reduce((sum, entry) => {
+      // Handle case where time_spent might not exist, or might be of different type
+      const timeSpent = typeof entry.time_spent === 'number' ? entry.time_spent : 0;
+      return sum + timeSpent;
+    }, 0);
   };
 
   if (!session) {

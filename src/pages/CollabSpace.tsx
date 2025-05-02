@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/components/AppLayout';
 import collabService from '@/services/collabService';
@@ -12,22 +13,7 @@ import { PollComposer } from '@/components/PollComposer';
 import { MeetingNotesPanel } from '@/components/MeetingNotesPanel';
 import { FileVaultPreview } from '@/components/FileVaultPreview';
 import { PlanBoardPreview } from '@/components/PlanBoardPreview';
-
-interface Channel {
-  id: string;
-  name: string;
-  type: 'public' | 'private' | 'dm' | 'group_dm';
-  created_at: string;
-  user_id: string;
-}
-
-interface Message {
-  id: string;
-  channel_id: string;
-  user_id: string;
-  content: string;
-  created_at: string;
-}
+import { Channel, Message } from '@/utils/dbtypes';
 
 const CollabSpace = () => {
   const { user } = useAuthContext();
@@ -42,14 +28,22 @@ const CollabSpace = () => {
     if (!user) return;
 
     const fetchChannels = async () => {
-      const result = await collabService.getChannels(user.id);
+      const result = await collabService.getChannels();
       if (result && result.data) {
-        setChannels(result.data);
+        // Cast the result to match our Channel interface
+        const typedChannels = result.data.map(ch => ({
+          id: ch.id,
+          name: ch.name,
+          type: ch.type as 'public' | 'private' | 'dm' | 'group_dm',
+          created_at: ch.created_at,
+          user_id: ch.created_by || user.id // Ensure user_id is set
+        }));
+        setChannels(typedChannels);
       }
     };
 
     const fetchAllUsers = async () => {
-      const result = await collabService.getAllUsers();
+      const result = await collabService.getUsers(); // Changed from getAllUsers to getUsers
       if (result && result.data) {
         setAllUsers(result.data.map(u => ({ id: u.id, name: u.full_name })));
       }
@@ -65,7 +59,22 @@ const CollabSpace = () => {
     const fetchMessages = async () => {
       const result = await collabService.getMessages(selectedChannelId);
       if (result && result.data) {
-        setMessages(result.data);
+        // Cast messages to match our Message interface
+        const typedMessages = result.data.map(msg => ({
+          id: msg.id,
+          channel_id: msg.channel_id,
+          user_id: msg.user_id,
+          content: msg.content || '',  // Ensure content is not undefined
+          created_at: msg.created_at,
+          username: msg.username,
+          edited_at: msg.edited_at,
+          reactions: msg.reactions,
+          parent_id: msg.parent_id,
+          file_url: msg.file_url,
+          scheduled_for: msg.scheduled_for,
+          type: msg.type
+        }));
+        setMessages(typedMessages);
       }
     };
 
@@ -81,22 +90,39 @@ const CollabSpace = () => {
     setSelectedChannelId(channel.id);
   };
 
-  const sendMessage = async (text: string, fileVaultId: string | null, planBoardId: string | null, meetingNotesId: string | null) => {
+  const sendMessage = async (content: string, fileId: string | null = null, planBoardId: string | null = null, meetingNotesId: string | null = null) => {
     if (!user || !selectedChannelId) return;
 
-    const result = await collabService.sendMessage(selectedChannelId, user.id, text, fileVaultId, planBoardId, meetingNotesId);
+    const result = await collabService.sendMessage(selectedChannelId, user.id, content);
     if (result && result.data) {
-      setMessages(prevMessages => [...prevMessages, result.data]);
+      // Cast the result to match our Message interface
+      const newMessage: Message = {
+        id: result.data.id,
+        channel_id: result.data.channel_id,
+        user_id: result.data.user_id,
+        content: result.data.content || '',
+        created_at: result.data.created_at
+      };
+      
+      setMessages(prevMessages => [...prevMessages, newMessage]);
       setMessageText('');
     }
   };
 
   const handleSendMessage = () => {
-    sendMessage(messageText, null, null, null);
+    sendMessage(messageText);
   };
 
-  const handleGroupDMCreated = (channel: Channel) => {
-    setChannels(prevChannels => [...prevChannels, channel]);
+  const handleGroupDMCreated = (channel: any) => {
+    // Convert to our Channel type
+    const newChannel: Channel = {
+      id: channel.id,
+      name: channel.name,
+      type: channel.type as 'public' | 'private' | 'dm' | 'group_dm',
+      created_at: channel.created_at,
+      user_id: channel.created_by || user?.id || ''
+    };
+    setChannels(prevChannels => [...prevChannels, newChannel]);
   };
 
   const getInitials = (name: string) => {

@@ -33,14 +33,56 @@ const ClientConnect = () => {
 
   const fetchClients = async () => {
     if (!user) return;
-    const response = await dbService.getClients(user.id);
-    setClients(response.data || []);
+    try {
+      const response = await dbService.getClients(user.id);
+      if (response.data) {
+        // Ensure clients data matches our Client interface
+        const typedClients: Client[] = response.data.map((client: any) => ({
+          id: client.id,
+          name: client.name,
+          user_id: client.user_id,
+          email: client.email || '',
+          phone: client.phone || '',
+          company: client.company || '',
+          created_at: client.created_at
+        }));
+        setClients(typedClients);
+      }
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch clients",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleClientSelect = async (client: Client) => {
     setSelectedClient(client);
-    const response = await dbService.getClientNotesByClientId(client.id);
-    setClientNotes((response.data || []) as ClientNote[]);
+    try {
+      const response = await dbService.getClientNotes(client.id);
+      if (response && response.data) {
+        // Convert API response to ClientNote[] type
+        const typedNotes: ClientNote[] = response.data.map((note: any) => ({
+          id: note.id,
+          client_id: note.client_id,
+          user_id: note.user_id,
+          content: note.content,
+          created_at: note.created_at
+        }));
+        setClientNotes(typedNotes);
+      } else {
+        setClientNotes([]);
+      }
+    } catch (error) {
+      console.error("Error fetching client notes:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch client notes",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -49,15 +91,34 @@ const ClientConnect = () => {
 
   const handleCreateClient = async () => {
     if (!user) return;
-    const response = await dbService.createClient({ ...clientData, user_id: user.id });
-    if (response.data) {
-      fetchClients();
-      setClientData({ name: '', email: '', phone: '', company: '' });
+    if (!clientData.name) {
       toast({
-        title: "Client created",
-        description: "The client has been created successfully",
+        title: "Validation Error",
+        description: "Client name is required",
+        variant: "destructive",
       });
-    } else if (response.error) {
+      return;
+    }
+    
+    try {
+      const clientToCreate = {
+        ...clientData,
+        user_id: user.id,
+        name: clientData.name || '' // Ensure name is not undefined
+      };
+      
+      const response = await dbService.createClient(clientToCreate as Client);
+      
+      if (response && response.data) {
+        fetchClients();
+        setClientData({ name: '', email: '', phone: '', company: '' });
+        toast({
+          title: "Client created",
+          description: "The client has been created successfully",
+        });
+      }
+    } catch (error) {
+      console.error("Error creating client:", error);
       toast({
         title: "Error",
         description: "Failed to create client",
@@ -68,32 +129,63 @@ const ClientConnect = () => {
 
   const handleUpdateClient = async () => {
     if (!selectedClient) return;
-    const response = await dbService.updateClient(selectedClient.id, clientData);
-    setSelectedClient((response.data) as Client);
-    fetchClients();
-    setIsEditing(false);
-    toast({
-      title: "Client updated",
-      description: "The client has been updated successfully",
-    });
+    try {
+      const response = await dbService.updateClient(selectedClient.id, clientData);
+      if (response && response.data) {
+        // Create updated client object
+        const updatedClient: Client = {
+          ...selectedClient,
+          ...clientData,
+          name: clientData.name || selectedClient.name
+        };
+        setSelectedClient(updatedClient);
+        fetchClients();
+        setIsEditing(false);
+        toast({
+          title: "Client updated",
+          description: "The client has been updated successfully",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating client:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update client",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCreateNote = async () => {
     if (!selectedClient || !user) return;
-    const response = await dbService.createClientNote({
-      client_id: selectedClient.id,
-      user_id: user.id,
-      content: newNote,
-    });
+    try {
+      const noteData = {
+        client_id: selectedClient.id,
+        user_id: user.id,
+        content: newNote,
+      };
+      
+      const response = await dbService.createClientNote(noteData as ClientNote);
 
-    if (response.data) {
-      setClientNotes([...clientNotes, response.data as unknown as ClientNote]);
-      setNewNote('');
-      toast({
-        title: "Note created",
-        description: "The note has been created successfully",
-      });
-    } else {
+      if (response && response.data) {
+        // Create properly typed ClientNote
+        const newNoteData: ClientNote = {
+          id: response.data.id,
+          client_id: response.data.client_id,
+          user_id: response.data.user_id,
+          content: response.data.content,
+          created_at: response.data.created_at
+        };
+        
+        setClientNotes([...clientNotes, newNoteData]);
+        setNewNote('');
+        toast({
+          title: "Note created",
+          description: "The note has been created successfully",
+        });
+      }
+    } catch (error) {
+      console.error("Error creating note:", error);
       toast({
         title: "Error",
         description: "Failed to create note",
@@ -104,15 +196,18 @@ const ClientConnect = () => {
 
   const handleDeleteClient = async () => {
     if (!selectedClient) return;
-    const response = await dbService.deleteClient(selectedClient.id);
-    if (!response.error) {
-      setSelectedClient(null);
-      fetchClients();
-      toast({
-        title: "Client deleted",
-        description: "The client has been deleted successfully",
-      });
-    } else {
+    try {
+      const response = await dbService.deleteClient(selectedClient.id);
+      if (!response.error) {
+        setSelectedClient(null);
+        fetchClients();
+        toast({
+          title: "Client deleted",
+          description: "The client has been deleted successfully",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting client:", error);
       toast({
         title: "Error",
         description: "Failed to delete client",
@@ -122,14 +217,17 @@ const ClientConnect = () => {
   };
 
   const handleDeleteNote = async (noteId: string) => {
-    const response = await dbService.deleteClientNote(noteId);
-    if (!response.error) {
-      setClientNotes(clientNotes.filter((note) => note.id !== noteId));
-      toast({
-        title: "Note deleted",
-        description: "The note has been deleted successfully",
-      });
-    } else {
+    try {
+      const response = await dbService.deleteClientNote(noteId);
+      if (!response.error) {
+        setClientNotes(clientNotes.filter((note) => note.id !== noteId));
+        toast({
+          title: "Note deleted",
+          description: "The note has been deleted successfully",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting note:", error);
       toast({
         title: "Error",
         description: "Failed to delete note",
