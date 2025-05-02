@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -105,37 +104,43 @@ const UserProfileSettings = () => {
   };
 
   const handleSaveProfile = async () => {
-    if (!profile || !user) return;
-    
-    setIsSaving(true);
+    setSaving(true);
     try {
       const { error } = await dbService.updateUserProfile(user.id, {
-        full_name: profile.full_name,
-        avatar_url: profile.avatar_url,
-        bio: profile.bio,
-        job_title: profile.job_title,
-        phone: profile.phone,
-        location: profile.location
+        full_name: profileData.full_name,
+        avatar_url: profileData.avatar_url,
+        bio: profileData.bio,
+        job_title: profileData.job_title,
+        phone: profileData.phone,
+        location: profileData.location
       });
 
-      if (error) throw error;
-
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been updated successfully",
-      });
-      
-      // Reload the profile to see updates
-      fetchUserProfile();
+      if (error) {
+        console.error('Error updating profile:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to update profile',
+          variant: 'destructive',
+        });
+      } else {
+        setProfile({
+          ...profile,
+          ...profileData
+        });
+        toast({
+          title: 'Profile updated',
+          description: 'Your profile has been updated successfully',
+        });
+      }
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error('Exception in handleSaveProfile:', error);
       toast({
-        title: "Failed to update profile",
-        description: "An error occurred while updating your profile",
-        variant: "destructive",
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
       });
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   };
 

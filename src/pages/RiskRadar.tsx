@@ -1,285 +1,232 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { 
-  ArrowLeft, 
-  Plus, 
-  Filter, 
-  AlertTriangle, 
-  Shield, 
-  ShieldAlert,
-  ShieldCheck,
-  PieChart,
-  BarChart4,
-  Clock,
-  ChevronDown,
-  Search
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import RiskRadarChart from '@/components/RiskRadarChart';
 import RiskTable from '@/components/RiskTable';
-import dbService from '@/services/dbService'; // Fixed import statement
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { useToast } from '@/hooks/use-toast';
+import dbService from '@/services/dbService';
 
 const RiskRadar = () => {
-  const navigate = useNavigate();
-  
+  const { toast } = useToast();
+  const [risks, setRisks] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [newRiskDescription, setNewRiskDescription] = useState('');
+  const [newRiskLevel, setNewRiskLevel] = useState('medium');
+  const [newRiskStatus, setNewRiskStatus] = useState('open');
+  const [editingRisk, setEditingRisk] = useState(null);
+  const [projectIdFilter, setProjectIdFilter] = useState('');
+
+  useEffect(() => {
+    fetchRisks();
+  }, [projectIdFilter]);
+
+  const fetchRisks = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await dbService.getRisks(projectIdFilter);
+      if (error) {
+        setError('Failed to fetch risks');
+        toast({
+          title: 'Error',
+          description: 'Failed to load risks',
+          variant: 'destructive',
+        });
+      } else {
+        setRisks(data || []);
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateRisk = async () => {
+    try {
+      const response = await dbService.getRisks({
+        description: newRiskDescription,
+        level: newRiskLevel,
+        status: newRiskStatus
+      });
+
+      if (response.error) {
+        setError('Failed to create risk');
+        toast({
+          title: 'Error',
+          description: 'Failed to create risk',
+          variant: 'destructive',
+        });
+      } else {
+        setRisks([...risks, response.data]);
+        setNewRiskDescription('');
+        toast({
+          title: 'Success',
+          description: 'Risk created successfully',
+        });
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleUpdateRisk = async (id, updates) => {
+    try {
+      const response = await dbService.getRisks(id, updates);
+      if (response.error) {
+        setError('Failed to update risk');
+        toast({
+          title: 'Error',
+          description: 'Failed to update risk',
+          variant: 'destructive',
+        });
+      } else {
+        setRisks(risks.map(risk => risk.id === id ? { ...risk, ...response.data } : risk));
+        toast({
+          title: 'Success',
+          description: 'Risk updated successfully',
+        });
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteRisk = async (id) => {
+    try {
+      const response = await dbService.getRisks(id);
+      if (response.error) {
+        setError('Failed to delete risk');
+        toast({
+          title: 'Error',
+          description: 'Failed to delete risk',
+          variant: 'destructive',
+        });
+      } else {
+        setRisks(risks.filter(risk => risk.id !== id));
+        toast({
+          title: 'Success',
+          description: 'Risk deleted successfully',
+        });
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <AppLayout>
-      <div className="mb-4">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="gap-1 mb-4" 
-          onClick={() => navigate('/')}
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Button>
-      </div>
-      
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold mb-1">RiskRadar</h1>
-          <p className="text-muted-foreground">Proactive risk and issue tracking</p>
+      <div className="space-y-6">
+        <div className="flex flex-col space-y-2 md:flex-row md:justify-between md:space-y-0">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Risk Radar</h1>
+            <p className="text-muted-foreground">
+              Identify and mitigate project risks effectively
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-          <Button size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            New Risk
-          </Button>
-        </div>
-      </div>
-      
-      {/* Risk Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card className="p-4">
-          <div className="flex items-center mb-3">
-            <div className="p-2 rounded-full bg-amber-100 mr-3">
-              <AlertTriangle className="h-5 w-5 text-amber-700" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">Total Risks</p>
-              <h3 className="text-2xl font-bold">24</h3>
-            </div>
-          </div>
-          <Progress value={65} className="h-1 bg-amber-100" />
-          <p className="text-xs text-muted-foreground mt-2">65% have mitigation plans</p>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Risk Overview</CardTitle>
+            <CardDescription>
+              Visualize project risks and their potential impact
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="h-80">
+            <RiskRadarChart />
+          </CardContent>
         </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center mb-3">
-            <div className="p-2 rounded-full bg-red-100 mr-3">
-              <ShieldAlert className="h-5 w-5 text-red-700" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">High Priority</p>
-              <h3 className="text-2xl font-bold">8</h3>
-            </div>
-          </div>
-          <Progress value={75} className="h-1 bg-red-100" />
-          <p className="text-xs text-muted-foreground mt-2">75% actively monitored</p>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center mb-3">
-            <div className="p-2 rounded-full bg-amber-100 mr-3">
-              <Shield className="h-5 w-5 text-amber-700" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">Medium Priority</p>
-              <h3 className="text-2xl font-bold">10</h3>
-            </div>
-          </div>
-          <Progress value={60} className="h-1 bg-amber-100" />
-          <p className="text-xs text-muted-foreground mt-2">60% have mitigation plans</p>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center mb-3">
-            <div className="p-2 rounded-full bg-green-100 mr-3">
-              <ShieldCheck className="h-5 w-5 text-green-700" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">Resolved</p>
-              <h3 className="text-2xl font-bold">14</h3>
-            </div>
-          </div>
-          <Progress value={100} className="h-1 bg-green-100" />
-          <p className="text-xs text-muted-foreground mt-2">In the last 30 days</p>
-        </Card>
-      </div>
-      
-      {/* Risk Visualization and Management */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <Card className="lg:col-span-2 p-4">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-medium">Risk Assessment Matrix</h3>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
-                <Clock className="h-4 w-4 mr-2" />
-                Last 30 Days
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Risk Management</CardTitle>
+            <CardDescription>
+              Manage and track project risks
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="projectFilter">Project ID:</Label>
+              <Input
+                type="text"
+                id="projectFilter"
+                placeholder="Filter by project ID"
+                value={projectIdFilter}
+                onChange={(e) => setProjectIdFilter(e.target.value)}
+              />
+              <Button onClick={fetchRisks} disabled={loading}>
+                {loading ? 'Loading...' : 'Apply Filter'}
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    Project Alpha
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem>All Projects</DropdownMenuItem>
-                  <DropdownMenuItem>Project Alpha</DropdownMenuItem>
-                  <DropdownMenuItem>Project Beta</DropdownMenuItem>
-                  <DropdownMenuItem>Project Gamma</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
-          </div>
-          
-          <Tabs defaultValue="matrix">
-            <TabsList className="mb-4">
-              <TabsTrigger value="matrix">Risk Matrix</TabsTrigger>
-              <TabsTrigger value="trends">Risk Trends</TabsTrigger>
-              <TabsTrigger value="categories">Categories</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="matrix" className="space-y-4">
-              <div className="h-[300px]">
-                <RiskRadarChart />
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="trends" className="space-y-4">
-              <div className="h-[300px] flex items-center justify-center">
-                <div className="text-center">
-                  <BarChart4 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-medium mb-2">Risk Trends</h3>
-                  <p className="text-muted-foreground max-w-md mb-4">
-                    Track how risks evolve over time with detailed trend analysis.
-                  </p>
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="categories" className="space-y-4">
-              <div className="h-[300px] flex items-center justify-center">
-                <div className="text-center">
-                  <PieChart className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-medium mb-2">Risk Categories</h3>
-                  <p className="text-muted-foreground max-w-md mb-4">
-                    Visualize distribution of risks across different categories.
-                  </p>
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </Card>
-        
-        <Card className="p-4">
-          <h3 className="font-medium mb-4">Risk Categories</h3>
-          
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-sm">Technical</span>
-                <span className="text-sm font-medium">9 risks</span>
-              </div>
-              <Progress value={38} className="h-2 bg-red-100" />
-              <p className="text-xs text-muted-foreground mt-1">3 high, 4 medium, 2 low</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Input
+                type="text"
+                placeholder="Risk description"
+                value={newRiskDescription}
+                onChange={(e) => setNewRiskDescription(e.target.value)}
+              />
+              <Select onValueChange={setNewRiskLevel}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Risk level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button onClick={handleCreateRisk} disabled={loading}>
+                Add Risk
+              </Button>
             </div>
-            
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-sm">Schedule</span>
-                <span className="text-sm font-medium">6 risks</span>
-              </div>
-              <Progress value={25} className="h-2 bg-amber-100" />
-              <p className="text-xs text-muted-foreground mt-1">2 high, 3 medium, 1 low</p>
-            </div>
-            
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-sm">Resource</span>
-                <span className="text-sm font-medium">5 risks</span>
-              </div>
-              <Progress value={21} className="h-2 bg-amber-100" />
-              <p className="text-xs text-muted-foreground mt-1">1 high, 2 medium, 2 low</p>
-            </div>
-            
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-sm">Financial</span>
-                <span className="text-sm font-medium">4 risks</span>
-              </div>
-              <Progress value={16} className="h-2 bg-emerald-100" />
-              <p className="text-xs text-muted-foreground mt-1">0 high, 1 medium, 3 low</p>
-            </div>
-          </div>
-          
-          <div className="mt-6 pt-4 border-t">
-            <h4 className="text-sm font-medium mb-2">Risk Alerts</h4>
-            
-            <div className="space-y-3">
-              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-sm text-red-800">3 high priority risks require immediate attention</p>
-              </div>
-              
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
-                <p className="text-sm text-amber-800">5 risks have passed their review date</p>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-      
-      {/* Risk List */}
-      <div>
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-medium">Risk Register</h3>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  type="search" 
-                  placeholder="Search risks..." 
-                  className="pl-8 w-[200px]"
-                />
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    Status: All
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem>All</DropdownMenuItem>
-                  <DropdownMenuItem>Open</DropdownMenuItem>
-                  <DropdownMenuItem>Mitigated</DropdownMenuItem>
-                  <DropdownMenuItem>Closed</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-          
-          <RiskTable />
+
+            {error && <div className="text-red-500">{error}</div>}
+
+            <RiskTable
+              risks={risks}
+              onUpdateRisk={handleUpdateRisk}
+              onDeleteRisk={handleDeleteRisk}
+              loading={loading}
+            />
+          </CardContent>
         </Card>
       </div>
     </AppLayout>

@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import bcrypt from 'bcryptjs';
-import { Client, ClientNote, TimeEntry, ResourceAllocation, File, Task } from '@/utils/dbtypes';
+import { Client, ClientNote, TimeEntry, ResourceAllocation, File, Task, Project } from '@/utils/dbtypes';
 
 // Helper functions
 const handleError = (error: any) => {
@@ -16,6 +16,23 @@ const getUserProfile = async (userId: string) => {
       .from('user_profiles')
       .select('*')
       .eq('id', userId)
+      .single();
+    
+    if (error) return handleError(error);
+    return { data, error };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+// Added updateUserProfile function
+const updateUserProfile = async (userId: string, updates: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update(updates)
+      .eq('id', userId)
+      .select()
       .single();
     
     if (error) return handleError(error);
@@ -296,7 +313,7 @@ const deleteClientNote = async (noteId: string) => {
 };
 
 // Time Tracking Functions
-const getTimeEntries = async (userId: string, filters: { projectId?: string, start_date?: string, end_date?: string } = {}) => {
+const getTimeEntries = async (userId: string, filters = {}) => {
   try {
     let query = supabase
       .from('time_entries')
@@ -317,6 +334,25 @@ const getTimeEntries = async (userId: string, filters: { projectId?: string, sta
     }
     
     const { data, error } = await query.order('date', { ascending: false });
+    
+    if (error) return handleError(error);
+    return { data, error };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+// Added createTimeEntry function
+const createTimeEntry = async (userId: string, entry: Partial<TimeEntry>) => {
+  try {
+    const { data, error } = await supabase
+      .from('time_entries')
+      .insert({
+        user_id: userId,
+        ...entry
+      })
+      .select()
+      .single();
     
     if (error) return handleError(error);
     return { data, error };
@@ -515,6 +551,22 @@ const getTasks = async (userId: string) => {
   }
 };
 
+// Projects
+const getProjects = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (error) return handleError(error);
+    return { data, error };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
 // Dashboard stats
 const getDashboardStats = async (userId: string) => {
   try {
@@ -561,6 +613,7 @@ const getDashboardStats = async (userId: string) => {
 
 export default {
   getUserProfile,
+  updateUserProfile,
   getUserSettings,
   createUserSettings,
   updateUserSettings,
@@ -578,6 +631,7 @@ export default {
   createClientNote,
   deleteClientNote,
   getTimeEntries,
+  createTimeEntry,
   createResourceAllocation,
   getResourceAllocations,
   deleteResourceAllocation,
@@ -590,5 +644,6 @@ export default {
   getUtilizationHistory,
   getUnavailability,
   getTasks,
+  getProjects,
   getDashboardStats
 };

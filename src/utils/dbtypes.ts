@@ -60,6 +60,7 @@ export interface Task {
   assignee?: string;
   user_id: string;
   project_id?: string;
+  project?: string; // Added project field
   created_at: string;
 }
 

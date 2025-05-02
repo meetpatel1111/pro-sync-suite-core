@@ -26,6 +26,26 @@ import {
 import { useAuthContext } from '@/context/AuthContext';
 import dbService from '@/services/dbService';
 import { Dashboard, Widget, Project, TimeEntry, Task } from '@/utils/dbtypes';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  LineChart as RechartLineChart, 
+  Line, 
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer 
+} from 'recharts';
+import { 
+  Activity,
+  BarChart2,
+  Pencil
+} from 'lucide-react';
 
 const InsightIQ = () => {
   const { toast } = useToast();
