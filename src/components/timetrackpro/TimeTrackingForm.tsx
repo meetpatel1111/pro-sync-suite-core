@@ -35,7 +35,7 @@ const TimeTrackingForm = () => {
       
       try {
         const response = await dbService.getProjects(user.id);
-        if (response.data) {
+        if (response && response.data) {
           setProjects(response.data);
         }
       } catch (error) {
@@ -52,9 +52,9 @@ const TimeTrackingForm = () => {
       if (!user || !selectedProject) return;
       
       try {
-        const response = await dbService.getTasks(user.id, { project: selectedProject });
-        if (response.data) {
-          setTasks(response.data);
+        const response = await dbService.getTasks(user.id);
+        if (response && response.data) {
+          setTasks(response.data.filter((task: any) => task.project === selectedProject));
         }
       } catch (error) {
         console.error('Error fetching tasks:', error);
@@ -171,10 +171,10 @@ const TimeTrackingForm = () => {
         billable: true
       };
       
-      // Fix: Just pass user.id
-      const { error } = await dbService.createTimeEntry(user.id, timeEntry);
+      // Fix: Pass only user.id
+      const response = await dbService.createTimeEntry(user.id, timeEntry);
       
-      if (error) throw error;
+      if (response.error) throw response.error;
       
       // Reset form
       setHours("");

@@ -25,10 +25,10 @@ const RiskRadar = () => {
         project_id: projectIdFilter || null
       };
       
-      // Fix: Pass the risk object directly
+      // Pass the risk object as the only argument
       const response = await dbService.createRisk(newRisk);
 
-      if (response.error) {
+      if (response && response.error) {
         setError('Failed to create risk');
         toast({
           title: 'Error',
@@ -55,9 +55,9 @@ const RiskRadar = () => {
 
   const handleUpdateRisk = async (id: string, updates: any) => {
     try {
-      // Fix: Pass id and updates as separate parameters
+      // Correctly call updateRisk with separate parameters
       const response = await dbService.updateRisk(id, updates);
-      if (response.error) {
+      if (response && response.error) {
         setError('Failed to update risk');
         toast({
           title: 'Error',
@@ -87,10 +87,10 @@ const RiskRadar = () => {
       setLoading(true);
       try {
         const response = await dbService.getRisks();
-        if (response.error) {
+        if (response && response.error) {
           setError('Failed to fetch risks');
         } else {
-          setRisks(response.data || []);
+          setRisks(response?.data || []);
         }
       } catch (err) {
         setError('An unexpected error occurred');

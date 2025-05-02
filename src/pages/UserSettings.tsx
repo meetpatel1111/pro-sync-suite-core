@@ -102,8 +102,7 @@ const UserSettings = () => {
     }
   };
 
-  // Replace getTaskSettings with getUserSettings
-  const fetchTaskSettings = async () => {
+  const fetchSettings = async () => {
     setSettingsLoading(true);
     try {
       const response = await dbService.getUserSettings(user.id);
@@ -122,11 +121,10 @@ const UserSettings = () => {
     }
   };
 
-  // Replace updateTaskSettings with updateUserSettings
-  const saveTaskSettings = async (settings: any) => {
+  const handleSave = async (settings: any) => {
     try {
-      const response = await dbService.updateUserSettings(user.id, settings);
-      if (!response.error) {
+      const result = await dbService.updateUserSettings(user.id, settings);
+      if (!result.error) {
         setTaskSettings(settings);
         toast({
           title: 'Settings updated',
@@ -151,7 +149,7 @@ const UserSettings = () => {
 
   useEffect(() => {
     if (user) {
-      fetchTaskSettings();
+      fetchSettings();
     }
   }, [user]);
 

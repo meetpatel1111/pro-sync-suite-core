@@ -73,15 +73,22 @@ const FileVault = () => {
     setUploadProgress(0);
     
     try {
-      // Fix: Pass only user.id
-      const result = await dbService.uploadFile(user?.id, {
+      // We need to make sure uploadFile exists in dbService
+      const fileData = {
         file,
         description: fileDescription,
         isPublic: isPublic,
-      });
+      };
       
-      if (result.error) {
-        throw new Error(result.error.message);
+      // Fix: First check if uploadFile exists in dbService
+      if (!dbService.uploadFile) {
+        throw new Error("The uploadFile function is not implemented in dbService");
+      }
+      
+      const result = await dbService.uploadFile(user?.id, fileData);
+      
+      if (result && result.error) {
+        throw new Error(result.error.message || "Upload failed");
       }
       
       toast({
@@ -257,15 +264,15 @@ const FileVault = () => {
             </TabsContent>
 
             <TabsContent value="public" className="space-y-4">
-              <FileVaultApp filter="public" />
+              <FileVaultApp />
             </TabsContent>
             
             <TabsContent value="private" className="space-y-4">
-              <FileVaultApp filter="private" />
+              <FileVaultApp />
             </TabsContent>
             
             <TabsContent value="archived" className="space-y-4">
-              <FileVaultApp filter="archived" />
+              <FileVaultApp />
             </TabsContent>
           </Tabs>
         </div>

@@ -24,8 +24,8 @@ const CollabSpace = () => {
           let readBy: string[] = [];
           if (msg.read_by) {
             if (Array.isArray(msg.read_by)) {
-              // If it's already an array, convert all elements to strings
-              readBy = msg.read_by.map(item => String(item));
+              // Convert all elements to strings
+              readBy = msg.read_by.map((item: any) => String(item));
             } else {
               // If it's a single value, convert to string and wrap in array
               readBy = [String(msg.read_by)];

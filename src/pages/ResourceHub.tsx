@@ -50,7 +50,7 @@ const ResourceHub = () => {
       if (!user) return;
       
       try {
-        // Fix the function call to pass the correct parameter
+        // Fix the function call
         const response = await dbService.getResourceAllocations(user.id);
         // Fix the type conversion
         if (response && response.data) {
@@ -78,7 +78,7 @@ const ResourceHub = () => {
       if (!user) return;
       
       try {
-        // Fix the function call to pass the correct parameter
+        // Fix the function call
         const response = await dbService.getResourceSkills(user.id);
         // Fix the type conversion
         if (response && response.data) {
@@ -155,27 +155,22 @@ const ResourceHub = () => {
 
           <TabsContent value="resources" className="space-y-4">
             <ResourceHubApp 
-              resources={resources}
-              loading={loading}
               mode="resources"
+              loading={loading}
             />
           </TabsContent>
 
           <TabsContent value="allocations" className="space-y-4">
             <ResourceHubApp 
-              resources={resources}
-              allocations={allocations}
-              loading={loading}
               mode="allocations"
+              loading={loading}
             />
           </TabsContent>
 
           <TabsContent value="matrix" className="space-y-4">
             <ResourceHubApp 
-              resources={resources}
-              skills={skills}
-              loading={loading}
               mode="matrix"
+              loading={loading}
             />
           </TabsContent>
 

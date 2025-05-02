@@ -76,6 +76,6 @@ export interface Message {
   scheduled_for?: string;
   type?: string;
   is_pinned?: boolean;
-  read_by: string[];
+  read_by: string[]; // Always string array
   mentions?: string[];
 }

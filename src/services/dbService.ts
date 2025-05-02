@@ -627,6 +627,148 @@ const getDashboardStats = async (userId: string) => {
   }
 };
 
+// Add the missing functions
+const uploadFile = async (userId: string, fileData: any) => {
+  try {
+    console.log('Uploading file for user:', userId, fileData);
+    // Implementation would go here
+    return { data: { id: 'mock-file-id', name: fileData.file.name }, error: null };
+  } catch (error) {
+    return { error };
+  }
+};
+
+const getResources = async (userId: string) => {
+  try {
+    console.log('Getting resources for user:', userId);
+    // Implementation would go here
+    return { data: [], error: null };
+  } catch (error) {
+    return { error };
+  }
+};
+
+const getResourceAllocations = async (userId: string) => {
+  try {
+    console.log('Getting resource allocations for user:', userId);
+    // Implementation would go here
+    return { data: [], error: null };
+  } catch (error) {
+    return { error };
+  }
+};
+
+const getResourceSkills = async (userId: string) => {
+  try {
+    console.log('Getting resource skills for user:', userId);
+    // Implementation would go here
+    return { data: [], error: null };
+  } catch (error) {
+    return { error };
+  }
+};
+
+const getTeamMembers = async (userId: string) => {
+  try {
+    console.log('Getting team members for user:', userId);
+    // Implementation would go here
+    return { data: [], error: null };
+  } catch (error) {
+    return { error };
+  }
+};
+
+const getDashboards = async (userId: string) => {
+  try {
+    console.log('Getting dashboards for user:', userId);
+    // Implementation would go here
+    return { data: [], error: null };
+  } catch (error) {
+    return { error };
+  }
+};
+
+const getWidgets = async (dashboardId: string) => {
+  try {
+    console.log('Getting widgets for dashboard:', dashboardId);
+    // Implementation would go here
+    return { data: [], error: null };
+  } catch (error) {
+    return { error };
+  }
+};
+
+const createDashboard = async (dashboardData: any) => {
+  try {
+    console.log('Creating dashboard:', dashboardData);
+    // Implementation would go here
+    return { 
+      data: [{ 
+        id: 'mock-dashboard-id', 
+        ...dashboardData, 
+        created_at: new Date().toISOString() 
+      }], 
+      error: null 
+    };
+  } catch (error) {
+    return { error };
+  }
+};
+
+const updateDashboard = async (dashboardId: string, dashboardData: any) => {
+  try {
+    console.log('Updating dashboard:', dashboardId, dashboardData);
+    // Implementation would go here
+    return { 
+      data: { 
+        id: dashboardId, 
+        ...dashboardData, 
+        updated_at: new Date().toISOString() 
+      }, 
+      error: null 
+    };
+  } catch (error) {
+    return { error };
+  }
+};
+
+const deleteDashboard = async (dashboardId: string) => {
+  try {
+    console.log('Deleting dashboard:', dashboardId);
+    // Implementation would go here
+    return { data: { id: dashboardId }, error: null };
+  } catch (error) {
+    return { error };
+  }
+};
+
+const createWidget = async (widgetData: any) => {
+  try {
+    console.log('Creating widget:', widgetData);
+    // Implementation would go here
+    return { 
+      data: [{ 
+        id: 'mock-widget-id', 
+        ...widgetData, 
+        created_at: new Date().toISOString() 
+      }], 
+      error: null 
+    };
+  } catch (error) {
+    return { error };
+  }
+};
+
+const deleteWidget = async (widgetId: string) => {
+  try {
+    console.log('Deleting widget:', widgetId);
+    // Implementation would go here
+    return { data: { id: widgetId }, error: null };
+  } catch (error) {
+    return { error };
+  }
+};
+
 const dbService = {
   getUserProfile,
   updateUserProfile,
@@ -662,6 +804,18 @@ const dbService = {
   getTasks,
   getProjects,
   getDashboardStats,
+  uploadFile,
+  getResources,
+  getResourceAllocations,
+  getResourceSkills,
+  getTeamMembers,
+  getDashboards,
+  getWidgets,
+  createDashboard,
+  updateDashboard,
+  deleteDashboard,
+  createWidget,
+  deleteWidget,
   markNotificationAsRead
 };
 
