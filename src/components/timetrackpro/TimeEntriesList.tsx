@@ -29,14 +29,20 @@ const TimeEntriesList = () => {
   }, [user, projectFilter, startDateFilter, endDateFilter]);
 
   const fetchTimeEntries = async () => {
+    if (!user?.id) return;
+    
     setLoading(true);
     try {
-      // Use the timetrackpro service to fetch time entries
-      const { data: entriesData } = await dbService.getTimeEntries(user?.id, {
-        projectId: projectFilter, // Fixed: Changed project_id to projectId
+      // Use the dbService to fetch time entries
+      const { data: entriesData, error } = await dbService.getTimeEntries(user.id, {
+        projectId: projectFilter,
         start_date: startDateFilter,
         end_date: endDateFilter
       });
+
+      if (error) {
+        throw error;
+      }
 
       if (entriesData) {
         setTimeEntries(entriesData);

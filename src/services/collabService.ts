@@ -1,3 +1,4 @@
+
 // This is a partial update to add missing methods that are causing TypeScript errors
 // Define Message type export
 export interface Message {
@@ -77,6 +78,51 @@ const createApproval = async (messageId: string, userId: string, status: string)
   return { data: null, error: null };
 };
 
+const addReaction = async (messageId: string, userId: string, emoji: string) => {
+  console.log('Stub for addReaction', { messageId, userId, emoji });
+  return { data: null, error: null };
+};
+
+const removeReaction = async (messageId: string, userId: string) => {
+  console.log('Stub for removeReaction', { messageId, userId });
+  return { data: null, error: null };
+};
+
+const deleteMessage = async (messageId: string) => {
+  console.log('Stub for deleteMessage', { messageId });
+  return { data: null, error: null };
+};
+
+const getChannels = async () => {
+  console.log('Stub for getChannels');
+  return { data: [], error: null };
+};
+
+const getChannelMembers = async (channelId: string) => {
+  console.log('Stub for getChannelMembers', { channelId });
+  return { data: [], error: null };
+};
+
+const getChannelFiles = async (channelId: string) => {
+  console.log('Stub for getChannelFiles', { channelId });
+  return { data: [], error: null };
+};
+
+const getMessages = async (channelId: string) => {
+  console.log('Stub for getMessages', { channelId });
+  return { data: [], error: null };
+};
+
+const createChannel = async (channelData: any) => {
+  console.log('Stub for createChannel', { channelData });
+  return { data: null, error: null };
+};
+
+const deleteChannel = async (channelId: string) => {
+  console.log('Stub for deleteChannel', { channelId });
+  return { data: null, error: null };
+};
+
 // Add these methods to the exports
 const collabService = {
   // Keep existing exports
@@ -93,7 +139,15 @@ const collabService = {
   createTaskFromMessage,
   getApprovalsForMessage,
   createApproval,
-  // Other existing exports should remain unchanged
+  addReaction,
+  removeReaction,
+  deleteMessage,
+  getChannels,
+  getChannelMembers,
+  getChannelFiles,
+  getMessages,
+  createChannel,
+  deleteChannel,
 };
 
 export default collabService;
