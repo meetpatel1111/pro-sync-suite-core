@@ -7,7 +7,7 @@ import {
   AlertCircle,
   Users
 } from 'lucide-react';
-import * as dbService from '@/services/dbService';
+import dbService from '@/services/dbService';
 import { useAuthContext } from '@/context/AuthContext';
 
 interface StatCardProps {
@@ -65,7 +65,7 @@ const DashboardStats = () => {
   useEffect(() => {
     if (!loading && user?.id) {
       setIsLoading(true);
-      dbService.default.getDashboardStats(user.id)
+      dbService.getDashboardStats(user.id)
         .then((response) => {
           if (response.error) {
             throw response.error;
@@ -86,6 +86,7 @@ const DashboardStats = () => {
         })
         .catch((e) => {
           setError('Failed to load dashboard stats');
+          console.error('Dashboard stats error:', e);
         })
         .finally(() => setIsLoading(false));
     }
