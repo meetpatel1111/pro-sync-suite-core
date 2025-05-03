@@ -30,10 +30,12 @@ export const useAuth = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
-      setUser(session?.user ?? null);
-
-      // Fetch user profile if session exists
+      
+      // First check for Supabase session
       if (session?.user) {
+        console.log('Found Supabase session for user:', session.user.email);
+        setUser(session.user);
+
         // Ensure user is present in the application's users table
         await dbService.upsertAppUser(session.user);
 
@@ -44,7 +46,6 @@ export const useAuth = () => {
             theme: 'system',
             language: 'en',
             notifications_enabled: true,
-            // Add other default settings as needed
           });
         }
 
@@ -54,6 +55,7 @@ export const useAuth = () => {
         // If no Supabase session, check for custom user in localStorage
         const customUser = typeof window !== 'undefined' ? localStorage.getItem('customUser') : null;
         if (customUser) {
+          console.log('Found custom user in localStorage');
           const userObj = JSON.parse(customUser);
           setUser(userObj);
           setProfile(userObj);
@@ -67,6 +69,8 @@ export const useAuth = () => {
               console.error('[CustomUser] Failed to upsert user:', upsertResult.error);
               setLoading(false);
               return;
+            } else {
+              console.log('[CustomUser] User successfully upserted');
             }
           } catch (err) {
             console.error('[CustomUser] Exception during upsertAppUser:', err);
@@ -78,24 +82,28 @@ export const useAuth = () => {
           try {
             const settings = await dbService.getUserSettings(userObj.id);
             console.debug('[CustomUser] getUserSettings result:', settings);
-            if (!settings) {
+            if (!settings || !settings.data) {
               const createResult = await dbService.createUserSettings(userObj.id, {
                 theme: 'system',
                 language: 'en',
                 notifications_enabled: true,
-                // Add other default settings as needed
               });
               console.debug('[CustomUser] createUserSettings result:', createResult);
               if (createResult?.error) {
                 console.error('[CustomUser] Failed to create user_settings:', createResult.error);
+              } else {
+                console.log('[CustomUser] Settings successfully created');
               }
+            } else {
+              console.log('[CustomUser] User settings found:', settings.data);
             }
           } catch (err) {
             console.error('[CustomUser] Exception during createUserSettings:', err);
           }
-
-          setLoading(false);
-          return;
+        } else {
+          console.log('No user found in session or localStorage');
+          setUser(null);
+          setProfile(null);
         }
       }
     } catch (error) {
@@ -106,8 +114,8 @@ export const useAuth = () => {
   };
 
   useEffect(() => {
-    checkSession();
-
+    console.log('useAuth: initializing');
+    
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -127,7 +135,6 @@ export const useAuth = () => {
                 theme: 'system',
                 language: 'en',
                 notifications_enabled: true,
-                // Add other default settings as needed
               });
             }
           });
@@ -141,6 +148,9 @@ export const useAuth = () => {
         }
       }
     );
+    
+    // Then check for existing session
+    checkSession();
 
     return () => {
       subscription.unsubscribe();
@@ -149,6 +159,7 @@ export const useAuth = () => {
 
   const signOut = async () => {
     try {
+      console.log('Signing out user');
       // Clear custom user on sign out
       if (typeof window !== 'undefined') {
         localStorage.removeItem('customUser');
@@ -163,6 +174,10 @@ export const useAuth = () => {
         });
         return false;
       }
+      
+      setUser(null);
+      setProfile(null);
+      setSession(null);
       
       toast({
         title: 'Signed out successfully',

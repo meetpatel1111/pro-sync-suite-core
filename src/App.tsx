@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -109,7 +110,7 @@ const App = () => {
               <BrowserRouter>
                 <Routes>
                   <Route path="/auth" element={<Auth />} />
-<Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
                   {/* Make Index route protected */}
                   <Route 
                     path="/" 

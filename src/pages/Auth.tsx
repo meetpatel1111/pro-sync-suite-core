@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,7 +38,7 @@ const Auth = () => {
         
         if (session || customUser) {
           console.log('User already authenticated, redirecting to dashboard');
-          navigate('/');
+          navigate('/', { replace: true });
         }
       } catch (error) {
         console.error('Error checking session:', error);
@@ -130,6 +131,7 @@ const Auth = () => {
       });
       
       // Ensure we navigate to the dashboard after successful sign-in
+      console.log('Auth successful, redirecting to dashboard');
       navigate('/', { replace: true });
     } catch (error: any) {
       console.error('Sign-in error:', error);
@@ -227,9 +229,15 @@ const Auth = () => {
         console.debug('[CustomUser] upsertAppUser result:', upsertResult);
         if (upsertResult?.error) {
           console.error('[CustomUser] Failed to upsert user:', upsertResult.error);
+          setLoading(false);
+          setFormError('Error creating user profile. Please try again.');
+          return;
         }
       } catch (err) {
         console.error('[CustomUser] Exception during upsertAppUser:', err);
+        setLoading(false);
+        setFormError('Error creating user profile. Please try again.');
+        return;
       }
 
       toast({
@@ -237,7 +245,9 @@ const Auth = () => {
         description: 'You have been signed in to your account',
       });
 
-      // Ensure we navigate to the dashboard after successful sign-in
+      // Ensure we navigate to the dashboard after successful sign-in with clear logging
+      console.log('Custom auth successful, redirecting to dashboard');
+      setLoading(false); // Make sure loading is false before navigation
       navigate('/', { replace: true });
     } catch (error: any) {
       console.error('Custom sign-in error:', error);
