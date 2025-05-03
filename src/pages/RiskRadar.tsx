@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useAuthContext } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import dbService from '@/services/dbService';
+import riskService from '@/services/riskService';
 
 const RiskRadar = () => {
   const { toast } = useToast();
@@ -16,17 +16,42 @@ const RiskRadar = () => {
   const [newRiskStatus, setNewRiskStatus] = useState('identified');
   const [projectIdFilter, setProjectIdFilter] = useState<string | null>(null);
 
+  useEffect(() => {
+    const fetchRisks = async () => {
+      if (!user?.id) return;
+      
+      setLoading(true);
+      try {
+        const response = await riskService.getRisks(user.id);
+        if (response && response.error) {
+          setError('Failed to fetch risks');
+        } else {
+          setRisks(response?.data || []);
+        }
+      } catch (err) {
+        setError('An unexpected error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRisks();
+  }, [user?.id]);
+
   const handleCreateRisk = async () => {
+    if (!user?.id) return;
+    
     try {
       const newRisk = {
         description: newRiskDescription,
         level: newRiskLevel,
         status: newRiskStatus,
-        project_id: projectIdFilter || null
+        project_id: projectIdFilter || null,
+        user_id: user.id
       };
       
-      // Use createRisk function from dbService
-      const response = await dbService.createRisk(newRisk);
+      // Use createRisk function from riskService
+      const response = await riskService.createRisk(newRisk);
 
       if (response && response.error) {
         setError('Failed to create risk');
@@ -36,7 +61,7 @@ const RiskRadar = () => {
           variant: 'destructive',
         });
       } else {
-        setRisks([...risks, response.data[0]]);
+        setRisks([...risks, response.data]);
         setNewRiskDescription('');
         toast({
           title: 'Success',
@@ -55,8 +80,8 @@ const RiskRadar = () => {
 
   const handleUpdateRisk = async (id: string, updates: any) => {
     try {
-      // Use updateRisk function from dbService
-      const response = await dbService.updateRisk(id, updates);
+      // Use updateRisk function from riskService
+      const response = await riskService.updateRisk(id, updates);
       if (response && response.error) {
         setError('Failed to update risk');
         toast({
@@ -80,27 +105,6 @@ const RiskRadar = () => {
       });
     }
   };
-
-  // Fetch risks
-  useEffect(() => {
-    const fetchRisks = async () => {
-      setLoading(true);
-      try {
-        const response = await dbService.getRisks();
-        if (response && response.error) {
-          setError('Failed to fetch risks');
-        } else {
-          setRisks(response?.data || []);
-        }
-      } catch (err) {
-        setError('An unexpected error occurred');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRisks();
-  }, []);
 
   return (
     <AppLayout>

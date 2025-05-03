@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
-import dbService from '@/services/dbService';
+import userService from '@/services/userService';
+import settingsService from '@/services/settingsService';
 import { useToast } from '@/hooks/use-toast';
 
 export const useAuth = () => {
@@ -15,7 +16,7 @@ export const useAuth = () => {
   const fetchUserProfile = async (userId: string) => {
     try {
       // getUserProfile now uses the users table
-      const { data, error } = await dbService.getUserProfile(userId);
+      const { data, error } = await userService.getUserProfile(userId);
       if (!error && data) {
         setProfile(data);
       } else if (error) {
@@ -37,15 +38,14 @@ export const useAuth = () => {
         setUser(session.user);
 
         // Ensure user is present in the application's users table
-        await dbService.upsertAppUser(session.user);
+        await userService.upsertAppUser(session.user);
 
         // Ensure user_settings exists for this user
-        const settings = await dbService.getUserSettings(session.user.id);
+        const settings = await settingsService.getUserSettings(session.user.id);
         if (!settings?.data) {
-          await dbService.createUserSettings(session.user.id, {
+          await settingsService.createUserSettings(session.user.id, {
             theme: 'system',
             language: 'en',
-            notifications_enabled: true,
             user_id: session.user.id
           });
         }
@@ -64,7 +64,7 @@ export const useAuth = () => {
 
           // Ensure user is present in the application's users table (required for FK)
           try {
-            const upsertResult = await dbService.upsertAppUser(userObj);
+            const upsertResult = await userService.upsertAppUser(userObj);
             console.debug('[CustomUser] upsertAppUser result:', upsertResult);
             if (upsertResult?.error) {
               console.error('[CustomUser] Failed to upsert user:', upsertResult.error);
@@ -81,13 +81,12 @@ export const useAuth = () => {
 
           // Ensure user_settings exists for this custom user
           try {
-            const settings = await dbService.getUserSettings(userObj.id);
+            const settings = await settingsService.getUserSettings(userObj.id);
             console.debug('[CustomUser] getUserSettings result:', settings);
             if (!settings || !settings.data) {
-              const createResult = await dbService.createUserSettings(userObj.id, {
+              const createResult = await settingsService.createUserSettings(userObj.id, {
                 theme: 'system',
                 language: 'en',
-                notifications_enabled: true,
                 user_id: userObj.id
               });
               console.debug('[CustomUser] createUserSettings result:', createResult);
@@ -128,15 +127,14 @@ export const useAuth = () => {
         // Fetch or update profile when auth state changes
         if (session?.user) {
           // Ensure user is present in the application's users table
-          dbService.upsertAppUser(session.user);
+          userService.upsertAppUser(session.user);
 
           // Ensure user_settings exists for this user
-          dbService.getUserSettings(session.user.id).then(settings => {
+          settingsService.getUserSettings(session.user.id).then(settings => {
             if (!settings?.data) {
-              dbService.createUserSettings(session.user.id, {
+              settingsService.createUserSettings(session.user.id, {
                 theme: 'system',
                 language: 'en',
-                notifications_enabled: true,
                 user_id: session.user.id
               });
             }

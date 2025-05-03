@@ -202,8 +202,8 @@ const getChannelFiles = async (channelId: string) => {
   return { data: [], error: null };
 };
 
-const getMessages = async (channelId: string, options = {}) => {
-  console.log('Fetching messages for channel', { channelId, options });
+const getMessages = async (channelId: string) => {
+  console.log('Fetching messages for channel', { channelId });
   return { 
     data: [
       { 
@@ -212,7 +212,15 @@ const getMessages = async (channelId: string, options = {}) => {
         user_id: 'user_1', 
         content: 'Hello, team!', 
         created_at: new Date(Date.now() - 3600000).toISOString(),
-        username: 'jane_doe'
+        username: 'jane_doe',
+        reactions: {},
+        read_by: [],
+        edited_at: '',
+        parent_id: '',
+        file_url: '',
+        scheduled_for: '',
+        type: 'text',
+        is_pinned: false
       },
       { 
         id: 'msg_2', 
@@ -220,7 +228,15 @@ const getMessages = async (channelId: string, options = {}) => {
         user_id: 'user_2', 
         content: 'Hi Jane! How are the reports coming along?', 
         created_at: new Date(Date.now() - 1800000).toISOString(),
-        username: 'john_smith'
+        username: 'john_smith',
+        reactions: {},
+        read_by: [],
+        edited_at: '',
+        parent_id: '',
+        file_url: '',
+        scheduled_for: '',
+        type: 'text',
+        is_pinned: false
       }
     ],
     error: null 
