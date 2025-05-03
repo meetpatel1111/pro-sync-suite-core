@@ -3,7 +3,7 @@
 // This allows existing code to continue functioning without changes
 
 import userService from './userService';
-import settingsService, { UserSettings } from './settingsService';
+import settingsService from './settingsService';
 import timeTrackingService from './timeTrackingService';
 import dashboardService from './dashboardService';
 import clientService from './clientService';
@@ -16,7 +16,7 @@ import fileService from './fileService';
 import insightService from './insightService';
 
 // Export UserSettings interface for backward compatibility
-export { UserSettings } from './settingsService';
+export type { UserSettings } from './settingsService';
 
 // Combine all services into one
 const dbService = {

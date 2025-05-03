@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
 import { Message } from '@/utils/dbtypes'; // Correct import from dbtypes
@@ -49,7 +50,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
-  const handleRemoveReaction = async (messageId: string) => { // Fix: Remove emoji parameter - not used in implementation
+  const handleRemoveReaction = async (messageId: string) => {
     try {
       await collabService.removeReaction(messageId, currentUserId);
     } catch (error) {

@@ -254,8 +254,8 @@ const CollabSpaceApp = () => {
           userId
         );
 
-        if (uploadResponse.data) {
-          fileUrl = uploadResponse.data.url;
+        if (uploadResponse.data && uploadResponse.data.file_url) {
+          fileUrl = uploadResponse.data.file_url;
         }
       }
 
@@ -263,15 +263,12 @@ const CollabSpaceApp = () => {
       if (showScheduleForm && scheduleDate && scheduleTime) {
         const scheduledFor = new Date(`${scheduleDate}T${scheduleTime}`);
         
-        await collabService.scheduleMessage(
-          {
-            channel_id: selectedChannel,
-            user_id: userId,
-            content: newMessage,
-            file_url: fileUrl
-          },
-          scheduledFor
-        );
+        await collabService.scheduleMessage({
+          channel_id: selectedChannel,
+          user_id: userId,
+          content: newMessage,
+          file_url: fileUrl
+        }, scheduledFor);
 
         toast({
           title: 'Message scheduled',
@@ -282,7 +279,8 @@ const CollabSpaceApp = () => {
         await collabService.sendMessage(
           selectedChannel,
           userId,
-          newMessage
+          newMessage,
+          fileUrl
         );
       }
 
