@@ -22,6 +22,7 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Use the custom hook to manage authentication state
   const authState = useAuth();
 
   return (
@@ -31,4 +32,5 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
+// Export a custom hook to use the auth context
 export const useAuthContext = () => useContext(AuthContext);

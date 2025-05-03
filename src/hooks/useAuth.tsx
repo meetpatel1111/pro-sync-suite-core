@@ -41,11 +41,12 @@ export const useAuth = () => {
 
         // Ensure user_settings exists for this user
         const settings = await dbService.getUserSettings(session.user.id);
-        if (!settings) {
+        if (!settings?.data) {
           await dbService.createUserSettings(session.user.id, {
             theme: 'system',
             language: 'en',
             notifications_enabled: true,
+            user_id: session.user.id
           });
         }
 
@@ -87,6 +88,7 @@ export const useAuth = () => {
                 theme: 'system',
                 language: 'en',
                 notifications_enabled: true,
+                user_id: userObj.id
               });
               console.debug('[CustomUser] createUserSettings result:', createResult);
               if (createResult?.error) {
@@ -130,16 +132,17 @@ export const useAuth = () => {
 
           // Ensure user_settings exists for this user
           dbService.getUserSettings(session.user.id).then(settings => {
-            if (!settings) {
+            if (!settings?.data) {
               dbService.createUserSettings(session.user.id, {
                 theme: 'system',
                 language: 'en',
                 notifications_enabled: true,
+                user_id: session.user.id
               });
             }
           });
 
-          // Fetch user profile from users table
+          // Use setTimeout to avoid potential deadlocks with Supabase
           setTimeout(() => {
             fetchUserProfile(session.user.id);
           }, 0);

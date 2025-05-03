@@ -1,56 +1,73 @@
+
 import React, { useState } from 'react';
-import collabService from '@/services/collabService';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { useAuthContext } from '@/context/AuthContext';
+import dbService from '@/services/dbService';
 
-interface QuickTaskCreateProps {
-  messageId: string;
-  onCreated?: (task: any) => void;
-}
-
-export const QuickTaskCreate: React.FC<QuickTaskCreateProps> = ({ messageId, onCreated }) => {
+const QuickTaskCreate = () => {
   const [title, setTitle] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuthContext();
 
-  const handleCreate = async () => {
-    setLoading(true);
-    setError(null);
-    
+  const handleCreateTask = async () => {
+    if (!title.trim()) {
+      toast({
+        title: 'Task title required',
+        description: 'Please enter a task title',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsCreating(true);
     try {
       const taskData = {
-        title: title,
-        status: 'new',
-        priority: 'medium'
+        title,
+        status: 'pending',
+        priority: 'medium',
+        user_id: user?.id
       };
       
-      // Using the createTaskFromMessage method with the correct signature
-      const res = await collabService.createTaskFromMessage(messageId, taskData);
+      const result = await dbService.createTask(taskData);
       
-      if (res && 'error' in res && res.error) {
-        setError(typeof res.error === 'string' ? res.error : 'Task creation failed');
-      } 
-      else if (onCreated) {
-        onCreated(res && 'data' in res ? res.data : res);
+      if (result.error) {
+        throw result.error;
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to create task');
+
+      toast({
+        title: 'Task created',
+        description: `Task "${title}" has been created`,
+      });
+      
+      setTitle('');
+    } catch (error) {
+      console.error('Error creating task:', error);
+      toast({
+        title: 'Failed to create task',
+        description: 'There was an error creating your task',
+        variant: 'destructive',
+      });
     } finally {
-      setLoading(false);
+      setIsCreating(false);
     }
   };
 
   return (
-    <div>
-      <input
-        type="text"
-        placeholder="Task title"
+    <div className="flex gap-2">
+      <Input
+        placeholder="Quick task title..."
         value={title}
-        onChange={e => setTitle(e.target.value)}
-        disabled={loading}
+        onChange={(e) => setTitle(e.target.value)}
+        className="flex-1"
       />
-      <button onClick={handleCreate} disabled={loading || !title}>
-        {loading ? 'Creating...' : 'Create Task'}
-      </button>
-      {error && <span style={{ color: 'red' }}>{error}</span>}
+      <Button onClick={handleCreateTask} disabled={isCreating}>
+        {isCreating ? 'Creating...' : 'Create'}
+      </Button>
     </div>
   );
 };
+
+export default QuickTaskCreate;

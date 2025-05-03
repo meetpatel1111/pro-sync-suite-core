@@ -1,6 +1,22 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { User, TimeEntry, UserSettings } from '@/utils/dbtypes';
+import { User, TimeEntry } from '@/utils/dbtypes';
+
+// Define UserSettings interface
+export interface UserSettings {
+  id?: string;
+  user_id: string;
+  theme?: string;
+  language?: string;
+  timezone?: string;
+  date_format?: string;
+  email_notifications?: any;
+  app_notifications?: any;
+  auto_save?: boolean;
+  interface_density?: string;
+  font_size?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 // Helper function to handle errors
 const handleError = (error: any) => {
@@ -162,20 +178,26 @@ const listTimeEntries = async (userId: string) => {
 
 const createTimeEntry = async (timeEntryData: Partial<TimeEntry>) => {
   try {
+    // Ensure required fields have values
+    const data = {
+      description: timeEntryData.description || 'Time entry',
+      project: timeEntryData.project || 'General',
+      time_spent: timeEntryData.time_spent || 60,
+      user_id: timeEntryData.user_id,
+      ...timeEntryData
+    };
+    
     // Ensure date is not null before processing
-    if (!timeEntryData.date) {
-      return { data: null, error: new Error('Date is required for time entries') };
+    if (!data.date) {
+      data.date = new Date().toISOString();
+    } else {
+      // Format the date properly
+      data.date = new Date(data.date).toISOString();
     }
     
-    // Format the date properly
-    const formattedDate = new Date(timeEntryData.date).toISOString();
-
-    const { data, error } = await supabase
+    const { data: result, error } = await supabase
       .from('time_entries')
-      .insert({
-        ...timeEntryData,
-        date: formattedDate
-      })
+      .insert(data)
       .select()
       .single();
     
@@ -183,7 +205,7 @@ const createTimeEntry = async (timeEntryData: Partial<TimeEntry>) => {
       console.error('Error creating time entry:', error);
       return { data: null, error };
     }
-    return { data, error: null };
+    return { data: result, error: null };
   } catch (error) {
     console.error('Exception while creating time entry:', error);
     return { data: null, error };
@@ -824,23 +846,303 @@ const getRisks = async (userId: string, projectId?: string) => {
   }
 };
 
+// FileVault functions
+const getFiles = async (userId: string, filters?: any) => {
+  try {
+    let query = supabase
+      .from('files')
+      .select('*')
+      .eq('user_id', userId);
+
+    // Apply filters if provided
+    if (filters) {
+      if (filters.projectId) {
+        query = query.eq('project_id', filters.projectId);
+      }
+      if (filters.type) {
+        query = query.eq('file_type', filters.type);
+      }
+      if (filters.isArchived !== undefined) {
+        query = query.eq('is_archived', filters.isArchived);
+      }
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching files:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Exception while fetching files:', error);
+    return { data: null, error };
+  }
+};
+
+const uploadFile = async (fileData: any) => {
+  try {
+    // In a real implementation, we would upload to storage and then record in the database
+    // This is a mock implementation for now
+    const { data, error } = await supabase
+      .from('files')
+      .insert({
+        name: fileData.name,
+        file_type: fileData.type,
+        size_bytes: fileData.size,
+        user_id: fileData.userId,
+        storage_path: `files/${fileData.userId}/${fileData.name}`,
+        project_id: fileData.projectId,
+        is_public: fileData.isPublic || false,
+        description: fileData.description || ''
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error uploading file:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Exception while uploading file:', error);
+    return { data: null, error };
+  }
+};
+
+// InsightIQ functions
+const getDashboards = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('dashboards')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching dashboards:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Exception while fetching dashboards:', error);
+    return { data: null, error };
+  }
+};
+
+const getWidgets = async (dashboardId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('widgets')
+      .select('*')
+      .eq('dashboard_id', dashboardId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching widgets:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Exception while fetching widgets:', error);
+    return { data: null, error };
+  }
+};
+
+const createDashboard = async (dashboardData: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('dashboards')
+      .insert(dashboardData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating dashboard:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Exception while creating dashboard:', error);
+    return { data: null, error };
+  }
+};
+
+const updateDashboard = async (dashboardId: string, updates: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('dashboards')
+      .update(updates)
+      .eq('id', dashboardId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating dashboard:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Exception while updating dashboard:', error);
+    return { data: null, error };
+  }
+};
+
+const deleteDashboard = async (dashboardId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('dashboards')
+      .delete()
+      .eq('id', dashboardId);
+
+    if (error) {
+      console.error('Error deleting dashboard:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Exception while deleting dashboard:', error);
+    return { data: null, error };
+  }
+};
+
+const createWidget = async (widgetData: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('widgets')
+      .insert(widgetData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating widget:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Exception while creating widget:', error);
+    return { data: null, error };
+  }
+};
+
+const deleteWidget = async (widgetId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('widgets')
+      .delete()
+      .eq('id', widgetId);
+
+    if (error) {
+      console.error('Error deleting widget:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Exception while deleting widget:', error);
+    return { data: null, error };
+  }
+};
+
+// RiskRadar functions
+const createRisk = async (riskData: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('risks')
+      .insert(riskData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating risk:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Exception while creating risk:', error);
+    return { data: null, error };
+  }
+};
+
+const updateRisk = async (riskId: string, updates: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('risks')
+      .update(updates)
+      .eq('id', riskId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating risk:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Exception while updating risk:', error);
+    return { data: null, error };
+  }
+};
+
+// PlanBoard functions
+const createResourceAllocation = async (allocationData: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('resource_allocations')
+      .insert(allocationData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating resource allocation:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Exception while creating resource allocation:', error);
+    return { data: null, error };
+  }
+};
+
 // Export all functions
 const dbService = {
+  // User profile functions
   getUserProfile,
   createUserProfile,
   updateUserProfile,
   deleteUserProfile,
+  
+  // Time entry functions
   getTimeEntry,
   listTimeEntries,
   createTimeEntry,
   updateTimeEntry,
   deleteTimeEntry,
+  
+  // User settings functions
   getUserSettings,
   createUserSettings,
   updateUserSettings,
   deleteUserSettings,
+  
+  // App user functions
   upsertAppUser,
+  
+  // Dashboard stats function
   getDashboardStats,
+  
+  // Client functions
   getClients,
   getClientById,
   createClient,
@@ -850,17 +1152,47 @@ const dbService = {
   createClientNote,
   updateClientNote,
   deleteClientNote,
+  
+  // Time entries function
   getTimeEntries,
+  
+  // Notification functions
   getNotifications,
   markNotificationAsRead,
+  
+  // Resource functions
   getResources,
   getResourceAllocations,
   getResourceSkills,
   getTeamMembers,
+  
+  // Project functions
   getProjects,
+  
+  // Task functions
   getTasks,
   createTask,
+  
+  // Risk functions
   getRisks,
+  createRisk,
+  updateRisk,
+  
+  // FileVault functions
+  getFiles,
+  uploadFile,
+  
+  // InsightIQ functions
+  getDashboards,
+  getWidgets,
+  createDashboard,
+  updateDashboard,
+  deleteDashboard,
+  createWidget,
+  deleteWidget,
+  
+  // PlanBoard functions
+  createResourceAllocation
 };
 
 export default dbService;
