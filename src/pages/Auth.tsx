@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Loader2, Mail, Lock, AlertCircle, Shield, ShieldCheck, ExternalLink } from 'lucide-react';
-import dbService from '@/services/dbService';
+import { supabase } from '@/integrations/supabase/client';
+import authService from '@/services/authService';
 import "../pages/auth-modern.css";
 
 const Auth = () => {
@@ -25,6 +25,7 @@ const Auth = () => {
   const [formError, setFormError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [authType, setAuthType] = useState('supabase'); // 'supabase' or 'custom'
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -105,18 +106,15 @@ const Auth = () => {
   };
 
   // Sign in with Supabase
-  const handleSignIn = async () => {
+  const handleSupabaseSignIn = async () => {
     if (!validateForm()) return;
     
     setLoading(true);
     setFormError('');
     
     try {
-      console.log('Attempting to sign in with:', email);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      console.log('Attempting to sign in with Supabase:', email);
+      const { data, error } = await authService.signInWithEmail(email, password);
       
       if (error) {
         console.error('Auth error:', error);
@@ -138,29 +136,24 @@ const Auth = () => {
       setFormError('An unexpected error occurred');
       setLoading(false);
     }
-  }
+  };
 
   // Sign up with Supabase
-  const handleSignUp = async () => {
+  const handleSupabaseSignUp = async () => {
     if (!validateForm()) return;
     
     setLoading(true);
     setFormError('');
     
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-        },
+      const { data, error } = await authService.signUpWithEmail(email, password, {
+        full_name: fullName
       });
       
       if (error) {
         console.error('Auth error:', error);
         setFormError(error.message);
+        setLoading(false);
         return;
       }
       
@@ -172,72 +165,31 @@ const Auth = () => {
     } catch (error: any) {
       console.error('Sign-up error:', error);
       setFormError('An unexpected error occurred');
-    } finally {
       setLoading(false);
     }
-  }
+  };
 
-  // Custom sign in for users in the database
+  // Custom sign in
   const handleCustomSignIn = async () => {
-    console.log('Attempting custom sign in with:', email);
     if (!validateForm()) return;
     
     setLoading(true);
     setFormError('');
     
     try {
-      // Check if the user exists using maybeSingle() instead of single() to avoid errors
-      const { data: existingUser, error: fetchError } = await supabase
-        .from('users')
-        .select('id, email, full_name')
-        .eq('email', email)
-        .maybeSingle();
-
-      console.log('User lookup result:', existingUser, fetchError);
+      console.log('Attempting custom sign in with:', email);
+      const { data, error } = await authService.customSignIn(email, password);
       
-      if (fetchError) {
-        console.error('Error fetching user:', fetchError);
-        setFormError('Failed to check credentials. Please try again.');
+      if (error) {
+        console.error('Custom auth error:', error);
+        setFormError(error.message);
         setLoading(false);
         return;
       }
-      
-      if (!existingUser) {
-        console.log('No user found with this email');
-        setFormError('Invalid email or password');
-        setLoading(false);
-        return;
-      }
-
-      // For development purposes, we're allowing any password
-      // In production, you should validate the password properly
-      const customUser = {
-        id: existingUser.id,
-        email: existingUser.email,
-        full_name: existingUser.full_name || email.split('@')[0],
-        customAuth: true,
-      };
-
-      console.log('Creating custom user session:', customUser);
       
       // Store the custom user in localStorage
-      localStorage.setItem('customUser', JSON.stringify(customUser));
-
-      // Ensure user is present in the application's users table (required for FK)
-      try {
-        const upsertResult = await dbService.upsertAppUser(customUser);
-        console.debug('[CustomUser] upsertAppUser result:', upsertResult);
-        if (upsertResult?.error) {
-          console.error('[CustomUser] Failed to upsert user:', upsertResult.error);
-          setLoading(false);
-          setFormError('Error creating user profile. Please try again.');
-          return;
-        }
-      } catch (err) {
-        console.error('[CustomUser] Exception during upsertAppUser:', err);
-        setLoading(false);
-        setFormError('Error creating user profile. Please try again.');
-        return;
+      if (data) {
+        localStorage.setItem('customUser', JSON.stringify(data));
       }
 
       toast({
@@ -245,9 +197,9 @@ const Auth = () => {
         description: 'You have been signed in to your account',
       });
 
-      // Ensure we navigate to the dashboard after successful sign-in with clear logging
+      // Ensure we navigate to the dashboard after successful sign-in
       console.log('Custom auth successful, redirecting to dashboard');
-      setLoading(false); // Make sure loading is false before navigation
+      setLoading(false); 
       navigate('/', { replace: true });
     } catch (error: any) {
       console.error('Custom sign-in error:', error);
@@ -256,6 +208,7 @@ const Auth = () => {
     }
   };
 
+  // Custom sign up
   const handleCustomSignUp = async () => {
     if (!validateForm()) return;
     
@@ -263,55 +216,19 @@ const Auth = () => {
     setFormError('');
     
     try {
-      // Check if the user already exists using maybeSingle() instead of single()
-      const { data: existingUser, error: fetchError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', email)
-        .maybeSingle();
-
-      if (fetchError) {
-        console.error('Error checking if user exists:', fetchError);
-        setFormError('Error checking if user exists. Please try again.');
-        setLoading(false);
-        return;
-      }
-
-      if (existingUser) {
-        setFormError('User with this email already exists. Please sign in instead.');
-        setLoading(false);
-        return;
-      }
-
-      // Create a new user ID
-      const userId = crypto.randomUUID();
+      const { data, error } = await authService.customSignUp(email, fullName, password);
       
-      // Insert into users table
-      const { error: insertError } = await supabase
-        .from('users')
-        .insert({
-          id: userId,
-          email: email,
-          full_name: fullName || email.split('@')[0],
-          username: email.split('@')[0] // Adding a username derived from email
-        });
-        
-      if (insertError) {
-        setFormError(insertError.message);
+      if (error) {
+        console.error('Custom auth error:', error);
+        setFormError(error.message);
         setLoading(false);
         return;
       }
-
-      // Create a custom user object
-      const customUser = {
-        id: userId,
-        email: email,
-        full_name: fullName || email.split('@')[0],
-        customAuth: true,
-      };
-
+      
       // Store the custom user in localStorage
-      localStorage.setItem('customUser', JSON.stringify(customUser));
+      if (data) {
+        localStorage.setItem('customUser', JSON.stringify(data));
+      }
 
       toast({
         title: 'Signed up successfully',
@@ -322,17 +239,26 @@ const Auth = () => {
     } catch (error: any) {
       console.error('Custom sign-up error:', error);
       setFormError('An unexpected error occurred');
-    } finally {
       setLoading(false);
     }
   };
 
+  // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (type === "sign-in") {
-      handleCustomSignIn();
+      if (authType === 'supabase') {
+        handleSupabaseSignIn();
+      } else {
+        handleCustomSignIn();
+      }
     } else {
-      handleCustomSignUp();
+      if (authType === 'supabase') {
+        handleSupabaseSignUp();
+      } else {
+        handleCustomSignUp();
+      }
     }
   };
 
@@ -393,6 +319,33 @@ const Auth = () => {
               }
             </p>
 
+            {/* Auth Type Selection */}
+            <div className="mb-4">
+              <div className="flex space-x-4">
+                <Button 
+                  type="button" 
+                  variant={authType === 'supabase' ? 'default' : 'outline'} 
+                  onClick={() => setAuthType('supabase')}
+                  className="flex-1"
+                >
+                  <ShieldCheck className="mr-2 h-4 w-4" /> Supabase Auth
+                </Button>
+                <Button 
+                  type="button" 
+                  variant={authType === 'custom' ? 'default' : 'outline'} 
+                  onClick={() => setAuthType('custom')}
+                  className="flex-1"
+                >
+                  <Shield className="mr-2 h-4 w-4" /> Custom Auth
+                </Button>
+              </div>
+              <p className="mt-2 text-xs text-gray-500 text-center">
+                {authType === 'supabase' 
+                  ? 'Using Supabase built-in authentication'
+                  : 'Using custom authentication flow'}
+              </p>
+            </div>
+
             {formError && (
               <div className="mb-6 flex items-center gap-2 rounded-md bg-red-50 p-3 text-sm text-red-700">
                 <AlertCircle className="h-5 w-5" />
@@ -413,7 +366,7 @@ const Auth = () => {
                     placeholder="Enter your full name"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="h-12"
+                    className="mb-2"
                   />
                 </div>
               )}

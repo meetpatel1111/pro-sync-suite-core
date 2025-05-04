@@ -6,6 +6,7 @@ import { useAuthContext } from '@/context/AuthContext';
 import collabService, { Message } from '@/services/collabService';
 import ChatInterface from '@/components/ChatInterface';
 import { Card } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
 
 const CollabSpace = () => {
   const { user } = useAuthContext();
