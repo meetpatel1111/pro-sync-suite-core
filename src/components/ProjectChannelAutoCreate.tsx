@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import collabService from '@/services/collabService';
 
@@ -15,8 +16,10 @@ export const ProjectChannelAutoCreate: React.FC<ProjectChannelAutoCreateProps> =
     setError(null);
     
     try {
-      // Fix the call to match collabService.autoCreateProjectChannel signature
-      const response = await collabService.autoCreateProjectChannel(projectId, projectName, 'CURRENT_USER_ID');
+      // Get the current user ID from context or auth state management
+      const currentUserId = 'CURRENT_USER_ID'; // Replace with actual user ID from your auth context
+      
+      const response = await collabService.autoCreateProjectChannel(projectId, projectName, currentUserId);
       
       if (response && response.error) {
         setError(typeof response.error === 'string' ? response.error : 'Channel creation failed');

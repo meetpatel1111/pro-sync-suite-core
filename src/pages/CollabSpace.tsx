@@ -79,7 +79,8 @@ const CollabSpace = () => {
           channel_id: selectedChannelId,
           user_id: user.id,
           content,
-          file_url: fileUrl
+          file_url: fileUrl,
+          read_by: [user.id]
         }, scheduledFor);
       } else {
         await collabService.sendMessage(

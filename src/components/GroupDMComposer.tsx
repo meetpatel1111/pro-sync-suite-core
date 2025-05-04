@@ -2,59 +2,73 @@
 import React, { useState } from 'react';
 import collabService from '@/services/collabService';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 
 interface GroupDMComposerProps {
-  allUsers: { id: string; name: string }[];
-  onCreated?: (channel: any) => void;
   currentUserId: string;
+  onChannelCreated?: (channelId: string) => void;
 }
 
-export const GroupDMComposer: React.FC<GroupDMComposerProps> = ({ allUsers, onCreated, currentUserId }) => {
-  const [selected, setSelected] = useState<string[]>([]);
+const GroupDMComposer: React.FC<GroupDMComposerProps> = ({ currentUserId, onChannelCreated }) => {
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [groupName, setGroupName] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleToggle = (userId: string) => {
-    setSelected(sel => sel.includes(userId) ? sel.filter(id => id !== userId) : [...sel, userId]);
-  };
-
   const handleCreate = async () => {
+    if (selectedUsers.length === 0) return;
+    
     setLoading(true);
     try {
-      const result = await collabService.createGroupDM(selected, currentUserId);
-      setLoading(false);
-      if (result && result.data && onCreated) {
-        onCreated(result.data);
+      const { data, error } = await collabService.createGroupDM(selectedUsers, currentUserId, groupName);
+      
+      if (error) {
+        console.error('Error creating group DM:', error);
+        return;
       }
-    } catch (error) {
-      console.error("Error creating group DM:", error);
+      
+      if (onChannelCreated && data) {
+        onChannelCreated(data.id);
+      }
+    } catch (err) {
+      console.error('Exception creating group DM:', err);
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="p-4 border rounded-md mt-4">
-      <h3 className="font-medium mb-2">Start Group DM</h3>
-      <div className="space-y-2 max-h-40 overflow-y-auto mb-3">
-        {allUsers.filter(u => u.id !== currentUserId).map(user => (
-          <div key={user.id} className="flex items-center space-x-2">
-            <Checkbox 
-              id={`user-${user.id}`}
-              checked={selected.includes(user.id)} 
-              onCheckedChange={() => handleToggle(user.id)} 
-            />
-            <Label htmlFor={`user-${user.id}`}>{user.name}</Label>
-          </div>
-        ))}
+    <div>
+      <h3>Create Group Chat</h3>
+      <div>
+        <label htmlFor="group-name">Group Name (Optional)</label>
+        <input 
+          id="group-name"
+          value={groupName}
+          onChange={(e) => setGroupName(e.target.value)}
+          placeholder="Enter group name"
+        />
       </div>
+      
+      {/* User selection would go here */}
+      <div>
+        <p>Selected users: {selectedUsers.length}</p>
+        
+        {/* This is a placeholder for a proper user selector */}
+        <Button 
+          onClick={() => setSelectedUsers(['sample-user-id1', 'sample-user-id2'])}
+          disabled={loading}
+        >
+          Add Sample Users
+        </Button>
+      </div>
+      
       <Button 
-        onClick={handleCreate} 
-        disabled={loading || selected.length === 0}
-        size="sm"
+        onClick={handleCreate}
+        disabled={loading || selectedUsers.length === 0}
       >
         {loading ? 'Creating...' : 'Create Group DM'}
       </Button>
     </div>
   );
 };
+
+export default GroupDMComposer;
