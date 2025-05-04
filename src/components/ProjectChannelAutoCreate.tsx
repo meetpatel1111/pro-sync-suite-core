@@ -1,6 +1,9 @@
 
 import React, { useState } from 'react';
 import collabService from '@/services/collabService';
+import { useAuthContext } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
 
 interface ProjectChannelAutoCreateProps {
   projectId: string;
@@ -10,25 +13,41 @@ interface ProjectChannelAutoCreateProps {
 export const ProjectChannelAutoCreate: React.FC<ProjectChannelAutoCreateProps> = ({ projectId, projectName }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuthContext();
 
   const handleCreateChannel = async () => {
+    if (!user?.id) {
+      setError('User not authenticated');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     
     try {
-      // Get the current user ID from context or auth state management
-      const currentUserId = 'CURRENT_USER_ID'; // Replace with actual user ID from your auth context
-      
-      const response = await collabService.autoCreateProjectChannel(projectId, projectName, currentUserId);
+      const response = await collabService.autoCreateProjectChannel(projectId, projectName, user.id);
       
       if (response && response.error) {
         setError(typeof response.error === 'string' ? response.error : 'Channel creation failed');
+        toast({
+          title: 'Error',
+          description: 'Failed to create project channel',
+          variant: 'destructive',
+        });
       } else {
-        // Handle success (e.g., show a success message)
-        console.log('Channel created successfully:', response.data);
+        // Handle success
+        toast({
+          title: 'Success',
+          description: 'Project channel created successfully',
+        });
       }
     } catch (err: any) {
       setError(err.message || 'Failed to create channel');
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to create project channel',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -36,10 +55,12 @@ export const ProjectChannelAutoCreate: React.FC<ProjectChannelAutoCreateProps> =
 
   return (
     <div>
-      <button onClick={handleCreateChannel} disabled={loading}>
+      <Button onClick={handleCreateChannel} disabled={loading} variant="outline">
         {loading ? 'Creating Channel...' : 'Auto-Create Project Channel'}
-      </button>
-      {error && <span style={{ color: 'red' }}>{error}</span>}
+      </Button>
+      {error && <span className="text-red-500 text-sm mt-1 block">{error}</span>}
     </div>
   );
 };
+
+export default ProjectChannelAutoCreate;

@@ -26,12 +26,12 @@ const CollabSpace = () => {
         // Fetch messages
         const result = await collabService.getMessages(selectedChannelId);
         if (result && result.data) {
-          // Convert the messages to match the DbMessage type
+          // Ensure that each message has the required fields
           const typedMessages = result.data.map(msg => ({
             ...msg,
             content: msg.content || '', // Ensure content is never undefined
-            read_by: Array.isArray(msg.read_by) ? msg.read_by : msg.read_by ? [msg.read_by] : []
-          })) as DbMessage[];
+            read_by: Array.isArray(msg.read_by) ? msg.read_by : (msg.read_by ? [msg.read_by] : [])
+          })) as unknown as DbMessage[];
           
           setMessages(typedMessages);
         }
@@ -61,12 +61,13 @@ const CollabSpace = () => {
         }, 
         (payload) => {
           const newMessage = payload.new as CollabMessage;
-          // Convert to DbMessage type
+          // Ensure the message has all required fields before adding it
           const typedMessage = {
             ...newMessage,
             content: newMessage.content || '',
-            read_by: Array.isArray(newMessage.read_by) ? newMessage.read_by : newMessage.read_by ? [newMessage.read_by] : []
-          } as DbMessage;
+            read_by: Array.isArray(newMessage.read_by) ? newMessage.read_by : 
+                    newMessage.read_by ? [newMessage.read_by] : []
+          } as unknown as DbMessage;
           
           setMessages(prevMessages => [...prevMessages, typedMessage]);
         })
@@ -103,7 +104,8 @@ const CollabSpace = () => {
           selectedChannelId,
           user.id,
           content,
-          fileUrl
+          fileUrl,
+          parentId
         );
       }
       

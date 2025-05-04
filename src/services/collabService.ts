@@ -1,34 +1,58 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { baseService } from './base/baseService';
-import { Channel, Message as DbMessage } from '@/utils/dbtypes';
 
+// Define the interface for a Channel
+export interface Channel {
+  id: string;
+  name: string;
+  description?: string;
+  about?: string;
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+  type?: string;
+}
+
+// Define the interface for a Message
 export interface Message {
   id: string;
   channel_id: string;
   user_id: string;
-  content: string; // Making content required to match dbtypes
-  file_url?: string;
-  created_at: string;
-  type: 'text' | 'file' | 'poll';
+  content: string;
+  file_url?: string | null;
+  parent_id?: string | null;
+  scheduled_for?: string | null;
+  created_at?: string;
+  pinned?: boolean;
+  read_by: string[];
+  // Additional properties from joins
+  user_email?: string;
   username?: string;
   avatar_url?: string;
-  edited_at?: string;
-  reactions?: any;
-  parent_id?: string;
-  is_pinned?: boolean;
-  read_by: string[]; // This must be string[] to match dbtypes
-  mentions?: string[];
+  reactions?: Record<string, string[]>;
 }
 
-// Get all channels
+// Define the interface for a Channel Member
+export interface ChannelMember {
+  id: string;
+  channel_id: string;
+  user_id: string;
+  role?: string;
+  joined_at?: string;
+  // Additional properties from joins
+  user_email?: string;
+  username?: string;
+  avatar_url?: string;
+}
+
+// Function to get all channels
 const getChannels = async () => {
   try {
     const { data, error } = await supabase
       .from('channels')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
+      .select('*');
+      
     if (error) {
       console.error('Error fetching channels:', error);
       return { data: null, error };
@@ -41,20 +65,26 @@ const getChannels = async () => {
   }
 };
 
-// Create a new channel
-const createChannel = async (channelData: { name: string, type?: string, description?: string, created_by?: string }) => {
+// Function to create a channel
+const createChannel = async (channel: Partial<Channel>) => {
   try {
-    // Make sure the name property is always provided
-    if (!channelData.name) {
-      return { data: null, error: new Error('Channel name is required') };
+    // Ensure name is provided
+    if (!channel.name) {
+      return { data: null, error: { message: 'Channel name is required' } };
     }
     
     const { data, error } = await supabase
       .from('channels')
-      .insert(channelData)
+      .insert({
+        name: channel.name,
+        description: channel.description || '',
+        about: channel.about || '',
+        created_by: channel.created_by,
+        type: channel.type || 'public'
+      })
       .select()
       .single();
-    
+      
     if (error) {
       console.error('Error creating channel:', error);
       return { data: null, error };
@@ -67,27 +97,7 @@ const createChannel = async (channelData: { name: string, type?: string, descrip
   }
 };
 
-// Delete a channel
-const deleteChannel = async (channelId: string) => {
-  try {
-    const { data, error } = await supabase
-      .from('channels')
-      .delete()
-      .eq('id', channelId);
-    
-    if (error) {
-      console.error('Error deleting channel:', error);
-      return { data: null, error };
-    }
-    
-    return { data, error: null };
-  } catch (error) {
-    console.error('Exception while deleting channel:', error);
-    return { data: null, error };
-  }
-};
-
-// Get all messages for a channel
+// Function to get messages in a channel
 const getMessages = async (channelId: string) => {
   try {
     const { data, error } = await supabase
@@ -95,61 +105,61 @@ const getMessages = async (channelId: string) => {
       .select(`
         *,
         users:user_id (
-          username,
+          email,
+          full_name,
           avatar_url
         )
       `)
       .eq('channel_id', channelId)
       .order('created_at', { ascending: true });
-    
+      
     if (error) {
       console.error('Error fetching messages:', error);
       return { data: null, error };
     }
     
-    // Format the data to include the username and avatar_url
-    const messagesWithUserInfo = data.map(message => {
-      const formattedMessage: Message = {
-        ...message,
-        content: message.content || '', // Ensure content is always a string
-        username: message.users?.username || 'Unknown',
-        avatar_url: message.users?.avatar_url || null,
-        read_by: Array.isArray(message.read_by) ? message.read_by : message.read_by ? [message.read_by] : []
+    // Map the data to the expected format
+    const mappedData = data.map(msg => {
+      const userData = msg.users as any;
+      return {
+        ...msg,
+        user_email: userData?.email || '',
+        username: userData?.full_name || 'Unknown User',
+        avatar_url: userData?.avatar_url || '',
+        read_by: Array.isArray(msg.read_by) ? msg.read_by : (msg.read_by ? [msg.read_by] : []),
+        content: msg.content || ''  // Ensure content is never undefined
       };
-      return formattedMessage;
     });
     
-    return { data: messagesWithUserInfo, error: null };
+    return { data: mappedData, error: null };
   } catch (error) {
     console.error('Exception while fetching messages:', error);
     return { data: null, error };
   }
 };
 
-// Send a message
+// Function to send a message
 const sendMessage = async (
   channelId: string,
   userId: string,
-  content?: string,
+  content: string,
   fileUrl?: string | null,
-  messageType = 'text'
+  parentId?: string | null
 ) => {
   try {
-    const message = {
-      channel_id: channelId,
-      user_id: userId,
-      content: content || '', // Ensure content is always a string
-      file_url: fileUrl || null,
-      type: messageType,
-      read_by: [userId] // Ensure read_by is always an array
-    };
-    
     const { data, error } = await supabase
       .from('messages')
-      .insert(message)
+      .insert({
+        channel_id: channelId,
+        user_id: userId,
+        content: content || '', // Ensure content is never null
+        file_url: fileUrl,
+        parent_id: parentId,
+        read_by: [userId] // Initialize read_by as an array with the sender
+      })
       .select()
       .single();
-    
+      
     if (error) {
       console.error('Error sending message:', error);
       return { data: null, error };
@@ -162,22 +172,19 @@ const sendMessage = async (
   }
 };
 
-// Schedule a message
+// Function to schedule a message for later sending
 const scheduleMessage = async (message: Partial<Message>, scheduledFor: Date) => {
   try {
-    const messageWithSchedule = {
-      ...message,
-      content: message.content || '', // Ensure content is always a string
-      scheduled_for: scheduledFor.toISOString(),
-      read_by: [message.user_id || ''] // Initialize with the sender having read it
-    };
-    
     const { data, error } = await supabase
       .from('messages')
-      .insert(messageWithSchedule)
+      .insert({
+        ...message,
+        scheduled_for: scheduledFor.toISOString(),
+        read_by: Array.isArray(message.read_by) ? message.read_by : [message.user_id || '']
+      })
       .select()
       .single();
-    
+      
     if (error) {
       console.error('Error scheduling message:', error);
       return { data: null, error };
@@ -190,52 +197,32 @@ const scheduleMessage = async (message: Partial<Message>, scheduledFor: Date) =>
   }
 };
 
-// Upload a file
+// Function to upload a file
 const uploadFile = async (file: File, channelId: string, userId: string) => {
   try {
-    const filePath = `${channelId}/${Date.now()}_${file.name}`;
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${channelId}/${userId}/${Date.now()}.${fileExt}`;
     
     const { data, error } = await supabase.storage
-      .from('collabspace_files')
-      .upload(filePath, file);
-    
+      .from('collabspace')
+      .upload(fileName, file);
+      
     if (error) {
       console.error('Error uploading file:', error);
       return { data: null, error };
     }
     
-    // Get the public URL
-    const { data: publicUrlData } = supabase.storage
-      .from('collabspace_files')
-      .getPublicUrl(filePath);
-    
-    const fileRecord = {
-      name: file.name,
-      storage_path: filePath,
-      file_type: file.type,
-      size_bytes: file.size,
-      user_id: userId,
-      channel_id: channelId,
-      is_public: true,
-      is_archived: false
-    };
-    
-    // Insert file record
-    const { data: fileData, error: fileError } = await supabase
-      .from('files')
-      .insert(fileRecord)
-      .select()
-      .single();
-    
-    if (fileError) {
-      console.error('Error creating file record:', fileError);
-      return { data: null, error: fileError };
-    }
+    // Get the public URL for the file
+    const { data: { publicUrl } } = supabase.storage
+      .from('collabspace')
+      .getPublicUrl(fileName);
     
     return { 
-      data: { 
-        ...fileData, 
-        file_url: publicUrlData.publicUrl 
+      data: {
+        file_url: publicUrl,
+        file_name: file.name,
+        file_type: file.type,
+        file_size: file.size
       }, 
       error: null 
     };
@@ -245,7 +232,7 @@ const uploadFile = async (file: File, channelId: string, userId: string) => {
   }
 };
 
-// Get channel members
+// Function to get members of a channel
 const getChannelMembers = async (channelId: string) => {
   try {
     const { data, error } = await supabase
@@ -253,45 +240,49 @@ const getChannelMembers = async (channelId: string) => {
       .select(`
         *,
         users:user_id (
-          username,
+          email,
+          full_name,
           avatar_url
         )
       `)
       .eq('channel_id', channelId);
-    
+      
     if (error) {
       console.error('Error fetching channel members:', error);
       return { data: null, error };
     }
     
-    // Format the data to include user information
-    const membersWithUserInfo = data.map(member => {
+    // Map the data to the expected format
+    const mappedData = data.map(member => {
+      const userData = member.users as any;
       return {
         ...member,
-        username: member.users?.username || 'Unknown',
-        avatar_url: member.users?.avatar_url || null
+        user_email: userData?.email || '',
+        username: userData?.full_name || 'Unknown User',
+        avatar_url: userData?.avatar_url || ''
       };
     });
     
-    return { data: membersWithUserInfo, error: null };
+    return { data: mappedData, error: null };
   } catch (error) {
     console.error('Exception while fetching channel members:', error);
     return { data: null, error };
   }
 };
 
-// Join a channel
-const joinChannel = async (channelId: string, userId: string) => {
+// Function to join a channel
+const joinChannel = async (channelId: string, userId: string, role?: string) => {
   try {
     const { data, error } = await supabase
       .from('channel_members')
       .insert({
         channel_id: channelId,
-        user_id: userId
+        user_id: userId,
+        role: role || 'member'
       })
       .select()
       .single();
-    
+      
     if (error) {
       console.error('Error joining channel:', error);
       return { data: null, error };
@@ -304,7 +295,7 @@ const joinChannel = async (channelId: string, userId: string) => {
   }
 };
 
-// Leave a channel
+// Function to leave a channel
 const leaveChannel = async (channelId: string, userId: string) => {
   try {
     const { data, error } = await supabase
@@ -312,7 +303,7 @@ const leaveChannel = async (channelId: string, userId: string) => {
       .delete()
       .eq('channel_id', channelId)
       .eq('user_id', userId);
-    
+      
     if (error) {
       console.error('Error leaving channel:', error);
       return { data: null, error };
@@ -325,10 +316,10 @@ const leaveChannel = async (channelId: string, userId: string) => {
   }
 };
 
-// Add reaction to message
-const addReaction = async (messageId: string, userId: string, emoji: string) => {
+// Function to add a reaction to a message
+const addReaction = async (messageId: string, userId: string, reaction: string) => {
   try {
-    // First get the current message
+    // First get the current message to see if it has existing reactions
     const { data: message, error: fetchError } = await supabase
       .from('messages')
       .select('reactions')
@@ -340,27 +331,31 @@ const addReaction = async (messageId: string, userId: string, emoji: string) => 
       return { data: null, error: fetchError };
     }
     
-    // Update the reactions object
-    const currentReactions = message.reactions || {};
-    if (!currentReactions[emoji]) {
-      currentReactions[emoji] = [];
+    // Create or update reactions object
+    let reactions = message.reactions || {};
+    
+    // Ensure reactions is an object
+    if (typeof reactions !== 'object' || reactions === null) {
+      reactions = {};
     }
     
-    // Add user ID if not already reacted with this emoji
-    const emojiReactions = Array.isArray(currentReactions[emoji]) ? 
-      currentReactions[emoji] : 
-      currentReactions[emoji] ? [currentReactions[emoji]] : [];
+    // Add user to the reaction list or create a new array if it doesn't exist
+    if (!reactions[reaction]) {
+      reactions[reaction] = [userId];
+    } else {
+      // Convert to array if it's not already
+      const reactionUsers = Array.isArray(reactions[reaction]) ? reactions[reaction] : [reactions[reaction]];
       
-    if (!emojiReactions.includes(userId)) {
-      emojiReactions.push(userId);
+      // Only add user if they haven't already reacted
+      if (!reactionUsers.includes(userId)) {
+        reactions[reaction] = [...reactionUsers, userId];
+      }
     }
     
-    currentReactions[emoji] = emojiReactions;
-    
-    // Update the message
+    // Update the message with new reactions
     const { data, error } = await supabase
       .from('messages')
-      .update({ reactions: currentReactions })
+      .update({ reactions })
       .eq('id', messageId)
       .select()
       .single();
@@ -377,8 +372,8 @@ const addReaction = async (messageId: string, userId: string, emoji: string) => 
   }
 };
 
-// Remove reaction from message
-const removeReaction = async (messageId: string, userId: string) => {
+// Function to remove a reaction from a message
+const removeReaction = async (messageId: string, userId: string, reaction: string) => {
   try {
     // First get the current message
     const { data: message, error: fetchError } = await supabase
@@ -392,27 +387,30 @@ const removeReaction = async (messageId: string, userId: string) => {
       return { data: null, error: fetchError };
     }
     
-    // Update the reactions object
-    const currentReactions = message.reactions || {};
+    // Get current reactions
+    let reactions = message.reactions || {};
     
-    // Remove the user ID from all emoji arrays
-    Object.keys(currentReactions).forEach(emoji => {
-      const emojiReactions = Array.isArray(currentReactions[emoji]) ? 
-        currentReactions[emoji] : 
-        currentReactions[emoji] ? [currentReactions[emoji]] : [];
-        
-      currentReactions[emoji] = emojiReactions.filter(id => id !== userId);
+    // Ensure reactions is an object
+    if (typeof reactions !== 'object' || reactions === null) {
+      return { data: message, error: null }; // Nothing to remove
+    }
+    
+    // Remove user from the reaction list if it exists
+    if (reactions[reaction]) {
+      // Convert to array if it's not already
+      const reactionUsers = Array.isArray(reactions[reaction]) ? reactions[reaction] : [reactions[reaction]];
+      reactions[reaction] = reactionUsers.filter((id: string) => id !== userId);
       
-      // Clean up empty emoji arrays
-      if (currentReactions[emoji].length === 0) {
-        delete currentReactions[emoji];
+      // Remove the reaction entirely if no users are left
+      if (reactions[reaction].length === 0) {
+        delete reactions[reaction];
       }
-    });
+    }
     
-    // Update the message
+    // Update the message with new reactions
     const { data, error } = await supabase
       .from('messages')
-      .update({ reactions: currentReactions })
+      .update({ reactions })
       .eq('id', messageId)
       .select()
       .single();
@@ -429,12 +427,12 @@ const removeReaction = async (messageId: string, userId: string) => {
   }
 };
 
-// Pin message
+// Function to pin a message
 const pinMessage = async (messageId: string) => {
   try {
     const { data, error } = await supabase
       .from('messages')
-      .update({ is_pinned: true })
+      .update({ pinned: true })
       .eq('id', messageId)
       .select()
       .single();
@@ -451,12 +449,12 @@ const pinMessage = async (messageId: string) => {
   }
 };
 
-// Unpin message
+// Function to unpin a message
 const unpinMessage = async (messageId: string) => {
   try {
     const { data, error } = await supabase
       .from('messages')
-      .update({ is_pinned: false })
+      .update({ pinned: false })
       .eq('id', messageId)
       .select()
       .single();
@@ -473,10 +471,10 @@ const unpinMessage = async (messageId: string) => {
   }
 };
 
-// Mark message as read
+// Function to mark a message as read
 const markAsRead = async (messageId: string, userId: string) => {
   try {
-    // First get the current message
+    // First get the current message to see who has read it
     const { data: message, error: fetchError } = await supabase
       .from('messages')
       .select('read_by')
@@ -488,16 +486,21 @@ const markAsRead = async (messageId: string, userId: string) => {
       return { data: null, error: fetchError };
     }
     
-    // Update the read_by array
-    let readBy = Array.isArray(message.read_by) ? 
-      message.read_by : 
-      message.read_by ? [message.read_by] : [];
-      
-    if (!readBy.includes(userId)) {
-      readBy.push(userId);
+    // Create or update read_by array
+    let readBy: string[] = [];
+    
+    if (message.read_by) {
+      readBy = Array.isArray(message.read_by) ? message.read_by : [message.read_by];
     }
     
-    // Update the message
+    // Only add user if they haven't already read it
+    if (!readBy.includes(userId)) {
+      readBy.push(userId);
+    } else {
+      return { data: message, error: null }; // Already marked as read
+    }
+    
+    // Update the message with new read_by
     const { data, error } = await supabase
       .from('messages')
       .update({ read_by: readBy })
@@ -517,7 +520,7 @@ const markAsRead = async (messageId: string, userId: string) => {
   }
 };
 
-// Delete message
+// Function to delete a message
 const deleteMessage = async (messageId: string) => {
   try {
     const { data, error } = await supabase
@@ -537,15 +540,12 @@ const deleteMessage = async (messageId: string) => {
   }
 };
 
-// Edit message
+// Function to edit a message
 const editMessage = async (messageId: string, content: string) => {
   try {
     const { data, error } = await supabase
       .from('messages')
-      .update({
-        content,
-        edited_at: new Date().toISOString()
-      })
+      .update({ content })
       .eq('id', messageId)
       .select()
       .single();
@@ -562,56 +562,74 @@ const editMessage = async (messageId: string, content: string) => {
   }
 };
 
-// Search messages
-const searchMessages = async (query: string, filters?: any) => {
+// Function to search messages
+const searchMessages = async (query: string, filters?: { channel_id?: string, user_id?: string, from_date?: string, to_date?: string }) => {
   try {
-    let searchQuery = supabase
+    let queryBuilder = supabase
       .from('messages')
-      .select('*, users:user_id(username, avatar_url)')
+      .select(`
+        *,
+        users:user_id (
+          email,
+          full_name,
+          avatar_url
+        )
+      `)
       .ilike('content', `%${query}%`);
     
-    // Apply any additional filters
-    if (filters?.channel_id) {
-      searchQuery = searchQuery.eq('channel_id', filters.channel_id);
+    // Apply additional filters if provided
+    if (filters) {
+      if (filters.channel_id) {
+        queryBuilder = queryBuilder.eq('channel_id', filters.channel_id);
+      }
+      if (filters.user_id) {
+        queryBuilder = queryBuilder.eq('user_id', filters.user_id);
+      }
+      if (filters.from_date) {
+        queryBuilder = queryBuilder.gte('created_at', filters.from_date);
+      }
+      if (filters.to_date) {
+        queryBuilder = queryBuilder.lte('created_at', filters.to_date);
+      }
     }
     
-    if (filters?.user_id) {
-      searchQuery = searchQuery.eq('user_id', filters.user_id);
-    }
-    
-    const { data, error } = await searchQuery;
+    const { data, error } = await queryBuilder;
     
     if (error) {
       console.error('Error searching messages:', error);
       return { data: null, error };
     }
     
-    // Format the results
-    const formattedResults = data.map(message => ({
-      ...message,
-      content: message.content || '', // Ensure content is always a string
-      username: message.users?.username || 'Unknown',
-      avatar_url: message.users?.avatar_url || null,
-      read_by: Array.isArray(message.read_by) ? message.read_by : message.read_by ? [message.read_by] : []
-    }));
+    // Map the data to the expected format
+    const mappedData = data.map(msg => {
+      const userData = msg.users as any;
+      return {
+        ...msg,
+        user_email: userData?.email || '',
+        username: userData?.full_name || 'Unknown User',
+        avatar_url: userData?.avatar_url || '',
+        read_by: Array.isArray(msg.read_by) ? msg.read_by : (msg.read_by ? [msg.read_by] : []),
+        content: msg.content || ''  // Ensure content is never undefined
+      };
+    });
     
-    return { data: formattedResults, error: null };
+    return { data: mappedData, error: null };
   } catch (error) {
     console.error('Exception while searching messages:', error);
     return { data: null, error };
   }
 };
 
-// Create group DM
-const createGroupDM = async (userIds: string[], createdBy: string, name?: string) => {
+// Function to create a group DM channel
+const createGroupDM = async (name: string, userIds: string[], creatorId: string) => {
   try {
-    // Create a new channel of type 'group_dm'
-    const { data: channelData, error: channelError } = await supabase
+    // First, create a channel with type 'direct'
+    const { data: channel, error: channelError } = await supabase
       .from('channels')
       .insert({
-        name: name || `Group (${userIds.length + 1} members)`,
-        type: 'group_dm',
-        created_by: createdBy
+        name,
+        created_by: creatorId,
+        type: 'direct'
       })
       .select()
       .single();
@@ -621,78 +639,79 @@ const createGroupDM = async (userIds: string[], createdBy: string, name?: string
       return { data: null, error: channelError };
     }
     
-    const channelId = channelData.id;
+    // Now add all users to the channel
+    const memberPromises = userIds.map(userId => 
+      supabase.from('channel_members').insert({
+        channel_id: channel.id,
+        user_id: userId,
+        role: userId === creatorId ? 'admin' : 'member'
+      })
+    );
     
-    // Add all users to the channel
-    const memberInserts = [...userIds, createdBy].map(userId => ({
-      channel_id: channelId,
-      user_id: userId
-    }));
+    await Promise.all(memberPromises);
     
-    const { error: membersError } = await supabase
-      .from('channel_members')
-      .insert(memberInserts);
-    
-    if (membersError) {
-      console.error('Error adding members to group DM:', membersError);
-      // Try to clean up the channel if adding members failed
-      await supabase.from('channels').delete().eq('id', channelId);
-      return { data: null, error: membersError };
-    }
-    
-    return { data: channelData, error: null };
+    return { data: channel, error: null };
   } catch (error) {
     console.error('Exception while creating group DM:', error);
     return { data: null, error };
   }
 };
 
-// Auto-create project channel
-const autoCreateProjectChannel = async (projectId: string, projectName: string, userId: string) => {
+// Function to automatically create a project channel
+const autoCreateProjectChannel = async (projectId: string, projectName: string, creatorId: string) => {
   try {
-    // Create a new channel for the project
-    const { data, error } = await supabase
+    // Create a channel named after the project
+    const { data: channel, error: channelError } = await supabase
       .from('channels')
       .insert({
         name: `Project: ${projectName}`,
-        description: `Channel for project ${projectName} (${projectId})`,
-        type: 'public',
-        created_by: userId
+        description: `Channel for ${projectName} project collaboration`,
+        created_by: creatorId,
+        type: 'project',
+        about: `Project ID: ${projectId}`
       })
       .select()
       .single();
     
-    if (error) {
-      console.error('Error creating project channel:', error);
-      return { data: null, error };
+    if (channelError) {
+      console.error('Error creating project channel:', channelError);
+      return { data: null, error: channelError };
     }
     
     // Add the creator as a member
     const { error: memberError } = await supabase
       .from('channel_members')
       .insert({
-        channel_id: data.id,
-        user_id: userId
+        channel_id: channel.id,
+        user_id: creatorId,
+        role: 'admin'
       });
     
     if (memberError) {
-      console.error('Error adding creator to channel:', memberError);
-      // The channel was created but adding member failed, we'll leave it as is
+      console.error('Error adding creator to project channel:', memberError);
+      return { data: channel, error: memberError };
     }
     
-    return { data, error: null };
+    return { data: channel, error: null };
   } catch (error) {
     console.error('Exception while creating project channel:', error);
     return { data: null, error };
   }
 };
 
-// Get approvals for message
+// Function to get approvals for a message
 const getApprovalsForMessage = async (messageId: string) => {
   try {
     const { data, error } = await supabase
-      .from('approvals')
-      .select('*')
+      .from('message_approvals')
+      .select(`
+        *,
+        users:user_id (
+          email,
+          full_name,
+          avatar_url
+        )
+      `)
       .eq('message_id', messageId);
     
     if (error) {
@@ -700,23 +719,34 @@ const getApprovalsForMessage = async (messageId: string) => {
       return { data: null, error };
     }
     
-    return { data, error: null };
+    // Map the data to the expected format
+    const mappedData = data.map(approval => {
+      const userData = approval.users as any;
+      return {
+        ...approval,
+        user_email: userData?.email || '',
+        username: userData?.full_name || 'Unknown User',
+        avatar_url: userData?.avatar_url || ''
+      };
+    });
+    
+    return { data: mappedData, error: null };
   } catch (error) {
     console.error('Exception while fetching approvals:', error);
     return { data: null, error };
   }
 };
 
-// Create approval
-const createApproval = async (messageId: string, approvalType: string, approverId: string) => {
+// Function to create an approval for a message
+const createApproval = async (messageId: string, userId: string, status: 'pending' | 'approved' | 'rejected', comment?: string) => {
   try {
     const { data, error } = await supabase
-      .from('approvals')
+      .from('message_approvals')
       .insert({
         message_id: messageId,
-        approval_type: approvalType,
-        approver_id: approverId,
-        status: 'pending'
+        user_id: userId,
+        status,
+        comment
       })
       .select()
       .single();
@@ -733,10 +763,10 @@ const createApproval = async (messageId: string, approvalType: string, approverI
   }
 };
 
+// Export all functions
 const collabService = {
   getChannels,
   createChannel,
-  deleteChannel,
   getMessages,
   sendMessage,
   scheduleMessage,
@@ -759,3 +789,4 @@ const collabService = {
 };
 
 export default collabService;
+export type { Channel, Message, ChannelMember };

@@ -48,7 +48,7 @@ const Auth = () => {
     
     checkSession();
   }, [navigate]);
-  
+
   // Clear errors when switching between login/signup
   useEffect(() => {
     setFormError('');
@@ -161,7 +161,10 @@ const Auth = () => {
         title: 'Signed up successfully',
         description: 'Please check your email to verify your account',
       });
-      navigate('/');
+      
+      // Add explicit redirect after signup success
+      console.log('Signup successful, redirecting to dashboard');
+      navigate('/', { replace: true });
     } catch (error: any) {
       console.error('Sign-up error:', error);
       setFormError('An unexpected error occurred');
@@ -197,10 +200,11 @@ const Auth = () => {
         description: 'You have been signed in to your account',
       });
 
-      // Ensure we navigate to the dashboard after successful sign-in
+      // Fix: Ensure redirection happens after state updates
       console.log('Custom auth successful, redirecting to dashboard');
-      setLoading(false); 
-      navigate('/', { replace: true });
+      setTimeout(() => {
+        navigate('/', { replace: true });
+      }, 100);
     } catch (error: any) {
       console.error('Custom sign-in error:', error);
       setFormError('An unexpected error occurred');
@@ -235,7 +239,11 @@ const Auth = () => {
         description: 'Your account has been created successfully',
       });
 
-      navigate('/');
+      // Fix: Ensure redirection happens after state updates
+      console.log('Custom signup successful, redirecting to dashboard');
+      setTimeout(() => {
+        navigate('/', { replace: true });
+      }, 100);
     } catch (error: any) {
       console.error('Custom sign-up error:', error);
       setFormError('An unexpected error occurred');
