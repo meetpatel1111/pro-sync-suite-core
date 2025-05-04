@@ -3,15 +3,16 @@ import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import CollabSpaceApp from '@/components/CollabSpaceApp';
 import { useAuthContext } from '@/context/AuthContext';
-import collabService, { Message } from '@/services/collabService';
+import collabService, { Message as CollabMessage } from '@/services/collabService';
 import ChatInterface from '@/components/ChatInterface';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
+import { Message as DbMessage } from '@/utils/dbtypes';
 
 const CollabSpace = () => {
   const { user } = useAuthContext();
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<DbMessage[]>([]);
   const [channelMembers, setChannelMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,7 +26,14 @@ const CollabSpace = () => {
         // Fetch messages
         const result = await collabService.getMessages(selectedChannelId);
         if (result && result.data) {
-          setMessages(result.data as Message[]);
+          // Convert the messages to match the DbMessage type
+          const typedMessages = result.data.map(msg => ({
+            ...msg,
+            content: msg.content || '', // Ensure content is never undefined
+            read_by: Array.isArray(msg.read_by) ? msg.read_by : msg.read_by ? [msg.read_by] : []
+          })) as DbMessage[];
+          
+          setMessages(typedMessages);
         }
         
         // Fetch channel members
@@ -52,7 +60,15 @@ const CollabSpace = () => {
           filter: `channel_id=eq.${selectedChannelId}`
         }, 
         (payload) => {
-          setMessages(prevMessages => [...prevMessages, payload.new as Message]);
+          const newMessage = payload.new as CollabMessage;
+          // Convert to DbMessage type
+          const typedMessage = {
+            ...newMessage,
+            content: newMessage.content || '',
+            read_by: Array.isArray(newMessage.read_by) ? newMessage.read_by : newMessage.read_by ? [newMessage.read_by] : []
+          } as DbMessage;
+          
+          setMessages(prevMessages => [...prevMessages, typedMessage]);
         })
       .subscribe();
       

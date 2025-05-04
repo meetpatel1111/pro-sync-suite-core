@@ -7,7 +7,7 @@ export interface Message {
   id: string;
   channel_id: string;
   user_id: string;
-  content?: string;
+  content: string; // Making content required to match dbtypes
   file_url?: string;
   created_at: string;
   type: 'text' | 'file' | 'poll';
@@ -17,7 +17,7 @@ export interface Message {
   reactions?: any;
   parent_id?: string;
   is_pinned?: boolean;
-  read_by: string[];
+  read_by: string[]; // This must be string[] to match dbtypes
   mentions?: string[];
 }
 
@@ -111,9 +111,10 @@ const getMessages = async (channelId: string) => {
     const messagesWithUserInfo = data.map(message => {
       const formattedMessage: Message = {
         ...message,
+        content: message.content || '', // Ensure content is always a string
         username: message.users?.username || 'Unknown',
         avatar_url: message.users?.avatar_url || null,
-        read_by: message.read_by || []
+        read_by: Array.isArray(message.read_by) ? message.read_by : message.read_by ? [message.read_by] : []
       };
       return formattedMessage;
     });
@@ -137,10 +138,10 @@ const sendMessage = async (
     const message = {
       channel_id: channelId,
       user_id: userId,
-      content,
+      content: content || '', // Ensure content is always a string
       file_url: fileUrl || null,
       type: messageType,
-      read_by: [userId]
+      read_by: [userId] // Ensure read_by is always an array
     };
     
     const { data, error } = await supabase
@@ -166,6 +167,7 @@ const scheduleMessage = async (message: Partial<Message>, scheduledFor: Date) =>
   try {
     const messageWithSchedule = {
       ...message,
+      content: message.content || '', // Ensure content is always a string
       scheduled_for: scheduledFor.toISOString(),
       read_by: [message.user_id || ''] // Initialize with the sender having read it
     };
@@ -345,9 +347,15 @@ const addReaction = async (messageId: string, userId: string, emoji: string) => 
     }
     
     // Add user ID if not already reacted with this emoji
-    if (!currentReactions[emoji].includes(userId)) {
-      currentReactions[emoji].push(userId);
+    const emojiReactions = Array.isArray(currentReactions[emoji]) ? 
+      currentReactions[emoji] : 
+      currentReactions[emoji] ? [currentReactions[emoji]] : [];
+      
+    if (!emojiReactions.includes(userId)) {
+      emojiReactions.push(userId);
     }
+    
+    currentReactions[emoji] = emojiReactions;
     
     // Update the message
     const { data, error } = await supabase
@@ -389,7 +397,12 @@ const removeReaction = async (messageId: string, userId: string) => {
     
     // Remove the user ID from all emoji arrays
     Object.keys(currentReactions).forEach(emoji => {
-      currentReactions[emoji] = currentReactions[emoji].filter(id => id !== userId);
+      const emojiReactions = Array.isArray(currentReactions[emoji]) ? 
+        currentReactions[emoji] : 
+        currentReactions[emoji] ? [currentReactions[emoji]] : [];
+        
+      currentReactions[emoji] = emojiReactions.filter(id => id !== userId);
+      
       // Clean up empty emoji arrays
       if (currentReactions[emoji].length === 0) {
         delete currentReactions[emoji];
@@ -476,7 +489,10 @@ const markAsRead = async (messageId: string, userId: string) => {
     }
     
     // Update the read_by array
-    const readBy = message.read_by || [];
+    let readBy = Array.isArray(message.read_by) ? 
+      message.read_by : 
+      message.read_by ? [message.read_by] : [];
+      
     if (!readBy.includes(userId)) {
       readBy.push(userId);
     }
@@ -573,9 +589,10 @@ const searchMessages = async (query: string, filters?: any) => {
     // Format the results
     const formattedResults = data.map(message => ({
       ...message,
+      content: message.content || '', // Ensure content is always a string
       username: message.users?.username || 'Unknown',
       avatar_url: message.users?.avatar_url || null,
-      read_by: message.read_by || []
+      read_by: Array.isArray(message.read_by) ? message.read_by : message.read_by ? [message.read_by] : []
     }));
     
     return { data: formattedResults, error: null };
