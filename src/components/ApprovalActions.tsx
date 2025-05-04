@@ -27,7 +27,7 @@ export const ApprovalActions: React.FC<ApprovalActionsProps> = ({ messageId, cur
   const handleApprove = async () => {
     setLoading(true);
     setError(null);
-    const res = await collabService.createApproval(messageId, approvalType, currentUserId);
+    const res = await collabService.createApproval(messageId, currentUserId, 'pending');
     if (res.error) setError(res.error.message);
     else setStatus('pending');
     setLoading(false);

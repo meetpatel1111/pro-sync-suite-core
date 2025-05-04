@@ -19,12 +19,12 @@ export interface Message {
   id: string;
   channel_id: string;
   user_id: string;
-  content: string;
+  content: string; // Making this required
   file_url?: string | null;
   parent_id?: string | null;
   scheduled_for?: string | null;
   created_at?: string;
-  pinned?: boolean;
+  is_pinned?: boolean;
   read_by: string[];
   // Additional properties from joins
   user_email?: string;
@@ -75,13 +75,13 @@ const createChannel = async (channel: Partial<Channel>) => {
     
     const { data, error } = await supabase
       .from('channels')
-      .insert({
+      .insert([{
         name: channel.name,
         description: channel.description || '',
         about: channel.about || '',
         created_by: channel.created_by,
         type: channel.type || 'public'
-      })
+      }])
       .select()
       .single();
       
@@ -93,6 +93,26 @@ const createChannel = async (channel: Partial<Channel>) => {
     return { data, error: null };
   } catch (error) {
     console.error('Exception while creating channel:', error);
+    return { data: null, error };
+  }
+};
+
+// Function to delete a channel
+const deleteChannel = async (channelId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('channels')
+      .delete()
+      .eq('id', channelId);
+      
+    if (error) {
+      console.error('Error deleting channel:', error);
+      return { data: null, error };
+    }
+    
+    return { data, error: null };
+  } catch (error) {
+    console.error('Exception while deleting channel:', error);
     return { data: null, error };
   }
 };
@@ -120,7 +140,7 @@ const getMessages = async (channelId: string) => {
     
     // Map the data to the expected format
     const mappedData = data.map(msg => {
-      const userData = msg.users as any;
+      const userData = msg.users || {};
       return {
         ...msg,
         user_email: userData?.email || '',
@@ -149,14 +169,14 @@ const sendMessage = async (
   try {
     const { data, error } = await supabase
       .from('messages')
-      .insert({
+      .insert([{
         channel_id: channelId,
         user_id: userId,
         content: content || '', // Ensure content is never null
         file_url: fileUrl,
         parent_id: parentId,
         read_by: [userId] // Initialize read_by as an array with the sender
-      })
+      }])
       .select()
       .single();
       
@@ -177,11 +197,14 @@ const scheduleMessage = async (message: Partial<Message>, scheduledFor: Date) =>
   try {
     const { data, error } = await supabase
       .from('messages')
-      .insert({
-        ...message,
+      .insert([{
+        channel_id: message.channel_id,
+        user_id: message.user_id,
+        content: message.content || '',
+        file_url: message.file_url,
         scheduled_for: scheduledFor.toISOString(),
         read_by: Array.isArray(message.read_by) ? message.read_by : [message.user_id || '']
-      })
+      }])
       .select()
       .single();
       
@@ -254,7 +277,7 @@ const getChannelMembers = async (channelId: string) => {
     
     // Map the data to the expected format
     const mappedData = data.map(member => {
-      const userData = member.users as any;
+      const userData = member.users || {};
       return {
         ...member,
         user_email: userData?.email || '',
@@ -275,11 +298,11 @@ const joinChannel = async (channelId: string, userId: string, role?: string) => 
   try {
     const { data, error } = await supabase
       .from('channel_members')
-      .insert({
+      .insert([{
         channel_id: channelId,
         user_id: userId,
         role: role || 'member'
-      })
+      }])
       .select()
       .single();
       
@@ -349,6 +372,8 @@ const addReaction = async (messageId: string, userId: string, reaction: string) 
       // Only add user if they haven't already reacted
       if (!reactionUsers.includes(userId)) {
         reactions[reaction] = [...reactionUsers, userId];
+      } else {
+        reactions[reaction] = reactionUsers;
       }
     }
     
@@ -432,7 +457,7 @@ const pinMessage = async (messageId: string) => {
   try {
     const { data, error } = await supabase
       .from('messages')
-      .update({ pinned: true })
+      .update({ is_pinned: true })
       .eq('id', messageId)
       .select()
       .single();
@@ -454,7 +479,7 @@ const unpinMessage = async (messageId: string) => {
   try {
     const { data, error } = await supabase
       .from('messages')
-      .update({ pinned: false })
+      .update({ is_pinned: false })
       .eq('id', messageId)
       .select()
       .single();
@@ -492,6 +517,9 @@ const markAsRead = async (messageId: string, userId: string) => {
     if (message.read_by) {
       readBy = Array.isArray(message.read_by) ? message.read_by : [message.read_by];
     }
+    
+    // Convert any non-string values to strings to ensure a consistent array
+    readBy = readBy.map(id => String(id));
     
     // Only add user if they haven't already read it
     if (!readBy.includes(userId)) {
@@ -545,7 +573,10 @@ const editMessage = async (messageId: string, content: string) => {
   try {
     const { data, error } = await supabase
       .from('messages')
-      .update({ content })
+      .update({ 
+        content,
+        edited_at: new Date().toISOString()
+      })
       .eq('id', messageId)
       .select()
       .single();
@@ -602,7 +633,7 @@ const searchMessages = async (query: string, filters?: { channel_id?: string, us
     
     // Map the data to the expected format
     const mappedData = data.map(msg => {
-      const userData = msg.users as any;
+      const userData = msg.users || {};
       return {
         ...msg,
         user_email: userData?.email || '',
@@ -621,16 +652,16 @@ const searchMessages = async (query: string, filters?: { channel_id?: string, us
 };
 
 // Function to create a group DM channel
-const createGroupDM = async (name: string, userIds: string[], creatorId: string) => {
+const createGroupDM = async (userIds: string[], creatorId: string, name: string) => {
   try {
-    // First, create a channel with type 'direct'
+    // First, create a channel with type 'group_dm'
     const { data: channel, error: channelError } = await supabase
       .from('channels')
-      .insert({
+      .insert([{
         name,
         created_by: creatorId,
-        type: 'direct'
-      })
+        type: 'group_dm'
+      }])
       .select()
       .single();
     
@@ -641,11 +672,11 @@ const createGroupDM = async (name: string, userIds: string[], creatorId: string)
     
     // Now add all users to the channel
     const memberPromises = userIds.map(userId => 
-      supabase.from('channel_members').insert({
+      supabase.from('channel_members').insert([{
         channel_id: channel.id,
         user_id: userId,
         role: userId === creatorId ? 'admin' : 'member'
-      })
+      }])
     );
     
     await Promise.all(memberPromises);
@@ -663,13 +694,13 @@ const autoCreateProjectChannel = async (projectId: string, projectName: string, 
     // Create a channel named after the project
     const { data: channel, error: channelError } = await supabase
       .from('channels')
-      .insert({
+      .insert([{
         name: `Project: ${projectName}`,
         description: `Channel for ${projectName} project collaboration`,
         created_by: creatorId,
         type: 'project',
         about: `Project ID: ${projectId}`
-      })
+      }])
       .select()
       .single();
     
@@ -681,11 +712,11 @@ const autoCreateProjectChannel = async (projectId: string, projectName: string, 
     // Add the creator as a member
     const { error: memberError } = await supabase
       .from('channel_members')
-      .insert({
+      .insert([{
         channel_id: channel.id,
         user_id: creatorId,
         role: 'admin'
-      });
+      }]);
     
     if (memberError) {
       console.error('Error adding creator to project channel:', memberError);
@@ -703,10 +734,10 @@ const autoCreateProjectChannel = async (projectId: string, projectName: string, 
 const getApprovalsForMessage = async (messageId: string) => {
   try {
     const { data, error } = await supabase
-      .from('message_approvals')
+      .from('approvals')
       .select(`
         *,
-        users:user_id (
+        users:approver_id (
           email,
           full_name,
           avatar_url
@@ -721,7 +752,7 @@ const getApprovalsForMessage = async (messageId: string) => {
     
     // Map the data to the expected format
     const mappedData = data.map(approval => {
-      const userData = approval.users as any;
+      const userData = approval.users || {};
       return {
         ...approval,
         user_email: userData?.email || '',
@@ -741,13 +772,13 @@ const getApprovalsForMessage = async (messageId: string) => {
 const createApproval = async (messageId: string, userId: string, status: 'pending' | 'approved' | 'rejected', comment?: string) => {
   try {
     const { data, error } = await supabase
-      .from('message_approvals')
-      .insert({
+      .from('approvals')
+      .insert([{
         message_id: messageId,
-        user_id: userId,
+        approver_id: userId,
         status,
         comment
-      })
+      }])
       .select()
       .single();
     
@@ -767,6 +798,7 @@ const createApproval = async (messageId: string, userId: string, status: 'pendin
 const collabService = {
   getChannels,
   createChannel,
+  deleteChannel,
   getMessages,
   sendMessage,
   scheduleMessage,
@@ -789,4 +821,3 @@ const collabService = {
 };
 
 export default collabService;
-export type { Channel, Message, ChannelMember };

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
 import collabService from '@/services/collabService';
@@ -167,6 +166,7 @@ const CollabSpaceApp: React.FC<CollabSpaceAppProps> = ({ onChannelSelect }) => {
     }
   };
 
+  // Fix the handleDeleteChannel method to use the correct function
   const handleDeleteChannel = async (channelId: string, e: React.MouseEvent) => {
     e.stopPropagation();
 

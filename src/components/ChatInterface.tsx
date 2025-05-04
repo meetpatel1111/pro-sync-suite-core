@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
 import { Message } from '@/utils/dbtypes'; // Correct import from dbtypes
@@ -56,7 +55,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const handleRemoveReaction = async (messageId: string) => {
     try {
-      await collabService.removeReaction(messageId, currentUserId);
+      // Changed to pass the required reaction parameter (using a default value)
+      await collabService.removeReaction(messageId, currentUserId, '👍');
     } catch (error) {
       console.error('Error removing reaction:', error);
       toast({
