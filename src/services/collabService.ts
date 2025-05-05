@@ -15,6 +15,13 @@ export interface Channel {
   type?: string;
 }
 
+// Define user data interface to avoid TypeScript errors when accessing user properties
+interface UserData {
+  email?: string;
+  full_name?: string;
+  avatar_url?: string;
+}
+
 // Define the interface for a Message
 export interface Message {
   id: string;
@@ -141,14 +148,17 @@ const getMessages = async (channelId: string) => {
     
     // Map the data to the expected format
     const mappedData = data.map(msg => {
-      // Handle potentially undefined userData more safely
-      const userData = msg.users || {};
+      // Cast userData to our interface for type safety
+      const userData: UserData = (msg.users as UserData) || {};
+      
       return {
         ...msg,
-        user_email: userData?.email || '',
-        username: userData?.full_name || 'Unknown User',
-        avatar_url: userData?.avatar_url || '',
-        read_by: Array.isArray(msg.read_by) ? msg.read_by : (msg.read_by ? [String(msg.read_by)] : []),
+        user_email: userData.email || '',
+        username: userData.full_name || 'Unknown User',
+        avatar_url: userData.avatar_url || '',
+        read_by: Array.isArray(msg.read_by) 
+          ? msg.read_by.map(id => String(id)) 
+          : (msg.read_by ? [String(msg.read_by)] : []),
         content: msg.content || ''  // Ensure content is never undefined
       };
     });
@@ -279,13 +289,14 @@ const getChannelMembers = async (channelId: string) => {
     
     // Map the data to the expected format
     const mappedData = data.map(member => {
-      // Handle potentially undefined userData more safely
-      const userData = member.users || {};
+      // Cast userData to our interface for type safety
+      const userData: UserData = (member.users as UserData) || {};
+      
       return {
         ...member,
-        user_email: userData?.email || '',
-        username: userData?.full_name || 'Unknown User',
-        avatar_url: userData?.avatar_url || ''
+        user_email: userData.email || '',
+        username: userData.full_name || 'Unknown User',
+        avatar_url: userData.avatar_url || ''
       };
     });
     
@@ -518,11 +529,11 @@ const markAsRead = async (messageId: string, userId: string) => {
     let readBy: string[] = [];
     
     if (message.read_by) {
-      readBy = Array.isArray(message.read_by) ? message.read_by : [String(message.read_by)];
+      // Ensure all elements are strings by explicitly converting each item
+      readBy = Array.isArray(message.read_by) 
+        ? message.read_by.map(id => String(id)) 
+        : [String(message.read_by)];
     }
-    
-    // Convert any non-string values to strings to ensure a consistent array
-    readBy = readBy.map(id => String(id));
     
     // Only add user if they haven't already read it
     if (!readBy.includes(userId)) {
@@ -636,14 +647,17 @@ const searchMessages = async (query: string, filters?: { channel_id?: string, us
     
     // Map the data to the expected format
     const mappedData = data.map(msg => {
-      // Handle potentially undefined userData more safely
-      const userData = msg.users || {};
+      // Cast userData to our interface for type safety
+      const userData: UserData = (msg.users as UserData) || {};
+      
       return {
         ...msg,
-        user_email: userData?.email || '',
-        username: userData?.full_name || 'Unknown User',
-        avatar_url: userData?.avatar_url || '',
-        read_by: Array.isArray(msg.read_by) ? msg.read_by : (msg.read_by ? [String(msg.read_by)] : []),
+        user_email: userData.email || '',
+        username: userData.full_name || 'Unknown User',
+        avatar_url: userData.avatar_url || '',
+        read_by: Array.isArray(msg.read_by) 
+          ? msg.read_by.map(id => String(id)) 
+          : (msg.read_by ? [String(msg.read_by)] : []),
         content: msg.content || ''  // Ensure content is never undefined
       };
     });
@@ -756,13 +770,14 @@ const getApprovalsForMessage = async (messageId: string) => {
     
     // Map the data to the expected format
     const mappedData = data.map(approval => {
-      // Handle potentially undefined userData more safely
-      const userData = approval.users || {};
+      // Cast userData to our interface for type safety
+      const userData: UserData = (approval.users as UserData) || {};
+      
       return {
         ...approval,
-        user_email: userData?.email || '',
-        username: userData?.full_name || 'Unknown User',
-        avatar_url: userData?.avatar_url || ''
+        user_email: userData.email || '',
+        username: userData.full_name || 'Unknown User',
+        avatar_url: userData.avatar_url || ''
       };
     });
     
