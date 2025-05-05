@@ -63,7 +63,8 @@ const Auth = () => {
     
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
+      // First try to create the user
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -73,9 +74,15 @@ const Auth = () => {
         },
       });
 
-      if (error) throw error;
+      if (signUpError) throw signUpError;
 
-      if (data) {
+      if (data?.user) {
+        toast({
+          title: 'Account created',
+          description: 'You have been logged in automatically',
+        });
+        // No need to set active tab - the auth state change listener will redirect
+      } else {
         toast({
           title: 'Account created',
           description: 'Please check your email for verification link',
@@ -83,6 +90,7 @@ const Auth = () => {
         setActiveTab('login');
       }
     } catch (error: any) {
+      console.error('Signup error:', error);
       setError(error.message || 'An error occurred during sign up');
     } finally {
       setLoading(false);
@@ -108,6 +116,7 @@ const Auth = () => {
       if (error) throw error;
       // Navigation will happen in the auth state change listener after sample data setup
     } catch (error: any) {
+      console.error('Login error:', error);
       setError(error.message || 'Invalid login credentials');
       setLoading(false);
     }

@@ -14,14 +14,22 @@ export const useAuth = () => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('Fetching profile for user:', userId);
       const { data, error } = await dbService.getUserProfile(userId);
-      if (!error && data) {
-        setProfile(data);
-      } else if (error) {
+      
+      if (error) {
         console.error('Error fetching profile:', error);
+        return;
+      }
+      
+      if (data) {
+        console.log('Profile data received:', data);
+        setProfile(data);
+      } else {
+        console.log('No profile data found');
       }
     } catch (error) {
-      console.error('Error in fetchUserProfile:', error);
+      console.error('Exception in fetchUserProfile:', error);
     }
   };
 
