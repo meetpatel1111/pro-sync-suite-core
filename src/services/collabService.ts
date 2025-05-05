@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { baseService } from './base/baseService';
+import { Json } from '@/integrations/supabase/types';
 
 // Define the interface for a Channel
 export interface Channel {
@@ -140,13 +141,14 @@ const getMessages = async (channelId: string) => {
     
     // Map the data to the expected format
     const mappedData = data.map(msg => {
+      // Handle potentially undefined userData more safely
       const userData = msg.users || {};
       return {
         ...msg,
         user_email: userData?.email || '',
         username: userData?.full_name || 'Unknown User',
         avatar_url: userData?.avatar_url || '',
-        read_by: Array.isArray(msg.read_by) ? msg.read_by : (msg.read_by ? [msg.read_by] : []),
+        read_by: Array.isArray(msg.read_by) ? msg.read_by : (msg.read_by ? [String(msg.read_by)] : []),
         content: msg.content || ''  // Ensure content is never undefined
       };
     });
@@ -277,6 +279,7 @@ const getChannelMembers = async (channelId: string) => {
     
     // Map the data to the expected format
     const mappedData = data.map(member => {
+      // Handle potentially undefined userData more safely
       const userData = member.users || {};
       return {
         ...member,
@@ -515,7 +518,7 @@ const markAsRead = async (messageId: string, userId: string) => {
     let readBy: string[] = [];
     
     if (message.read_by) {
-      readBy = Array.isArray(message.read_by) ? message.read_by : [message.read_by];
+      readBy = Array.isArray(message.read_by) ? message.read_by : [String(message.read_by)];
     }
     
     // Convert any non-string values to strings to ensure a consistent array
@@ -633,13 +636,14 @@ const searchMessages = async (query: string, filters?: { channel_id?: string, us
     
     // Map the data to the expected format
     const mappedData = data.map(msg => {
+      // Handle potentially undefined userData more safely
       const userData = msg.users || {};
       return {
         ...msg,
         user_email: userData?.email || '',
         username: userData?.full_name || 'Unknown User',
         avatar_url: userData?.avatar_url || '',
-        read_by: Array.isArray(msg.read_by) ? msg.read_by : (msg.read_by ? [msg.read_by] : []),
+        read_by: Array.isArray(msg.read_by) ? msg.read_by : (msg.read_by ? [String(msg.read_by)] : []),
         content: msg.content || ''  // Ensure content is never undefined
       };
     });
@@ -752,6 +756,7 @@ const getApprovalsForMessage = async (messageId: string) => {
     
     // Map the data to the expected format
     const mappedData = data.map(approval => {
+      // Handle potentially undefined userData more safely
       const userData = approval.users || {};
       return {
         ...approval,

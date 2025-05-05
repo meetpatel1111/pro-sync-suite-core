@@ -18,7 +18,6 @@ const GroupDMComposer: React.FC<GroupDMComposerProps> = ({ currentUserId, onChan
     
     setLoading(true);
     try {
-      // Fixed the parameter order to match the createGroupDM function signature
       const { data, error } = await collabService.createGroupDM(selectedUsers, currentUserId, groupName);
       
       if (error) {
