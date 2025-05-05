@@ -262,7 +262,7 @@ const BudgetBuddy = () => {
             </Button>
           </div>
           
-          <ExpenseTable transactions={[]} />
+          <ExpenseTable />
         </Card>
       </div>
     </AppLayout>

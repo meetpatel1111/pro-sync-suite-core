@@ -8,8 +8,7 @@ interface AuthContextType {
   session: Session | null;
   profile: any;
   loading: boolean;
-  signOut: () => Promise<boolean>;
-  setProfile: (profile: any) => void;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -17,12 +16,10 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
   loading: true,
-  signOut: async () => false,
-  setProfile: () => {},
+  signOut: async () => {}
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Use the custom hook to manage authentication state
   const authState = useAuth();
 
   return (
@@ -32,5 +29,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-// Export a custom hook to use the auth context
 export const useAuthContext = () => useContext(AuthContext);

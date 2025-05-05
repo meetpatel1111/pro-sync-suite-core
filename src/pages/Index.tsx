@@ -34,23 +34,7 @@ const Index = () => {
       icon: Calendar,
       bgColor: 'bg-blue-600',
       route: '/taskmaster',
-      featureCount: 5,
-    },
-    {
-      title: 'PlanBoard',
-      description: 'Project Planning & Gantt Charts',
-      icon: FileText,
-      bgColor: 'bg-amber-600',
-      route: '/planboard',
-      featureCount: 100,
-    },
-    {
-      title: 'ClientConnect',
-      description: 'Client & Stakeholder Engagement',
-      icon: Users,
-      bgColor: 'bg-sky-600',
-      route: '/clientconnect',
-      featureCount: 100,
+      featureCount: 100
     },
     {
       title: 'TimeTrackPro',
@@ -68,7 +52,14 @@ const Index = () => {
       route: '/collabspace',
       featureCount: 100
     },
-
+    {
+      title: 'PlanBoard',
+      description: 'Project Planning & Gantt Charts',
+      icon: FileText,
+      bgColor: 'bg-amber-600',
+      route: '/planboard',
+      featureCount: 100
+    },
     {
       title: 'FileVault',
       description: 'Document & File Management',
@@ -93,7 +84,14 @@ const Index = () => {
       route: '/insightiq',
       featureCount: 100
     },
-
+    {
+      title: 'ClientConnect',
+      description: 'Client & Stakeholder Engagement',
+      icon: Users,
+      bgColor: 'bg-sky-600',
+      route: '/clientconnect',
+      featureCount: 100
+    },
     {
       title: 'RiskRadar',
       description: 'Risk & Issue Tracking',
@@ -147,7 +145,20 @@ const Index = () => {
           </div>
         </div>
 
-
+        <div className="mt-8 rounded-lg border bg-card p-6 shadow-sm">
+          <h2 className="text-xl font-semibold mb-2">Getting Started</h2>
+          <p className="text-muted-foreground mb-4">
+            ProSync Suite offers ten powerful applications to streamline your project management workflow. 
+            Here's how to get started:
+          </p>
+          <ol className="list-decimal pl-5 space-y-2">
+            <li className="text-sm">Explore the apps in the dashboard</li>
+            <li className="text-sm">Set up your team and project in TaskMaster</li>
+            <li className="text-sm">Start tracking time with TimeTrackPro</li>
+            <li className="text-sm">Plan your project timeline in PlanBoard</li>
+            <li className="text-sm">Configure custom dashboards in InsightIQ</li>
+          </ol>
+        </div>
       </div>
     </AppLayout>
   );

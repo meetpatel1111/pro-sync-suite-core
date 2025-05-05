@@ -139,23 +139,13 @@ const TaskBoard = () => {
             user_id: task.user_id
           }));
           
-          const uniqueTasks = mappedTasks.filter((task, index, self) =>
-            index === self.findIndex(t => t.id === task.id)
-          );
-          setTasks(uniqueTasks);
+          setTasks(mappedTasks);
         } else {
           const storedTasks = localStorage.getItem('tasks');
           if (storedTasks) {
-            const parsedTasks = JSON.parse(storedTasks);
-            const uniqueTasks = parsedTasks.filter((task, index, self) =>
-              index === self.findIndex(t => t.id === task.id)
-            );
-            setTasks(uniqueTasks);
+            setTasks(JSON.parse(storedTasks));
           } else {
-            const uniqueTasks = initialData.filter((task, index, self) =>
-              index === self.findIndex(t => t.id === task.id)
-            );
-            setTasks(uniqueTasks);
+            setTasks(initialData);
             localStorage.setItem('tasks', JSON.stringify(initialData));
           }
         }

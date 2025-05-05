@@ -121,18 +121,6 @@ const TaskList = ({ tasks: initialTasks = [], onTaskUpdate, onTaskDelete }: Task
         user_id: userData.user.id
       };
 
-      // --- Notification: If task is assigned, notify the assignee ---
-      if (taskData.assignee && taskData.assignee !== userData.user.id) {
-        import('@/services/notificationService').then(({ notifyUser }) => {
-          notifyUser({
-            userId: taskData.assignee,
-            subject: 'New Task Assigned',
-            message: `You have been assigned a new task: ${taskData.title}`,
-            type: 'task_assigned',
-          });
-        });
-      }
-
       const { error } = await supabase
         .from('tasks')
         .insert(taskData);

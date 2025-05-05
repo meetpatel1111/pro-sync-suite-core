@@ -1,59 +1,70 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { useAuthContext } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
-  LineChart, BarChart, Area, Bar, XAxis, YAxis, CartesianGrid, 
-  Tooltip, Legend, ResponsiveContainer, ComposedChart, Line, 
-  PieChart, Pie, Cell 
-} from 'recharts';
+  BarChart2, 
+  ArrowLeft, 
+  Plus, 
+  Filter, 
+  PieChart, 
+  LineChart, 
+  CalendarDays, 
+  User, 
+  Users,
+  FileText,
+  Clock,
+  Download,
+  Activity,
+  TrendingUp,
+  Pencil,
+  Trash2
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import dbService from '@/services/dbService';
-import { Activity, BarChart2, TrendingUp, Pencil, Plus, Trash2 } from 'lucide-react';
-
-// Define the necessary types
-interface Dashboard {
-  id: string;
-  title: string;
-  description?: string;
-  user_id: string;
-  created_at: string;
-}
-
-interface Widget {
-  id: string;
-  dashboard_id: string;
-  title: string;
-  widget_type: string;
-  config: Record<string, any>;
-  position: { x: number; y: number; w: number; h: number };
-  user_id: string;
-  created_at: string;
-}
-
-interface TimeEntry {
-  id: string;
-  task_id?: string;
-  user_id: string;
-  project_id?: string;
-  start_time: string;
-  end_time?: string;
-  duration?: number;
-  description?: string;
-  created_at: string;
-  time_spent: number;
-  project?: string;
-}
+import { Input } from '@/components/ui/input';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  LineChart as RechartLineChart,
+  Line,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell
+} from 'recharts';
+import type { Dashboard, Widget, Project, TimeEntry, Task } from '@/utils/dbtypes';
 
 const InsightIQ = () => {
   const { toast } = useToast();
-  const { user } = useAuthContext();
   const [activeTab, setActiveTab] = useState('dashboards');
   const [dashboards, setDashboards] = useState<Dashboard[]>([]);
   const [widgets, setWidgets] = useState<Widget[]>([]);
@@ -62,9 +73,10 @@ const InsightIQ = () => {
   const [showAddWidgetDialog, setShowAddWidgetDialog] = useState(false);
   const [isEditingDashboard, setIsEditingDashboard] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [projects, setProjects] = useState<any[]>([]);
+  const [session, setSession] = useState<any>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   
   const [newDashboard, setNewDashboard] = useState({
     title: '',
@@ -81,33 +93,47 @@ const InsightIQ = () => {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
   useEffect(() => {
-    // Fetch user session
-    const fetchSession = async () => {
-      try {
-        // Instead of using Supabase directly, use your auth context
-        if (user) {
-          fetchDashboards();
-          fetchProjects();
-          fetchTimeEntries();
-          fetchTasks();
-        }
-      } catch (error) {
-        console.error('Error fetching session:', error);
-      }
-    };
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
 
-    fetchSession();
-  }, [user]);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (session) {
+      fetchDashboards();
+      fetchProjects();
+      fetchTimeEntries();
+      fetchTasks();
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (selectedDashboard) {
+      fetchWidgets(selectedDashboard.id);
+    }
+  }, [selectedDashboard]);
 
   const fetchDashboards = async () => {
     setIsLoading(true);
     try {
-      const response = await dbService.getDashboards(user?.id);
-      if (response && response.data) {
-        setDashboards(response.data);
+      const { data, error } = await supabase
+        .from('dashboards')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      if (data) {
+        setDashboards(data as Dashboard[]);
         
-        if (response.data.length > 0 && !selectedDashboard) {
-          setSelectedDashboard(response.data[0]);
+        if (data.length > 0 && !selectedDashboard) {
+          setSelectedDashboard(data[0]);
         }
       }
     } catch (error) {
@@ -124,9 +150,16 @@ const InsightIQ = () => {
 
   const fetchWidgets = async (dashboardId: string) => {
     try {
-      const response = await dbService.getWidgets(dashboardId);
-      if (response && response.data) {
-        const formattedWidgets = response.data.map(widget => ({
+      const { data, error } = await supabase
+        .from('widgets')
+        .select('*')
+        .eq('dashboard_id', dashboardId)
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      
+      if (data) {
+        const formattedWidgets = data.map(widget => ({
           ...widget,
           config: typeof widget.config === 'string' ? JSON.parse(widget.config) : widget.config,
           position: typeof widget.position === 'string' 
@@ -148,9 +181,14 @@ const InsightIQ = () => {
 
   const fetchProjects = async () => {
     try {
-      const response = await dbService.getProjects(user?.id);
-      if (response && response.data) {
-        setProjects(response.data);
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*');
+      
+      if (error) throw error;
+      
+      if (data) {
+        setProjects(data as Project[]);
       }
     } catch (error) {
       console.error('Error fetching projects:', error);
@@ -159,10 +197,14 @@ const InsightIQ = () => {
 
   const fetchTimeEntries = async () => {
     try {
-      const response = await dbService.getTimeEntries(user?.id);
-      if (response && response.data) {
-        const entries = response.data as TimeEntry[];
-        setTimeEntries(entries);
+      const { data, error } = await supabase
+        .from('time_entries')
+        .select('*');
+      
+      if (error) throw error;
+      
+      if (data) {
+        setTimeEntries(data as TimeEntry[]);
       }
     } catch (error) {
       console.error('Error fetching time entries:', error);
@@ -171,20 +213,31 @@ const InsightIQ = () => {
 
   const fetchTasks = async () => {
     try {
-      const response = await dbService.getTasks(user?.id);
-      if (response && response.data) {
-        setTasks(response.data);
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*');
+      
+      if (error) throw error;
+      
+      if (data) {
+        const mappedTasks: Task[] = data.map((task): Task => ({
+          id: task.id,
+          title: task.title,
+          description: task.description || '',
+          status: task.status as 'todo' | 'inProgress' | 'review' | 'done',
+          priority: task.priority as 'low' | 'medium' | 'high',
+          due_date: task.due_date,
+          assignee: task.assignee,
+          project: task.project,
+          created_at: task.created_at,
+          user_id: task.user_id
+        }));
+        setTasks(mappedTasks);
       }
     } catch (error) {
       console.error('Error fetching tasks:', error);
     }
   };
-
-  useEffect(() => {
-    if (selectedDashboard) {
-      fetchWidgets(selectedDashboard.id);
-    }
-  }, [selectedDashboard]);
 
   const handleAddDashboard = async () => {
     if (!newDashboard.title) {
@@ -198,12 +251,15 @@ const InsightIQ = () => {
 
     try {
       if (isEditingDashboard && selectedDashboard) {
-        const response = await dbService.updateDashboard(selectedDashboard.id, {
-          title: newDashboard.title,
-          description: newDashboard.description
-        });
-        
-        if (response.error) throw response.error;
+        const { error } = await supabase
+          .from('dashboards')
+          .update({
+            title: newDashboard.title,
+            description: newDashboard.description
+          })
+          .eq('id', selectedDashboard.id);
+          
+        if (error) throw error;
         
         toast({
           title: 'Dashboard updated',
@@ -222,17 +278,20 @@ const InsightIQ = () => {
           description: newDashboard.description
         });
       } else {
-        const response = await dbService.createDashboard({
-          title: newDashboard.title,
-          description: newDashboard.description,
-          user_id: user?.id
-        });
+        const { data, error } = await supabase
+          .from('dashboards')
+          .insert({
+            title: newDashboard.title,
+            description: newDashboard.description,
+            user_id: session.user.id
+          })
+          .select();
+          
+        if (error) throw error;
         
-        if (response.error) throw response.error;
-        
-        if (response.data) {
-          setDashboards([response.data[0], ...dashboards]);
-          setSelectedDashboard(response.data[0]);
+        if (data) {
+          setDashboards([data[0], ...dashboards]);
+          setSelectedDashboard(data[0]);
           toast({
             title: 'Dashboard added',
             description: 'New dashboard has been added successfully.'
@@ -264,32 +323,35 @@ const InsightIQ = () => {
     }
 
     try {
-      const response = await dbService.createWidget({
-        dashboard_id: selectedDashboard.id,
-        title: newWidget.title,
-        widget_type: newWidget.widget_type,
-        config: {
-          data_source: newWidget.data_source,
-          group_by: newWidget.group_by
-        },
-        position: {
-          x: 0,
-          y: widgets.length * 4,
-          w: 12,
-          h: 4
-        },
-        user_id: user?.id
-      });
+      const { data, error } = await supabase
+        .from('widgets')
+        .insert({
+          dashboard_id: selectedDashboard.id,
+          title: newWidget.title,
+          widget_type: newWidget.widget_type,
+          config: {
+            data_source: newWidget.data_source,
+            group_by: newWidget.group_by
+          },
+          position: {
+            x: 0,
+            y: widgets.length * 4,
+            w: 12,
+            h: 4
+          },
+          user_id: session.user.id
+        })
+        .select();
+        
+      if (error) throw error;
       
-      if (response.error) throw response.error;
-      
-      if (response.data) {
+      if (data) {
         const newWidgets = [...widgets, {
-          ...response.data[0],
-          config: typeof response.data[0].config === 'string' ? JSON.parse(response.data[0].config) : response.data[0].config,
-          position: typeof response.data[0].position === 'string' 
-            ? JSON.parse(response.data[0].position) 
-            : response.data[0].position
+          ...data[0],
+          config: typeof data[0].config === 'string' ? JSON.parse(data[0].config) : data[0].config,
+          position: typeof data[0].position === 'string' 
+            ? JSON.parse(data[0].position) 
+            : data[0].position
         } as Widget];
         
         setWidgets(newWidgets);
@@ -319,8 +381,12 @@ const InsightIQ = () => {
 
   const handleDeleteDashboard = async (dashboardId: string) => {
     try {
-      const response = await dbService.deleteDashboard(dashboardId);
-      if (response.error) throw response.error;
+      const { error } = await supabase
+        .from('dashboards')
+        .delete()
+        .eq('id', dashboardId);
+        
+      if (error) throw error;
       
       const updatedDashboards = dashboards.filter(dashboard => dashboard.id !== dashboardId);
       setDashboards(updatedDashboards);
@@ -346,14 +412,18 @@ const InsightIQ = () => {
 
   const handleDeleteWidget = async (widgetId: string) => {
     try {
-      const response = await dbService.deleteWidget(widgetId);
-      if (response.error) throw response.error;
+      const { error } = await supabase
+        .from('widgets')
+        .delete()
+        .eq('id', widgetId);
+        
+      if (error) throw error;
       
       setWidgets(widgets.filter(widget => widget.id !== widgetId));
       
       toast({
         title: 'Widget deleted',
-        description: 'Widget has been deleted successfully'
+        description: 'Widget has been deleted successfully.'
       });
     } catch (error) {
       console.error('Error deleting widget:', error);
@@ -368,7 +438,7 @@ const InsightIQ = () => {
   const handleEditDashboard = (dashboard: Dashboard) => {
     setNewDashboard({
       title: dashboard.title,
-      description: dashboard.description || ''
+      description: dashboard.description
     });
     setIsEditingDashboard(true);
     setShowAddDashboardDialog(true);
@@ -378,8 +448,8 @@ const InsightIQ = () => {
     const { data_source, group_by } = widget.config;
     
     if (data_source === 'tasks') {
-      const groupedData = tasks.reduce((acc: Record<string, number>, task: any) => {
-        const key = task[group_by as keyof typeof task] as string;
+      const groupedData = tasks.reduce((acc, task) => {
+        const key = task[group_by as keyof Task] as string;
         if (!acc[key]) {
           acc[key] = 0;
         }
@@ -389,7 +459,7 @@ const InsightIQ = () => {
       
       return Object.entries(groupedData).map(([name, value]) => ({ name, value }));
     } else if (data_source === 'time_entries') {
-      const groupedData = timeEntries.reduce((acc: Record<string, number>, entry: TimeEntry) => {
+      const groupedData = timeEntries.reduce((acc, entry) => {
         let key = entry[group_by as keyof TimeEntry] as string;
         
         if (group_by === 'project') {
@@ -409,7 +479,7 @@ const InsightIQ = () => {
       
       return Object.entries(groupedData).map(([name, value]) => ({ 
         name, 
-        value: typeof value === 'number' ? parseFloat(value.toFixed(1)) : value
+        value: parseFloat(value.toFixed(1))
       }));
     }
     
@@ -421,7 +491,6 @@ const InsightIQ = () => {
     return project ? project.name : projectId;
   };
 
-  // Fix the renderWidget function to use the correct chart components from recharts:
   const renderWidget = (widget: Widget) => {
     const data = getChartData(widget);
     
@@ -433,7 +502,7 @@ const InsightIQ = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip />
+              <RechartsTooltip />
               <Legend />
               <Bar dataKey="value" fill="#8884d8" />
             </BarChart>
@@ -442,26 +511,27 @@ const InsightIQ = () => {
       case 'line_chart':
         return (
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data}>
+            <RechartLineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip />
+              <RechartsTooltip />
               <Legend />
               <Line type="monotone" dataKey="value" stroke="#8884d8" />
-            </LineChart>
+            </RechartLineChart>
           </ResponsiveContainer>
         );
       case 'pie_chart':
         return (
           <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
+            <RechartsPieChart>
               <Pie
                 data={data}
                 cx="50%"
                 cy="50%"
-                labelLine={false}
-                outerRadius={80}
+                labelLine={true}
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                outerRadius={100}
                 fill="#8884d8"
                 dataKey="value"
               >
@@ -469,9 +539,8 @@ const InsightIQ = () => {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
+              <RechartsTooltip />
+            </RechartsPieChart>
           </ResponsiveContainer>
         );
       default:
@@ -479,23 +548,14 @@ const InsightIQ = () => {
     }
   };
 
-  const calculateCompletionRate = (tasks: any[]): number => {
+  const calculateCompletionRate = (tasks: Task[]): number => {
     if (!tasks || tasks.length === 0) return 0;
     const completedTasks = tasks.filter(task => task.status === 'done').length;
     const percentage = (completedTasks / tasks.length) * 100;
     return Number(percentage.toFixed(1));
   };
 
-  const getHoursWorked = (entries: any[]) => {
-    if (!entries || entries.length === 0) return 0;
-    return entries.reduce((sum, entry) => {
-      // Handle case where time_spent might not exist, or might be of different type
-      const timeSpent = typeof entry.time_spent === 'number' ? entry.time_spent : 0;
-      return sum + timeSpent;
-    }, 0);
-  };
-
-  if (!user) {
+  if (!session) {
     return (
       <AppLayout>
         <div className="space-y-6">

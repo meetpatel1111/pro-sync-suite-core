@@ -1,191 +1,291 @@
-
 import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import dbService from '@/services/dbService';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, Save, User, Camera } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { dbService } from '@/services/dbService';
+import { useAuthContext } from '@/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
-interface UserProfileSettingsProps {
-  userId: string;
+interface UserProfile {
+  id: string;
+  full_name: string;
+  avatar_url?: string;
+  bio?: string;
+  job_title?: string;
+  email?: string;
+  phone?: string;
+  location?: string;
 }
 
-const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ userId }) => {
-  // Add missing state variables
-  const [saving, setSaving] = useState(false);
-  const [profileData, setProfileData] = useState({
-    full_name: '',
-    avatar_url: '',
-    bio: '',
-    job_title: '',
-    phone: '',
-    location: ''
-  });
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+const UserProfileSettings = () => {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user, profile: authProfile } = useAuthContext();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [email, setEmail] = useState('');
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (!userId) return;
-      
-      try {
-        const { data, error } = await dbService.getUserProfile(userId);
-        
-        if (error) throw error;
-        
-        if (data) {
-          setProfileData({
-            full_name: data.full_name || '',
-            avatar_url: data.avatar_url || '',
-            bio: data.bio || '',
-            job_title: data.job_title || '',
-            phone: data.phone || '',
-            location: data.location || ''
-          });
-        }
-      } catch (err) {
-        console.error('Error fetching user profile:', err);
-        setError('Failed to load profile data');
-      }
-    };
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
     
     fetchUserProfile();
-  }, [userId]);
+  }, [user]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setProfileData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(false);
-    setSaving(true);
+  const fetchUserProfile = async () => {
+    if (!user) return;
     
+    setIsLoading(true);
     try {
-      const updateData = {
-        full_name: profileData.full_name,
-        avatar_url: profileData.avatar_url,
-        bio: profileData.bio,
-        job_title: profileData.job_title,
-        phone: profileData.phone,
-        location: profileData.location
-      };
-      
-      // Update to use dbService.updateUserProfile
-      const { error } = await dbService.updateUserProfile(userId, updateData);
-      
-      if (error) throw error;
-      
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (err) {
-      console.error('Error updating profile:', err);
-      setError('Failed to update profile');
+      setEmail(user.email || '');
+
+      // Check if we already have the profile from auth context
+      if (authProfile) {
+        setProfile({
+          id: authProfile.id,
+          full_name: authProfile.full_name || '',
+          avatar_url: authProfile.avatar_url,
+          bio: authProfile.bio,
+          job_title: authProfile.job_title,
+          phone: authProfile.phone,
+          location: authProfile.location,
+          email: user.email
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Otherwise fetch from the database
+      const { data, error } = await dbService.getUserProfile(user.id);
+
+      if (error) {
+        // If no profile exists, create a default one
+        setProfile({
+          id: user.id,
+          full_name: user.user_metadata?.full_name || '',
+          avatar_url: user.user_metadata?.avatar_url,
+          email: user.email
+        });
+      } else if (data) {
+        // Ensure data is handled as a single object, not an array
+        const profileData = Array.isArray(data) ? data[0] : data;
+        
+        setProfile({
+          id: profileData.id,
+          full_name: profileData.full_name || '',
+          avatar_url: profileData.avatar_url,
+          bio: profileData.bio,
+          job_title: profileData.job_title,
+          phone: profileData.phone,
+          location: profileData.location,
+          email: user.email
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      toast({
+        title: "Failed to load profile",
+        description: "An error occurred while loading your profile",
+        variant: "destructive",
+      });
     } finally {
-      setSaving(false);
+      setIsLoading(false);
     }
   };
 
-  const getInitials = (name: string) => {
-    if (!name) return '??';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const handleSaveProfile = async () => {
+    if (!profile || !user) return;
+    
+    setIsSaving(true);
+    try {
+      const { error } = await dbService.updateUserProfile(user.id, {
+        full_name: profile.full_name,
+        avatar_url: profile.avatar_url,
+        bio: profile.bio,
+        job_title: profile.job_title,
+        phone: profile.phone,
+        location: profile.location
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully",
+      });
+      
+      // Reload the profile to see updates
+      fetchUserProfile();
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Failed to update profile",
+        description: "An error occurred while updating your profile",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
+  const handleProfileChange = (key: keyof UserProfile, value: string) => {
+    if (profile) {
+      setProfile({ ...profile, [key]: value });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Profile Information</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSaveProfile} className="space-y-4">
-          <div className="flex flex-col items-center mb-6">
-            <Avatar className="w-20 h-20 mb-2">
-              <AvatarImage src={profileData.avatar_url} alt={profileData.full_name} />
-              <AvatarFallback>{getInitials(profileData.full_name)}</AvatarFallback>
-            </Avatar>
-          </div>
-
-          <div className="space-y-2">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="full_name">Full Name</Label>
-                <Input
-                  id="full_name"
-                  name="full_name"
-                  value={profileData.full_name}
-                  onChange={handleInputChange}
-                />
+    <div className="space-y-6">
+      <Tabs defaultValue="profile" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="account">Account</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="profile" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Information</CardTitle>
+              <CardDescription>
+                Update your profile information and how others see you in the system
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex flex-col items-center space-y-3 sm:flex-row sm:space-y-0 sm:space-x-4">
+                <Avatar className="h-24 w-24">
+                  {profile?.avatar_url ? (
+                    <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
+                  ) : (
+                    <AvatarFallback className="text-2xl">
+                      <User className="h-12 w-12" />
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <div className="space-y-1 text-center sm:text-left">
+                  <h3 className="text-lg font-medium">{profile?.full_name || 'Your Name'}</h3>
+                  <p className="text-sm text-muted-foreground">{profile?.job_title || 'No job title set'}</p>
+                  <div className="flex justify-center sm:justify-start">
+                    <Button variant="outline" size="sm" className="mt-2 gap-1">
+                      <Camera className="h-4 w-4" />
+                      Change Avatar
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="avatar_url">Avatar URL</Label>
-                <Input
-                  id="avatar_url"
-                  name="avatar_url"
-                  value={profileData.avatar_url}
-                  onChange={handleInputChange}
-                />
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input 
+                    id="fullName" 
+                    value={profile?.full_name || ''} 
+                    onChange={(e) => handleProfileChange('full_name', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" value={email} disabled />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="jobTitle">Job Title</Label>
+                  <Input 
+                    id="jobTitle" 
+                    value={profile?.job_title || ''} 
+                    onChange={(e) => handleProfileChange('job_title', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input 
+                    id="phone" 
+                    value={profile?.phone || ''} 
+                    onChange={(e) => handleProfileChange('phone', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input 
+                    id="location" 
+                    value={profile?.location || ''} 
+                    onChange={(e) => handleProfileChange('location', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="bio">Bio</Label>
+                  <textarea 
+                    id="bio" 
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={profile?.bio || ''} 
+                    onChange={(e) => handleProfileChange('bio', e.target.value)}
+                  />
+                </div>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                name="bio"
-                value={profileData.bio}
-                onChange={handleInputChange}
-                rows={3}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="job_title">Job Title</Label>
-                <Input
-                  id="job_title"
-                  name="job_title"
-                  value={profileData.job_title}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  name="phone"
-                  value={profileData.phone}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input
-                id="location"
-                name="location"
-                value={profileData.location}
-                onChange={handleInputChange}
-              />
-            </div>
-          </div>
-
-          {error && <p className="text-destructive">{error}</p>}
-          {success && <p className="text-green-500">Profile updated successfully!</p>}
-
-          <Button type="submit" className="w-full" disabled={saving}>
-            {saving ? 'Saving...' : 'Save Profile'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={handleSaveProfile} disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Profile
+                  </>
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="account" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Account Settings</CardTitle>
+              <CardDescription>
+                Manage your account settings and preferences
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p>Account settings will be implemented soon.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="notifications" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notification Settings</CardTitle>
+              <CardDescription>
+                Customize how and when you receive notifications
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p>Notification settings will be implemented soon.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

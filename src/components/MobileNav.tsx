@@ -96,18 +96,6 @@ const MobileNav = () => {
                     RiskRadar
                   </Button>
                 </Link>
-                <Link to="/planboard" onClick={() => setOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-start">
-                    <Calendar className="mr-2 h-4 w-4" />
-                    PlanBoard
-                  </Button>
-                </Link>
-                <Link to="/clientconnect" onClick={() => setOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-start">
-                    <Users className="mr-2 h-4 w-4" />
-                    ClientConnect
-                  </Button>
-                </Link>
                 <Link to="/resourcehub" onClick={() => setOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start">
                     <Users className="mr-2 h-4 w-4" />

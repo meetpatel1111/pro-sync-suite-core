@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { 
   ArrowUpRight, 
   CheckCircle2, 
@@ -7,8 +7,6 @@ import {
   AlertCircle,
   Users
 } from 'lucide-react';
-import dbService from '@/services/dbService';
-import { useAuthContext } from '@/context/AuthContext';
 
 interface StatCardProps {
   title: string;
@@ -16,13 +14,6 @@ interface StatCardProps {
   change?: string;
   icon: React.ReactNode;
   trend?: 'up' | 'down' | 'neutral';
-}
-
-interface DashboardStatsData {
-  completedTasks: number | null;
-  hoursTracked: number | null;
-  openIssues: number | null;
-  teamMembers: number | null;
 }
 
 const StatCard = ({ title, value, change, icon, trend }: StatCardProps) => {
@@ -52,76 +43,33 @@ const StatCard = ({ title, value, change, icon, trend }: StatCardProps) => {
 };
 
 const DashboardStats = () => {
-  const { user, loading } = useAuthContext();
-  const [stats, setStats] = useState<DashboardStatsData>({
-    completedTasks: null,
-    hoursTracked: null,
-    openIssues: null,
-    teamMembers: null
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!loading && user?.id) {
-      setIsLoading(true);
-      dbService.getDashboardStats(user.id)
-        .then((response) => {
-          if (response.error) {
-            throw response.error;
-          }
-          
-          if (response.data) {
-            // Map the response data to our stats structure
-            const mappedStats: DashboardStatsData = {
-              completedTasks: response.data.completedTasks || 0,
-              hoursTracked: response.data.hoursTracked || 0,
-              openIssues: response.data.openIssues || 0,
-              teamMembers: response.data.teamMembers || 0
-            };
-            
-            setStats(mappedStats);
-            setError(null);
-          }
-        })
-        .catch((e) => {
-          setError('Failed to load dashboard stats');
-          console.error('Dashboard stats error:', e);
-        })
-        .finally(() => setIsLoading(false));
-    }
-  }, [user, loading]);
-
-  if (isLoading) {
-    return <div className="col-span-4 text-center text-muted-foreground py-10">Loading dashboard statistics...</div>;
-  }
-  if (error) {
-    return <div className="col-span-4 text-center text-red-500 py-10">{error}</div>;
-  }
-
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <StatCard
         title="Completed Tasks"
-        value={stats.completedTasks !== null && stats.completedTasks !== undefined ? String(stats.completedTasks) : '-'}
-        trend="neutral"
+        value="147"
+        change="12%"
+        trend="up"
         icon={<CheckCircle2 className="h-4 w-4 text-green-600" />}
       />
       <StatCard
         title="Hours Tracked"
-        value={stats.hoursTracked !== null && stats.hoursTracked !== undefined ? String(stats.hoursTracked) : '-'}
-        trend="neutral"
+        value="215.5"
+        change="8%"
+        trend="up"
         icon={<Clock className="h-4 w-4 text-blue-600" />}
       />
       <StatCard
         title="Open Issues"
-        value={stats.openIssues !== null && stats.openIssues !== undefined ? String(stats.openIssues) : '-'}
-        trend="neutral"
+        value="23"
+        change="5%"
+        trend="down"
         icon={<AlertCircle className="h-4 w-4 text-amber-600" />}
       />
       <StatCard
         title="Team Members"
-        value={stats.teamMembers !== null && stats.teamMembers !== undefined ? String(stats.teamMembers) : '-'}
+        value="18"
+        change="2"
         trend="neutral"
         icon={<Users className="h-4 w-4 text-violet-600" />}
       />

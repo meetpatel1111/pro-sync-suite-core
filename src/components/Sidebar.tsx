@@ -122,7 +122,6 @@ const Sidebar = ({ className }: SidebarProps) => {
                 Profile
               </Button>
             </Link>
-
             <Link to="/settings">
               <Button variant="ghost" className="w-full justify-start">
                 <Settings className="mr-2 h-4 w-4" />

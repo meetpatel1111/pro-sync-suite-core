@@ -1,205 +1,157 @@
 
-import React, { useState } from 'react';
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
+import React from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Eye, FileText, MoreHorizontal, ArrowUpDown, Check, X } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { MoreHorizontal, Download, FileText } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
-// Updated Transaction interface
-interface Transaction {
-  id: string;
-  amount: number;
-  date: string;
-  description: string;
-  payee: string;
-  category?: string;
-  status?: string;
-  approvedBy?: {
-    name: string;
-    avatar: string;
-    initials: string;
+// Sample expense data
+const expenses = [
+  {
+    id: 1,
+    description: 'Developer Licenses',
+    category: 'Development',
+    date: '2025-04-10',
+    amount: 1250.00,
+    status: 'Approved',
+    approvedBy: { name: 'Alex Kim', avatar: '/avatar-1.png', initials: 'AK' },
+    receipt: true,
+  },
+  {
+    id: 2,
+    description: 'Social Media Campaign',
+    category: 'Marketing',
+    date: '2025-04-08',
+    amount: 3600.00,
+    status: 'Approved',
+    approvedBy: { name: 'Jamie Rivera', avatar: '/avatar-6.png', initials: 'JR' },
+    receipt: true,
+  },
+  {
+    id: 3,
+    description: 'Server Hosting (Q2)',
+    category: 'Operations',
+    date: '2025-04-05',
+    amount: 2150.00,
+    status: 'Approved',
+    approvedBy: { name: 'Alex Kim', avatar: '/avatar-1.png', initials: 'AK' },
+    receipt: true,
+  },
+  {
+    id: 4,
+    description: 'Design Software Subscription',
+    category: 'Development',
+    date: '2025-04-03',
+    amount: 980.00,
+    status: 'Approved',
+    approvedBy: { name: 'Morgan Lee', avatar: '/avatar-2.png', initials: 'ML' },
+    receipt: true,
+  },
+  {
+    id: 5,
+    description: 'Team Lunch',
+    category: 'Operations',
+    date: '2025-04-12',
+    amount: 345.00,
+    status: 'Pending',
+    approvedBy: null,
+    receipt: true,
+  },
+];
+
+const ExpenseTable = () => {
+  // Format date to a more readable format
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
-  receipt?: string;
-}
-
-const formatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-});
-
-export interface ExpenseTableProps {
-  transactions: Transaction[];
-  title?: string;
-  description?: string;
-  onApprove?: (id: string) => void;
-  onReject?: (id: string) => void;
-}
-
-export function ExpenseTable({ 
-  transactions,
-  title = "Recent Expenses",
-  description = "A list of your recent expenses and receipts.",
-  onApprove,
-  onReject
-}: ExpenseTableProps) {
-  const [selectedReceipt, setSelectedReceipt] = useState<string | null>(null);
-  const [sortColumn, setSortColumn] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortColumn(column);
-      setSortDirection('asc');
-    }
+  
+  // Format currency
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
   };
-
-  const sortedTransactions = [...transactions].sort((a, b) => {
-    if (!sortColumn) return 0;
-    
-    const aValue = a[sortColumn];
-    const bValue = b[sortColumn];
-    
-    if (sortColumn === 'amount') {
-      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
-    }
-    
-    if (sortColumn === 'date') {
-      return sortDirection === 'asc' 
-        ? new Date(aValue).getTime() - new Date(bValue).getTime()
-        : new Date(bValue).getTime() - new Date(aValue).getTime();
-    }
-    
-    if (!aValue && !bValue) return 0;
-    if (!aValue) return sortDirection === 'asc' ? -1 : 1;
-    if (!bValue) return sortDirection === 'asc' ? 1 : -1;
-    
-    return sortDirection === 'asc'
-      ? aValue.localeCompare(bValue)
-      : bValue.localeCompare(aValue);
-  });
-
-  const viewReceipt = (receiptUrl: string) => {
-    setSelectedReceipt(receiptUrl);
-  };
-
+  
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead onClick={() => handleSort('date')} className="cursor-pointer w-[100px]">
-                Date {sortColumn === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
-              </TableHead>
-              <TableHead onClick={() => handleSort('description')} className="cursor-pointer">
-                Description {sortColumn === 'description' && (sortDirection === 'asc' ? '↑' : '↓')}
-              </TableHead>
-              <TableHead onClick={() => handleSort('category')} className="cursor-pointer">
-                Category {sortColumn === 'category' && (sortDirection === 'asc' ? '↑' : '↓')}
-              </TableHead>
-              <TableHead onClick={() => handleSort('amount')} className="cursor-pointer text-right">
-                Amount {sortColumn === 'amount' && (sortDirection === 'asc' ? '↑' : '↓')}
-              </TableHead>
-              <TableHead onClick={() => handleSort('status')} className="cursor-pointer">
-                Status {sortColumn === 'status' && (sortDirection === 'asc' ? '↑' : '↓')}
-              </TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedTransactions.map((transaction) => (
-              <TableRow key={transaction.id}>
-                <TableCell className="font-medium">{new Date(transaction.date).toLocaleDateString()}</TableCell>
-                <TableCell>{transaction.description}</TableCell>
-                <TableCell>{transaction.category || 'N/A'}</TableCell>
-                <TableCell className="text-right">{formatter.format(transaction.amount)}</TableCell>
-                <TableCell>
-                  {transaction.status === 'approved' ? (
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-green-500">Approved</Badge>
-                      {transaction.approvedBy && (
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={transaction.approvedBy.avatar} alt={transaction.approvedBy.name} />
-                          <AvatarFallback>{transaction.approvedBy.initials}</AvatarFallback>
-                        </Avatar>
-                      )}
-                    </div>
-                  ) : transaction.status === 'rejected' ? (
-                    <Badge className="bg-red-500">Rejected</Badge>
-                  ) : (
-                    <Badge variant="outline">Pending</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      {transaction.receipt && (
-                        <DropdownMenuItem onClick={() => viewReceipt(transaction.receipt!)}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Receipt
-                        </DropdownMenuItem>
-                      )}
-                      {transaction.status === 'pending' && onApprove && (
-                        <DropdownMenuItem onClick={() => onApprove(transaction.id)}>
-                          <Check className="mr-2 h-4 w-4" />
-                          Approve
-                        </DropdownMenuItem>
-                      )}
-                      {transaction.status === 'pending' && onReject && (
-                        <DropdownMenuItem onClick={() => onReject(transaction.id)}>
-                          <X className="mr-2 h-4 w-4" />
-                          Reject
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem>
-                        <FileText className="mr-2 h-4 w-4" />
-                        View Details
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        
-        <Dialog open={!!selectedReceipt} onOpenChange={(open) => !open && setSelectedReceipt(null)}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Receipt</DialogTitle>
-              <DialogDescription>Transaction receipt or invoice</DialogDescription>
-            </DialogHeader>
-            <div className="flex justify-center">
-              {selectedReceipt && (
-                <img 
-                  src={selectedReceipt}
-                  alt="Receipt"
-                  className="max-h-[500px] object-contain"
-                />
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Description</TableHead>
+          <TableHead>Category</TableHead>
+          <TableHead>Date</TableHead>
+          <TableHead>Amount</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {expenses.map((expense) => (
+          <TableRow key={expense.id}>
+            <TableCell className="font-medium">{expense.description}</TableCell>
+            <TableCell>{expense.category}</TableCell>
+            <TableCell>{formatDate(expense.date)}</TableCell>
+            <TableCell>{formatCurrency(expense.amount)}</TableCell>
+            <TableCell>
+              {expense.status === 'Approved' ? (
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-emerald-600">Approved</Badge>
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={expense.approvedBy.avatar} alt={expense.approvedBy.name} />
+                    <AvatarFallback>{expense.approvedBy.initials}</AvatarFallback>
+                  </Avatar>
+                </div>
+              ) : (
+                <Badge variant="outline">Pending</Badge>
               )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
+            </TableCell>
+            <TableCell className="text-right">
+              <div className="flex items-center justify-end gap-2">
+                {expense.receipt && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Download className="h-4 w-4" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>View Details</DropdownMenuItem>
+                    <DropdownMenuItem>Edit</DropdownMenuItem>
+                    {expense.status === 'Pending' && (
+                      <DropdownMenuItem>Approve</DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
-}
+};
 
 export default ExpenseTable;
