@@ -1,446 +1,487 @@
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ExclamationTriangleIcon, CheckCircledIcon } from "@radix-ui/react-icons";
+import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
+import { useAuthContext } from "@/context/AuthContext";
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { AlertCircle, Eye, EyeOff, Mail, Lock, Check } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Checkbox } from '@/components/ui/checkbox';
-import { PasswordStrengthMeter } from '@/components/PasswordStrengthMeter';
-
-const Auth = () => {
+export default function Auth() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [activeTab, setActiveTab] = useState("login");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [activeTab, setActiveTab] = useState('login');
-  const [error, setError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [acceptTerms, setAcceptTerms] = useState(false);
-  const [emailError, setEmailError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const { user } = useAuthContext();
 
+  // Field validation states
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
+
+  // Redirect if already logged in
   useEffect(() => {
-    // Check if the user is already signed in
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate('/');
-      }
-    });
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
 
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate('/');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  // Validate email format
-  const validateEmail = (email: string) => {
+  const validateEmail = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) {
-      setEmailError('Email is required');
+      setEmailError("Email is required");
       return false;
     } else if (!emailRegex.test(email)) {
-      setEmailError('Please enter a valid email address');
+      setEmailError("Please enter a valid email address");
       return false;
     }
-    setEmailError('');
+    setEmailError("");
     return true;
   };
 
-  // Validate password strength
-  const validatePassword = (password: string) => {
+  const validatePassword = () => {
+    if (activeTab === "login") {
+      if (!password) {
+        setPasswordError("Password is required");
+        return false;
+      }
+      setPasswordError("");
+      return true;
+    }
+
     if (!password) {
-      setPasswordError('Password is required');
+      setPasswordError("Password is required");
       return false;
     } else if (password.length < 8) {
-      setPasswordError('Password must be at least 8 characters long');
+      setPasswordError("Password must be at least 8 characters");
       return false;
     }
-    setPasswordError('');
+    setPasswordError("");
     return true;
   };
 
-  // Validate password confirmation
-  const validateConfirmPassword = (password: string, confirmPassword: string) => {
-    if (password !== confirmPassword) {
-      setConfirmPasswordError('Passwords do not match');
+  const validateConfirmPassword = () => {
+    if (activeTab === "signup" && password !== confirmPassword) {
+      setConfirmPasswordError("Passwords don't match");
       return false;
     }
-    setConfirmPasswordError('');
+    setConfirmPasswordError("");
     return true;
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateEmail() || !validatePassword()) {
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      // Note: Removed the expiresIn property to fix the build error
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+        });
+        navigate("/");
+      }
+    } catch (error) {
+      console.error("Unexpected error during login:", error);
+      toast({
+        title: "Login failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     
-    // Validate all fields
-    const isEmailValid = validateEmail(email);
-    const isPasswordValid = validatePassword(password);
-    const isConfirmPasswordValid = validateConfirmPassword(password, confirmPassword);
-    
-    if (!isEmailValid || !isPasswordValid || !isConfirmPasswordValid || !fullName) {
-      setError('Please correct the errors above');
+    if (!validateEmail() || !validatePassword() || !validateConfirmPassword()) {
       return;
     }
 
-    if (!acceptTerms) {
-      setError('Please accept the Terms of Service and Privacy Policy');
+    if (!termsAccepted) {
+      toast({
+        title: "Terms & Conditions required",
+        description: "Please accept the Terms of Service and Privacy Policy",
+        variant: "destructive",
+      });
       return;
     }
-    
+
     setLoading(true);
     
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { full_name: fullName }
-        }
+          data: {
+            full_name: fullName,
+          },
+        },
       });
 
-      if (signUpError) throw signUpError;
-      
-      if (data?.user) {
+      if (error) {
         toast({
-          title: 'Account created successfully',
-          description: 'Welcome to ProSync Suite!',
+          title: "Signup failed",
+          description: error.message,
+          variant: "destructive",
         });
-        // Auth state listener will handle redirection
       } else {
         toast({
-          title: 'Account created',
-          description: 'Please check your email for verification link',
+          title: "Signup successful",
+          description: "Please check your email to verify your account.",
         });
+        // Keep user on the same page to see the success message
       }
-    } catch (error: any) {
-      console.error('Signup error:', error);
-      setError(error.message || 'Error creating account');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    
-    const isEmailValid = validateEmail(email);
-    const isPasswordValid = password.length > 0; // Just check if password is not empty for login
-    
-    if (!isEmailValid || !isPasswordValid) {
-      setError('Please fill in all fields correctly');
-      return;
-    }
-    
-    setLoading(true);
-    
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-        options: {
-          // Set session expiry based on "Remember me" checkbox
-          // Default expiry is 1 hour if not remembered
-          expiresIn: rememberMe ? 60 * 60 * 24 * 7 : 60 * 60
-        }
-      });
-
-      if (error) throw error;
-      
+    } catch (error) {
+      console.error("Unexpected error during signup:", error);
       toast({
-        title: 'Logged in successfully',
-        description: 'Welcome back to ProSync Suite!'
+        title: "Signup failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
       });
-      // Auth state listener will handle redirection
-      
-    } catch (error: any) {
-      console.error('Login error:', error);
-      setError(error.message || 'Invalid login credentials');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!email) {
-      setError('Please enter your email address');
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateEmail()) {
       return;
     }
 
     setLoading(true);
+    
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/reset-password',
+        redirectTo: `${window.location.origin}/auth?passwordReset=true`,
       });
 
-      if (error) throw error;
-      
+      if (error) {
+        toast({
+          title: "Password reset failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Password reset email sent",
+          description: "Check your email for the password reset link",
+        });
+        setForgotPasswordMode(false);
+      }
+    } catch (error) {
+      console.error("Unexpected error during password reset:", error);
       toast({
-        title: 'Password reset link sent',
-        description: 'Please check your email for the password reset link',
+        title: "Password reset failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
       });
-    } catch (error: any) {
-      console.error('Password reset error:', error);
-      setError(error.message || 'Failed to send password reset email');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    setError(null);
-    setEmailError('');
-    setPasswordError('');
-    setConfirmPasswordError('');
+  const getActiveForm = () => {
+    if (forgotPasswordMode) {
+      return (
+        <form onSubmit={handleForgotPassword} className="space-y-4">
+          <CardHeader>
+            <CardTitle className="text-2xl text-center">Reset Your Password</CardTitle>
+            <CardDescription className="text-center">
+              Enter your email address below and we'll send you instructions to reset your password.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">Email</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@example.com"
+                className={emailError ? "border-red-500" : ""}
+              />
+              {emailError && <p className="text-sm text-red-500">{emailError}</p>}
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? "Sending..." : "Send Reset Instructions"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={() => setForgotPasswordMode(false)}
+            >
+              Back to Login
+            </Button>
+          </CardFooter>
+        </form>
+      );
+    }
+    
+    return (
+      <Tabs
+        defaultValue={activeTab}
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="login">Login</TabsTrigger>
+          <TabsTrigger value="signup">Sign Up</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="login" className="mt-4">
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="login-email">Email</Label>
+              <Input
+                id="login-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@example.com"
+                className={emailError ? "border-red-500" : ""}
+              />
+              {emailError && <p className="text-sm text-red-500">{emailError}</p>}
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="login-password">Password</Label>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="p-0 h-auto text-xs"
+                  onClick={() => setForgotPasswordMode(true)}
+                >
+                  Forgot password?
+                </Button>
+              </div>
+              <div className="relative">
+                <Input
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className={passwordError ? "border-red-500 pr-10" : "pr-10"}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {passwordError && <p className="text-sm text-red-500">{passwordError}</p>}
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="remember-me"
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+              />
+              <Label htmlFor="remember-me" className="text-sm">Remember me</Label>
+            </div>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? "Logging in..." : "Log In"}
+            </Button>
+          </form>
+        </TabsContent>
+        
+        <TabsContent value="signup" className="mt-4">
+          <form onSubmit={handleSignUp} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="signup-fullname">Full Name</Label>
+              <Input
+                id="signup-fullname"
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="John Doe"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="signup-email">Email</Label>
+              <Input
+                id="signup-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@example.com"
+                className={emailError ? "border-red-500" : ""}
+              />
+              {emailError && <p className="text-sm text-red-500">{emailError}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="signup-password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="signup-password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className={passwordError ? "border-red-500 pr-10" : "pr-10"}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {passwordError && <p className="text-sm text-red-500">{passwordError}</p>}
+              <PasswordStrengthMeter password={password} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="signup-confirm-password">Confirm Password</Label>
+              <div className="relative">
+                <Input
+                  id="signup-confirm-password"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className={confirmPasswordError ? "border-red-500 pr-10" : "pr-10"}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {confirmPasswordError && <p className="text-sm text-red-500">{confirmPasswordError}</p>}
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="terms"
+                checked={termsAccepted}
+                onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+              />
+              <Label htmlFor="terms" className="text-sm">
+                I accept the{" "}
+                <a href="/terms" className="text-primary hover:underline" onClick={(e) => {
+                  e.preventDefault();
+                  // Open terms in a modal or new tab
+                  alert("Terms of Service would open here");
+                }}>
+                  Terms of Service
+                </a>{" "}
+                and{" "}
+                <a href="/privacy" className="text-primary hover:underline" onClick={(e) => {
+                  e.preventDefault();
+                  // Open privacy policy in a modal or new tab
+                  alert("Privacy Policy would open here");
+                }}>
+                  Privacy Policy
+                </a>
+              </Label>
+            </div>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? "Signing up..." : "Sign Up"}
+            </Button>
+          </form>
+        </TabsContent>
+      </Tabs>
+    );
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-md">
-        <Card className="shadow-xl border-opacity-50">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">
-              <span className="bg-gradient-to-r from-prosync-600 to-prosync-800 bg-clip-text text-transparent">ProSync Suite</span>
-            </CardTitle>
-            <CardDescription className="text-center">
-              {activeTab === 'login' ? 'Sign in to access your workspace' : 'Create an account to get started'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {error && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="login">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium">
-                      Email
-                    </Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="email" 
-                        type="email" 
-                        placeholder="name@example.com"
-                        value={email}
-                        onChange={(e) => {
-                          setEmail(e.target.value);
-                          validateEmail(e.target.value);
-                        }}
-                        className="pl-10"
-                        aria-invalid={!!emailError}
-                        required
-                      />
-                    </div>
-                    {emailError && <p className="text-sm text-destructive mt-1">{emailError}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleForgotPassword();
-                        }}
-                        className="text-xs text-primary hover:underline"
-                      >
-                        Forgot Password?
-                      </button>
-                    </div>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="password" 
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => {
-                          setPassword(e.target.value);
-                          validatePassword(e.target.value);
-                        }}
-                        className="pl-10"
-                        aria-invalid={!!passwordError}
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-2.5 text-muted-foreground"
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                    {passwordError && <p className="text-sm text-destructive mt-1">{passwordError}</p>}
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="rememberMe" 
-                      checked={rememberMe} 
-                      onCheckedChange={(checked) => setRememberMe(checked === true)}
-                    />
-                    <label
-                      htmlFor="rememberMe"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      Remember me
-                    </label>
-                  </div>
-                  
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? 'Signing in...' : 'Sign In'}
-                  </Button>
-                </form>
-              </TabsContent>
-              
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name</Label>
-                    <Input 
-                      id="fullName" 
-                      placeholder="John Doe"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signupEmail">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="signupEmail" 
-                        type="email" 
-                        placeholder="name@example.com"
-                        value={email}
-                        onChange={(e) => {
-                          setEmail(e.target.value);
-                          validateEmail(e.target.value);
-                        }}
-                        className="pl-10"
-                        aria-invalid={!!emailError}
-                        required
-                      />
-                    </div>
-                    {emailError && <p className="text-sm text-destructive mt-1">{emailError}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signupPassword">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="signupPassword" 
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => {
-                          setPassword(e.target.value);
-                          validatePassword(e.target.value);
-                        }}
-                        className="pl-10"
-                        aria-invalid={!!passwordError}
-                        required
-                        minLength={8}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-2.5 text-muted-foreground"
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                    {passwordError && <p className="text-sm text-destructive mt-1">{passwordError}</p>}
-                    {password && <PasswordStrengthMeter password={password} />}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input 
-                      id="confirmPassword" 
-                      type={showPassword ? "text" : "password"}
-                      value={confirmPassword}
-                      onChange={(e) => {
-                        setConfirmPassword(e.target.value);
-                        validateConfirmPassword(password, e.target.value);
-                      }}
-                      required
-                      aria-invalid={!!confirmPasswordError}
-                    />
-                    {confirmPasswordError && <p className="text-sm text-destructive mt-1">{confirmPasswordError}</p>}
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="terms" 
-                      checked={acceptTerms} 
-                      onCheckedChange={(checked) => setAcceptTerms(checked === true)}
-                      required
-                    />
-                    <label
-                      htmlFor="terms"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      I accept the{" "}
-                      <a href="/terms" className="text-primary hover:underline" target="_blank">
-                        Terms of Service
-                      </a>{" "}
-                      and{" "}
-                      <a href="/privacy" className="text-primary hover:underline" target="_blank">
-                        Privacy Policy
-                      </a>
-                    </label>
-                  </div>
-                  
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? 'Creating account...' : 'Create Account'}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
+        <div className="flex flex-col items-center justify-center mb-8">
+          <div className="flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-4">
+            <svg
+              className="h-8 w-8 text-primary"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold">ProSync Suite</h1>
+          <p className="text-muted-foreground">Sign in to access your workspace</p>
+        </div>
+
+        <Card className="shadow-lg">
+          <CardContent className="pt-6">
+            {getActiveForm()}
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4 border-t pt-4">
-            <div className="text-sm text-muted-foreground text-center">
-              {activeTab === 'login' ? (
-                <>Don't have an account? <button onClick={() => handleTabChange('signup')} className="text-primary hover:underline">Sign up</button></>
-              ) : (
-                <>Already have an account? <button onClick={() => handleTabChange('login')} className="text-primary hover:underline">Sign in</button></>
-              )}
-            </div>
-          </CardFooter>
         </Card>
+
+        <div className="mt-6 text-center text-sm text-muted-foreground">
+          Need help? <a href="#" className="text-primary hover:underline">Contact Support</a>
+        </div>
       </div>
     </div>
   );
-};
-
-export default Auth;
+}

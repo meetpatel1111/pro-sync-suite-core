@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,11 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, Plus, Search, Phone, Mail, Building, Edit, Trash2, MessageSquare, Clock } from 'lucide-react';
+import { Users, Plus, Search, Phone, Mail, Building, Edit, Trash2, MessageSquare, Clock, User, FileText, FileCheck, CreditCard, Calendar, Bell } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { Client, ClientNote } from '@/utils/dbtypes';
+import { ContactBook } from '@/components/clientconnect/ContactBook';
+import { useAuthContext } from '@/context/AuthContext';
 
 const ClientConnect = () => {
   const { toast } = useToast();
@@ -23,7 +26,7 @@ const ClientConnect = () => {
   const [showAddNoteDialog, setShowAddNoteDialog] = useState(false);
   const [isEditingClient, setIsEditingClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [session, setSession] = useState<any>(null);
+  const { session, user } = useAuthContext();
   
   // Form states
   const [newClient, setNewClient] = useState({
@@ -38,22 +41,10 @@ const ClientConnect = () => {
   });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (session) {
+    if (user) {
       fetchClients();
     }
-  }, [session]);
+  }, [user]);
 
   useEffect(() => {
     if (selectedClient) {
@@ -67,6 +58,7 @@ const ClientConnect = () => {
       const { data, error } = await supabase
         .from('clients')
         .select('*')
+        .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -154,7 +146,7 @@ const ClientConnect = () => {
             email: newClient.email,
             phone: newClient.phone,
             company: newClient.company,
-            user_id: session.user.id
+            user_id: user?.id
           })
           .select();
           
@@ -199,7 +191,7 @@ const ClientConnect = () => {
         .insert({
           client_id: selectedClient.id,
           content: newNote.content,
-          user_id: session.user.id
+          user_id: user?.id
         })
         .select();
         
@@ -284,9 +276,9 @@ const ClientConnect = () => {
   const handleEditClient = (client: Client) => {
     setNewClient({
       name: client.name,
-      email: client.email,
-      phone: client.phone,
-      company: client.company
+      email: client.email || '',
+      phone: client.phone || '',
+      company: client.company || ''
     });
     setIsEditingClient(true);
     setShowAddClientDialog(true);
@@ -298,7 +290,7 @@ const ClientConnect = () => {
     (client.company && client.company.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  if (!session) {
+  if (!user) {
     return (
       <AppLayout>
         <div className="space-y-6">
@@ -340,10 +332,14 @@ const ClientConnect = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2 gap-2">
+          <TabsList className="grid w-full md:w-auto grid-cols-2 md:inline-flex gap-2">
             <TabsTrigger value="clients" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               <span>Clients</span>
+            </TabsTrigger>
+            <TabsTrigger value="dashboard" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              <span>Dashboard</span>
             </TabsTrigger>
             <TabsTrigger value="interactions" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
@@ -416,7 +412,9 @@ const ClientConnect = () => {
                             size="icon"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteClient(client.id);
+                              if (confirm('Are you sure you want to delete this client?')) {
+                                handleDeleteClient(client.id);
+                              }
                             }}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -447,56 +445,216 @@ const ClientConnect = () => {
             </div>
             
             {selectedClient && (
-              <Card className="mt-6">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-lg">Client Notes</CardTitle>
-                    <Button 
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowAddNoteDialog(true)}
-                      className="flex items-center gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add Note
-                    </Button>
-                  </div>
-                  <CardDescription>Notes for {selectedClient.name}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {clientNotes.length === 0 ? (
-                    <div className="text-center py-4 text-muted-foreground">
-                      <p>No notes yet. Add your first note for this client.</p>
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Client Notes */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-lg">Client Notes</CardTitle>
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAddNoteDialog(true)}
+                        className="flex items-center gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Note
+                      </Button>
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {clientNotes.map(note => (
-                        <Card key={note.id}>
-                          <CardHeader className="pb-2">
-                            <div className="flex justify-between items-start">
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Clock className="h-4 w-4" />
-                                <span>{format(new Date(note.created_at), 'MMM d, yyyy h:mm a')}</span>
+                    <CardDescription>Notes for {selectedClient.name}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {clientNotes.length === 0 ? (
+                      <div className="text-center py-4 text-muted-foreground">
+                        <p>No notes yet. Add your first note for this client.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {clientNotes.map(note => (
+                          <Card key={note.id}>
+                            <CardHeader className="pb-2">
+                              <div className="flex justify-between items-start">
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Clock className="h-4 w-4" />
+                                  <span>{format(new Date(note.created_at), 'MMM d, yyyy h:mm a')}</span>
+                                </div>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  onClick={() => {
+                                    if (confirm('Are you sure you want to delete this note?')) {
+                                      handleDeleteNote(note.id);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </div>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={() => handleDeleteNote(note.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            <p className="whitespace-pre-wrap">{note.content}</p>
-                          </CardContent>
-                        </Card>
-                      ))}
+                            </CardHeader>
+                            <CardContent>
+                              <p className="whitespace-pre-wrap">{note.content}</p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+                
+                {/* Client Contact Book */}
+                <ContactBook clientId={selectedClient.id} />
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="dashboard" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <CardTitle className="text-lg">Recent Projects</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="text-sm">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="font-medium">Website Redesign</div>
+                      <div className="text-xs text-muted-foreground">75% complete</div>
                     </div>
-                  )}
+                    <div className="h-1.5 w-full bg-muted overflow-hidden rounded-full">
+                      <div className="h-full bg-primary rounded-full" style={{ width: '75%' }}></div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="font-medium">App Development</div>
+                      <div className="text-xs text-muted-foreground">30% complete</div>
+                    </div>
+                    <div className="h-1.5 w-full bg-muted overflow-hidden rounded-full">
+                      <div className="h-full bg-primary rounded-full" style={{ width: '30%' }}></div>
+                    </div>
+                    
+                    <div className="flex justify-end pt-2">
+                      <Button variant="ghost" size="sm" className="text-xs">View All Projects</Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-            )}
+              
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <FileCheck className="h-5 w-5 text-muted-foreground" />
+                    <CardTitle className="text-lg">Pending Approvals</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm">Logo Design Draft</div>
+                      <Button variant="outline" size="sm" className="h-7">Review</Button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm">Content Strategy</div>
+                      <Button variant="outline" size="sm" className="h-7">Review</Button>
+                    </div>
+                    <div className="flex justify-end pt-2">
+                      <Button variant="ghost" size="sm" className="text-xs">View All</Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-muted-foreground" />
+                    <CardTitle className="text-lg">Recent Invoices</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm">INV-2023-001</div>
+                      <div className="font-medium">$1,500.00</div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm">INV-2023-002</div>
+                      <div className="font-medium">$850.00</div>
+                    </div>
+                    <div className="flex justify-end pt-2">
+                      <Button variant="ghost" size="sm" className="text-xs">View All</Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-muted-foreground" />
+                    <CardTitle className="text-lg">Upcoming Meetings</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-muted rounded-md h-12 w-12 flex flex-col items-center justify-center text-center">
+                        <div className="text-xs">JUN</div>
+                        <div className="font-bold">15</div>
+                      </div>
+                      <div>
+                        <div className="font-medium">Project Status Review</div>
+                        <div className="text-sm text-muted-foreground">10:00 AM - 11:00 AM</div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="bg-muted rounded-md h-12 w-12 flex flex-col items-center justify-center text-center">
+                        <div className="text-xs">JUN</div>
+                        <div className="font-bold">18</div>
+                      </div>
+                      <div>
+                        <div className="font-medium">Feedback Session</div>
+                        <div className="text-sm text-muted-foreground">2:00 PM - 3:30 PM</div>
+                      </div>
+                    </div>
+                    <div className="flex justify-end pt-2">
+                      <Button variant="ghost" size="sm" className="text-xs">Schedule Meeting</Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-5 w-5 text-muted-foreground" />
+                    <CardTitle className="text-lg">Recent Updates</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-sm font-medium">New feature deployed</div>
+                      <div className="text-xs text-muted-foreground">3 hours ago</div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">Content updates completed</div>
+                      <div className="text-xs text-muted-foreground">Yesterday</div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">Report ready for review</div>
+                      <div className="text-xs text-muted-foreground">2 days ago</div>
+                    </div>
+                    <div className="flex justify-end pt-2">
+                      <Button variant="ghost" size="sm" className="text-xs">View All Updates</Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="interactions" className="space-y-4">
@@ -508,9 +666,66 @@ const ClientConnect = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>Client interaction timeline feature coming soon.</p>
-                  <p className="text-sm mt-2">This will display emails, meetings, and other touchpoints with clients.</p>
+                <div className="space-y-6">
+                  {/* Interaction Timeline */}
+                  <div className="relative border-l border-muted pl-6">
+                    {/* Email interaction */}
+                    <div className="mb-6 relative">
+                      <div className="absolute -left-10 mt-1.5 h-4 w-4 rounded-full bg-primary"></div>
+                      <div className="flex flex-col">
+                        <h4 className="font-medium">Email Sent: Project Update</h4>
+                        <p className="text-sm text-muted-foreground">
+                          To: client@example.com
+                        </p>
+                        <time className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(), 'MMM d, yyyy h:mm a')}
+                        </time>
+                        <p className="text-sm mt-2">
+                          Weekly project status update with timeline revisions and next steps.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Meeting interaction */}
+                    <div className="mb-6 relative">
+                      <div className="absolute -left-10 mt-1.5 h-4 w-4 rounded-full bg-primary"></div>
+                      <div className="flex flex-col">
+                        <h4 className="font-medium">Meeting: Kickoff Session</h4>
+                        <time className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(Date.now() - 86400000), 'MMM d, yyyy h:mm a')}
+                        </time>
+                        <p className="text-sm mt-2">
+                          Initial project kickoff meeting with team introductions and scope review.
+                        </p>
+                        <Button variant="outline" size="sm" className="mt-2 w-fit">
+                          View Meeting Notes
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* File sharing interaction */}
+                    <div className="relative">
+                      <div className="absolute -left-10 mt-1.5 h-4 w-4 rounded-full bg-primary"></div>
+                      <div className="flex flex-col">
+                        <h4 className="font-medium">Files Shared: Design Assets</h4>
+                        <time className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(Date.now() - 172800000), 'MMM d, yyyy h:mm a')}
+                        </time>
+                        <p className="text-sm mt-2">
+                          Shared 5 files including logo variations, color palette, and brand guidelines.
+                        </p>
+                        <Button variant="outline" size="sm" className="mt-2 w-fit">
+                          View Files
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-center">
+                    <Button variant="outline">
+                      Load More History
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -531,9 +746,9 @@ const ClientConnect = () => {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="name" className="text-right text-sm font-medium">
+              <Label htmlFor="name" className="text-right text-sm font-medium">
                 Name
-              </label>
+              </Label>
               <Input
                 id="name"
                 placeholder="Client Name"
@@ -543,9 +758,9 @@ const ClientConnect = () => {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="email" className="text-right text-sm font-medium">
+              <Label htmlFor="email" className="text-right text-sm font-medium">
                 Email
-              </label>
+              </Label>
               <Input
                 id="email"
                 placeholder="client@example.com"
@@ -555,9 +770,9 @@ const ClientConnect = () => {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="phone" className="text-right text-sm font-medium">
+              <Label htmlFor="phone" className="text-right text-sm font-medium">
                 Phone
-              </label>
+              </Label>
               <Input
                 id="phone"
                 placeholder="555-123-4567"
@@ -567,9 +782,9 @@ const ClientConnect = () => {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="company" className="text-right text-sm font-medium">
+              <Label htmlFor="company" className="text-right text-sm font-medium">
                 Company
-              </label>
+              </Label>
               <Input
                 id="company"
                 placeholder="Company Name"
@@ -601,9 +816,9 @@ const ClientConnect = () => {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div>
-              <label htmlFor="content" className="block text-sm font-medium mb-2">
+              <Label htmlFor="content" className="block text-sm font-medium mb-2">
                 Note Content
-              </label>
+              </Label>
               <Textarea
                 id="content"
                 placeholder="Enter your note here..."
