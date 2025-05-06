@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { setupSampleData } from '@/utils/sampleData';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -31,30 +30,18 @@ const Auth = () => {
     });
 
     // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        // Set up sample data for new users
-        setTimeout(async () => {
-          try {
-            await setupSampleData();
-          } catch (error) {
-            console.error('Error setting up sample data:', error);
-          }
-          navigate('/');
-        }, 0);
+        navigate('/');
       }
     });
 
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const clearError = () => {
-    if (error) setError(null);
-  };
-
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError();
+    setError(null);
     
     if (!email || !password || !fullName) {
       setError('Please fill in all fields');
@@ -62,42 +49,34 @@ const Auth = () => {
     }
     
     setLoading(true);
+    
     try {
-      console.log('Signing up with:', { email, fullName });
-      
+      // Simplified signup with minimal options
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: {
-            full_name: fullName,
-          },
-        },
+          data: { full_name: fullName }
+        }
       });
 
-      if (signUpError) {
-        console.error('Signup error details:', signUpError);
-        throw signUpError;
-      }
-
-      console.log('Signup response:', data);
-
+      if (signUpError) throw signUpError;
+      
       if (data?.user) {
         toast({
-          title: 'Account created',
-          description: 'You have been logged in automatically',
+          title: 'Account created successfully',
+          description: 'Welcome to ProSync Suite!',
         });
-        // Auth state change listener will handle the redirect
+        // Auth state listener will handle redirection
       } else {
         toast({
           title: 'Account created',
           description: 'Please check your email for verification link',
         });
-        setActiveTab('login');
       }
     } catch (error: any) {
       console.error('Signup error:', error);
-      setError(error.message || 'An error occurred during sign up');
+      setError(error.message || 'Error creating account');
     } finally {
       setLoading(false);
     }
@@ -105,7 +84,7 @@ const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError();
+    setError(null);
     
     if (!email || !password) {
       setError('Please fill in all fields');
@@ -113,14 +92,21 @@ const Auth = () => {
     }
     
     setLoading(true);
+    
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
-        password,
+        password
       });
 
       if (error) throw error;
-      // Navigation will happen in the auth state change listener
+      
+      toast({
+        title: 'Logged in successfully',
+        description: 'Welcome back to ProSync Suite!'
+      });
+      // Auth state listener will handle redirection
+      
     } catch (error: any) {
       console.error('Login error:', error);
       setError(error.message || 'Invalid login credentials');
@@ -167,9 +153,7 @@ const Auth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="password">Password</Label>
-                    </div>
+                    <Label htmlFor="password">Password</Label>
                     <Input 
                       id="password" 
                       type="password"
