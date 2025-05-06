@@ -63,6 +63,8 @@ const Auth = () => {
     
     setLoading(true);
     try {
+      console.log('Signing up with:', { email, fullName });
+      
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -73,7 +75,12 @@ const Auth = () => {
         },
       });
 
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+        console.error('Signup error details:', signUpError);
+        throw signUpError;
+      }
+
+      console.log('Signup response:', data);
 
       if (data?.user) {
         toast({
@@ -117,6 +124,7 @@ const Auth = () => {
     } catch (error: any) {
       console.error('Login error:', error);
       setError(error.message || 'Invalid login credentials');
+    } finally {
       setLoading(false);
     }
   };
@@ -207,6 +215,7 @@ const Auth = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      minLength={6}
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
