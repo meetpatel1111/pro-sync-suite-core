@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
 import { useAuthContext } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
@@ -324,7 +325,7 @@ export default function Auth() {
                   className="absolute right-0 top-0 h-full"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
               {passwordError && <p className="text-sm text-red-500">{passwordError}</p>}
@@ -389,7 +390,7 @@ export default function Auth() {
                   className="absolute right-0 top-0 h-full"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
               {passwordError && <p className="text-sm text-red-500">{passwordError}</p>}
@@ -413,7 +414,7 @@ export default function Auth() {
                   className="absolute right-0 top-0 h-full"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  {showConfirmPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
               {confirmPasswordError && <p className="text-sm text-red-500">{confirmPasswordError}</p>}

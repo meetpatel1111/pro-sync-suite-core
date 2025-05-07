@@ -1,4 +1,3 @@
-
 // This file defines the types for our database tables
 // Types for use in application code when working with database records
 
@@ -291,14 +290,66 @@ export interface File {
   updated_at: string;
 }
 
-export interface Contact {
+// New types for CollabSpace
+export interface Channel {
   id: string;
-  client_id: string;
   name: string;
-  role?: string;
-  email?: string;
-  phone?: string;
-  emergency_contact?: boolean;
-  notes?: string;
+  description?: string;
+  type: string;
+  created_by: string;
   created_at: string;
+  updated_at: string;
+  about?: string;
+}
+
+export interface ChannelMember {
+  id: string;
+  channel_id: string;
+  user_id: string;
+  joined_at: string;
+}
+
+export interface DirectMessage {
+  id: string;
+  user1_id: string;
+  user2_id: string;
+  created_at: string;
+}
+
+export interface Message {
+  id: string;
+  channel_id: string;
+  user_id: string;
+  content?: string;
+  type: 'text' | 'image' | 'file' | 'system';
+  parent_id?: string;
+  read_by?: Record<string, any>;
+  mentions?: Record<string, any>;
+  reactions?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+  edited_at?: string;
+  is_pinned: boolean;
+  username?: string;
+  name?: string;
+  channel_name?: string;
+  scheduled_for?: string;
+  file_url?: string;
+}
+
+export interface Poll {
+  id: string;
+  message_id: string;
+  question: string;
+  options: any[];
+  created_by: string;
+  created_at: string;
+}
+
+export interface PollVote {
+  id: string;
+  poll_id: string;
+  user_id: string;
+  option_index: number;
+  voted_at: string;
 }

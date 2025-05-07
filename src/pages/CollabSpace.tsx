@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -11,6 +12,10 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ChatInterface from '@/components/ChatInterface';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Channel, ChannelMember } from '@/utils/dbtypes';
+import { useAuth } from '@/hooks/useAuth';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +25,186 @@ import {
 
 const CollabSpace = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
+  const [channelMembers, setChannelMembers] = useState<ChannelMember[]>([]);
+  
+  useEffect(() => {
+    const fetchChannels = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('channels')
+          .select('*')
+          .order('created_at', { ascending: true });
+          
+        if (error) {
+          console.error("Error fetching channels:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load channels",
+            variant: "destructive",
+          });
+        } else {
+          setChannels(data as Channel[]);
+          // Select the first channel by default
+          if (data && data.length > 0) {
+            setSelectedChannel(data[0]);
+          }
+        }
+      } catch (error) {
+        console.error("Exception fetching channels:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchChannels();
+    
+    // Subscribe to channel changes
+    const channelsSubscription = supabase
+      .channel('public:channels')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'channels',
+      }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setChannels(prev => [...prev, payload.new as Channel]);
+        } else if (payload.eventType === 'UPDATE') {
+          setChannels(prev => 
+            prev.map(ch => 
+              ch.id === payload.new.id ? payload.new as Channel : ch
+            )
+          );
+        } else if (payload.eventType === 'DELETE') {
+          setChannels(prev => 
+            prev.filter(ch => ch.id !== payload.old.id)
+          );
+        }
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channelsSubscription);
+    };
+  }, [toast]);
+  
+  useEffect(() => {
+    if (!selectedChannel) return;
+    
+    const fetchChannelMembers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('channel_members')
+          .select('*')
+          .eq('channel_id', selectedChannel.id);
+          
+        if (error) {
+          console.error("Error fetching channel members:", error);
+        } else {
+          setChannelMembers(data as ChannelMember[]);
+        }
+      } catch (error) {
+        console.error("Exception fetching channel members:", error);
+      }
+    };
+    
+    fetchChannelMembers();
+  }, [selectedChannel]);
+
+  const handleCreateChannel = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to create a channel",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const channelName = prompt("Enter channel name:");
+    if (!channelName) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('channels')
+        .insert({
+          name: channelName,
+          type: 'public',
+          created_by: user.id,
+        })
+        .select();
+        
+      if (error) {
+        console.error("Error creating channel:", error);
+        toast({
+          title: "Error",
+          description: "Failed to create channel",
+          variant: "destructive",
+        });
+      } else if (data && data.length > 0) {
+        // Join the channel immediately
+        const { error: joinError } = await supabase
+          .from('channel_members')
+          .insert({
+            channel_id: data[0].id,
+            user_id: user.id,
+          });
+          
+        if (joinError) {
+          console.error("Error joining channel:", joinError);
+        }
+        
+        setSelectedChannel(data[0]);
+        toast({
+          title: "Success",
+          description: `Channel "${channelName}" created`,
+        });
+      }
+    } catch (error) {
+      console.error("Exception creating channel:", error);
+    }
+  };
+
+  const handleJoinChannel = async (channelId: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to join a channel",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('channel_members')
+        .insert({
+          channel_id: channelId,
+          user_id: user.id,
+        });
+        
+      if (error) {
+        console.error("Error joining channel:", error);
+        toast({
+          title: "Error",
+          description: "Failed to join channel",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Joined channel successfully",
+        });
+      }
+    } catch (error) {
+      console.error("Exception joining channel:", error);
+    }
+  };
   
   return (
     <AppLayout>
@@ -45,7 +230,7 @@ const CollabSpace = () => {
             <Bell className="h-4 w-4 mr-2" />
             Notifications
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={handleCreateChannel}>
             <Plus className="h-4 w-4 mr-2" />
             New Chat
           </Button>
@@ -56,7 +241,7 @@ const CollabSpace = () => {
         <Card className="p-4 lg:col-span-1">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-medium">Spaces</h3>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={handleCreateChannel}>
               <Plus className="h-4 w-4" />
             </Button>
           </div>
@@ -80,43 +265,42 @@ const CollabSpace = () => {
             <TabsContent value="channels" className="m-0">
               <ScrollArea className="h-[400px]">
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between p-2 rounded-md bg-secondary cursor-pointer">
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></div>
-                      <span># general</span>
+                  {loading ? (
+                    <div className="p-4 text-center">
+                      <p className="text-muted-foreground">Loading channels...</p>
                     </div>
-                    <Badge variant="secondary">3</Badge>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-2 rounded-md hover:bg-secondary/50 cursor-pointer">
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></div>
-                      <span># product-team</span>
+                  ) : channels.length === 0 ? (
+                    <div className="p-4 text-center">
+                      <p className="text-muted-foreground">No channels yet</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-2"
+                        onClick={handleCreateChannel}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Channel
+                      </Button>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-2 rounded-md hover:bg-secondary/50 cursor-pointer">
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></div>
-                      <span># design</span>
-                    </div>
-                    <Badge variant="secondary">12</Badge>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-2 rounded-md hover:bg-secondary/50 cursor-pointer">
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></div>
-                      <span># marketing</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-2 rounded-md hover:bg-secondary/50 cursor-pointer">
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 rounded-full bg-gray-500 mr-2"></div>
-                      <span># development</span>
-                    </div>
-                    <Badge variant="secondary">5</Badge>
-                  </div>
+                  ) : (
+                    channels.map(channel => (
+                      <div 
+                        key={channel.id}
+                        className={`flex items-center justify-between p-2 rounded-md ${
+                          selectedChannel?.id === channel.id 
+                            ? 'bg-secondary' 
+                            : 'hover:bg-secondary/50'
+                        } cursor-pointer`}
+                        onClick={() => setSelectedChannel(channel)}
+                      >
+                        <div className="flex items-center">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></div>
+                          <span># {channel.name}</span>
+                        </div>
+                        <Badge variant="secondary">3</Badge>
+                      </div>
+                    ))
+                  )}
                 </div>
               </ScrollArea>
             </TabsContent>
@@ -230,8 +414,12 @@ const CollabSpace = () => {
                 <MessageSquare className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-medium"># general</h3>
-                <p className="text-xs text-muted-foreground">25 members • 3 online</p>
+                <h3 className="font-medium">
+                  {selectedChannel ? `# ${selectedChannel.name}` : 'Select a channel'}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {selectedChannel ? `${channelMembers.length} members • 3 online` : 'No channel selected'}
+                </p>
               </div>
             </div>
             
@@ -249,29 +437,7 @@ const CollabSpace = () => {
           </div>
           
           <div className="h-[500px]">
-            <ChatInterface />
-          </div>
-          
-          <div className="p-4 border-t">
-            <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="icon">
-                <Plus className="h-4 w-4" />
-              </Button>
-              <Input 
-                type="text" 
-                placeholder="Type a message..." 
-                className="flex-1"
-              />
-              <Button variant="ghost" size="icon">
-                <Paperclip className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon">
-                <Smile className="h-4 w-4" />
-              </Button>
-              <Button size="icon">
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
+            <ChatInterface channelId={selectedChannel?.id} />
           </div>
         </Card>
         
@@ -284,28 +450,37 @@ const CollabSpace = () => {
             </TabsList>
             
             <TabsContent value="about" className="m-0 space-y-4">
-              <div>
-                <h3 className="font-medium mb-2">Description</h3>
-                <p className="text-sm text-muted-foreground">
-                  General channel for team-wide communication and announcements. Everyone is automatically added to this channel.
-                </p>
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <h3 className="font-medium mb-2">Pinned Messages</h3>
-                <Card className="p-3 text-sm">
-                  <p className="font-medium">@everyone Important Update</p>
-                  <p className="text-muted-foreground">
-                    All team members should update their project status before EOD Friday...
-                  </p>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-xs text-muted-foreground">Alex Johnson</span>
-                    <span className="text-xs text-muted-foreground">Yesterday</span>
+              {selectedChannel ? (
+                <>
+                  <div>
+                    <h3 className="font-medium mb-2">Description</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedChannel.about || selectedChannel.description || 
+                       `${selectedChannel.name} - No description available.`}
+                    </p>
                   </div>
-                </Card>
-              </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <h3 className="font-medium mb-2">Pinned Messages</h3>
+                    <Card className="p-3 text-sm">
+                      <p className="font-medium">@everyone Important Update</p>
+                      <p className="text-muted-foreground">
+                        All team members should update their project status before EOD Friday...
+                      </p>
+                      <div className="flex justify-between items-center mt-2">
+                        <span className="text-xs text-muted-foreground">Alex Johnson</span>
+                        <span className="text-xs text-muted-foreground">Yesterday</span>
+                      </div>
+                    </Card>
+                  </div>
+                </>
+              ) : (
+                <p className="text-muted-foreground text-center py-4">
+                  Select a channel to view details
+                </p>
+              )}
               
               <Separator />
               
