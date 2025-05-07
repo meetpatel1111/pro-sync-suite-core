@@ -7,150 +7,115 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Download, FileText } from 'lucide-react';
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Expense } from '@/utils/dbtypes';
+import { format } from 'date-fns';
+import { FileText, MoreHorizontal } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 
-// Sample expense data
-const expenses = [
-  {
-    id: 1,
-    description: 'Developer Licenses',
-    category: 'Development',
-    date: '2025-04-10',
-    amount: 1250.00,
-    status: 'Approved',
-    approvedBy: { name: 'Alex Kim', avatar: '/avatar-1.png', initials: 'AK' },
-    receipt: true,
-  },
-  {
-    id: 2,
-    description: 'Social Media Campaign',
-    category: 'Marketing',
-    date: '2025-04-08',
-    amount: 3600.00,
-    status: 'Approved',
-    approvedBy: { name: 'Jamie Rivera', avatar: '/avatar-6.png', initials: 'JR' },
-    receipt: true,
-  },
-  {
-    id: 3,
-    description: 'Server Hosting (Q2)',
-    category: 'Operations',
-    date: '2025-04-05',
-    amount: 2150.00,
-    status: 'Approved',
-    approvedBy: { name: 'Alex Kim', avatar: '/avatar-1.png', initials: 'AK' },
-    receipt: true,
-  },
-  {
-    id: 4,
-    description: 'Design Software Subscription',
-    category: 'Development',
-    date: '2025-04-03',
-    amount: 980.00,
-    status: 'Approved',
-    approvedBy: { name: 'Morgan Lee', avatar: '/avatar-2.png', initials: 'ML' },
-    receipt: true,
-  },
-  {
-    id: 5,
-    description: 'Team Lunch',
-    category: 'Operations',
-    date: '2025-04-12',
-    amount: 345.00,
-    status: 'Pending',
-    approvedBy: null,
-    receipt: true,
-  },
-];
+interface ExpenseTableProps {
+  expensesData?: Expense[];
+  loading?: boolean;
+}
 
-const ExpenseTable = () => {
-  // Format date to a more readable format
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const ExpenseTable = ({ expensesData = [], loading = false }: ExpenseTableProps) => {
+  const getStatusBadgeVariant = (status?: string) => {
+    switch (status) {
+      case 'approved': return 'default';
+      case 'pending': return 'outline';
+      case 'rejected': return 'destructive';
+      default: return 'secondary';
+    }
   };
   
-  // Format currency
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
+  if (loading) {
+    return (
+      <div className="py-8 text-center">
+        <p className="text-muted-foreground">Loading expenses...</p>
+      </div>
+    );
+  }
+  
+  if (expensesData.length === 0) {
+    return (
+      <div className="py-8 text-center">
+        <p className="text-muted-foreground">No expenses found</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Create your first expense to get started.
+        </p>
+      </div>
+    );
+  }
   
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Description</TableHead>
-          <TableHead>Category</TableHead>
-          <TableHead>Date</TableHead>
-          <TableHead>Amount</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {expenses.map((expense) => (
-          <TableRow key={expense.id}>
-            <TableCell className="font-medium">{expense.description}</TableCell>
-            <TableCell>{expense.category}</TableCell>
-            <TableCell>{formatDate(expense.date)}</TableCell>
-            <TableCell>{formatCurrency(expense.amount)}</TableCell>
-            <TableCell>
-              {expense.status === 'Approved' ? (
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-emerald-600">Approved</Badge>
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={expense.approvedBy.avatar} alt={expense.approvedBy.name} />
-                    <AvatarFallback>{expense.approvedBy.initials}</AvatarFallback>
-                  </Avatar>
-                </div>
-              ) : (
-                <Badge variant="outline">Pending</Badge>
-              )}
-            </TableCell>
-            <TableCell className="text-right">
-              <div className="flex items-center justify-end gap-2">
-                {expense.receipt && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <FileText className="h-4 w-4" />
-                  </Button>
-                )}
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Download className="h-4 w-4" />
-                </Button>
+    <div className="border rounded-md overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Description</TableHead>
+            <TableHead>Amount</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead>Category</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {expensesData.map((expense) => (
+            <TableRow key={expense.id}>
+              <TableCell className="font-medium">{expense.description}</TableCell>
+              <TableCell>
+                {new Intl.NumberFormat('en-US', { 
+                  style: 'currency', 
+                  currency: expense.currency || 'USD'
+                }).format(expense.amount)}
+              </TableCell>
+              <TableCell>
+                {expense.date ? format(new Date(expense.date), 'MMM d, yyyy') : '-'}
+              </TableCell>
+              <TableCell>{expense.category_id || 'Uncategorized'}</TableCell>
+              <TableCell>
+                <Badge variant={getStatusBadgeVariant(expense.status)}>
+                  {expense.status || 'Pending'}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button variant="ghost" size="icon">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem>View Details</DropdownMenuItem>
-                    <DropdownMenuItem>Edit</DropdownMenuItem>
-                    {expense.status === 'Pending' && (
-                      <DropdownMenuItem>Approve</DropdownMenuItem>
+                    <DropdownMenuItem>Edit Expense</DropdownMenuItem>
+                    {expense.receipt_url && (
+                      <DropdownMenuItem>
+                        <FileText className="h-4 w-4 mr-2" />
+                        View Receipt
+                      </DropdownMenuItem>
                     )}
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              </div>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 };
 
