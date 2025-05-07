@@ -1,18 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ExclamationTriangleIcon, CheckCircledIcon } from "@radix-ui/react-icons";
-import { Checkbox } from "@/components/ui/checkbox";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
-import { useAuthContext } from "@/context/AuthContext";
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { EyeIcon, EyeOffIcon } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { PasswordStrengthMeter } from '@/components/PasswordStrengthMeter';
+import { useAuthContext } from '@/context/AuthContext';
 
 export default function Auth() {
   const [email, setEmail] = useState("");
@@ -318,7 +316,7 @@ export default function Auth() {
                   className="absolute right-0 top-0 h-full"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                 </Button>
               </div>
               {passwordError && <p className="text-sm text-red-500">{passwordError}</p>}
@@ -383,7 +381,7 @@ export default function Auth() {
                   className="absolute right-0 top-0 h-full"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                 </Button>
               </div>
               {passwordError && <p className="text-sm text-red-500">{passwordError}</p>}
@@ -407,7 +405,7 @@ export default function Auth() {
                   className="absolute right-0 top-0 h-full"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showConfirmPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                 </Button>
               </div>
               {confirmPasswordError && <p className="text-sm text-red-500">{confirmPasswordError}</p>}

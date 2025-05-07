@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Search, User, Phone, Mail, Building, MapPin, Plus, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { safeQueryTable } from "@/utils/db-helpers";
 
 interface Contact {
   id: string;
@@ -53,16 +54,17 @@ export const ContactBook: React.FC<{ clientId: string }> = ({ clientId }) => {
   const fetchContacts = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('client_contacts')
-        .select('*')
-        .eq('client_id', clientId)
-        .order('name');
+      const { data, error } = await safeQueryTable<Contact>('client_contacts', (query) => 
+        query
+          .select('*')
+          .eq('client_id', clientId)
+          .order('name')
+      );
         
       if (error) throw error;
       
       if (data) {
-        setContacts(data as Contact[]);
+        setContacts(data || []);
       }
     } catch (error) {
       console.error('Error fetching contacts:', error);
@@ -89,17 +91,18 @@ export const ContactBook: React.FC<{ clientId: string }> = ({ clientId }) => {
     try {
       if (isEditMode && selectedContact) {
         // Update existing contact
-        const { error } = await supabase
-          .from('client_contacts')
-          .update({
-            name: newContact.name,
-            role: newContact.role,
-            email: newContact.email,
-            phone: newContact.phone,
-            emergency_contact: newContact.emergency_contact,
-            notes: newContact.notes
-          })
-          .eq('id', selectedContact.id);
+        const { error } = await safeQueryTable<Contact>('client_contacts', (query) => 
+          query
+            .update({
+              name: newContact.name,
+              role: newContact.role,
+              email: newContact.email,
+              phone: newContact.phone,
+              emergency_contact: newContact.emergency_contact,
+              notes: newContact.notes
+            })
+            .eq('id', selectedContact.id)
+        );
           
         if (error) throw error;
         
@@ -110,26 +113,27 @@ export const ContactBook: React.FC<{ clientId: string }> = ({ clientId }) => {
         
         // Update local state
         setContacts(contacts.map(contact => 
-          contact.id === selectedContact.id ? { ...contact, ...newContact } : contact
+          contact.id === selectedContact.id ? { ...contact, ...newContact } as Contact : contact
         ));
       } else {
         // Add new contact
-        const { data, error } = await supabase
-          .from('client_contacts')
-          .insert({
-            client_id: clientId,
-            name: newContact.name,
-            role: newContact.role,
-            email: newContact.email,
-            phone: newContact.phone,
-            emergency_contact: newContact.emergency_contact,
-            notes: newContact.notes
-          })
-          .select();
+        const { data, error } = await safeQueryTable<Contact>('client_contacts', (query) => 
+          query
+            .insert({
+              client_id: clientId,
+              name: newContact.name,
+              role: newContact.role,
+              email: newContact.email,
+              phone: newContact.phone,
+              emergency_contact: newContact.emergency_contact,
+              notes: newContact.notes
+            })
+            .select()
+        );
           
         if (error) throw error;
         
-        if (data) {
+        if (data && data.length > 0) {
           setContacts([...contacts, data[0] as Contact]);
           toast({
             title: 'Success',
@@ -153,10 +157,11 @@ export const ContactBook: React.FC<{ clientId: string }> = ({ clientId }) => {
 
   const handleDeleteContact = async (contactId: string) => {
     try {
-      const { error } = await supabase
-        .from('client_contacts')
-        .delete()
-        .eq('id', contactId);
+      const { error } = await safeQueryTable<Contact>('client_contacts', (query) => 
+        query
+          .delete()
+          .eq('id', contactId)
+      );
         
       if (error) throw error;
       
