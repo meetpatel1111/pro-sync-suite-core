@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,18 +13,7 @@ import { Search, User, Phone, Mail, Building, MapPin, Plus, Edit, Trash2 } from 
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { safeQueryTable } from "@/utils/db-helpers";
-
-interface Contact {
-  id: string;
-  client_id: string;
-  name: string;
-  role?: string;
-  email?: string;
-  phone?: string;
-  emergency_contact?: boolean;
-  notes?: string;
-  created_at: string;
-}
+import { Contact } from "@/utils/dbtypes";
 
 export const ContactBook: React.FC<{ clientId: string }> = ({ clientId }) => {
   const [contacts, setContacts] = useState<Contact[]>([]);

@@ -1,3 +1,4 @@
+
 // This file defines the types for our database tables
 // Types for use in application code when working with database records
 
@@ -129,6 +130,18 @@ export interface ClientNote {
   client_id: string;
   content: string;
   user_id: string;
+  created_at: string;
+}
+
+export interface Contact {
+  id: string;
+  client_id: string;
+  name: string;
+  role?: string;
+  email?: string;
+  phone?: string;
+  emergency_contact?: boolean;
+  notes?: string;
   created_at: string;
 }
 
