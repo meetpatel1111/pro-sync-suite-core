@@ -5,7 +5,6 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -15,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Project } from '@/utils/dbtypes';
+import { safeQueryTable } from '@/utils/db-helpers';
 
 interface ExpenseFormProps {
   onSuccess?: () => void;
@@ -55,10 +55,12 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
       if (!user) return;
       
       try {
-        const { data, error } = await supabase
-          .from('projects')
-          .select('*')
-          .eq('user_id', user.id);
+        // Use safeQueryTable to query projects table
+        const { data, error } = await safeQueryTable<Project>("projects", (query) => 
+          query
+            .select('*')
+            .eq('user_id', user.id)
+        );
           
         if (error) {
           console.error('Error fetching projects:', error);
@@ -145,10 +147,9 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
         receiptUrl = publicUrl;
       }
       
-      // Create expense record
-      const { error } = await supabase
-        .from('expenses')
-        .insert({
+      // Create expense record using safeQueryTable
+      const { error } = await safeQueryTable("expenses", (query) =>
+        query.insert({
           description,
           amount: parseFloat(amount),
           date: date.toISOString(),
@@ -159,7 +160,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
           receipt_url: receiptUrl,
           status: 'pending',
           created_at: new Date().toISOString(),
-        });
+        })
+      );
         
       if (error) {
         console.error('Error creating expense:', error);

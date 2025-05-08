@@ -1,4 +1,3 @@
-
 // This file defines the types for our database tables
 // Types for use in application code when working with database records
 

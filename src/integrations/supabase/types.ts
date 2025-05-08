@@ -224,6 +224,48 @@ export type Database = {
           },
         ]
       }
+      budget_messages: {
+        Row: {
+          budget_id: string
+          content: string
+          created_at: string
+          id: string
+          parent_id: string | null
+          sender_id: string
+        }
+        Insert: {
+          budget_id: string
+          content: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          sender_id: string
+        }
+        Update: {
+          budget_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_messages_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_messages_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "budget_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       budgets: {
         Row: {
           id: string
@@ -446,6 +488,48 @@ export type Database = {
           id?: string
           user1_id?: string | null
           user2_id?: string | null
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          currency: string | null
+          date: string
+          description: string
+          id: string
+          project_id: string | null
+          receipt_url: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          currency?: string | null
+          date?: string
+          description: string
+          id?: string
+          project_id?: string | null
+          receipt_url?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          currency?: string | null
+          date?: string
+          description?: string
+          id?: string
+          project_id?: string | null
+          receipt_url?: string | null
+          status?: string | null
+          user_id?: string
         }
         Relationships: []
       }

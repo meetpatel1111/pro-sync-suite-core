@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BudgetMessage } from "@/utils/dbtypes";
 import { useAuth } from "@/hooks/useAuth";
 import { Paperclip, Send, Smile, ThumbsUp, MessageSquare } from "lucide-react";
+import { safeQueryTable } from "@/utils/db-helpers";
 
 interface BudgetChatInterfaceProps {
   budgetId: string;
@@ -38,12 +39,13 @@ const BudgetChatInterface: React.FC<BudgetChatInterfaceProps> = ({
     const fetchMessages = async () => {
       setLoading(true);
       try {
-        // Use Supabase to query the budget_messages table
-        const { data, error } = await supabase
-          .from('budget_messages')
-          .select('*')
-          .eq('budget_id', budgetId)
-          .order('created_at', { ascending: true });
+        // Use safeQueryTable to query the budget_messages table
+        const { data, error } = await safeQueryTable<BudgetMessage>("budget_messages", (query) => 
+          query
+            .select('*')
+            .eq('budget_id', budgetId)
+            .order('created_at', { ascending: true })
+        );
         
         if (error) {
           console.error("Error fetching messages:", error);
@@ -53,7 +55,7 @@ const BudgetChatInterface: React.FC<BudgetChatInterfaceProps> = ({
             variant: "destructive",
           });
         } else {
-          setMessages(data as BudgetMessage[]);
+          setMessages(data || []);
         }
       } catch (error) {
         console.error("Exception fetching messages:", error);
@@ -117,10 +119,10 @@ const BudgetChatInterface: React.FC<BudgetChatInterfaceProps> = ({
         created_at: new Date().toISOString(),
       };
       
-      // Insert the message into the budget_messages table
-      const { error } = await supabase
-        .from('budget_messages')
-        .insert(messageData);
+      // Insert the message using safeQueryTable
+      const { error } = await safeQueryTable("budget_messages", (query) =>
+        query.insert(messageData)
+      );
         
       if (error) {
         console.error("Error sending message:", error);

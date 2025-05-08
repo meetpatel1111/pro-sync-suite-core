@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -30,6 +29,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import ExpenseForm from '@/components/ExpenseForm';
 import BudgetChatInterface from '@/components/BudgetChatInterface';
 import { Expense, Budget } from '@/utils/dbtypes';
+import { safeQueryTable } from '@/utils/db-helpers';
 
 const BudgetBuddy = () => {
   const navigate = useNavigate();
@@ -47,46 +47,50 @@ const BudgetBuddy = () => {
       
       setLoading(true);
       try {
-        // Fetch expenses
-        const { data: expensesData, error: expensesError } = await supabase
-          .from('expenses')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(10);
+        // Fetch expenses using safeQueryTable
+        const { data: expensesData, error: expensesError } = await safeQueryTable<Expense>("expenses", (query) =>
+          query
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(10)
+        );
           
         if (expensesError) {
           console.error('Error fetching expenses:', expensesError);
         } else {
-          setExpenses(expensesData as Expense[]);
+          setExpenses(expensesData || []);
         }
         
-        // Fetch budgets
-        const { data: budgetsData, error: budgetsError } = await supabase
-          .from('budgets')
-          .select('*')
-          .limit(1);
+        // Fetch budgets using safeQueryTable
+        const { data: budgetsData, error: budgetsError } = await safeQueryTable<Budget>("budgets", (query) =>
+          query
+            .select('*')
+            .limit(1)
+        );
           
         if (budgetsError) {
           console.error('Error fetching budgets:', budgetsError);
         } else if (budgetsData && budgetsData.length > 0) {
-          setBudgets(budgetsData as Budget[]);
+          setBudgets(budgetsData);
           setActiveBudgetId(budgetsData[0].id);
         } else {
           // If no budgets exist yet, create a sample budget
-          const { data: newBudget, error: createError } = await supabase
-            .from('budgets')
-            .insert({
-              total: 58620,
-              spent: 42180,
-              updated_at: new Date().toISOString()
-            })
-            .select();
+          const { data: newBudget, error: createError } = await safeQueryTable<Budget>("budgets", (query) =>
+            query
+              .insert({
+                id: crypto.randomUUID(), // Generate a UUID for the budget
+                total: 58620,
+                spent: 42180,
+                updated_at: new Date().toISOString()
+              })
+              .select()
+          );
             
           if (createError) {
             console.error('Error creating budget:', createError);
           } else if (newBudget && newBudget.length > 0) {
-            setBudgets(newBudget as Budget[]);
+            setBudgets(newBudget);
             setActiveBudgetId(newBudget[0].id);
           }
         }
@@ -103,23 +107,23 @@ const BudgetBuddy = () => {
   const handleExpenseCreated = () => {
     // Refresh expenses after a new one is created
     if (user) {
-      supabase
-        .from('expenses')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10)
-        .then(({ data, error }) => {
-          if (error) {
-            console.error('Error refreshing expenses:', error);
-          } else {
-            setExpenses(data as Expense[]);
-            toast({
-              title: 'Expense Added',
-              description: 'Your expense has been successfully added.',
-            });
-          }
-        });
+      safeQueryTable<Expense>("expenses", (query) =>
+        query
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(10)
+      ).then(({ data, error }) => {
+        if (error) {
+          console.error('Error refreshing expenses:', error);
+        } else {
+          setExpenses(data || []);
+          toast({
+            title: 'Expense Added',
+            description: 'Your expense has been successfully added.',
+          });
+        }
+      });
     }
   };
   
