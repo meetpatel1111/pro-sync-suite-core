@@ -29,13 +29,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import ExpenseForm from '@/components/ExpenseForm';
 import BudgetChatInterface from '@/components/BudgetChatInterface';
-import { Expense } from '@/utils/dbtypes';
+import { Expense, Budget } from '@/utils/dbtypes';
 
 const BudgetBuddy = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [activeBudgetId, setActiveBudgetId] = useState<string | null>(null);
@@ -46,8 +47,7 @@ const BudgetBuddy = () => {
       
       setLoading(true);
       try {
-        // In a real app, we would fetch the real budget data
-        // For now we'll just fetch sample expenses
+        // Fetch expenses
         const { data: expensesData, error: expensesError } = await supabase
           .from('expenses')
           .select('*')
@@ -58,20 +58,37 @@ const BudgetBuddy = () => {
         if (expensesError) {
           console.error('Error fetching expenses:', expensesError);
         } else {
-          setExpenses(expensesData || []);
+          setExpenses(expensesData as Expense[]);
         }
         
-        // For demo purposes, let's set a sample budget ID
-        // In a real app, you'd fetch the actual budget associated with the project
+        // Fetch budgets
         const { data: budgetsData, error: budgetsError } = await supabase
           .from('budgets')
-          .select('id')
+          .select('*')
           .limit(1);
           
         if (budgetsError) {
           console.error('Error fetching budgets:', budgetsError);
         } else if (budgetsData && budgetsData.length > 0) {
+          setBudgets(budgetsData as Budget[]);
           setActiveBudgetId(budgetsData[0].id);
+        } else {
+          // If no budgets exist yet, create a sample budget
+          const { data: newBudget, error: createError } = await supabase
+            .from('budgets')
+            .insert({
+              total: 58620,
+              spent: 42180,
+              updated_at: new Date().toISOString()
+            })
+            .select();
+            
+          if (createError) {
+            console.error('Error creating budget:', createError);
+          } else if (newBudget && newBudget.length > 0) {
+            setBudgets(newBudget as Budget[]);
+            setActiveBudgetId(newBudget[0].id);
+          }
         }
       } catch (error) {
         console.error('Exception fetching budget data:', error);
@@ -96,7 +113,7 @@ const BudgetBuddy = () => {
           if (error) {
             console.error('Error refreshing expenses:', error);
           } else {
-            setExpenses(data || []);
+            setExpenses(data as Expense[]);
             toast({
               title: 'Expense Added',
               description: 'Your expense has been successfully added.',
@@ -126,10 +143,12 @@ const BudgetBuddy = () => {
           <p className="text-muted-foreground">Comprehensive budgeting and expense tracking</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowChatPanel(!showChatPanel)}>
-            <MessageSquare className="h-4 w-4 mr-2" />
-            {showChatPanel ? 'Hide Chat' : 'Budget Discussion'}
-          </Button>
+          {activeBudgetId && (
+            <Button variant="outline" size="sm" onClick={() => setShowChatPanel(!showChatPanel)}>
+              <MessageSquare className="h-4 w-4 mr-2" />
+              {showChatPanel ? 'Hide Chat' : 'Budget Discussion'}
+            </Button>
+          )}
           <Button variant="outline" size="sm">
             <FileText className="h-4 w-4 mr-2" />
             Export Report

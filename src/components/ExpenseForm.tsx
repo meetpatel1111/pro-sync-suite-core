@@ -101,6 +101,20 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
       let receiptUrl = null;
       
       if (receipt) {
+        // Create the storage bucket if it doesn't exist
+        const { data: bucketData } = await supabase
+          .storage
+          .getBucket('receipts');
+          
+        if (!bucketData) {
+          // Create receipts bucket
+          await supabase
+            .storage
+            .createBucket('receipts', {
+              public: false
+            });
+        }
+        
         // Upload receipt to storage
         const fileExt = receipt.name.split('.').pop();
         const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;

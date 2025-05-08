@@ -38,6 +38,7 @@ const BudgetChatInterface: React.FC<BudgetChatInterfaceProps> = ({
     const fetchMessages = async () => {
       setLoading(true);
       try {
+        // Use Supabase to query the budget_messages table
         const { data, error } = await supabase
           .from('budget_messages')
           .select('*')
@@ -65,7 +66,7 @@ const BudgetChatInterface: React.FC<BudgetChatInterfaceProps> = ({
     
     // Set up real-time subscription
     const channel = supabase
-      .channel('public:budget_messages')
+      .channel('budget_messages_changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -116,6 +117,7 @@ const BudgetChatInterface: React.FC<BudgetChatInterfaceProps> = ({
         created_at: new Date().toISOString(),
       };
       
+      // Insert the message into the budget_messages table
       const { error } = await supabase
         .from('budget_messages')
         .insert(messageData);
