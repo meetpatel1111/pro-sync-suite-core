@@ -1,68 +1,58 @@
-
-import React, { useState, useEffect } from 'react';
-import AppLayout from '@/components/AppLayout';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, FolderPlus, File, Upload, Search, Filter, Grid, List, Download, Trash2, Share, Settings } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { dbService } from '@/services/dbService';
+import AppLayout from '@/components/AppLayout';
+import { FileGrid } from '@/components/filevault/FileGrid';
+import { FileList } from '@/components/filevault/FileList';
+import { UploadDialog } from '@/components/filevault/UploadDialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowLeft, Search, Filter, Grid, List, FolderPlus } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { FileItem, FileMetadata } from '@/types/file-vault';
+import { formatFileSize, generateStoragePath, getFileType } from '@/utils/file-helpers';
+import { 
+  uploadFileToVault, 
+  getFileVaultItems, 
+  updateFileVaultItem, 
+  deleteFileVaultItem 
+} from '@/services/fileVaultService';
 
-interface FileItem {
-  id: string;
-  name: string;
-  description?: string;
-  file_type: string;
-  size_bytes: number;
-  storage_path: string;
-  created_at: string;
-  is_public: boolean;
-  is_archived: boolean;
-}
-
-const FileVault = () => {
+const FileVault: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('all');
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [activeTab, setActiveTab] = useState('all');
   const [files, setFiles] = useState<FileItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [fileName, setFileName] = useState('');
-  const [fileDescription, setFileDescription] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchFiles();
-  }, []);
-
-  const fetchFiles = async () => {
+  const fetchFiles = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) {
         toast({
-          title: "Authentication required",
+          title: "Authentication Required",
           description: "Please log in to view your files",
           variant: "destructive",
         });
-        setIsLoading(false);
+        navigate('/auth');
         return;
       }
 
-      const { data, error } = await dbService.getFiles(userData.user.id);
-
+      const { data, error } = await getFileVaultItems(supabase, userData.user.id);
       if (error) throw error;
       
-      setFiles(Array.isArray(data) ? data : []);
+      setFiles(prevFiles => {
+        // Compare with previous files to avoid unnecessary updates
+        if (JSON.stringify(prevFiles) === JSON.stringify(data)) return prevFiles;
+        return data || [];
+      });
     } catch (error) {
       console.error('Error fetching files:', error);
       toast({
@@ -73,83 +63,38 @@ const FileVault = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [navigate, toast]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0]);
-      if (!fileName) {
-        setFileName(e.target.files[0].name);
-      }
-    }
-  };
+  useEffect(() => {
+    fetchFiles();
+  }, [fetchFiles]);
 
-  const handleUpload = async (event: React.FormEvent) => {
-    event.preventDefault();
-    
-    if (!selectedFile) {
-      toast({
-        title: "No file selected",
-        description: "Please select a file to upload",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsUploading(true);
+  const handleUpload = useCallback(async (name: string, description: string, file: File) => {
     try {
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) {
-        toast({
-          title: "Authentication required",
-          description: "Please log in to upload files",
-          variant: "destructive",
-        });
-        return;
-      }
+      if (!userData?.user) return;
 
-      // Generate a unique path for the file
-      const fileExt = selectedFile.name.split('.').pop();
-      const filePath = `${userData.user.id}/${Date.now()}.${fileExt}`;
-
-      // Upload file to Supabase storage
-      const { error: uploadError } = await supabase.storage
-        .from('files')
-        .upload(filePath, selectedFile);
-
-      if (uploadError) throw uploadError;
-
-      // Save file metadata to database
-      const fileData = {
-        name: fileName || selectedFile.name,
-        description: fileDescription,
-        file_type: selectedFile.type,
-        size_bytes: selectedFile.size,
-        storage_path: filePath,
+      const storagePath = generateStoragePath(userData.user.id, file.name);
+      const fileData: FileMetadata = {
+        name: name || file.name,
+        description,
+        file_type: getFileType(file),
+        size_bytes: file.size,
+        storage_path: storagePath,
         is_public: false,
-        is_archived: false,
-        user_id: userData.user.id
+        folder_path: '/',
+        created_by: userData.user.id
       };
 
-      const { error: dbError } = await supabase
-        .from('files')
-        .insert(fileData);
-
-      if (dbError) throw dbError;
+      const { error } = await uploadFileToVault(supabase, fileData, file, storagePath);
+      if (error) throw error;
 
       toast({
         title: "File uploaded",
         description: "Your file has been uploaded successfully",
       });
 
-      // Reset form
-      setFileName('');
-      setFileDescription('');
-      setSelectedFile(null);
-      setUploadDialogOpen(false);
-      
-      // Refresh files list
-      fetchFiles();
+      await fetchFiles();
     } catch (error) {
       console.error('Error uploading file:', error);
       toast({
@@ -157,28 +102,23 @@ const FileVault = () => {
         description: "An error occurred while uploading your file",
         variant: "destructive",
       });
-    } finally {
-      setIsUploading(false);
     }
-  };
+  }, [fetchFiles, toast]);
 
   const handleDownload = async (file: FileItem) => {
     try {
       const { data, error } = await supabase.storage
-        .from('files')
+        .from('file_vault')
         .download(file.storage_path);
 
       if (error) throw error;
 
-      // Create a download link
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
       a.download = file.name;
       document.body.appendChild(a);
       a.click();
-      
-      // Clean up
       URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
@@ -191,37 +131,43 @@ const FileVault = () => {
     }
   };
 
-  const handleDelete = async (fileId: string) => {
+  const handleShare = async (file: FileItem) => {
     try {
-      const fileToDelete = files.find(f => f.id === fileId);
-      if (!fileToDelete) return;
+      const { error } = await updateFileVaultItem(supabase, file.id, {
+        is_public: !file.is_public
+      });
 
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) return;
+      if (error) throw error;
 
-      // Delete from storage
-      const { error: storageError } = await supabase.storage
-        .from('files')
-        .remove([fileToDelete.storage_path]);
+      toast({
+        title: file.is_public ? "File privacy set to private" : "File is now shared",
+        description: file.is_public 
+          ? "The file is no longer publicly accessible"
+          : "The file can now be accessed by others with the link",
+      });
 
-      if (storageError) throw storageError;
+      fetchFiles();
+    } catch (error) {
+      console.error('Error sharing file:', error);
+      toast({
+        title: "Share failed",
+        description: "An error occurred while sharing your file",
+        variant: "destructive",
+      });
+    }
+  };
 
-      // Delete from database
-      const { error: dbError } = await supabase
-        .from('files')
-        .delete()
-        .eq('id', fileId)
-        .eq('user_id', userData.user.id);
-
-      if (dbError) throw dbError;
+  const handleDelete = async (file: FileItem) => {
+    try {
+      const { error } = await deleteFileVaultItem(supabase, file.id, file.storage_path);
+      if (error) throw error;
 
       toast({
         title: "File deleted",
         description: "Your file has been deleted successfully",
       });
 
-      // Update files list
-      setFiles(files.filter(f => f.id !== fileId));
+      setFiles(files.filter(f => f.id !== file.id));
     } catch (error) {
       console.error('Error deleting file:', error);
       toast({
@@ -243,7 +189,6 @@ const FileVault = () => {
           return matchesSearch && 
             (file.file_type.includes('document') || 
              file.file_type.includes('pdf') || 
-             file.file_type.includes('word') ||
              file.file_type.includes('text'));
         case 'images':
           return matchesSearch && file.file_type.includes('image');
@@ -259,24 +204,10 @@ const FileVault = () => {
 
   const filteredFiles = getFilteredFiles();
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
-
   return (
     <AppLayout>
       <div className="space-y-6">
+        {/* Header section */}
         <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
           <div>
             <Button 
@@ -290,63 +221,13 @@ const FileVault = () => {
             </Button>
             <h1 className="text-3xl font-bold tracking-tight">FileVault</h1>
             <p className="text-muted-foreground">
-              Secure document and file management system for your projects
+              Secure document and file management system
             </p>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-1">
-                  <Upload className="h-4 w-4" />
-                  Upload File
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Upload File</DialogTitle>
-                  <DialogDescription>
-                    Upload a file to your secure vault
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleUpload} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="file">File</Label>
-                    <Input 
-                      id="file" 
-                      type="file" 
-                      onChange={handleFileChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fileName">File Name</Label>
-                    <Input 
-                      id="fileName" 
-                      placeholder="Enter file name" 
-                      value={fileName}
-                      onChange={(e) => setFileName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description (optional)</Label>
-                    <Textarea 
-                      id="description" 
-                      placeholder="Enter file description" 
-                      value={fileDescription}
-                      onChange={(e) => setFileDescription(e.target.value)}
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit" disabled={isUploading}>
-                      {isUploading ? 'Uploading...' : 'Upload'}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 items-center">
+        {/* Search and controls section */}
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input 
@@ -376,10 +257,14 @@ const FileVault = () => {
             >
               <List className="h-4 w-4" />
             </Button>
+            <Button onClick={() => setUploadDialogOpen(true)}>
+              Upload File
+            </Button>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        {/* Files section with tabs */}
+        <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList>
             <TabsTrigger value="all">All Files</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -388,105 +273,50 @@ const FileVault = () => {
             <TabsTrigger value="archived">Archived</TabsTrigger>
           </TabsList>
 
-          <TabsContent value={activeTab} className="space-y-4">
-            {isLoading ? (
-              <div className="flex justify-center p-8">
-                <p>Loading files...</p>
-              </div>
-            ) : filteredFiles.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center p-8 text-center">
-                  <FolderPlus className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium">No files yet</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Upload your first file to get started
-                  </p>
-                  <Button onClick={() => setUploadDialogOpen(true)}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload File
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : viewMode === 'grid' ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredFiles.map(file => (
-                  <Card key={file.id}>
-                    <CardContent className="p-4 space-y-3">
-                      <div className="bg-muted rounded-md p-4 flex justify-center items-center">
-                        <File className="h-12 w-12 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium truncate">{file.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {formatFileSize(file.size_bytes)} • Added {formatDate(file.created_at)}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-8 w-8"
-                          onClick={() => handleDownload(file)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" className="h-8 w-8">
-                          <Share className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => handleDelete(file.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {filteredFiles.map(file => (
-                  <Card key={file.id}>
-                    <CardContent className="p-3 flex items-center gap-4">
-                      <File className="h-8 w-8 text-muted-foreground" />
-                      <div className="flex-1">
-                        <h3 className="font-medium">{file.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {formatFileSize(file.size_bytes)} • Added {formatDate(file.created_at)}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-8 w-8"
-                          onClick={() => handleDownload(file)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" className="h-8 w-8">
-                          <Share className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => handleDelete(file.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+          <TabsContent value={activeTab}>
+            <div className="space-y-4">
+              {isLoading ? (
+                <div className="flex justify-center p-8">
+                  <p>Loading files...</p>
+                </div>
+              ) : filteredFiles.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center p-8 text-center">
+                    <FolderPlus className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium">No files yet</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Upload your first file to get started
+                    </p>
+                    <Button onClick={() => setUploadDialogOpen(true)}>
+                      Upload File
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : viewMode === 'grid' ? (
+                <FileGrid
+                  files={filteredFiles}
+                  onDownload={handleDownload}
+                  onShare={handleShare}
+                  onDelete={handleDelete}
+                />
+              ) : (
+                <FileList
+                  files={filteredFiles}
+                  onDownload={handleDownload}
+                  onShare={handleShare}
+                  onDelete={handleDelete}
+                />
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </div>
+
+      <UploadDialog
+        isOpen={uploadDialogOpen}
+        onClose={() => setUploadDialogOpen(false)}
+        onUpload={handleUpload}
+      />
     </AppLayout>
   );
 };

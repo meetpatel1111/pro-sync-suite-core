@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,6 +23,8 @@ import NotFound from "./pages/NotFound";
 import ProfileSettings from "./pages/ProfileSettings";
 import UserSettings from "./pages/UserSettings";
 import Notifications from "./pages/Notifications";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 import { useState, useEffect } from "react";
 
 const queryClient = new QueryClient({
@@ -91,6 +92,8 @@ const App = () => {
             <BrowserRouter>
               <Routes>
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/privacy" element={<Privacy />} />
                 
                 {/* Make Index route protected */}
                 <Route 
