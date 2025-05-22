@@ -92,18 +92,6 @@ export default function Auth() {
     return true;
   };
 
-  const validateTerms = () => {
-    if (activeTab === "signup" && !termsAccepted) {
-      toast({
-        variant: "destructive",
-        title: "Terms Required",
-        description: "Please accept the Terms of Service and Privacy Policy to continue"
-      });
-      return false;
-    }
-    return true;
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -148,7 +136,7 @@ export default function Auth() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateEmail() || !validatePassword() || !validateConfirmPassword() || !validateTerms()) {
+    if (!validateEmail() || !validatePassword() || !validateConfirmPassword()) {
       return;
     }
 
@@ -350,18 +338,6 @@ export default function Auth() {
               />
               <Label htmlFor="remember-me" className="text-sm">Remember me</Label>
             </div>
-
-            <div className="text-center text-sm text-muted-foreground mt-2 mb-4">
-              By logging in, you agree to our{" "}
-              <a href="/terms" className="text-primary hover:underline" target="_blank">
-                Terms of Service
-              </a>{" "}
-              and{" "}
-              <a href="/privacy" className="text-primary hover:underline" target="_blank">
-                Privacy Policy
-              </a>
-            </div>
-
             <Button
               type="submit"
               className="w-full"
@@ -443,29 +419,31 @@ export default function Auth() {
               </div>
               {confirmPasswordError && <p className="text-sm text-red-500">{confirmPasswordError}</p>}
             </div>
-            <div className="flex items-start space-x-2 mb-4">
+            <div className="flex items-center space-x-2">
               <Checkbox
                 id="terms"
                 checked={termsAccepted}
                 onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
               />
-              <div className="grid gap-1.5 leading-none">
-                <label
-                  htmlFor="terms"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  I agree to the{" "}
-                  <a href="/terms" className="text-primary hover:underline" target="_blank">
-                    Terms of Service
-                  </a>{" "}
-                  and{" "}
-                  <a href="/privacy" className="text-primary hover:underline" target="_blank">
-                    Privacy Policy
-                  </a>
-                </label>
-              </div>            
+              <Label htmlFor="terms" className="text-sm">
+                I accept the{" "}
+                <a href="/terms" className="text-primary hover:underline" onClick={(e) => {
+                  e.preventDefault();
+                  // Open terms in a modal or new tab
+                  alert("Terms of Service would open here");
+                }}>
+                  Terms of Service
+                </a>{" "}
+                and{" "}
+                <a href="/privacy" className="text-primary hover:underline" onClick={(e) => {
+                  e.preventDefault();
+                  // Open privacy policy in a modal or new tab
+                  alert("Privacy Policy would open here");
+                }}>
+                  Privacy Policy
+                </a>
+              </Label>
             </div>
-
             <Button
               type="submit"
               className="w-full"

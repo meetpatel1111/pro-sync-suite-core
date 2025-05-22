@@ -152,12 +152,21 @@ export interface Dashboard {
   created_at: string;
 }
 
+export interface WidgetConfig {
+  dataSource?: string;
+  refreshInterval?: number;
+  displayType?: 'chart' | 'table' | 'list' | 'grid';
+  filters?: Record<string, unknown>;
+  columns?: string[];
+  settings?: Record<string, unknown>;
+}
+
 export interface Widget {
   id: string;
   dashboard_id: string;
   title: string;
   widget_type: string;
-  config: any;
+  config: WidgetConfig;
   position: {
     x: number;
     y: number;
@@ -392,9 +401,9 @@ export interface Message {
   content?: string;
   type: 'text' | 'image' | 'file' | 'system';
   parent_id?: string;
-  read_by?: Record<string, any>;
-  mentions?: Record<string, any>;
-  reactions?: Record<string, any>;
+  read_by?: Record<string, boolean>;
+  mentions?: Record<string, string[]>;
+  reactions?: Record<string, string[]>;
   created_at: string;
   updated_at: string;
   edited_at?: string;
@@ -404,6 +413,10 @@ export interface Message {
   channel_name?: string;
   scheduled_for?: string;
   file_url?: string;
+  user_profiles?: {
+    full_name?: string;
+    avatar_url?: string;
+  }
 }
 
 export interface Poll {
@@ -422,3 +435,108 @@ export interface PollVote {
   option_index: number;
   voted_at: string;
 }
+
+// Settings Types
+export type SettingScope = 'user' | 'org';
+export type NotificationDeliveryMethod = 'email' | 'push' | 'in-app';
+
+export interface GeneralSetting {
+  id: string;
+  user_id: string;
+  org_id?: string;
+  setting_key: string;
+  setting_value: string;
+  scope: SettingScope;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AppearanceSetting {
+  id: string;
+  user_id: string;
+  org_id?: string;
+  theme: string;
+  primary_color: string;
+  font_size: string;
+  sidebar_state: string;
+  layout: Record<string, unknown>;
+  ui_density: string;
+  animations_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NotificationSetting {
+  id: string;
+  user_id: string;
+  app: string;
+  setting_key: string;
+  enabled: boolean;
+  delivery_method: NotificationDeliveryMethod;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SecuritySetting {
+  id: string;
+  user_id: string;
+  org_id?: string;
+  setting_key: string;
+  setting_value: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserSession {
+  id: string;
+  user_id: string;
+  device_info: string;
+  ip_address: string;
+  last_active: string;
+  is_current: boolean;
+  created_at: string;
+}
+
+export interface DataSetting {
+  id: string;
+  user_id: string;
+  org_id?: string;
+  data_type: string;
+  retention_days?: number;
+  auto_export: boolean;
+  linked_services: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+// Settings key types for type safety
+export type GeneralSettingKey = 
+  | 'organization_name'
+  | 'organization_logo'
+  | 'timezone'
+  | 'date_format'
+  | 'time_format'
+  | 'language'
+  | 'default_app'
+  | 'session_timeout'
+  | 'currency'
+  | 'enabled_apps'
+  | 'custom_fields';
+
+export type SecuritySettingKey =
+  | 'two_factor_enabled'
+  | 'email_login_enabled'
+  | 'magic_link_enabled'
+  | 'password_reset_cooldown'
+  | 'allowed_ips'
+  | 'auto_lock_timeout'
+  | 'terms_accepted'
+  | 'privacy_accepted';
+
+export type DataSettingType =
+  | 'chat_messages'
+  | 'tasks'
+  | 'invoices'
+  | 'time_entries'
+  | 'files'
+  | 'audit_logs';
