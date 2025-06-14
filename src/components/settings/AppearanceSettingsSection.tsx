@@ -33,6 +33,30 @@ const PRESET_COLORS = [
   '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e'
 ];
 
+// Helper function to convert hex to HSL
+const hexToHsl = (hex: string) => {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+};
+
 export const AppearanceSettingsSection = () => {
   const { settings, updateSetting, loading } = useSettings();
   const [customColor, setCustomColor] = useState(settings.primaryColor || '#2563eb');
@@ -41,15 +65,14 @@ export const AppearanceSettingsSection = () => {
     setCustomColor(settings.primaryColor || '#2563eb');
   }, [settings.primaryColor]);
 
-  const handleThemeChange = async (theme: string) => {
-    await updateSetting('theme', theme);
-    
-    // Apply theme to document root for immediate effect
-    if (theme === 'dark') {
+  // Apply initial styles on component mount
+  useEffect(() => {
+    // Apply theme
+    if (settings.theme === 'dark') {
       document.documentElement.classList.add('dark');
-    } else if (theme === 'light') {
+    } else if (settings.theme === 'light') {
       document.documentElement.classList.remove('dark');
-    } else if (theme === 'system') {
+    } else if (settings.theme === 'system') {
       const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       if (systemTheme === 'dark') {
         document.documentElement.classList.add('dark');
@@ -57,45 +80,57 @@ export const AppearanceSettingsSection = () => {
         document.documentElement.classList.remove('dark');
       }
     }
-  };
 
-  const handleColorChange = async (color: string) => {
-    setCustomColor(color);
-    await updateSetting('primaryColor', color);
-    
-    // Apply color to CSS custom property for immediate effect
-    document.documentElement.style.setProperty('--primary', color);
-  };
-
-  const handleAnimationsChange = async (enabled: boolean) => {
-    await updateSetting('animationsEnabled', enabled);
-    
-    // Apply animation preference for immediate effect
-    if (!enabled) {
-      document.documentElement.style.setProperty('--animation-duration', '0s');
-    } else {
-      document.documentElement.style.removeProperty('--animation-duration');
+    // Apply primary color
+    if (settings.primaryColor) {
+      const hslColor = hexToHsl(settings.primaryColor);
+      document.documentElement.style.setProperty('--primary', hslColor);
     }
-  };
 
-  const handleDensityChange = async (density: string) => {
-    await updateSetting('uiDensity', density);
-    
-    // Apply density class for immediate effect
-    document.documentElement.className = document.documentElement.className
-      .replace(/density-\w+/g, '') + ` density-${density}`;
-  };
-
-  const handleFontSizeChange = async (fontSize: string) => {
-    await updateSetting('fontSize', fontSize);
-    
-    // Apply font size for immediate effect
+    // Apply font size
     const fontSizeMap = {
       small: '14px',
       medium: '16px',
       large: '18px'
     };
-    document.documentElement.style.setProperty('--base-font-size', fontSizeMap[fontSize as keyof typeof fontSizeMap]);
+    if (settings.fontSize && fontSizeMap[settings.fontSize as keyof typeof fontSizeMap]) {
+      document.documentElement.style.setProperty('--base-font-size', fontSizeMap[settings.fontSize as keyof typeof fontSizeMap]);
+      document.documentElement.style.fontSize = fontSizeMap[settings.fontSize as keyof typeof fontSizeMap];
+    }
+
+    // Apply animations
+    if (!settings.animationsEnabled) {
+      document.documentElement.style.setProperty('--animation-duration', '0s');
+    } else {
+      document.documentElement.style.removeProperty('--animation-duration');
+    }
+
+    // Apply UI density
+    if (settings.uiDensity) {
+      document.documentElement.className = document.documentElement.className
+        .replace(/density-\w+/g, '') + ` density-${settings.uiDensity}`;
+    }
+  }, [settings.theme, settings.primaryColor, settings.fontSize, settings.animationsEnabled, settings.uiDensity]);
+
+  const handleThemeChange = async (theme: string) => {
+    await updateSetting('theme', theme);
+  };
+
+  const handleColorChange = async (color: string) => {
+    setCustomColor(color);
+    await updateSetting('primaryColor', color);
+  };
+
+  const handleAnimationsChange = async (enabled: boolean) => {
+    await updateSetting('animationsEnabled', enabled);
+  };
+
+  const handleDensityChange = async (density: string) => {
+    await updateSetting('uiDensity', density);
+  };
+
+  const handleFontSizeChange = async (fontSize: string) => {
+    await updateSetting('fontSize', fontSize);
   };
 
   if (loading) {
@@ -283,7 +318,14 @@ export const AppearanceSettingsSection = () => {
             <p className="text-sm text-muted-foreground mb-3">
               This is how components will look with your selected theme and colors.
             </p>
-            <Button size="sm" style={{ backgroundColor: settings.primaryColor }}>
+            <Button 
+              size="sm" 
+              className="transition-all duration-200"
+              style={{ 
+                backgroundColor: settings.primaryColor,
+                borderColor: settings.primaryColor 
+              }}
+            >
               Sample Button
             </Button>
           </div>
