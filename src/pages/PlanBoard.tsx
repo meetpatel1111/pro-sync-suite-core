@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -110,7 +109,7 @@ const PlanBoard = () => {
       const milestoneData: Milestone[] = (data || []).map(task => ({
         id: task.id,
         title: task.title,
-        project_id: task.project || '',
+        project_id: task.project_id || '',
         due_date: task.due_date || new Date().toISOString(),
         priority: task.priority as 'low' | 'medium' | 'high',
         completed: task.status === 'done'

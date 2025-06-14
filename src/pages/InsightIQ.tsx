@@ -1,96 +1,58 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  BarChart2, 
-  ArrowLeft, 
-  Plus, 
-  Filter, 
-  PieChart, 
-  LineChart, 
-  CalendarDays, 
-  User, 
-  Users,
-  FileText,
-  Clock,
-  Download,
-  Activity,
-  TrendingUp,
-  Pencil,
-  Trash2
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input';
-import { 
+import { CalendarIcon, CheckCircle2, Circle, GanttChartIcon, ListChecks, User2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { format, startOfWeek, endOfWeek, isWithinInterval, isSameDay } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend,
-  LineChart as RechartLineChart,
-  Line,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell
-} from 'recharts';
-import type { Dashboard, Widget, Project, TimeEntry, Task } from '@/utils/dbtypes';
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { ChevronDown } from 'lucide-react';
+import { Progress } from "@/components/ui/progress"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Task } from '@/utils/dbtypes';
+
+interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  start_date?: string;
+  end_date?: string;
+  status?: string;
+  created_at: string;
+}
+
+interface UserProfile {
+  id: string;
+  full_name?: string;
+  avatar_url?: string;
+  bio?: string;
+  job_title?: string;
+  phone?: string;
+  location?: string;
+  created_at: string;
+  updated_at: string;
+}
 
 const InsightIQ = () => {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('dashboards');
-  const [dashboards, setDashboards] = useState<Dashboard[]>([]);
-  const [widgets, setWidgets] = useState<Widget[]>([]);
-  const [selectedDashboard, setSelectedDashboard] = useState<Dashboard | null>(null);
-  const [showAddDashboardDialog, setShowAddDashboardDialog] = useState(false);
-  const [showAddWidgetDialog, setShowAddWidgetDialog] = useState(false);
-  const [isEditingDashboard, setIsEditingDashboard] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [session, setSession] = useState<any>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
-  
-  const [newDashboard, setNewDashboard] = useState({
-    title: '',
-    description: ''
-  });
-  
-  const [newWidget, setNewWidget] = useState({
-    title: '',
-    widget_type: 'bar_chart',
-    data_source: 'tasks',
-    group_by: 'status'
-  });
-
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [userProfiles, setUserProfiles] = useState<UserProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [filterProject, setFilterProject] = useState('all');
+  const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -105,480 +67,211 @@ const InsightIQ = () => {
   }, []);
 
   useEffect(() => {
-    if (session) {
-      fetchDashboards();
-      fetchProjects();
-      fetchTimeEntries();
-      fetchTasks();
-    }
-  }, [session]);
-
-  useEffect(() => {
-    if (selectedDashboard) {
-      fetchWidgets(selectedDashboard.id);
-    }
-  }, [selectedDashboard]);
-
-  const fetchDashboards = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('dashboards')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      if (data) {
-        setDashboards(data as Dashboard[]);
-        
-        if (data.length > 0 && !selectedDashboard) {
-          setSelectedDashboard(data[0]);
+    async function fetchTasks() {
+      if (!session) {
+        const storedTasks = localStorage.getItem('tasks');
+        if (storedTasks) {
+          setTasks(JSON.parse(storedTasks));
         }
+        setIsLoading(false);
+        return;
       }
-    } catch (error) {
-      console.error('Error fetching dashboards:', error);
-      toast({
-        title: 'Error fetching dashboards',
-        description: 'There was a problem fetching your dashboards.',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const fetchWidgets = async (dashboardId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('widgets')
-        .select('*')
-        .eq('dashboard_id', dashboardId)
-        .order('created_at', { ascending: true });
-      
-      if (error) throw error;
-      
-      if (data) {
-        const formattedWidgets = data.map(widget => ({
-          ...widget,
-          config: typeof widget.config === 'string' ? JSON.parse(widget.config) : widget.config,
-          position: typeof widget.position === 'string' 
-            ? JSON.parse(widget.position) 
-            : widget.position
-        })) as Widget[];
-        
-        setWidgets(formattedWidgets);
-      }
-    } catch (error) {
-      console.error('Error fetching widgets:', error);
-      toast({
-        title: 'Error fetching widgets',
-        description: 'There was a problem fetching widgets for this dashboard.',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const fetchProjects = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*');
-      
-      if (error) throw error;
-      
-      if (data) {
-        setProjects(data as Project[]);
-      }
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-    }
-  };
-
-  const fetchTimeEntries = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('time_entries')
-        .select('*');
-      
-      if (error) throw error;
-      
-      if (data) {
-        setTimeEntries(data as TimeEntry[]);
-      }
-    } catch (error) {
-      console.error('Error fetching time entries:', error);
-    }
-  };
-
-  const fetchTasks = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*');
-      
-      if (error) throw error;
-      
-      if (data) {
-        const mappedTasks: Task[] = data.map((task): Task => ({
-          id: task.id,
-          title: task.title,
-          description: task.description || '',
-          status: task.status as 'todo' | 'inProgress' | 'review' | 'done',
-          priority: task.priority as 'low' | 'medium' | 'high',
-          due_date: task.due_date,
-          assignee: task.assignee,
-          project: task.project,
-          created_at: task.created_at,
-          user_id: task.user_id
-        }));
-        setTasks(mappedTasks);
-      }
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
-    }
-  };
-
-  const handleAddDashboard = async () => {
-    if (!newDashboard.title) {
-      toast({
-        title: 'Missing information',
-        description: 'Please provide a dashboard title.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    try {
-      if (isEditingDashboard && selectedDashboard) {
-        const { error } = await supabase
-          .from('dashboards')
-          .update({
-            title: newDashboard.title,
-            description: newDashboard.description
-          })
-          .eq('id', selectedDashboard.id);
-          
-        if (error) throw error;
-        
-        toast({
-          title: 'Dashboard updated',
-          description: 'Dashboard has been updated successfully.'
-        });
-        
-        setDashboards(dashboards.map(dashboard => 
-          dashboard.id === selectedDashboard.id 
-            ? { ...dashboard, ...newDashboard } 
-            : dashboard
-        ));
-        
-        setSelectedDashboard({
-          ...selectedDashboard,
-          title: newDashboard.title,
-          description: newDashboard.description
-        });
-      } else {
+      setIsLoading(true);
+      try {
         const { data, error } = await supabase
-          .from('dashboards')
-          .insert({
-            title: newDashboard.title,
-            description: newDashboard.description,
-            user_id: session.user.id
-          })
-          .select();
-          
-        if (error) throw error;
-        
+          .from('tasks')
+          .select('*');
+
+        if (error) {
+          throw error;
+        }
+
         if (data) {
-          setDashboards([data[0], ...dashboards]);
-          setSelectedDashboard(data[0]);
-          toast({
-            title: 'Dashboard added',
-            description: 'New dashboard has been added successfully.'
-          });
-        }
-      }
-      
-      setNewDashboard({ title: '', description: '' });
-      setShowAddDashboardDialog(false);
-      setIsEditingDashboard(false);
-    } catch (error) {
-      console.error('Error adding/updating dashboard:', error);
-      toast({
-        title: 'Error',
-        description: 'There was a problem adding/updating the dashboard.',
-        variant: 'destructive'
-      });
-    }
-  };
+          const mappedTasks = data.map((task): Task => ({
+            id: task.id,
+            title: task.title,
+            description: task.description || '',
+            status: validateStatus(task.status),
+            priority: validatePriority(task.priority),
+            due_date: task.due_date,
+            assigned_to: task.assigned_to,
+            project_id: task.project_id,
+            created_at: task.created_at,
+            user_id: task.created_by
+          }));
 
-  const handleAddWidget = async () => {
-    if (!selectedDashboard || !newWidget.title) {
-      toast({
-        title: 'Missing information',
-        description: 'Please select a dashboard and provide widget title.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('widgets')
-        .insert({
-          dashboard_id: selectedDashboard.id,
-          title: newWidget.title,
-          widget_type: newWidget.widget_type,
-          config: {
-            data_source: newWidget.data_source,
-            group_by: newWidget.group_by
-          },
-          position: {
-            x: 0,
-            y: widgets.length * 4,
-            w: 12,
-            h: 4
-          },
-          user_id: session.user.id
-        })
-        .select();
-        
-      if (error) throw error;
-      
-      if (data) {
-        const newWidgets = [...widgets, {
-          ...data[0],
-          config: typeof data[0].config === 'string' ? JSON.parse(data[0].config) : data[0].config,
-          position: typeof data[0].position === 'string' 
-            ? JSON.parse(data[0].position) 
-            : data[0].position
-        } as Widget];
-        
-        setWidgets(newWidgets);
-        
-        toast({
-          title: 'Widget added',
-          description: 'New widget has been added successfully.'
-        });
-      }
-      
-      setNewWidget({
-        title: '',
-        widget_type: 'bar_chart',
-        data_source: 'tasks',
-        group_by: 'status'
-      });
-      setShowAddWidgetDialog(false);
-    } catch (error) {
-      console.error('Error adding widget:', error);
-      toast({
-        title: 'Error',
-        description: 'There was a problem adding the widget.',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const handleDeleteDashboard = async (dashboardId: string) => {
-    try {
-      const { error } = await supabase
-        .from('dashboards')
-        .delete()
-        .eq('id', dashboardId);
-        
-      if (error) throw error;
-      
-      const updatedDashboards = dashboards.filter(dashboard => dashboard.id !== dashboardId);
-      setDashboards(updatedDashboards);
-      
-      if (selectedDashboard && selectedDashboard.id === dashboardId) {
-        setSelectedDashboard(updatedDashboards.length > 0 ? updatedDashboards[0] : null);
-        setWidgets([]);
-      }
-      
-      toast({
-        title: 'Dashboard deleted',
-        description: 'Dashboard has been deleted successfully.'
-      });
-    } catch (error) {
-      console.error('Error deleting dashboard:', error);
-      toast({
-        title: 'Error',
-        description: 'There was a problem deleting the dashboard.',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const handleDeleteWidget = async (widgetId: string) => {
-    try {
-      const { error } = await supabase
-        .from('widgets')
-        .delete()
-        .eq('id', widgetId);
-        
-      if (error) throw error;
-      
-      setWidgets(widgets.filter(widget => widget.id !== widgetId));
-      
-      toast({
-        title: 'Widget deleted',
-        description: 'Widget has been deleted successfully.'
-      });
-    } catch (error) {
-      console.error('Error deleting widget:', error);
-      toast({
-        title: 'Error',
-        description: 'There was a problem deleting the widget.',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const handleEditDashboard = (dashboard: Dashboard) => {
-    setNewDashboard({
-      title: dashboard.title,
-      description: dashboard.description
-    });
-    setIsEditingDashboard(true);
-    setShowAddDashboardDialog(true);
-  };
-
-  const getChartData = (widget: Widget) => {
-    const { data_source, group_by } = widget.config;
-    
-    if (data_source === 'tasks') {
-      const groupedData = tasks.reduce((acc, task) => {
-        const key = task[group_by as keyof Task] as string;
-        if (!acc[key]) {
-          acc[key] = 0;
-        }
-        acc[key]++;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      return Object.entries(groupedData).map(([name, value]) => ({ name, value }));
-    } else if (data_source === 'time_entries') {
-      const groupedData = timeEntries.reduce((acc, entry) => {
-        let key = entry[group_by as keyof TimeEntry] as string;
-        
-        if (group_by === 'project') {
-          const project = projects.find(p => p.id === key);
-          if (project) {
-            key = project.name;
+          setTasks(mappedTasks);
+        } else {
+          const storedTasks = localStorage.getItem('tasks');
+          if (storedTasks) {
+            setTasks(JSON.parse(storedTasks));
           }
         }
-        
-        if (!acc[key]) {
-          acc[key] = 0;
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+
+        const storedTasks = localStorage.getItem('tasks');
+        if (storedTasks) {
+          setTasks(JSON.parse(storedTasks));
         }
-        
-        acc[key] += entry.time_spent / 60;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      return Object.entries(groupedData).map(([name, value]) => ({ 
-        name, 
-        value: parseFloat(value.toFixed(1))
-      }));
+      } finally {
+        setIsLoading(false);
+      }
     }
-    
-    return [];
-  };
 
-  const getProjectName = (projectId: string) => {
-    const project = projects.find(p => p.id === projectId);
-    return project ? project.name : projectId;
-  };
+    async function fetchProjects() {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData?.user) return;
 
-  const renderWidget = (widget: Widget) => {
-    const data = getChartData(widget);
-    
-    switch (widget.widget_type) {
-      case 'bar_chart':
-        return (
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <RechartsTooltip />
-              <Legend />
-              <Bar dataKey="value" fill="#8884d8" />
-            </BarChart>
-          </ResponsiveContainer>
-        );
-      case 'line_chart':
-        return (
-          <ResponsiveContainer width="100%" height={300}>
-            <RechartLineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <RechartsTooltip />
-              <Legend />
-              <Line type="monotone" dataKey="value" stroke="#8884d8" />
-            </RechartLineChart>
-          </ResponsiveContainer>
-        );
-      case 'pie_chart':
-        return (
-          <ResponsiveContainer width="100%" height={300}>
-            <RechartsPieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                labelLine={true}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <RechartsTooltip />
-            </RechartsPieChart>
-          </ResponsiveContainer>
-        );
-      default:
-        return <div>Unsupported widget type</div>;
+        const { data, error } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('user_id', userData.user.id);
+
+        if (error) throw error;
+        setProjects(data || []);
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+        toast({
+          title: "Failed to load projects",
+          description: "An error occurred while loading your projects",
+          variant: "destructive",
+        });
+      }
     }
+
+    async function fetchUserProfiles() {
+      try {
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select('*');
+
+        if (error) throw error;
+        setUserProfiles(data || []);
+      } catch (error) {
+        console.error('Error fetching user profiles:', error);
+        toast({
+          title: "Failed to load user profiles",
+          description: "An error occurred while loading user profiles",
+          variant: "destructive",
+        });
+      }
+    }
+
+    fetchTasks();
+    fetchProjects();
+    fetchUserProfiles();
+  }, [session, toast]);
+
+  const validateStatus = (status: string): 'todo' | 'inProgress' | 'review' | 'done' => {
+    const validStatuses: Array<'todo' | 'inProgress' | 'review' | 'done'> = ['todo', 'inProgress', 'review', 'done'];
+    return validStatuses.includes(status as any) ? (status as 'todo' | 'inProgress' | 'review' | 'done') : 'todo';
   };
 
-  const calculateCompletionRate = (tasks: Task[]): number => {
-    if (!tasks || tasks.length === 0) return 0;
-    const completedTasks = tasks.filter(task => task.status === 'done').length;
-    const percentage = (completedTasks / tasks.length) * 100;
-    return Number(percentage.toFixed(1));
+  const validatePriority = (priority: string): 'low' | 'medium' | 'high' => {
+    const validPriorities: Array<'low' | 'medium' | 'high'> = ['low', 'medium', 'high'];
+    return validPriorities.includes(priority as any) ? (priority as 'low' | 'medium' | 'high') : 'medium';
+  };
+
+  const getTasksForWeek = (date: Date) => {
+    const start = startOfWeek(date, { weekStartsOn: 1 });
+    const end = endOfWeek(date, { weekStartsOn: 1 });
+
+    return tasks.filter(task => {
+      if (!task.due_date) return false;
+      const dueDate = new Date(task.due_date);
+      return isWithinInterval(dueDate, { start, end });
+    });
+  };
+
+  const getTasksForToday = () => {
+    return tasks.filter(task => {
+      if (!task.due_date) return false;
+      return isSameDay(new Date(task.due_date), selectedDate);
+    });
+  };
+
+  const getTaskStatusCounts = (tasks: Task[]) => {
+    const counts = {
+      todo: 0,
+      inProgress: 0,
+      review: 0,
+      done: 0,
+    };
+
+    tasks.forEach(task => {
+      counts[task.status]++;
+    });
+
+    return counts;
+  };
+
+  const tasksThisWeek = getTasksForWeek(selectedDate);
+  const tasksToday = getTasksForToday();
+  const statusCountsThisWeek = getTaskStatusCounts(tasksThisWeek);
+  const statusCountsToday = getTaskStatusCounts(tasksToday);
+
+  const calculateOverallProgress = () => {
+    const totalTasks = tasksThisWeek.length;
+    const completedTasks = statusCountsThisWeek.done;
+
+    if (totalTasks === 0) return 0;
+
+    return (completedTasks / totalTasks) * 100;
+  };
+
+  const overallProgress = calculateOverallProgress();
+
+  const projectMap: Record<string, string> = {
+    'project1': 'Website Redesign',
+    'project2': 'Mobile App',
+    'project3': 'Marketing Campaign',
+    'project4': 'Database Migration'
+  };
+
+  const assigneeMap: Record<string, string> = {
+    'user1': 'Alex Johnson',
+    'user2': 'Jamie Smith',
+    'user3': 'Taylor Lee',
+    'user4': 'Morgan Chen'
+  };
+
+  const getUserAvatar = (userId: string | undefined) => {
+    const userProfile = userProfiles.find(profile => profile.id === userId);
+    return userProfile?.avatar_url || '';
+  };
+
+  const getUserName = (userId: string | undefined) => {
+    const userProfile = userProfiles.find(profile => profile.id === userId);
+    return userProfile?.full_name || 'Unknown User';
   };
 
   if (!session) {
     return (
       <AppLayout>
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">InsightIQ</h1>
-            <p className="text-muted-foreground">
-              Advanced analytics and reporting tools
-            </p>
-          </div>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Please log in to view and manage your analytics.</p>
-                <Button 
-                  variant="default" 
-                  className="mt-4"
-                  onClick={() => window.location.href = '/auth'}
-                >
-                  Log In / Sign Up
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="text-center py-8">
+          <h1 className="text-2xl font-semibold mb-4">Task Insights</h1>
+          <p className="text-muted-foreground">Please log in to view task insights.</p>
+          <Button
+            variant="default"
+            className="mt-4"
+            onClick={() => window.location.href = '/auth'}
+          >
+            Log In / Sign Up
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="text-center py-8">
+          <h1 className="text-2xl font-semibold mb-4">Task Insights</h1>
+          <p className="text-muted-foreground">Loading task insights...</p>
         </div>
       </AppLayout>
     );
@@ -586,333 +279,204 @@ const InsightIQ = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col space-y-2 md:flex-row md:justify-between md:space-y-0">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">InsightIQ</h1>
-            <p className="text-muted-foreground">
-              Advanced analytics and reporting tools
-            </p>
-          </div>
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold">Task Insights</h2>
+          <Select value={filterProject} onValueChange={setFilterProject}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filter by project" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Projects</SelectItem>
+              {projects.map((project) => (
+                <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 gap-2">
-            <TabsTrigger value="dashboards" className="flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              <span>Dashboards</span>
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center gap-2">
-              <BarChart2 className="h-4 w-4" />
-              <span>Reports</span>
-            </TabsTrigger>
-            <TabsTrigger value="metrics" className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              <span>Metrics</span>
-            </TabsTrigger>
-          </TabsList>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="md:col-span-1">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                <div className="flex items-center">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  This Week
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{tasksThisWeek.length} Tasks</div>
+              <p className="text-sm text-muted-foreground">
+                Due this week
+              </p>
+              <Progress value={overallProgress} className="mt-4" />
+              <div className="flex justify-between text-sm text-muted-foreground mt-2">
+                <span>0%</span>
+                <span>100%</span>
+              </div>
+            </CardContent>
+          </Card>
 
-          <TabsContent value="dashboards" className="space-y-4">
-            <div className="flex flex-col md:flex-row justify-between gap-4">
-              <div className="flex items-center gap-2">
-                {selectedDashboard && (
-                  <>
-                    <h2 className="text-xl font-semibold">{selectedDashboard.title}</h2>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => handleEditDashboard(selectedDashboard)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </>
-                )}
+          <Card className="md:col-span-1">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                <div className="flex items-center">
+                  <ListChecks className="mr-2 h-4 w-4" />
+                  Status
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">To Do</span>
+                  <span className="font-medium">{statusCountsThisWeek.todo}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">In Progress</span>
+                  <span className="font-medium">{statusCountsThisWeek.inProgress}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Review</span>
+                  <span className="font-medium">{statusCountsThisWeek.review}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Done</span>
+                  <span className="font-medium">{statusCountsThisWeek.done}</span>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Select 
-                  value={selectedDashboard?.id || ''} 
-                  onValueChange={(value) => {
-                    const dashboard = dashboards.find(d => d.id === value);
-                    if (dashboard) {
-                      setSelectedDashboard(dashboard);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Select dashboard" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dashboards.map(dashboard => (
-                      <SelectItem key={dashboard.id} value={dashboard.id}>
-                        {dashboard.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button onClick={() => {
-                  setNewDashboard({ title: '', description: '' });
-                  setIsEditingDashboard(false);
-                  setShowAddDashboardDialog(true);
-                }} className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  New Dashboard
-                </Button>
-                {selectedDashboard && (
-                  <Button onClick={() => setShowAddWidgetDialog(true)} className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Widget
-                  </Button>
-                )}
+            </CardContent>
+          </Card>
+
+          <Card className="md:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                <div className="flex items-center">
+                  <GanttChartIcon className="mr-2 h-4 w-4" />
+                  Overall Progress
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-4">
+                <div className="w-3/4">
+                  <Progress value={overallProgress} />
+                </div>
+                <div className="w-1/4 text-right font-medium">{overallProgress.toFixed(0)}%</div>
               </div>
-            </div>
-            
-            {isLoading ? (
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>Loading dashboards...</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : dashboards.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No dashboards found. Create your first dashboard to get started.</p>
-                    <Button 
-                      variant="default" 
-                      className="mt-4"
-                      onClick={() => {
-                        setNewDashboard({ title: '', description: '' });
-                        setIsEditingDashboard(false);
-                        setShowAddDashboardDialog(true);
-                      }}
-                    >
-                      Create Dashboard
+              <p className="text-sm text-muted-foreground mt-2">
+                Progress of all tasks due this week
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+          <Card className="md:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                <div className="flex items-center">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(selectedDate, 'MMMM yyyy')}
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                className="rounded-md border"
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="md:col-span-5 h-full">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-md">
+                  {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+                </CardTitle>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      Sort By <ChevronDown className="h-4 w-4 ml-2" />
                     </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : selectedDashboard && widgets.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6">
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>Priority</DropdownMenuItem>
+                    <DropdownMenuItem>Due Date</DropdownMenuItem>
+                    <DropdownMenuItem>Assignee</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[600px] pr-4">
+                {tasksToday.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    <p>No widgets in this dashboard. Add your first widget to get started.</p>
-                    <Button 
-                      variant="default" 
-                      className="mt-4"
-                      onClick={() => setShowAddWidgetDialog(true)}
-                    >
-                      Add Widget
-                    </Button>
+                    No tasks due on this date
                   </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {widgets.map(widget => (
-                  <Card key={widget.id}>
-                    <CardHeader className="pb-2">
-                      <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg">{widget.title}</CardTitle>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleDeleteWidget(widget.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                ) : (
+                  <div className="space-y-3">
+                    {tasksToday.map((task) => (
+                      <div key={task.id} className="border-b pb-3 last:border-0 last:pb-0">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="font-medium">{task.title}</h3>
+                            {task.description && (
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {task.description}
+                              </p>
+                            )}
+                            <div className="mt-2 flex items-center text-sm text-muted-foreground">
+                              <CalendarIcon className="mr-1 h-4 w-4" />
+                              <span>{task.due_date ? format(new Date(task.due_date), 'MMM d, yyyy') : 'No due date'}</span>
+                            </div>
+                          </div>
+                          <div className="flex-col items-end">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={getUserAvatar(task.user_id)} />
+                              <AvatarFallback>{getUserName(task.user_id)}</AvatarFallback>
+                            </Avatar>
+                          </div>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {task.project_id && (
+                            <Badge variant="outline" className="text-xs">
+                              {projectMap[task.project_id] || task.project_id}
+                            </Badge>
+                          )}
+                          {task.assigned_to?.[0] && (
+                            <Badge variant="secondary" className="text-xs">
+                              {assigneeMap[task.assigned_to?.[0]] || task.assigned_to?.[0]}
+                            </Badge>
+                          )}
+                          <Badge className={`text-xs ${
+                            task.status === 'done'
+                              ? 'bg-green-500'
+                              : task.status === 'review'
+                                ? 'bg-purple-500'
+                                : task.status === 'inProgress'
+                                  ? 'bg-blue-500'
+                                  : 'bg-slate-500'
+                          }`}>
+                            {task.status === 'inProgress'
+                              ? 'In Progress'
+                              : task.status.charAt(0).toUpperCase() + task.status.slice(1)
+                            }
+                          </Badge>
+                        </div>
                       </div>
-                      <CardDescription>
-                        {widget.config.data_source === 'tasks' ? 'Task ' : 'Time '}
-                        data grouped by {widget.config.group_by}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {renderWidget(widget)}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="reports" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Custom Reports</CardTitle>
-                <CardDescription>
-                  Build and schedule custom reports
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>Custom reporting features coming soon.</p>
-                  <p className="text-sm mt-2">Create reports with data from any app in the ProSync Suite.</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="metrics" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Key Performance Metrics</CardTitle>
-                <CardDescription>
-                  Track important KPIs across your projects
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>KPI tracking features coming soon.</p>
-                  <p className="text-sm mt-2">Set up custom KPIs and track them in real-time.</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      <Dialog open={showAddDashboardDialog} onOpenChange={setShowAddDashboardDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{isEditingDashboard ? 'Edit Dashboard' : 'Add New Dashboard'}</DialogTitle>
-            <DialogDescription>
-              {isEditingDashboard 
-                ? 'Update dashboard information' 
-                : 'Fill in the details to add a new dashboard'}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="title" className="text-right text-sm font-medium">
-                Title
-              </label>
-              <Input
-                id="title"
-                placeholder="Dashboard Title"
-                className="col-span-3"
-                value={newDashboard.title}
-                onChange={(e) => setNewDashboard({ ...newDashboard, title: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="description" className="text-right text-sm font-medium">
-                Description
-              </label>
-              <Input
-                id="description"
-                placeholder="Dashboard Description"
-                className="col-span-3"
-                value={newDashboard.description}
-                onChange={(e) => setNewDashboard({ ...newDashboard, description: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDashboardDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddDashboard}>
-              {isEditingDashboard ? 'Update Dashboard' : 'Add Dashboard'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showAddWidgetDialog} onOpenChange={setShowAddWidgetDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Widget</DialogTitle>
-            <DialogDescription>
-              Configure your widget
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="widget-title" className="text-right text-sm font-medium">
-                Title
-              </label>
-              <Input
-                id="widget-title"
-                placeholder="Widget Title"
-                className="col-span-3"
-                value={newWidget.title}
-                onChange={(e) => setNewWidget({ ...newWidget, title: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="widget-type" className="text-right text-sm font-medium">
-                Chart Type
-              </label>
-              <Select 
-                value={newWidget.widget_type} 
-                onValueChange={(value) => setNewWidget({ ...newWidget, widget_type: value })}
-              >
-                <SelectTrigger id="widget-type" className="col-span-3">
-                  <SelectValue placeholder="Select chart type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bar_chart">Bar Chart</SelectItem>
-                  <SelectItem value="line_chart">Line Chart</SelectItem>
-                  <SelectItem value="pie_chart">Pie Chart</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="data-source" className="text-right text-sm font-medium">
-                Data Source
-              </label>
-              <Select 
-                value={newWidget.data_source} 
-                onValueChange={(value) => setNewWidget({ ...newWidget, data_source: value })}
-              >
-                <SelectTrigger id="data-source" className="col-span-3">
-                  <SelectValue placeholder="Select data source" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tasks">Tasks</SelectItem>
-                  <SelectItem value="time_entries">Time Entries</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="group-by" className="text-right text-sm font-medium">
-                Group By
-              </label>
-              <Select 
-                value={newWidget.group_by} 
-                onValueChange={(value) => setNewWidget({ ...newWidget, group_by: value })}
-              >
-                <SelectTrigger id="group-by" className="col-span-3">
-                  <SelectValue placeholder="Select grouping" />
-                </SelectTrigger>
-                <SelectContent>
-                  {newWidget.data_source === 'tasks' ? (
-                    <>
-                      <SelectItem value="status">Status</SelectItem>
-                      <SelectItem value="priority">Priority</SelectItem>
-                      <SelectItem value="project">Project</SelectItem>
-                    </>
-                  ) : (
-                    <>
-                      <SelectItem value="project">Project</SelectItem>
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddWidgetDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddWidget}>
-              Add Widget
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </AppLayout>
   );
 };
