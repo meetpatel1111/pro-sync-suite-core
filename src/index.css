@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -92,7 +93,7 @@
     --sidebar-ring: 217 91% 60%;
   }
 
-  /* Font family classes - Updated for Google Fonts integration */
+  /* Font family classes - Extended for all Google Fonts */
   .font-inter { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
   .font-roboto { font-family: 'Roboto', system-ui, -apple-system, sans-serif; }
   .font-open-sans { font-family: 'Open Sans', system-ui, -apple-system, sans-serif; }
@@ -103,11 +104,168 @@
   .font-nunito { font-family: 'Nunito', system-ui, -apple-system, sans-serif; }
   .font-pt-sans { font-family: 'PT Sans', system-ui, -apple-system, sans-serif; }
   .font-ubuntu { font-family: 'Ubuntu', system-ui, -apple-system, sans-serif; }
+  .font-raleway { font-family: 'Raleway', system-ui, -apple-system, sans-serif; }
+  .font-work-sans { font-family: 'Work Sans', system-ui, -apple-system, sans-serif; }
+  .font-nunito-sans { font-family: 'Nunito Sans', system-ui, -apple-system, sans-serif; }
+  .font-barlow { font-family: 'Barlow', system-ui, -apple-system, sans-serif; }
+  .font-dm-sans { font-family: 'DM Sans', system-ui, -apple-system, sans-serif; }
+  .font-ibm-plex-sans { font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif; }
+  .font-rubik { font-family: 'Rubik', system-ui, -apple-system, sans-serif; }
+  .font-oxygen { font-family: 'Oxygen', system-ui, -apple-system, sans-serif; }
+  .font-karla { font-family: 'Karla', system-ui, -apple-system, sans-serif; }
+  .font-hind { font-family: 'Hind', system-ui, -apple-system, sans-serif; }
+  .font-titillium-web { font-family: 'Titillium Web', system-ui, -apple-system, sans-serif; }
+  .font-fira-sans { font-family: 'Fira Sans', system-ui, -apple-system, sans-serif; }
+  .font-assistant { font-family: 'Assistant', system-ui, -apple-system, sans-serif; }
+  .font-merriweather-sans { font-family: 'Merriweather Sans', system-ui, -apple-system, sans-serif; }
+  .font-muli { font-family: 'Muli', system-ui, -apple-system, sans-serif; }
+  .font-arimo { font-family: 'Arimo', system-ui, -apple-system, sans-serif; }
+  .font-cabin { font-family: 'Cabin', system-ui, -apple-system, sans-serif; }
+  .font-dosis { font-family: 'Dosis', system-ui, -apple-system, sans-serif; }
+  .font-exo-2 { font-family: 'Exo 2', system-ui, -apple-system, sans-serif; }
+  .font-heebo { font-family: 'Heebo', system-ui, -apple-system, sans-serif; }
+  .font-quicksand { font-family: 'Quicksand', system-ui, -apple-system, sans-serif; }
+  .font-source-sans-3 { font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif; }
+  .font-overpass { font-family: 'Overpass', system-ui, -apple-system, sans-serif; }
+  .font-encode-sans { font-family: 'Encode Sans', system-ui, -apple-system, sans-serif; }
+  .font-manrope { font-family: 'Manrope', system-ui, -apple-system, sans-serif; }
+  .font-red-hat-display { font-family: 'Red Hat Display', system-ui, -apple-system, sans-serif; }
+  .font-red-hat-text { font-family: 'Red Hat Text', system-ui, -apple-system, sans-serif; }
+  .font-public-sans { font-family: 'Public Sans', system-ui, -apple-system, sans-serif; }
+  .font-figtree { font-family: 'Figtree', system-ui, -apple-system, sans-serif; }
+  .font-plus-jakarta-sans { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; }
+  .font-kanit { font-family: 'Kanit', system-ui, -apple-system, sans-serif; }
+  .font-lexend { font-family: 'Lexend', system-ui, -apple-system, sans-serif; }
+  .font-be-vietnam-pro { font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif; }
+  .font-albert-sans { font-family: 'Albert Sans', system-ui, -apple-system, sans-serif; }
+  .font-outfit { font-family: 'Outfit', system-ui, -apple-system, sans-serif; }
+  .font-space-grotesk { font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif; }
+  .font-sora { font-family: 'Sora', system-ui, -apple-system, sans-serif; }
+  .font-urbanist { font-family: 'Urbanist', system-ui, -apple-system, sans-serif; }
+  .font-commissioner { font-family: 'Commissioner', system-ui, -apple-system, sans-serif; }
+  .font-epilogue { font-family: 'Epilogue', system-ui, -apple-system, sans-serif; }
+  .font-readex-pro { font-family: 'Readex Pro', system-ui, -apple-system, sans-serif; }
+  .font-onest { font-family: 'Onest', system-ui, -apple-system, sans-serif; }
+  .font-schibsted-grotesk { font-family: 'Schibsted Grotesk', system-ui, -apple-system, sans-serif; }
+
+  /* Serif fonts */
   .font-playfair-display { font-family: 'Playfair Display', serif; }
   .font-merriweather { font-family: 'Merriweather', serif; }
   .font-lora { font-family: 'Lora', serif; }
+  .font-pt-serif { font-family: 'PT Serif', serif; }
+  .font-crimson-text { font-family: 'Crimson Text', serif; }
+  .font-eb-garamond { font-family: 'EB Garamond', serif; }
+  .font-libre-baskerville { font-family: 'Libre Baskerville', serif; }
+  .font-cormorant-garamond { font-family: 'Cormorant Garamond', serif; }
+  .font-source-serif-pro { font-family: 'Source Serif Pro', serif; }
+  .font-noto-serif { font-family: 'Noto Serif', serif; }
+  .font-vollkorn { font-family: 'Vollkorn', serif; }
+  .font-alegreya { font-family: 'Alegreya', serif; }
+  .font-spectral { font-family: 'Spectral', serif; }
+  .font-bitter { font-family: 'Bitter', serif; }
+  .font-arvo { font-family: 'Arvo', serif; }
+  .font-rokkitt { font-family: 'Rokkitt', serif; }
+  .font-zilla-slab { font-family: 'Zilla Slab', serif; }
+  .font-ibm-plex-serif { font-family: 'IBM Plex Serif', serif; }
+  .font-cardo { font-family: 'Cardo', serif; }
+  .font-domine { font-family: 'Domine', serif; }
+  .font-neuton { font-family: 'Neuton', serif; }
+  .font-gelasio { font-family: 'Gelasio', serif; }
+  .font-literata { font-family: 'Literata', serif; }
+  .font-source-serif-4 { font-family: 'Source Serif 4', serif; }
+  .font-fraunces { font-family: 'Fraunces', serif; }
+  .font-newsreader { font-family: 'Newsreader', serif; }
+  .font-young-serif { font-family: 'Young Serif', serif; }
+  .font-cormorant { font-family: 'Cormorant', serif; }
+  .font-petrona { font-family: 'Petrona', serif; }
+  .font-unna { font-family: 'Unna', serif; }
+
+  /* Monospace fonts */
   .font-fira-code { font-family: 'Fira Code', monospace; }
   .font-jetbrains-mono { font-family: 'JetBrains Mono', monospace; }
+  .font-source-code-pro { font-family: 'Source Code Pro', monospace; }
+  .font-roboto-mono { font-family: 'Roboto Mono', monospace; }
+  .font-space-mono { font-family: 'Space Mono', monospace; }
+  .font-inconsolata { font-family: 'Inconsolata', monospace; }
+  .font-ubuntu-mono { font-family: 'Ubuntu Mono', monospace; }
+  .font-ibm-plex-mono { font-family: 'IBM Plex Mono', monospace; }
+  .font-courier-prime { font-family: 'Courier Prime', monospace; }
+  .font-fira-mono { font-family: 'Fira Mono', monospace; }
+  .font-pt-mono { font-family: 'PT Mono', monospace; }
+  .font-anonymous-pro { font-family: 'Anonymous Pro', monospace; }
+  .font-cousine { font-family: 'Cousine', monospace; }
+  .font-cutive-mono { font-family: 'Cutive Mono', monospace; }
+  .font-overpass-mono { font-family: 'Overpass Mono', monospace; }
+  .font-red-hat-mono { font-family: 'Red Hat Mono', monospace; }
+  .font-azeret-mono { font-family: 'Azeret Mono', monospace; }
+  .font-dm-mono { font-family: 'DM Mono', monospace; }
+  .font-martian-mono { font-family: 'Martian Mono', monospace; }
+
+  /* Display fonts */
+  .font-oswald { font-family: 'Oswald', sans-serif; }
+  .font-bebas-neue { font-family: 'Bebas Neue', cursive; }
+  .font-anton { font-family: 'Anton', sans-serif; }
+  .font-abril-fatface { font-family: 'Abril Fatface', cursive; }
+  .font-righteous { font-family: 'Righteous', cursive; }
+  .font-kalam { font-family: 'Kalam', cursive; }
+  .font-fredoka-one { font-family: 'Fredoka One', cursive; }
+  .font-comfortaa { font-family: 'Comfortaa', cursive; }
+  .font-fjalla-one { font-family: 'Fjalla One', sans-serif; }
+  .font-archivo-black { font-family: 'Archivo Black', sans-serif; }
+  .font-bangers { font-family: 'Bangers', cursive; }
+  .font-bungee { font-family: 'Bungee', cursive; }
+  .font-lobster { font-family: 'Lobster', cursive; }
+  .font-pacifico { font-family: 'Pacifico', cursive; }
+  .font-staatliches { font-family: 'Staatliches', cursive; }
+  .font-alfa-slab-one { font-family: 'Alfa Slab One', cursive; }
+  .font-changa { font-family: 'Changa', sans-serif; }
+  .font-calistoga { font-family: 'Calistoga', cursive; }
+  .font-fredoka { font-family: 'Fredoka', sans-serif; }
+  .font-squada-one { font-family: 'Squada One', cursive; }
+  .font-black-ops-one { font-family: 'Black Ops One', cursive; }
+  .font-orbitron { font-family: 'Orbitron', sans-serif; }
+  .font-bai-jamjuree { font-family: 'Bai Jamjuree', sans-serif; }
+  .font-chakra-petch { font-family: 'Chakra Petch', sans-serif; }
+
+  /* Handwriting fonts */
+  .font-dancing-script { font-family: 'Dancing Script', cursive; }
+  .font-kaushan-script { font-family: 'Kaushan Script', cursive; }
+  .font-great-vibes { font-family: 'Great Vibes', cursive; }
+  .font-satisfy { font-family: 'Satisfy', cursive; }
+  .font-caveat { font-family: 'Caveat', cursive; }
+  .font-shadows-into-light { font-family: 'Shadows Into Light', cursive; }
+  .font-amatic-sc { font-family: 'Amatic SC', cursive; }
+  .font-indie-flower { font-family: 'Indie Flower', cursive; }
+  .font-handlee { font-family: 'Handlee', cursive; }
+  .font-permanent-marker { font-family: 'Permanent Marker', cursive; }
+  .font-cookie { font-family: 'Cookie', cursive; }
+  .font-allura { font-family: 'Allura', cursive; }
+  .font-alex-brush { font-family: 'Alex Brush', cursive; }
+  .font-courgette { font-family: 'Courgette', cursive; }
+  .font-patrick-hand { font-family: 'Patrick Hand', cursive; }
+  .font-architects-daughter { font-family: 'Architects Daughter', cursive; }
+  .font-cedarville-cursive { font-family: 'Cedarville Cursive', cursive; }
+  .font-yellowtail { font-family: 'Yellowtail', cursive; }
+  .font-tangerine { font-family: 'Tangerine', cursive; }
+  .font-rock-salt { font-family: 'Rock Salt', cursive; }
+
+  /* International fonts */
+  .font-noto-sans { font-family: 'Noto Sans', sans-serif; }
+  .font-noto-sans-jp { font-family: 'Noto Sans JP', sans-serif; }
+  .font-noto-sans-kr { font-family: 'Noto Sans KR', sans-serif; }
+  .font-noto-sans-sc { font-family: 'Noto Sans SC', sans-serif; }
+  .font-noto-sans-tc { font-family: 'Noto Sans TC', sans-serif; }
+  .font-m-plus-1p { font-family: 'M PLUS 1p', sans-serif; }
+  .font-m-plus-rounded-1c { font-family: 'M PLUS Rounded 1c', sans-serif; }
+  .font-sarabun { font-family: 'Sarabun', sans-serif; }
+  .font-prompt { font-family: 'Prompt', sans-serif; }
+  .font-mitr { font-family: 'Mitr', sans-serif; }
+  .font-tajawal { font-family: 'Tajawal', sans-serif; }
+  .font-cairo { font-family: 'Cairo', sans-serif; }
+  .font-amiri { font-family: 'Amiri', serif; }
+  .font-scheherazade-new { font-family: 'Scheherazade New', serif; }
+  .font-markazi-text { font-family: 'Markazi Text', serif; }
+  .font-recursive { font-family: 'Recursive', sans-serif; }
 
   /* Interface Density Classes */
   .density-compact {
