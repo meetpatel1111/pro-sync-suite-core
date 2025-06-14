@@ -578,5 +578,117 @@ export const dbService = {
     return await safeQueryTable('billing_rates', (query) => 
       query.insert(rateData)
     );
-  }
+  },
+
+  // TaskMaster: Checklists
+  async getTaskChecklists(taskId: string) {
+    return await safeQueryTable('task_checklists', (query) =>
+      query.select('*').eq('task_id', taskId).order('created_at', { ascending: true })
+    );
+  },
+  async addChecklistItem(item: { task_id: string; title: string; }) {
+    return await safeQueryTable('task_checklists', (query) =>
+      query.insert({ ...item, is_completed: false })
+    );
+  },
+  async toggleChecklistItem(itemId: string, is_completed: boolean) {
+    return await safeQueryTable('task_checklists', (query) =>
+      query.update({ is_completed }).eq('id', itemId)
+    );
+  },
+  async deleteChecklistItem(itemId: string) {
+    return await safeQueryTable('task_checklists', (query) =>
+      query.delete().eq('id', itemId)
+    );
+  },
+
+  // TaskMaster: Comments
+  async getTaskComments(taskId: string) {
+    return await safeQueryTable('task_comments', (query) =>
+      query.select('*').eq('task_id', taskId).order('created_at', { ascending: true })
+    );
+  },
+  async addComment(comment: { task_id: string; user_id: string; content: string; parent_id?: string; }) {
+    return await safeQueryTable('task_comments', (query) =>
+      query.insert(comment)
+    );
+  },
+  async deleteComment(commentId: string) {
+    return await safeQueryTable('task_comments', (query) =>
+      query.delete().eq('id', commentId)
+    );
+  },
+
+  // TaskMaster: Files
+  async getTaskFiles(taskId: string) {
+    return await safeQueryTable('task_files', (query) =>
+      query.select('*').eq('task_id', taskId).order('created_at', { ascending: true })
+    );
+  },
+  async uploadTaskFile(file: { task_id: string; file_url: string; uploaded_by: string; file_type?: string; }) {
+    return await safeQueryTable('task_files', (query) =>
+      query.insert(file)
+    );
+  },
+  async deleteTaskFile(fileId: string) {
+    return await safeQueryTable('task_files', (query) =>
+      query.delete().eq('id', fileId)
+    );
+  },
+
+  // TaskMaster: Tags
+  async getTaskTags() {
+    return await safeQueryTable('task_tags', (query) =>
+      query.select('*').order('name', { ascending: true })
+    );
+  },
+  async addTag(tag: { name: string; color?: string; }) {
+    return await safeQueryTable('task_tags', (query) =>
+      query.insert(tag)
+    );
+  },
+  async assignTagToTask(task_id: string, tag_id: string) {
+    return await safeQueryTable('task_tag_assignments', (query) =>
+      query.insert({ task_id, tag_id })
+    );
+  },
+  async removeTagFromTask(task_id: string, tag_id: string) {
+    return await safeQueryTable('task_tag_assignments', (query) =>
+      query.delete().eq('task_id', task_id).eq('tag_id', tag_id)
+    );
+  },
+  async getTagsForTask(task_id: string) {
+    return await safeQueryTable('task_tag_assignments', (query) =>
+      query.select('*, task_tags(*)').eq('task_id', task_id)
+    );
+  },
+
+  // TaskMaster: Dependencies
+  async getTaskDependencies(task_id: string) {
+    return await safeQueryTable('task_dependencies', (query) =>
+      query.select('*').eq('task_id', task_id)
+    );
+  },
+  async linkTaskDependency(task_id: string, depends_on_task_id: string) {
+    return await safeQueryTable('task_dependencies', (query) =>
+      query.insert({ task_id, depends_on_task_id })
+    );
+  },
+  async unlinkTaskDependency(id: string) {
+    return await safeQueryTable('task_dependencies', (query) =>
+      query.delete().eq('id', id)
+    );
+  },
+
+  // TaskMaster: Activity Log
+  async getTaskActivityLog(task_id: string) {
+    return await safeQueryTable('task_activity_log', (query) =>
+      query.select('*').eq('task_id', task_id).order('timestamp', { ascending: false })
+    );
+  },
+  async addTaskActivityLog(log: { task_id: string; user_id: string; action: string; description?: string; }) {
+    return await safeQueryTable('task_activity_log', (query) =>
+      query.insert({ ...log, timestamp: new Date().toISOString() })
+    );
+  },
 };

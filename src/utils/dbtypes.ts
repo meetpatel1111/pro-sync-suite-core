@@ -540,3 +540,56 @@ export type DataSettingType =
   | 'time_entries'
   | 'files'
   | 'audit_logs';
+
+export interface TaskChecklist {
+  id: string;
+  task_id: string;
+  title: string;
+  is_completed: boolean;
+  created_at: string;
+}
+
+export interface TaskComment {
+  id: string;
+  task_id: string;
+  user_id: string;
+  content: string;
+  parent_id?: string;
+  created_at: string;
+}
+
+export interface TaskFile {
+  id: string;
+  task_id: string;
+  file_url: string;
+  uploaded_by: string;
+  file_type?: string;
+  created_at: string;
+}
+
+export interface TaskTag {
+  id: string;
+  name: string;
+  color?: string;
+}
+
+export interface TaskTagAssignment {
+  id: string;
+  task_id: string;
+  tag_id: string;
+}
+
+export interface TaskDependency {
+  id: string;
+  task_id: string;
+  depends_on_task_id: string;
+}
+
+export interface TaskActivityLog {
+  id: string;
+  task_id: string;
+  user_id: string;
+  action: string;
+  description?: string;
+  timestamp: string;
+}
