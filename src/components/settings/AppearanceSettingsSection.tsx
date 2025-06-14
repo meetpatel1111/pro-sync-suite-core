@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
 import { Palette, Monitor, Type, Layout, Zap } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { FontFamilySelector } from './FontFamilySelector';
@@ -22,25 +23,19 @@ const UI_DENSITIES = [
   { value: 'comfortable', label: 'Comfortable', description: 'More spacing, easier to read' },
 ];
 
-const FONT_FAMILIES = [
-  { value: 'inter', label: 'Inter', family: 'Inter, system-ui, -apple-system, sans-serif' },
-  { value: 'roboto', label: 'Roboto', family: 'Roboto, system-ui, -apple-system, sans-serif' },
-  { value: 'open-sans', label: 'Open Sans', family: 'Open Sans, system-ui, -apple-system, sans-serif' },
-  { value: 'lato', label: 'Lato', family: 'Lato, system-ui, -apple-system, sans-serif' },
-  { value: 'poppins', label: 'Poppins', family: 'Poppins, system-ui, -apple-system, sans-serif' },
-  { value: 'montserrat', label: 'Montserrat', family: 'Montserrat, system-ui, -apple-system, sans-serif' },
-];
-
-const FONT_SIZES = [
-  { value: 'small', label: 'Small', size: '14px' },
-  { value: 'medium', label: 'Medium', size: '16px' },
-  { value: 'large', label: 'Large', size: '18px' },
-];
-
 const PRESET_COLORS = [
   '#2563eb', '#7c3aed', '#dc2626', '#ea580c', 
   '#d97706', '#65a30d', '#059669', '#0891b2',
   '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e'
+];
+
+const FONT_SIZE_PRESETS = [
+  { value: 'xs', label: 'Extra Small', size: 12 },
+  { value: 'sm', label: 'Small', size: 14 },
+  { value: 'base', label: 'Base', size: 16 },
+  { value: 'lg', label: 'Large', size: 18 },
+  { value: 'xl', label: 'Extra Large', size: 20 },
+  { value: '2xl', label: '2X Large', size: 24 },
 ];
 
 // Helper function to convert hex to HSL
@@ -70,10 +65,20 @@ const hexToHsl = (hex: string) => {
 export const AppearanceSettingsSection = () => {
   const { settings, updateSetting, loading } = useSettings();
   const [customColor, setCustomColor] = useState(settings.primaryColor || '#2563eb');
+  const [customFontSize, setCustomFontSize] = useState(
+    typeof settings.fontSize === 'number' ? settings.fontSize : 16
+  );
 
   useEffect(() => {
     setCustomColor(settings.primaryColor || '#2563eb');
-  }, [settings.primaryColor]);
+    if (typeof settings.fontSize === 'number') {
+      setCustomFontSize(settings.fontSize);
+    } else {
+      // Convert legacy string values to numbers
+      const legacyMap = { small: 14, medium: 16, large: 18 };
+      setCustomFontSize(legacyMap[settings.fontSize as keyof typeof legacyMap] || 16);
+    }
+  }, [settings.primaryColor, settings.fontSize]);
 
   // Apply settings immediately when they change
   useEffect(() => {
@@ -116,16 +121,9 @@ export const AppearanceSettingsSection = () => {
     }
 
     // Apply font size
-    const fontSizeMap = {
-      small: '14px',
-      medium: '16px',
-      large: '18px'
-    };
-    if (settings.fontSize && fontSizeMap[settings.fontSize as keyof typeof fontSizeMap]) {
-      const size = fontSizeMap[settings.fontSize as keyof typeof fontSizeMap];
-      document.documentElement.style.setProperty('--base-font-size', size);
-      document.documentElement.style.fontSize = size;
-    }
+    const fontSize = typeof settings.fontSize === 'number' ? settings.fontSize : customFontSize;
+    document.documentElement.style.setProperty('--base-font-size', `${fontSize}px`);
+    document.documentElement.style.fontSize = `${fontSize}px`;
 
     // Apply animations
     if (!settings.animationsEnabled) {
@@ -141,7 +139,7 @@ export const AppearanceSettingsSection = () => {
     if (settings.uiDensity) {
       document.documentElement.classList.add(`density-${settings.uiDensity}`);
     }
-  }, [settings.theme, settings.primaryColor, settings.fontFamily, settings.fontSize, settings.animationsEnabled, settings.uiDensity]);
+  }, [settings.theme, settings.primaryColor, settings.fontFamily, settings.fontSize, settings.animationsEnabled, settings.uiDensity, customFontSize]);
 
   const handleThemeChange = async (theme: string) => {
     await updateSetting('theme', theme);
@@ -164,9 +162,17 @@ export const AppearanceSettingsSection = () => {
     await updateSetting('uiDensity', density);
   };
 
-  const handleFontSizeChange = async (fontSize: string) => {
+  const handleFontSizeChange = async (fontSize: number | string) => {
     await updateSetting('fontSize', fontSize);
   };
+
+  const handleSliderFontSizeChange = async (value: number[]) => {
+    const newSize = value[0];
+    setCustomFontSize(newSize);
+    await handleFontSizeChange(newSize);
+  };
+
+  const currentFontSize = typeof settings.fontSize === 'number' ? settings.fontSize : customFontSize;
 
   if (loading) {
     return <div className="flex items-center justify-center p-6">Loading appearance settings...</div>;
@@ -251,7 +257,7 @@ export const AppearanceSettingsSection = () => {
 
           {/* Font Settings */}
           <div className="space-y-6">
-            {/* Font Family - Updated with new selector */}
+            {/* Font Family */}
             <div className="space-y-3">
               <Label className="text-base font-medium flex items-center gap-2">
                 <Type className="h-4 w-4" />
@@ -263,31 +269,72 @@ export const AppearanceSettingsSection = () => {
               />
             </div>
 
-            {/* Font Size */}
-            <div className="space-y-3">
+            {/* Font Size - Enhanced */}
+            <div className="space-y-4">
               <Label className="text-base font-medium">Font Size</Label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {FONT_SIZES.map((font) => (
-                  <div
-                    key={font.value}
-                    className={`p-3 rounded-lg border-2 cursor-pointer transition-colors ${
-                      settings.fontSize === font.value 
+              
+              {/* Preset Sizes */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {FONT_SIZE_PRESETS.map((preset) => (
+                  <button
+                    key={preset.value}
+                    className={`p-3 rounded-lg border-2 cursor-pointer transition-colors text-left ${
+                      currentFontSize === preset.size
                         ? 'border-primary bg-primary/5' 
                         : 'border-muted hover:border-muted-foreground/50'
                     }`}
-                    onClick={() => handleFontSizeChange(font.value)}
+                    onClick={() => handleFontSizeChange(preset.size)}
                   >
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="font-medium">{font.label}</span>
-                      {settings.fontSize === font.value && (
-                        <Badge variant="secondary" className="ml-auto">Active</Badge>
-                      )}
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium text-sm">{preset.label}</span>
+                      <span className="text-xs text-muted-foreground">{preset.size}px</span>
                     </div>
-                    <p className="text-xs text-muted-foreground" style={{ fontSize: font.size }}>
+                    <p className="text-xs text-muted-foreground" style={{ fontSize: `${Math.min(preset.size, 14)}px` }}>
                       Sample text
                     </p>
-                  </div>
+                  </button>
                 ))}
+              </div>
+
+              {/* Custom Size Slider */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Custom Size</Label>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-muted-foreground">{currentFontSize}px</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleFontSizeChange(16)}
+                      className="text-xs px-2 py-1"
+                    >
+                      Reset
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="px-2">
+                  <Slider
+                    value={[currentFontSize]}
+                    onValueChange={handleSliderFontSizeChange}
+                    min={10}
+                    max={32}
+                    step={1}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                    <span>10px</span>
+                    <span>32px</span>
+                  </div>
+                </div>
+
+                {/* Live Preview */}
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-muted-foreground text-xs mb-2">Live Preview:</p>
+                  <p style={{ fontSize: `${currentFontSize}px` }}>
+                    The quick brown fox jumps over the lazy dog.
+                  </p>
+                </div>
               </div>
             </div>
           </div>

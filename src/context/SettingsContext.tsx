@@ -22,7 +22,7 @@ interface AppSettings {
   primaryColor: string;
   accentColor: string;
   fontFamily: string;
-  fontSize: string;
+  fontSize: string | number; // Support both string presets and number values
   sidebarLayout: string;
   uiDensity: string;
   animationsEnabled: boolean;
@@ -112,7 +112,7 @@ const defaultSettings: AppSettings = {
   primaryColor: '#2563eb',
   accentColor: '#3b82f6',
   fontFamily: 'inter',
-  fontSize: 'medium',
+  fontSize: 16, // Default to number value
   sidebarLayout: 'expanded',
   uiDensity: 'standard',
   animationsEnabled: true,
@@ -285,10 +285,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!user) return;
 
     try {
-      // Update local state immediately for better UX
       setSettings(prev => ({ ...prev, [key]: value }));
-
-      // Update in database
       await settingsService.updateSetting(user.id, key, value);
 
       toast({
@@ -297,7 +294,6 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       });
     } catch (error) {
       console.error('Error updating setting:', error);
-      // Revert local state on error
       await loadUserSettings();
       toast({
         title: 'Error',
@@ -311,7 +307,6 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!user) return;
 
     try {
-      // Update local state immediately
       setSettings(prev => {
         const categoryData = (prev as any)[category];
         if (typeof categoryData === 'object' && categoryData !== null) {
@@ -326,7 +321,6 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return prev;
       });
 
-      // Update in database
       await settingsService.updateNestedSetting(user.id, category, key, value);
 
       toast({
@@ -335,7 +329,6 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       });
     } catch (error) {
       console.error('Error updating nested setting:', error);
-      // Revert local state on error
       await loadUserSettings();
       toast({
         title: 'Error',
