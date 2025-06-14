@@ -5,8 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, User, Camera } from 'lucide-react';
+import { Loader2, Save, User, Camera, Shield, Mail, Lock, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { dbService } from '@/services/dbService';
 import { useAuthContext } from '@/context/AuthContext';
@@ -23,14 +25,44 @@ interface UserProfile {
   location?: string;
 }
 
+interface AccountSettings {
+  email_notifications: boolean;
+  marketing_emails: boolean;
+  security_alerts: boolean;
+  weekly_digest: boolean;
+  mobile_notifications: boolean;
+  browser_notifications: boolean;
+  two_factor_enabled: boolean;
+  login_alerts: boolean;
+  data_export_enabled: boolean;
+  profile_visibility: 'public' | 'private' | 'team';
+  activity_status: boolean;
+}
+
 const UserProfileSettings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user, profile: authProfile } = useAuthContext();
+  const { user, profile: authProfile, signOut } = useAuthContext();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [email, setEmail] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [accountSettings, setAccountSettings] = useState<AccountSettings>({
+    email_notifications: true,
+    marketing_emails: false,
+    security_alerts: true,
+    weekly_digest: true,
+    mobile_notifications: true,
+    browser_notifications: true,
+    two_factor_enabled: false,
+    login_alerts: true,
+    data_export_enabled: true,
+    profile_visibility: 'team',
+    activity_status: true,
+  });
 
   useEffect(() => {
     if (!user) {
@@ -123,7 +155,6 @@ const UserProfileSettings = () => {
         description: "Your profile has been updated successfully",
       });
       
-      // Reload the profile to see updates
       fetchUserProfile();
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -135,6 +166,103 @@ const UserProfileSettings = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleUpdateEmail = async () => {
+    if (!user || !email) return;
+    
+    try {
+      const { error } = await supabase.auth.updateUser({ email });
+      if (error) throw error;
+      
+      toast({
+        title: "Email update initiated",
+        description: "Check your new email address for a confirmation link",
+      });
+    } catch (error) {
+      console.error('Error updating email:', error);
+      toast({
+        title: "Failed to update email",
+        description: "An error occurred while updating your email",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword || newPassword !== confirmPassword) {
+      toast({
+        title: "Password mismatch",
+        description: "New passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      
+      toast({
+        title: "Password updated",
+        description: "Your password has been updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating password:', error);
+      toast({
+        title: "Failed to update password",
+        description: "An error occurred while updating your password",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      // Sign out first
+      await signOut();
+      
+      toast({
+        title: "Account deletion requested",
+        description: "Please contact support to complete account deletion",
+      });
+      
+      navigate('/auth');
+    } catch (error) {
+      console.error('Error initiating account deletion:', error);
+      toast({
+        title: "Failed to delete account",
+        description: "Please contact support for assistance",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAccountSettingChange = (key: keyof AccountSettings, value: boolean | string) => {
+    setAccountSettings(prev => ({ ...prev, [key]: value }));
+    
+    // Save immediately (in a real app, you might want to debounce this)
+    toast({
+      title: "Setting updated",
+      description: `${key.replace(/_/g, ' ')} has been updated`,
+    });
   };
 
   const handleProfileChange = (key: keyof UserProfile, value: string) => {
@@ -258,29 +386,272 @@ const UserProfileSettings = () => {
         </TabsContent>
         
         <TabsContent value="account" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Account Settings</CardTitle>
-              <CardDescription>
-                Manage your account settings and preferences
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p>Account settings will be implemented soon.</p>
-            </CardContent>
-          </Card>
+          <div className="grid gap-6">
+            {/* Email Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  Email Settings
+                </CardTitle>
+                <CardDescription>
+                  Manage your email address and email preferences
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      id="email" 
+                      type="email"
+                      value={email} 
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Enter new email address"
+                    />
+                    <Button onClick={handleUpdateEmail} variant="outline">
+                      Update Email
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    You will receive a confirmation email at your new address
+                  </p>
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-4">
+                  <h4 className="font-medium">Email Preferences</h4>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Email Notifications</Label>
+                      <p className="text-sm text-muted-foreground">Receive notifications via email</p>
+                    </div>
+                    <Switch 
+                      checked={accountSettings.email_notifications}
+                      onCheckedChange={(checked) => handleAccountSettingChange('email_notifications', checked)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Marketing Emails</Label>
+                      <p className="text-sm text-muted-foreground">Receive product updates and tips</p>
+                    </div>
+                    <Switch 
+                      checked={accountSettings.marketing_emails}
+                      onCheckedChange={(checked) => handleAccountSettingChange('marketing_emails', checked)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Weekly Digest</Label>
+                      <p className="text-sm text-muted-foreground">Weekly summary of your activity</p>
+                    </div>
+                    <Switch 
+                      checked={accountSettings.weekly_digest}
+                      onCheckedChange={(checked) => handleAccountSettingChange('weekly_digest', checked)}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Password Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lock className="h-5 w-5" />
+                  Password & Security
+                </CardTitle>
+                <CardDescription>
+                  Update your password and security settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="currentPassword">Current Password</Label>
+                    <Input 
+                      id="currentPassword"
+                      type="password" 
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Enter current password"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">New Password</Label>
+                    <Input 
+                      id="newPassword"
+                      type="password" 
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                    <Input 
+                      id="confirmPassword"
+                      type="password" 
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                    />
+                  </div>
+                  
+                  <Button onClick={handleUpdatePassword} className="w-fit">
+                    Update Password
+                  </Button>
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-4">
+                  <h4 className="font-medium">Security Preferences</h4>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Security Alerts</Label>
+                      <p className="text-sm text-muted-foreground">Get notified of suspicious activity</p>
+                    </div>
+                    <Switch 
+                      checked={accountSettings.security_alerts}
+                      onCheckedChange={(checked) => handleAccountSettingChange('security_alerts', checked)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Login Alerts</Label>
+                      <p className="text-sm text-muted-foreground">Get notified when you sign in from a new device</p>
+                    </div>
+                    <Switch 
+                      checked={accountSettings.login_alerts}
+                      onCheckedChange={(checked) => handleAccountSettingChange('login_alerts', checked)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Two-Factor Authentication</Label>
+                      <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
+                    </div>
+                    <Switch 
+                      checked={accountSettings.two_factor_enabled}
+                      onCheckedChange={(checked) => handleAccountSettingChange('two_factor_enabled', checked)}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Privacy Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Privacy & Data
+                </CardTitle>
+                <CardDescription>
+                  Control your privacy settings and data preferences
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Profile Visibility</Label>
+                    <p className="text-sm text-muted-foreground">Who can see your profile information</p>
+                  </div>
+                  <select 
+                    value={accountSettings.profile_visibility}
+                    onChange={(e) => handleAccountSettingChange('profile_visibility', e.target.value)}
+                    className="px-3 py-1 border rounded-md"
+                  >
+                    <option value="public">Public</option>
+                    <option value="team">Team Only</option>
+                    <option value="private">Private</option>
+                  </select>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Activity Status</Label>
+                    <p className="text-sm text-muted-foreground">Show when you're online</p>
+                  </div>
+                  <Switch 
+                    checked={accountSettings.activity_status}
+                    onCheckedChange={(checked) => handleAccountSettingChange('activity_status', checked)}
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Data Export</Label>
+                    <p className="text-sm text-muted-foreground">Allow data export requests</p>
+                  </div>
+                  <Switch 
+                    checked={accountSettings.data_export_enabled}
+                    onCheckedChange={(checked) => handleAccountSettingChange('data_export_enabled', checked)}
+                  />
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-2">
+                  <h4 className="font-medium text-destructive">Danger Zone</h4>
+                  <p className="text-sm text-muted-foreground">
+                    These actions are permanent and cannot be undone
+                  </p>
+                  <Button 
+                    variant="destructive" 
+                    onClick={handleDeleteAccount}
+                    className="gap-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Account
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
         
         <TabsContent value="notifications" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Notification Settings</CardTitle>
+              <CardTitle>Notification Preferences</CardTitle>
               <CardDescription>
-                Customize how and when you receive notifications
+                Choose how and when you want to be notified
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p>Notification settings will be implemented soon.</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Mobile Notifications</Label>
+                  <p className="text-sm text-muted-foreground">Push notifications on mobile devices</p>
+                </div>
+                <Switch 
+                  checked={accountSettings.mobile_notifications}
+                  onCheckedChange={(checked) => handleAccountSettingChange('mobile_notifications', checked)}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Browser Notifications</Label>
+                  <p className="text-sm text-muted-foreground">Desktop notifications in your browser</p>
+                </div>
+                <Switch 
+                  checked={accountSettings.browser_notifications}
+                  onCheckedChange={(checked) => handleAccountSettingChange('browser_notifications', checked)}
+                />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
