@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { s3Service } from './s3Service';
 
 export interface FileItem {
   id: string;
@@ -122,7 +123,7 @@ export const fileVaultService = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      console.log('Starting file upload for:', file.name, 'Size:', file.size);
+      console.log('Starting direct S3 file upload for:', file.name, 'Size:', file.size);
 
       // Create file path: user_id/folder_id?/filename
       const fileExt = file.name.split('.').pop();
@@ -130,25 +131,20 @@ export const fileVaultService = {
       const sanitizedName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
       const timestamp = Date.now();
       
-      // Simple file path structure for S3
+      // Simple file path structure for direct S3 upload
       const filePath = `${user.id}/${timestamp}_${sanitizedName}`;
 
-      console.log('Uploading to S3 path:', filePath);
+      console.log('Uploading directly to S3 path:', filePath);
 
-      // Upload to S3 bucket via Supabase storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('pro-sync-suit-core')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+      // Upload directly to S3
+      const uploadResult = await s3Service.uploadFile(file, filePath);
 
-      if (uploadError) {
-        console.error('S3 upload error:', uploadError);
-        throw uploadError;
+      if (!uploadResult.success) {
+        console.error('Direct S3 upload failed:', uploadResult.error);
+        throw new Error(uploadResult.error || 'Upload failed');
       }
 
-      console.log('File uploaded successfully to S3:', uploadData);
+      console.log('File uploaded successfully to S3:', filePath);
 
       // Save metadata to database
       const fileData = {
@@ -180,7 +176,7 @@ export const fileVaultService = {
       if (dbError) {
         console.error('Database error:', dbError);
         // Clean up uploaded file if database insert fails
-        await supabase.storage.from('pro-sync-suit-core').remove([filePath]);
+        await s3Service.deleteFile(filePath);
         throw dbError;
       }
 
@@ -206,16 +202,17 @@ export const fileVaultService = {
 
       if (fileError) throw fileError;
 
-      const { data, error } = await supabase.storage
-        .from('pro-sync-suit-core')
-        .download(file.storage_path);
+      // Download directly from S3
+      const downloadResult = await s3Service.downloadFile(file.storage_path);
 
-      if (error) throw error;
+      if (downloadResult.error || !downloadResult.data) {
+        throw new Error(downloadResult.error || 'Download failed');
+      }
 
       // Log activity
       await this.logActivity('download', 'file', fileId, { fileName: file.name });
 
-      return { data, error: null };
+      return { data: downloadResult.data, error: null };
     } catch (error) {
       console.error('Error downloading file:', error);
       return { data: null, error };
@@ -235,12 +232,13 @@ export const fileVaultService = {
 
       if (fileError) throw fileError;
 
-      // Delete from S3 storage
-      const { error: storageError } = await supabase.storage
-        .from('pro-sync-suit-core')
-        .remove([file.storage_path]);
+      // Delete directly from S3
+      const deleteResult = await s3Service.deleteFile(file.storage_path);
 
-      if (storageError) throw storageError;
+      if (!deleteResult.success) {
+        console.error('S3 delete failed:', deleteResult.error);
+        throw new Error(deleteResult.error || 'Delete failed');
+      }
 
       // Delete from database
       const { error: dbError } = await supabase
@@ -493,12 +491,12 @@ export const fileVaultService = {
       const timestamp = Date.now();
       const versionPath = `${user.id}/versions/${fileId}/${timestamp}_v${currentFile.version + 1}.${fileExt}`;
 
-      // Upload new version to S3
-      const { error: uploadError } = await supabase.storage
-        .from('pro-sync-suit-core')
-        .upload(versionPath, file);
+      // Upload new version directly to S3
+      const uploadResult = await s3Service.uploadFile(file, versionPath);
 
-      if (uploadError) throw uploadError;
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error || 'Version upload failed');
+      }
 
       // Save version metadata
       const { data: versionData, error: versionError } = await supabase
