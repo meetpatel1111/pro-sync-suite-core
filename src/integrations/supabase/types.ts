@@ -597,13 +597,6 @@ export type Database = {
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "files_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
         ]
       }
       in_app_notifications: {
@@ -1296,8 +1289,143 @@ export type Database = {
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      task_activity_log: {
+        Row: {
+          action: string
+          description: string | null
+          id: string
+          task_id: string | null
+          timestamp: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          description?: string | null
+          id?: string
+          task_id?: string | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          description?: string | null
+          id?: string
+          task_id?: string | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
           {
-            foreignKeyName: "risks_task_id_fkey"
+            foreignKeyName: "task_activity_log_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_checklists: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_completed: boolean | null
+          task_id: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_completed?: boolean | null
+          task_id?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_completed?: boolean | null
+          task_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_checklists_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_comments: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          parent_id: string | null
+          task_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          parent_id?: string | null
+          task_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          parent_id?: string | null
+          task_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "task_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_dependencies: {
+        Row: {
+          depends_on_task_id: string | null
+          id: string
+          task_id: string | null
+        }
+        Insert: {
+          depends_on_task_id?: string | null
+          id?: string
+          task_id?: string | null
+        }
+        Update: {
+          depends_on_task_id?: string | null
+          id?: string
+          task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_dependencies_depends_on_task_id_fkey"
+            columns: ["depends_on_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_dependencies_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
@@ -1307,25 +1435,30 @@ export type Database = {
       }
       task_files: {
         Row: {
-          file_id: string
-          task_id: string
+          created_at: string | null
+          file_type: string | null
+          file_url: string
+          id: string
+          task_id: string | null
+          uploaded_by: string | null
         }
         Insert: {
-          file_id: string
-          task_id: string
+          created_at?: string | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          task_id?: string | null
+          uploaded_by?: string | null
         }
         Update: {
-          file_id?: string
-          task_id?: string
+          created_at?: string | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          task_id?: string | null
+          uploaded_by?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "task_files_file_id_fkey"
-            columns: ["file_id"]
-            isOneToOne: false
-            referencedRelation: "files"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "task_files_task_id_fkey"
             columns: ["task_id"]
@@ -1356,8 +1489,34 @@ export type Database = {
             referencedRelation: "resources"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      task_tag_assignments: {
+        Row: {
+          id: string
+          tag_id: string | null
+          task_id: string | null
+        }
+        Insert: {
+          id?: string
+          tag_id?: string | null
+          task_id?: string | null
+        }
+        Update: {
+          id?: string
+          tag_id?: string | null
+          task_id?: string | null
+        }
+        Relationships: [
           {
-            foreignKeyName: "task_resources_task_id_fkey"
+            foreignKeyName: "task_tag_assignments_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "task_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_tag_assignments_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
@@ -1365,44 +1524,95 @@ export type Database = {
           },
         ]
       }
+      task_tags: {
+        Row: {
+          color: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
-          assignee: string | null
-          created_at: string
+          assigned_to: string[] | null
+          created_at: string | null
+          created_by: string | null
           description: string | null
           due_date: string | null
           id: string
+          parent_task_id: string | null
           priority: string
-          project: string | null
+          project_id: string | null
+          recurrence_rule: string | null
+          reviewer_id: string | null
+          start_date: string | null
           status: string
           title: string
-          user_id: string
+          updated_at: string | null
+          visibility: string | null
         }
         Insert: {
-          assignee?: string | null
-          created_at?: string
+          assigned_to?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
+          parent_task_id?: string | null
           priority: string
-          project?: string | null
+          project_id?: string | null
+          recurrence_rule?: string | null
+          reviewer_id?: string | null
+          start_date?: string | null
           status: string
           title: string
-          user_id: string
+          updated_at?: string | null
+          visibility?: string | null
         }
         Update: {
-          assignee?: string | null
-          created_at?: string
+          assigned_to?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
+          parent_task_id?: string | null
           priority?: string
-          project?: string | null
+          project_id?: string | null
+          recurrence_rule?: string | null
+          reviewer_id?: string | null
+          start_date?: string | null
           status?: string
           title?: string
-          user_id?: string
+          updated_at?: string | null
+          visibility?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_members: {
         Row: {
@@ -1485,13 +1695,6 @@ export type Database = {
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "time_entries_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
         ]
       }
       time_logs: {
@@ -1516,15 +1719,7 @@ export type Database = {
           task_id?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "time_logs_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       timesheet_entries: {
         Row: {
@@ -2318,13 +2513,6 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "work_sessions_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]

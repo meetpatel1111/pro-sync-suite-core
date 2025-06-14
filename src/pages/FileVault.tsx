@@ -1,29 +1,31 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, FolderPlus, File, Upload, Search, Filter, Grid, List, Download, Trash2, Share, Settings } from 'lucide-react';
+import { ArrowLeft, FolderPlus, File, Upload, Search, Filter, Grid, List, Download, Trash2, Share } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { dbService } from '@/services/dbService';
 
 interface FileItem {
   id: string;
+  user_id: string;
   name: string;
   description?: string;
   file_type: string;
   size_bytes: number;
   storage_path: string;
-  created_at: string;
   is_public: boolean;
   is_archived: boolean;
+  project_id?: string;
+  task_id?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 const FileVault = () => {
@@ -40,15 +42,31 @@ const FileVault = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Fetch files on mount
   useEffect(() => {
     fetchFiles();
+    // Subscribe to realtime storage/DB changes for live updates
+    const channel = supabase
+      .channel('files-live-updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'files',
+      }, (payload) => {
+        fetchFiles();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchFiles = async () => {
     setIsLoading(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (!user) {
         toast({
           title: "Authentication required",
           description: "Please log in to view your files",
@@ -58,10 +76,13 @@ const FileVault = () => {
         return;
       }
 
-      const { data, error } = await dbService.getFiles(userData.user.id);
+      const { data, error } = await supabase
+        .from('files')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
       setFiles(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching files:', error);
@@ -86,7 +107,6 @@ const FileVault = () => {
 
   const handleUpload = async (event: React.FormEvent) => {
     event.preventDefault();
-    
     if (!selectedFile) {
       toast({
         title: "No file selected",
@@ -98,8 +118,8 @@ const FileVault = () => {
 
     setIsUploading(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
         toast({
           title: "Authentication required",
           description: "Please log in to upload files",
@@ -108,11 +128,11 @@ const FileVault = () => {
         return;
       }
 
-      // Generate a unique path for the file
+      // Use user's UUID as folder, so enforce privacy in bucket policies
       const fileExt = selectedFile.name.split('.').pop();
-      const filePath = `${userData.user.id}/${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${Date.now()}.${fileExt}`;
 
-      // Upload file to Supabase storage
+      // Upload file to Supabase storage (bucket: "files")
       const { error: uploadError } = await supabase.storage
         .from('files')
         .upload(filePath, selectedFile);
@@ -128,7 +148,7 @@ const FileVault = () => {
         storage_path: filePath,
         is_public: false,
         is_archived: false,
-        user_id: userData.user.id
+        user_id: user.id
       };
 
       const { error: dbError } = await supabase
@@ -142,13 +162,11 @@ const FileVault = () => {
         description: "Your file has been uploaded successfully",
       });
 
-      // Reset form
       setFileName('');
       setFileDescription('');
       setSelectedFile(null);
       setUploadDialogOpen(false);
-      
-      // Refresh files list
+
       fetchFiles();
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -171,14 +189,12 @@ const FileVault = () => {
       if (error) throw error;
 
       // Create a download link
-      const url = URL.createObjectURL(data);
+      const url = URL.createObjectURL(data as Blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = file.name;
       document.body.appendChild(a);
       a.click();
-      
-      // Clean up
       URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
@@ -196,14 +212,13 @@ const FileVault = () => {
       const fileToDelete = files.find(f => f.id === fileId);
       if (!fileToDelete) return;
 
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
       // Delete from storage
       const { error: storageError } = await supabase.storage
         .from('files')
         .remove([fileToDelete.storage_path]);
-
       if (storageError) throw storageError;
 
       // Delete from database
@@ -211,7 +226,7 @@ const FileVault = () => {
         .from('files')
         .delete()
         .eq('id', fileId)
-        .eq('user_id', userData.user.id);
+        .eq('user_id', user.id);
 
       if (dbError) throw dbError;
 
@@ -220,7 +235,6 @@ const FileVault = () => {
         description: "Your file has been deleted successfully",
       });
 
-      // Update files list
       setFiles(files.filter(f => f.id !== fileId));
     } catch (error) {
       console.error('Error deleting file:', error);
@@ -234,17 +248,17 @@ const FileVault = () => {
 
   const getFilteredFiles = () => {
     return files.filter(file => {
-      const matchesSearch = 
+      const matchesSearch =
         file.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (file.description && file.description.toLowerCase().includes(searchQuery.toLowerCase()));
-      
+
       switch (activeTab) {
         case 'documents':
-          return matchesSearch && 
-            (file.file_type.includes('document') || 
-             file.file_type.includes('pdf') || 
-             file.file_type.includes('word') ||
-             file.file_type.includes('text'));
+          return matchesSearch &&
+            (file.file_type.includes('document') ||
+              file.file_type.includes('pdf') ||
+              file.file_type.includes('word') ||
+              file.file_type.includes('text'));
         case 'images':
           return matchesSearch && file.file_type.includes('image');
         case 'shared':
@@ -267,10 +281,10 @@ const FileVault = () => {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
