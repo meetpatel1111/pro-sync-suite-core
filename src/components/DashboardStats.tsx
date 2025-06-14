@@ -1,15 +1,18 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, CheckCircle, Clock, TrendingUp, AlertTriangle, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const DashboardStats = () => {
-  const stats = [
+  const { user } = useAuth();
+  const [stats, setStats] = useState([
     {
       title: 'Active Projects',
-      value: '12',
-      change: '+2.5%',
+      value: '0',
+      change: '0%',
       trend: 'up',
       icon: Calendar,
       color: 'text-blue-600',
@@ -17,8 +20,8 @@ const DashboardStats = () => {
     },
     {
       title: 'Tasks Completed',
-      value: '156',
-      change: '+12.3%',
+      value: '0',
+      change: '0%',
       trend: 'up',
       icon: CheckCircle,
       color: 'text-green-600',
@@ -26,8 +29,8 @@ const DashboardStats = () => {
     },
     {
       title: 'Team Members',
-      value: '24',
-      change: '+3',
+      value: '0',
+      change: '0',
       trend: 'up',
       icon: Users,
       color: 'text-purple-600',
@@ -35,8 +38,8 @@ const DashboardStats = () => {
     },
     {
       title: 'Hours Tracked',
-      value: '342',
-      change: '+8.1%',
+      value: '0',
+      change: '0%',
       trend: 'up',
       icon: Clock,
       color: 'text-orange-600',
@@ -44,8 +47,8 @@ const DashboardStats = () => {
     },
     {
       title: 'Productivity',
-      value: '94%',
-      change: '+5.2%',
+      value: '0%',
+      change: '0%',
       trend: 'up',
       icon: TrendingUp,
       color: 'text-emerald-600',
@@ -53,14 +56,143 @@ const DashboardStats = () => {
     },
     {
       title: 'Issues',
-      value: '3',
-      change: '-2',
+      value: '0',
+      change: '0',
       trend: 'down',
       icon: AlertTriangle,
       color: 'text-red-600',
       bgColor: 'bg-red-100 dark:bg-red-900/20'
     }
-  ];
+  ]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
+
+  const fetchDashboardData = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+
+      // Fetch active projects count
+      const { data: projects, error: projectsError } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('user_id', user.id);
+
+      // Fetch completed tasks count
+      const { data: completedTasks, error: tasksError } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('created_by', user.id)
+        .eq('status', 'completed');
+
+      // Fetch team members count (unique users who have tasks assigned by this user)
+      const { data: teamMembers, error: teamError } = await supabase
+        .from('tasks')
+        .select('assigned_to')
+        .eq('created_by', user.id)
+        .not('assigned_to', 'is', null);
+
+      // Fetch total hours tracked
+      const { data: timeEntries, error: timeError } = await supabase
+        .from('time_entries')
+        .select('time_spent')
+        .eq('user_id', user.id);
+
+      // Fetch risks/issues count
+      const { data: risks, error: risksError } = await supabase
+        .from('risks')
+        .select('id')
+        .in('status', ['open', 'active']);
+
+      if (projectsError || tasksError || teamError || timeError || risksError) {
+        console.error('Error fetching dashboard data:', { projectsError, tasksError, teamError, timeError, risksError });
+        return;
+      }
+
+      // Calculate unique team members
+      const uniqueTeamMembers = teamMembers ? 
+        new Set(teamMembers.flatMap(t => t.assigned_to || [])).size : 0;
+
+      // Calculate total hours (convert seconds to hours)
+      const totalHours = timeEntries ? 
+        Math.round(timeEntries.reduce((sum, entry) => sum + (entry.time_spent || 0), 0) / 3600) : 0;
+
+      // Calculate productivity (simplified: completed tasks / total tasks * 100)
+      const { data: allTasks } = await supabase
+        .from('tasks')
+        .select('id, status')
+        .eq('created_by', user.id);
+
+      const totalTasks = allTasks?.length || 0;
+      const completedCount = completedTasks?.length || 0;
+      const productivity = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
+
+      // Update stats with real data
+      setStats(prevStats => [
+        {
+          ...prevStats[0],
+          value: projects?.length.toString() || '0',
+          change: '+0%', // Would need historical data to calculate real change
+        },
+        {
+          ...prevStats[1],
+          value: completedCount.toString(),
+          change: '+0%',
+        },
+        {
+          ...prevStats[2],
+          value: uniqueTeamMembers.toString(),
+          change: '+0',
+        },
+        {
+          ...prevStats[3],
+          value: totalHours.toString(),
+          change: '+0%',
+        },
+        {
+          ...prevStats[4],
+          value: `${productivity}%`,
+          change: '+0%',
+        },
+        {
+          ...prevStats[5],
+          value: risks?.length.toString() || '0',
+          change: '0',
+          trend: (risks?.length || 0) > 0 ? 'up' : 'down',
+        }
+      ]);
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <Card key={index} className="animate-pulse">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="h-4 bg-gray-200 rounded w-24"></div>
+              <div className="h-8 w-8 bg-gray-200 rounded-lg"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-8 bg-gray-200 rounded w-16 mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-20"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
