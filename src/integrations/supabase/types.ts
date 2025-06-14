@@ -1886,10 +1886,12 @@ export type Database = {
           access_role_definitions: Json | null
           admin_only_actions: boolean | null
           alert_priorities: Json | null
+          alert_tone: string | null
           api_key_management: boolean | null
           app_notifications: Json | null
           archiving_rules: Json | null
           audit_trail_enabled: boolean | null
+          auto_backup: boolean | null
           auto_cleanup_logs: boolean | null
           auto_delete_inactive_accounts: boolean | null
           auto_logout_inactivity: boolean | null
@@ -1916,6 +1918,7 @@ export type Database = {
           data_export_options: Json | null
           data_import_templates: Json | null
           data_localization_rules: Json | null
+          data_retention: Json | null
           data_retention_policy: string | null
           date_format: string | null
           default_currency: string | null
@@ -1924,9 +1927,11 @@ export type Database = {
           default_file_storage_location: string | null
           default_filters_reports: Json | null
           default_icon_set: string | null
+          default_landing_page: string | null
           default_landing_page_role: string | null
           default_time_zone: string | null
           device_activity_log: boolean | null
+          display_name: string | null
           email_notifications: Json | null
           enable_all_notifications: boolean | null
           enable_client_portal: boolean | null
@@ -1954,6 +1959,7 @@ export type Database = {
           ip_whitelist: Json | null
           language: string | null
           login_attempt_limit: number | null
+          login_notifications: boolean | null
           login_screen_branding: string | null
           meeting_reminders: boolean | null
           menu_order: Json | null
@@ -1975,6 +1981,11 @@ export type Database = {
           project_color_tags: Json | null
           project_deadline_alerts: boolean | null
           project_naming_conventions: string | null
+          quiet_hours_enabled: boolean | null
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          realtime_sync: boolean | null
+          require_password_sensitive: boolean | null
           restore_from_backup: boolean | null
           risk_trigger_alerts: boolean | null
           section_divider_style: string | null
@@ -1998,8 +2009,12 @@ export type Database = {
           user_id: string
           user_invitation_restrictions: boolean | null
           version_history_depth: number | null
+          weekly_digest_day: string | null
+          weekly_digest_time: string | null
           weekly_summary_reports: boolean | null
           working_days: Json | null
+          working_hours_end: string | null
+          working_hours_start: string | null
         }
         Insert: {
           accent_color?: string | null
@@ -2007,10 +2022,12 @@ export type Database = {
           access_role_definitions?: Json | null
           admin_only_actions?: boolean | null
           alert_priorities?: Json | null
+          alert_tone?: string | null
           api_key_management?: boolean | null
           app_notifications?: Json | null
           archiving_rules?: Json | null
           audit_trail_enabled?: boolean | null
+          auto_backup?: boolean | null
           auto_cleanup_logs?: boolean | null
           auto_delete_inactive_accounts?: boolean | null
           auto_logout_inactivity?: boolean | null
@@ -2037,6 +2054,7 @@ export type Database = {
           data_export_options?: Json | null
           data_import_templates?: Json | null
           data_localization_rules?: Json | null
+          data_retention?: Json | null
           data_retention_policy?: string | null
           date_format?: string | null
           default_currency?: string | null
@@ -2045,9 +2063,11 @@ export type Database = {
           default_file_storage_location?: string | null
           default_filters_reports?: Json | null
           default_icon_set?: string | null
+          default_landing_page?: string | null
           default_landing_page_role?: string | null
           default_time_zone?: string | null
           device_activity_log?: boolean | null
+          display_name?: string | null
           email_notifications?: Json | null
           enable_all_notifications?: boolean | null
           enable_client_portal?: boolean | null
@@ -2075,6 +2095,7 @@ export type Database = {
           ip_whitelist?: Json | null
           language?: string | null
           login_attempt_limit?: number | null
+          login_notifications?: boolean | null
           login_screen_branding?: string | null
           meeting_reminders?: boolean | null
           menu_order?: Json | null
@@ -2096,6 +2117,11 @@ export type Database = {
           project_color_tags?: Json | null
           project_deadline_alerts?: boolean | null
           project_naming_conventions?: string | null
+          quiet_hours_enabled?: boolean | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          realtime_sync?: boolean | null
+          require_password_sensitive?: boolean | null
           restore_from_backup?: boolean | null
           risk_trigger_alerts?: boolean | null
           section_divider_style?: string | null
@@ -2119,8 +2145,12 @@ export type Database = {
           user_id: string
           user_invitation_restrictions?: boolean | null
           version_history_depth?: number | null
+          weekly_digest_day?: string | null
+          weekly_digest_time?: string | null
           weekly_summary_reports?: boolean | null
           working_days?: Json | null
+          working_hours_end?: string | null
+          working_hours_start?: string | null
         }
         Update: {
           accent_color?: string | null
@@ -2128,10 +2158,12 @@ export type Database = {
           access_role_definitions?: Json | null
           admin_only_actions?: boolean | null
           alert_priorities?: Json | null
+          alert_tone?: string | null
           api_key_management?: boolean | null
           app_notifications?: Json | null
           archiving_rules?: Json | null
           audit_trail_enabled?: boolean | null
+          auto_backup?: boolean | null
           auto_cleanup_logs?: boolean | null
           auto_delete_inactive_accounts?: boolean | null
           auto_logout_inactivity?: boolean | null
@@ -2158,6 +2190,7 @@ export type Database = {
           data_export_options?: Json | null
           data_import_templates?: Json | null
           data_localization_rules?: Json | null
+          data_retention?: Json | null
           data_retention_policy?: string | null
           date_format?: string | null
           default_currency?: string | null
@@ -2166,9 +2199,11 @@ export type Database = {
           default_file_storage_location?: string | null
           default_filters_reports?: Json | null
           default_icon_set?: string | null
+          default_landing_page?: string | null
           default_landing_page_role?: string | null
           default_time_zone?: string | null
           device_activity_log?: boolean | null
+          display_name?: string | null
           email_notifications?: Json | null
           enable_all_notifications?: boolean | null
           enable_client_portal?: boolean | null
@@ -2196,6 +2231,7 @@ export type Database = {
           ip_whitelist?: Json | null
           language?: string | null
           login_attempt_limit?: number | null
+          login_notifications?: boolean | null
           login_screen_branding?: string | null
           meeting_reminders?: boolean | null
           menu_order?: Json | null
@@ -2217,6 +2253,11 @@ export type Database = {
           project_color_tags?: Json | null
           project_deadline_alerts?: boolean | null
           project_naming_conventions?: string | null
+          quiet_hours_enabled?: boolean | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          realtime_sync?: boolean | null
+          require_password_sensitive?: boolean | null
           restore_from_backup?: boolean | null
           risk_trigger_alerts?: boolean | null
           section_divider_style?: string | null
@@ -2240,8 +2281,12 @@ export type Database = {
           user_id?: string
           user_invitation_restrictions?: boolean | null
           version_history_depth?: number | null
+          weekly_digest_day?: string | null
+          weekly_digest_time?: string | null
           weekly_summary_reports?: boolean | null
           working_days?: Json | null
+          working_hours_end?: string | null
+          working_hours_start?: string | null
         }
         Relationships: []
       }
