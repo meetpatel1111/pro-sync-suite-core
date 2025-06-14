@@ -17,8 +17,21 @@ export const settingsService = {
       }
 
       if (!data) {
-        // Return default settings if no data found
-        return this.getDefaultSettings();
+        // Create default settings if no data found
+        const defaultSettings = this.getDefaultSettings();
+        const { error: insertError } = await supabase
+          .from('user_settings')
+          .insert({
+            user_id: userId,
+            ...this.mapSettingsToDatabase(defaultSettings)
+          });
+
+        if (insertError) {
+          console.error('Error creating default settings:', insertError);
+          throw insertError;
+        }
+
+        return defaultSettings;
       }
 
       // Map database fields to our settings structure
@@ -32,14 +45,13 @@ export const settingsService = {
   // Update a single setting
   async updateSetting(userId: string, key: string, value: any) {
     try {
-      const updateData: any = {};
+      const updateData: any = { updated_at: new Date().toISOString() };
       
       // Map our setting keys to database columns
       const columnMapping = this.getColumnMapping();
       const dbColumn = columnMapping[key] || key;
       
       updateData[dbColumn] = value;
-      updateData.updated_at = new Date().toISOString();
 
       const { error } = await supabase
         .from('user_settings')
@@ -100,7 +112,7 @@ export const settingsService = {
   async resetCategoryToDefaults(userId: string, category: string) {
     try {
       const defaults = this.getDefaultSettings();
-      const defaultValue = defaults[category as keyof typeof defaults];
+      const defaultValue = (defaults as any)[category];
 
       const updateData: any = {};
       updateData[category] = defaultValue;
@@ -146,9 +158,8 @@ export const settingsService = {
   // Export user data
   async exportData(userId: string, format: 'csv' | 'json' | 'pdf') {
     try {
-      // This would typically call an edge function for data export
       console.log(`Exporting data for user ${userId} in ${format} format`);
-      // Implementation would depend on your data export requirements
+      // Mock implementation - in real app this would call an edge function
       return { success: true, downloadUrl: '#' };
     } catch (error) {
       console.error('Exception in exportData:', error);
@@ -159,11 +170,8 @@ export const settingsService = {
   // Archive old data
   async archiveData(userId: string, dataType: string, olderThanDays: number) {
     try {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
-
       console.log(`Archiving ${dataType} older than ${olderThanDays} days for user ${userId}`);
-      // Implementation would depend on your archiving strategy
+      // Mock implementation
       return { success: true, archivedCount: 0 };
     } catch (error) {
       console.error('Exception in archiveData:', error);
@@ -292,7 +300,6 @@ export const settingsService = {
   mapDatabaseToSettings(data: any) {
     const settings = this.getDefaultSettings();
     
-    // Map database columns back to our settings structure
     return {
       ...settings,
       language: data.language || settings.language,
@@ -308,13 +315,16 @@ export const settingsService = {
       defaultCurrency: data.default_currency || settings.defaultCurrency,
       sessionTimeout: data.session_timeout || settings.sessionTimeout,
       organizationName: data.organization_name || settings.organizationName,
+      displayName: data.display_name || settings.displayName,
       emailNotifications: data.email_notifications || settings.emailNotifications,
       pushNotifications: data.app_notifications || settings.pushNotifications,
       inappNotifications: data.inapp_notifications || settings.inappNotifications,
       notificationSounds: data.new_message_sound ?? settings.notificationSounds,
       twoFactorAuth: data.two_factor_auth ?? settings.twoFactorAuth,
       autoLogout: data.auto_logout_inactivity ?? settings.autoLogout,
-      // Add other mappings as needed
+      autoBackup: data.auto_backup ?? settings.autoBackup,
+      realtimeSync: data.realtime_sync ?? settings.realtimeSync,
+      dataRetention: data.data_retention || settings.dataRetention,
     };
   },
 

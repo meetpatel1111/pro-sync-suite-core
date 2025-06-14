@@ -45,7 +45,7 @@ const EXPORT_FORMATS = [
   { value: 'csv', label: 'CSV', description: 'Spreadsheet compatible' },
   { value: 'json', label: 'JSON', description: 'Developer friendly' },
   { value: 'pdf', label: 'PDF', description: 'Print ready reports' },
-];
+] as const;
 
 export const DataManagementSection = () => {
   const { settings, updateSetting, updateNestedSetting, loading } = useSettings();
@@ -71,7 +71,7 @@ export const DataManagementSection = () => {
     });
   };
 
-  const handleExport = async (dataType: string, format: string) => {
+  const handleExport = async (dataType: string, format: typeof EXPORT_FORMATS[number]['value']) => {
     if (!user) return;
 
     setIsExporting(true);
@@ -364,59 +364,6 @@ export const DataManagementSection = () => {
             <Download className="h-4 w-4 mr-2" />
             Download Latest Backup
           </Button>
-        </CardContent>
-      </Card>
-
-      {/* Connected Services */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5" />
-            Connected Services
-          </CardTitle>
-          <CardDescription>
-            Manage integrations and third-party connections
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-3 border rounded-lg">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <span className="text-lg">💬</span>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Slack Integration</p>
-                <p className="text-xs text-muted-foreground">Sync notifications and updates</p>
-              </div>
-            </div>
-            <Badge variant="secondary">Connected</Badge>
-          </div>
-          
-          <div className="flex items-center justify-between p-3 border rounded-lg opacity-60">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                <span className="text-lg">⚡</span>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Zapier</p>
-                <p className="text-xs text-muted-foreground">Automate workflows</p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm">Connect</Button>
-          </div>
-          
-          <div className="flex items-center justify-between p-3 border rounded-lg opacity-60">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                <span className="text-lg">📊</span>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Google Workspace</p>
-                <p className="text-xs text-muted-foreground">Calendar and drive sync</p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm">Connect</Button>
-          </div>
         </CardContent>
       </Card>
 

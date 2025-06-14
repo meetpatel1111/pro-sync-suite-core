@@ -311,13 +311,19 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     try {
       // Update local state immediately
-      setSettings(prev => ({
-        ...prev,
-        [category]: {
-          ...prev[category as keyof AppSettings],
-          [key]: value
+      setSettings(prev => {
+        const categoryData = (prev as any)[category];
+        if (typeof categoryData === 'object' && categoryData !== null) {
+          return {
+            ...prev,
+            [category]: {
+              ...categoryData,
+              [key]: value
+            }
+          };
         }
-      }));
+        return prev;
+      });
 
       // Update in database
       await settingsService.updateNestedSetting(user.id, category, key, value);
@@ -343,7 +349,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     try {
       if (category) {
-        const defaultCategorySettings = defaultSettings[category as keyof AppSettings];
+        const defaultCategorySettings = (defaultSettings as any)[category];
         setSettings(prev => ({ ...prev, [category]: defaultCategorySettings }));
         await settingsService.resetCategoryToDefaults(user.id, category);
       } else {
