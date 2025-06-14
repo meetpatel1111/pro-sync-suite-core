@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -437,21 +438,6 @@ const FileVault = () => {
             )}
           </TabsContent>
         </Tabs>
-
-        {/* Breadcrumb Navigation - Fixed */}
-        <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-          {breadcrumb.map((item, index) => (
-            <div key={`breadcrumb-${index}`} className="flex items-center">
-              <button
-                onClick={() => handleBreadcrumbClick(index)}
-                className="hover:text-foreground transition-colors"
-              >
-                {item.name}
-              </button>
-              {index < breadcrumb.length - 1 && <ChevronRight className="h-3 w-3 mx-1" />}
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Upload Dialog */}

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -77,6 +78,8 @@ export const fileVaultService = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      console.log('Fetching files for user:', user.id);
+
       let query = supabase
         .from('files')
         .select('*')
@@ -101,8 +104,12 @@ export const fileVaultService = {
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('Database error fetching files:', error);
+        throw error;
+      }
 
+      console.log('Successfully fetched files:', data?.length || 0);
       return { data, error: null };
     } catch (error) {
       console.error('Error fetching files:', error);
@@ -123,14 +130,14 @@ export const fileVaultService = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      console.log('Starting file upload for:', file.name, 'Size:', file.size);
+      console.log('Starting file upload for user:', user.id, 'File:', file.name, 'Size:', file.size);
 
       // Create file path: user_id/folder_id?/filename
       const fileName = metadata.name || file.name;
       const sanitizedName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
       const timestamp = Date.now();
       
-      // Use Supabase storage path structure
+      // Use Supabase storage path structure with user ID first
       const filePath = metadata.folder_id 
         ? `${user.id}/${metadata.folder_id}/${timestamp}_${sanitizedName}`
         : `${user.id}/${timestamp}_${sanitizedName}`;
@@ -150,7 +157,7 @@ export const fileVaultService = {
         throw uploadError;
       }
 
-      console.log('File uploaded successfully to Supabase storage:', filePath);
+      console.log('File uploaded successfully to Supabase storage:', uploadData.path);
 
       // Save metadata to database with explicit user_id
       const fileData = {
@@ -171,7 +178,7 @@ export const fileVaultService = {
         version: 1
       };
 
-      console.log('Saving file metadata:', fileData);
+      console.log('Saving file metadata to database:', fileData);
 
       const { data, error: dbError } = await supabase
         .from('files')
@@ -180,7 +187,7 @@ export const fileVaultService = {
         .single();
 
       if (dbError) {
-        console.error('Database error:', dbError);
+        console.error('Database error saving file metadata:', dbError);
         // Clean up uploaded file if database insert fails
         await supabase.storage
           .from('pro-sync-suit-core')
@@ -271,9 +278,13 @@ export const fileVaultService = {
   // Folder operations
   async getFolders(parentId?: string, projectId?: string) {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
       let query = supabase
         .from('folders')
         .select('*')
+        .eq('created_by', user.id)
         .order('name');
 
       if (parentId) {
