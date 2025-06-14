@@ -9,6 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          resource_id: string
+          resource_type: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          resource_id: string
+          resource_type: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          resource_id?: string
+          resource_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       allocations: {
         Row: {
           created_at: string | null
@@ -533,54 +563,186 @@ export type Database = {
         }
         Relationships: []
       }
+      file_permissions: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          file_id: string
+          id: string
+          permission: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          file_id: string
+          id?: string
+          permission: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          file_id?: string
+          id?: string
+          permission?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_permissions_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      file_shares: {
+        Row: {
+          access_level: string
+          expires_at: string | null
+          file_id: string
+          id: string
+          link: string | null
+          shared_at: string | null
+          shared_by: string
+          shared_with: string
+        }
+        Insert: {
+          access_level: string
+          expires_at?: string | null
+          file_id: string
+          id?: string
+          link?: string | null
+          shared_at?: string | null
+          shared_by: string
+          shared_with: string
+        }
+        Update: {
+          access_level?: string
+          expires_at?: string | null
+          file_id?: string
+          id?: string
+          link?: string | null
+          shared_at?: string | null
+          shared_by?: string
+          shared_with?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_shares_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      file_versions: {
+        Row: {
+          file_id: string
+          id: string
+          notes: string | null
+          size_bytes: number
+          storage_path: string
+          uploaded_at: string | null
+          uploaded_by: string
+          version: number
+        }
+        Insert: {
+          file_id: string
+          id?: string
+          notes?: string | null
+          size_bytes: number
+          storage_path: string
+          uploaded_at?: string | null
+          uploaded_by: string
+          version: number
+        }
+        Update: {
+          file_id?: string
+          id?: string
+          notes?: string | null
+          size_bytes?: number
+          storage_path?: string
+          uploaded_at?: string | null
+          uploaded_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_versions_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       files: {
         Row: {
+          app_context: string | null
           channel_id: string | null
           created_at: string
           description: string | null
           file_type: string
+          folder_id: string | null
           id: string
           is_archived: boolean
           is_public: boolean
+          mime_type: string | null
           name: string
           project_id: string | null
           size_bytes: number
           storage_path: string
+          tags: string[] | null
           task_id: string | null
           updated_at: string
           user_id: string
+          version: number | null
         }
         Insert: {
+          app_context?: string | null
           channel_id?: string | null
           created_at?: string
           description?: string | null
           file_type: string
+          folder_id?: string | null
           id?: string
           is_archived?: boolean
           is_public?: boolean
+          mime_type?: string | null
           name: string
           project_id?: string | null
           size_bytes: number
           storage_path: string
+          tags?: string[] | null
           task_id?: string | null
           updated_at?: string
           user_id: string
+          version?: number | null
         }
         Update: {
+          app_context?: string | null
           channel_id?: string | null
           created_at?: string
           description?: string | null
           file_type?: string
+          folder_id?: string | null
           id?: string
           is_archived?: boolean
           is_public?: boolean
+          mime_type?: string | null
           name?: string
           project_id?: string | null
           size_bytes?: number
           storage_path?: string
+          tags?: string[] | null
           task_id?: string | null
           updated_at?: string
           user_id?: string
+          version?: number | null
         }
         Relationships: [
           {
@@ -591,7 +753,62 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "files_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folders: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          id: string
+          name: string
+          parent_id: string | null
+          project_id: string | null
+          shared: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          id?: string
+          name: string
+          parent_id?: string | null
+          project_id?: string | null
+          shared?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          name?: string
+          parent_id?: string | null
+          project_id?: string | null
+          shared?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "folders_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
