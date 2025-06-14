@@ -1,10 +1,14 @@
+
 import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FormField, FormItem, FormLabel, FormControl, FormDescription } from '@/components/ui/form';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -46,6 +50,18 @@ const SettingsSection: React.FC<SettingsSectionProps> = ({
   );
 };
 
+const settingsSchema = z.object({
+  organization_name: z.string().optional(),
+  timezone: z.string().optional(),
+  language: z.string().optional(),
+  theme: z.string().optional(),
+  primary_color: z.string().optional(),
+  animations_enabled: z.boolean().optional(),
+  ui_density: z.string().optional(),
+});
+
+type SettingsFormData = z.infer<typeof settingsSchema>;
+
 interface SettingsFormProps {
   defaultTab?: string;
 }
@@ -61,6 +77,19 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({ defaultTab = 'genera
   const [notificationSettings, setNotificationSettings] = React.useState<NotificationSetting[]>([]);
   const [securitySettings, setSecuritySettings] = React.useState<SecuritySetting[]>([]);
   const [dataSettings, setDataSettings] = React.useState<DataSetting[]>([]);
+
+  const form = useForm<SettingsFormData>({
+    resolver: zodResolver(settingsSchema),
+    defaultValues: {
+      organization_name: '',
+      timezone: '',
+      language: '',
+      theme: 'light',
+      primary_color: '#2563eb',
+      animations_enabled: true,
+      ui_density: 'standard',
+    },
+  });
 
   React.useEffect(() => {
     if (!user) return;
@@ -87,6 +116,19 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({ defaultTab = 'genera
         setNotificationSettings(notifications.data || []);
         setSecuritySettings(security.data || []);
         setDataSettings(data.data || []);
+
+        // Update form with loaded values
+        const formData: SettingsFormData = {
+          organization_name: general.data?.find(s => s.setting_key === 'organization_name')?.setting_value || '',
+          timezone: general.data?.find(s => s.setting_key === 'timezone')?.setting_value || '',
+          language: general.data?.find(s => s.setting_key === 'language')?.setting_value || '',
+          theme: appearance?.theme || 'light',
+          primary_color: appearance?.primary_color || '#2563eb',
+          animations_enabled: appearance?.animations_enabled ?? true,
+          ui_density: appearance?.ui_density || 'standard',
+        };
+        
+        form.reset(formData);
       } catch (error) {
         console.error('Error loading settings:', error);
         toast({
@@ -100,7 +142,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({ defaultTab = 'genera
     };
 
     loadSettings();
-  }, [user, toast]);
+  }, [user, toast, form]);
 
   const handleGeneralSettingChange = async (key: GeneralSettingKey, value: string) => {
     if (!user) return;
@@ -181,181 +223,252 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({ defaultTab = 'genera
   }
 
   return (
-    <Tabs defaultValue={defaultTab} className="space-y-6">
-      <TabsList>
-        <TabsTrigger value="general">General</TabsTrigger>
-        <TabsTrigger value="appearance">Appearance</TabsTrigger>
-        <TabsTrigger value="notifications">Notifications</TabsTrigger>
-        <TabsTrigger value="security">Security</TabsTrigger>
-        <TabsTrigger value="data">Data Management</TabsTrigger>
-      </TabsList>
+    <Form {...form}>
+      <Tabs defaultValue={defaultTab} className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="appearance">Appearance</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="data">Data Management</TabsTrigger>
+        </TabsList>
 
-      <TabsContent value="general">
-        <Card>
-          <CardHeader>
-            <CardTitle>General Settings</CardTitle>
-            <CardDescription>
-              Configure basic settings for your ProSync Suite experience
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <SettingsSection title="Organization">
-              <div className="grid gap-4">
-                <FormItem>
-                  <FormLabel>Organization Name</FormLabel>
-                  <FormControl>
-                    <Input
-                      value={generalSettings.find(s => s.setting_key === 'organization_name')?.setting_value || ''}
-                      onChange={(e) => handleGeneralSettingChange('organization_name', e.target.value)}
-                    />
-                  </FormControl>
-                </FormItem>
-              </div>
-            </SettingsSection>
+        <TabsContent value="general">
+          <Card>
+            <CardHeader>
+              <CardTitle>General Settings</CardTitle>
+              <CardDescription>
+                Configure basic settings for your ProSync Suite experience
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <SettingsSection title="Organization">
+                <div className="grid gap-4">
+                  <FormField
+                    control={form.control}
+                    name="organization_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Organization Name</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              handleGeneralSettingChange('organization_name', e.target.value);
+                            }}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </SettingsSection>
 
-            <Separator />
+              <Separator />
 
-            <SettingsSection title="Localization">
-              <div className="grid gap-4">
-                <FormItem>
-                  <FormLabel>Timezone</FormLabel>
-                  <Select
-                    value={generalSettings.find(s => s.setting_key === 'timezone')?.setting_value || ''}
-                    onValueChange={(value) => handleGeneralSettingChange('timezone', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select timezone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="UTC">UTC</SelectItem>
-                      <SelectItem value="America/New_York">Eastern Time</SelectItem>
-                      <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormItem>
+              <SettingsSection title="Localization">
+                <div className="grid gap-4">
+                  <FormField
+                    control={form.control}
+                    name="timezone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Timezone</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            handleGeneralSettingChange('timezone', value);
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select timezone" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="UTC">UTC</SelectItem>
+                            <SelectItem value="America/New_York">Eastern Time</SelectItem>
+                            <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
 
-                <FormItem>
-                  <FormLabel>Language</FormLabel>
-                  <Select
-                    value={generalSettings.find(s => s.setting_key === 'language')?.setting_value || ''}
-                    onValueChange={(value) => handleGeneralSettingChange('language', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="es">Spanish</SelectItem>
-                      <SelectItem value="fr">French</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              </div>
-            </SettingsSection>
-          </CardContent>
-        </Card>
-      </TabsContent>
+                  <FormField
+                    control={form.control}
+                    name="language"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Language</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            handleGeneralSettingChange('language', value);
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select language" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="en">English</SelectItem>
+                            <SelectItem value="es">Spanish</SelectItem>
+                            <SelectItem value="fr">French</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </SettingsSection>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <TabsContent value="appearance">
-        <Card>
-          <CardHeader>
-            <CardTitle>Appearance Settings</CardTitle>
-            <CardDescription>
-              Customize the look and feel of ProSync Suite
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <SettingsSection title="Theme">
-              <div className="grid gap-4">
-                <FormItem>
-                  <FormLabel>Color Theme</FormLabel>
-                  <Select
-                    value={appearanceSettings?.theme || 'light'}
-                    onValueChange={(value) => handleAppearanceSettingChange({ theme: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select theme" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="light">Light</SelectItem>
-                      <SelectItem value="dark">Dark</SelectItem>
-                      <SelectItem value="system">System</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormItem>
+        <TabsContent value="appearance">
+          <Card>
+            <CardHeader>
+              <CardTitle>Appearance Settings</CardTitle>
+              <CardDescription>
+                Customize the look and feel of ProSync Suite
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <SettingsSection title="Theme">
+                <div className="grid gap-4">
+                  <FormField
+                    control={form.control}
+                    name="theme"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Color Theme</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            handleAppearanceSettingChange({ theme: value });
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select theme" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="light">Light</SelectItem>
+                            <SelectItem value="dark">Dark</SelectItem>
+                            <SelectItem value="system">System</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
 
-                <FormItem>
-                  <FormLabel>Primary Color</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="color"
-                      value={appearanceSettings?.primary_color || '#2563eb'}
-                      onChange={(e) => handleAppearanceSettingChange({ primary_color: e.target.value })}
-                    />
-                  </FormControl>
-                </FormItem>
-              </div>
-            </SettingsSection>
+                  <FormField
+                    control={form.control}
+                    name="primary_color"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Primary Color</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="color"
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e.target.value);
+                              handleAppearanceSettingChange({ primary_color: e.target.value });
+                            }}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </SettingsSection>
 
-            <Separator />
+              <Separator />
 
-            <SettingsSection title="Layout">
-              <div className="grid gap-4">
-                <FormItem>
-                  <div className="flex items-center justify-between">
-                    <FormLabel>Animations</FormLabel>
-                    <Switch
-                      checked={appearanceSettings?.animations_enabled}
-                      onCheckedChange={(checked) =>
-                        handleAppearanceSettingChange({ animations_enabled: checked })
-                      }
-                    />
-                  </div>
-                </FormItem>
+              <SettingsSection title="Layout">
+                <div className="grid gap-4">
+                  <FormField
+                    control={form.control}
+                    name="animations_enabled"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center justify-between">
+                          <FormLabel>Animations</FormLabel>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={(checked) => {
+                                field.onChange(checked);
+                                handleAppearanceSettingChange({ animations_enabled: checked });
+                              }}
+                            />
+                          </FormControl>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
 
-                <FormItem>
-                  <FormLabel>Interface Density</FormLabel>
-                  <Select
-                    value={appearanceSettings?.ui_density || 'standard'}
-                    onValueChange={(value) => handleAppearanceSettingChange({ ui_density: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select density" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="compact">Compact</SelectItem>
-                      <SelectItem value="standard">Standard</SelectItem>
-                      <SelectItem value="comfortable">Comfortable</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              </div>
-            </SettingsSection>
-          </CardContent>
-        </Card>
-      </TabsContent>
+                  <FormField
+                    control={form.control}
+                    name="ui_density"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Interface Density</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            handleAppearanceSettingChange({ ui_density: value });
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select density" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="compact">Compact</SelectItem>
+                            <SelectItem value="standard">Standard</SelectItem>
+                            <SelectItem value="comfortable">Comfortable</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </SettingsSection>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <TabsContent value="notifications">
-        <Card>
-          <CardHeader>
-            <CardTitle>Notification Settings</CardTitle>
-            <CardDescription>
-              Manage your notification preferences for each app
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[600px] pr-4">
-              {/* Group notifications by app */}
-              {['CollabSpace', 'TaskMaster', 'TimeTrackPro', 'BudgetBuddy'].map((app) => (
-                <SettingsSection key={app} title={app}>
-                  <div className="space-y-4">
-                    {notificationSettings
-                      .filter((setting) => setting.app === app)
-                      .map((setting) => (
-                        <FormItem key={`${setting.app}-${setting.setting_key}-${setting.delivery_method}`}>
-                          <div className="flex items-center justify-between">
+        <TabsContent value="notifications">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notification Settings</CardTitle>
+              <CardDescription>
+                Manage your notification preferences for each app
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[600px] pr-4">
+                {/* Group notifications by app */}
+                {['CollabSpace', 'TaskMaster', 'TimeTrackPro', 'BudgetBuddy'].map((app) => (
+                  <SettingsSection key={app} title={app}>
+                    <div className="space-y-4">
+                      {notificationSettings
+                        .filter((setting) => setting.app === app)
+                        .map((setting) => (
+                          <div key={`${setting.app}-${setting.setting_key}-${setting.delivery_method}`} className="flex items-center justify-between">
                             <div>
-                              <FormLabel>{setting.setting_key}</FormLabel>
+                              <Label>{setting.setting_key}</Label>
                               <Badge variant="secondary" className="ml-2">
                                 {setting.delivery_method}
                               </Badge>
@@ -372,19 +485,45 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({ defaultTab = 'genera
                               }
                             />
                           </div>
-                        </FormItem>
-                      ))}
-                  </div>
-                  <Separator className="my-4" />
-                </SettingsSection>
-              ))}
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      </TabsContent>
+                        ))}
+                    </div>
+                    <Separator className="my-4" />
+                  </SettingsSection>
+                ))}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Security and Data Management tabs would follow similar patterns */}
-    </Tabs>
+        <TabsContent value="security">
+          <Card>
+            <CardHeader>
+              <CardTitle>Security Settings</CardTitle>
+              <CardDescription>
+                Manage your security preferences
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Security settings will be implemented soon.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="data">
+          <Card>
+            <CardHeader>
+              <CardTitle>Data Management</CardTitle>
+              <CardDescription>
+                Manage your data and export options
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Data management options will be implemented soon.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </Form>
   );
 };
 
