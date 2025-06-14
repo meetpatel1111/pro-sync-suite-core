@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Filter, Plus, Users, Calendar, Clock, Briefcase, Search } from 'lucide-react';
+import { ArrowLeft, Filter, Plus, Users, Calendar, Clock, Briefcase, Search, BarChart } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -18,6 +18,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { safeQueryTable } from '@/utils/db-helpers';
 import { Resource, ResourceSkill } from '@/utils/dbtypes';
+import ResourceAllocation from '@/components/resourcehub/ResourceAllocation';
+import UtilizationDashboard from '@/components/resourcehub/UtilizationDashboard';
+import SkillMatrix from '@/components/resourcehub/SkillMatrix';
 
 interface ResourceFormState {
   name: string;
@@ -33,6 +36,7 @@ const ResourceHub = () => {
   const [activeTab, setActiveTab] = useState('team');
   const [searchQuery, setSearchQuery] = useState('');
   const [resources, setResources] = useState<Resource[]>([]);
+  const [allocations, setAllocations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddResourceOpen, setIsAddResourceOpen] = useState(false);
   const [session, setSession] = useState<any>(null);
@@ -76,6 +80,18 @@ const ResourceHub = () => {
         );
         
         if (resourcesError) throw resourcesError;
+        
+        // Fetch allocations
+        const { data: allocationsData, error: allocationsError } = await safeQueryTable(
+          'allocations',
+          (query) => query.select('*')
+        );
+        
+        if (allocationsError) {
+          console.error('Error fetching allocations:', allocationsError);
+        } else {
+          setAllocations(allocationsData || []);
+        }
         
         if (resourcesData) {
           // For each resource, fetch their skills
@@ -243,6 +259,9 @@ const ResourceHub = () => {
     setNewResource({ ...newResource, skills: updatedSkills });
   };
 
+  // Get all unique skills from resources
+  const allSkills = [...new Set(resources.flatMap(resource => resource.skills || []))];
+
   // Render loading skeleton
   const renderSkeleton = () => (
     <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -405,22 +424,26 @@ const ResourceHub = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-2">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 gap-2">
             <TabsTrigger value="team" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               <span>Team</span>
             </TabsTrigger>
+            <TabsTrigger value="utilization" className="flex items-center gap-2">
+              <BarChart className="h-4 w-4" />
+              <span>Utilization</span>
+            </TabsTrigger>
+            <TabsTrigger value="allocation" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              <span>Allocation</span>
+            </TabsTrigger>
+            <TabsTrigger value="skills" className="flex items-center gap-2">
+              <Briefcase className="h-4 w-4" />
+              <span>Skills</span>
+            </TabsTrigger>
             <TabsTrigger value="schedule" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               <span>Schedule</span>
-            </TabsTrigger>
-            <TabsTrigger value="utilization" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              <span>Utilization</span>
-            </TabsTrigger>
-            <TabsTrigger value="projects" className="flex items-center gap-2">
-              <Briefcase className="h-4 w-4" />
-              <span>Projects</span>
             </TabsTrigger>
           </TabsList>
 
@@ -511,6 +534,27 @@ const ResourceHub = () => {
             )}
           </TabsContent>
 
+          <TabsContent value="utilization">
+            <UtilizationDashboard resources={resources} allocations={allocations} />
+          </TabsContent>
+
+          <TabsContent value="allocation">
+            <ResourceAllocation />
+          </TabsContent>
+
+          <TabsContent value="skills">
+            <SkillMatrix 
+              resources={resources} 
+              skills={allSkills}
+              onSkillUpdate={() => {
+                // Refresh resources when skills are updated
+                if (session) {
+                  // Re-fetch resources to get updated skills
+                }
+              }}
+            />
+          </TabsContent>
+
           <TabsContent value="schedule">
             <Card>
               <CardHeader>
@@ -519,30 +563,6 @@ const ResourceHub = () => {
               </CardHeader>
               <CardContent>
                 <p>Schedule content will be implemented soon.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="utilization">
-            <Card>
-              <CardHeader>
-                <CardTitle>Resource Utilization</CardTitle>
-                <CardDescription>Track resource allocation and utilization rates</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Utilization content will be implemented soon.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="projects">
-            <Card>
-              <CardHeader>
-                <CardTitle>Project Allocations</CardTitle>
-                <CardDescription>Manage resource allocations across projects</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Project allocations content will be implemented soon.</p>
               </CardContent>
             </Card>
           </TabsContent>
