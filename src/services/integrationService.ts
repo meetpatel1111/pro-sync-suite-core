@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Task, TimeEntry, Project } from '@/utils/dbtypes';
+import { v4 as uuidv4 } from 'uuid';
 
 // Integration service to handle workflows between different apps
 export const integrationService = {
@@ -339,6 +340,7 @@ export const integrationService = {
       for (const rule of rules || []) {
         // Log automation event with correct field names that match the database schema
         await supabase.from('automation_events').insert({
+          id: uuidv4(),
           event_type: eventType,
           source_module: rule.source_module,
           target_module: rule.action_module,

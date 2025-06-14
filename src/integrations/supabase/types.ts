@@ -107,7 +107,7 @@ export type Database = {
         }
         Insert: {
           event_type?: string | null
-          id: string
+          id?: string
           payload?: Json | null
           processed_at?: string | null
           source_id?: string | null
