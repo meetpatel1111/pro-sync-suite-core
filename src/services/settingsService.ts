@@ -269,7 +269,7 @@ export const settingsService = {
       'theme': 'theme',
       'primaryColor': 'primary_color',
       'accentColor': 'accent_color',
-      'fontFamily': 'font_family',
+      'fontFamily': 'font_family', // Updated mapping
       'fontSize': 'font_selection',
       'sidebarLayout': 'sidebar_layout',
       'uiDensity': 'interface_spacing',

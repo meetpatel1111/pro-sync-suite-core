@@ -1943,6 +1943,7 @@ export type Database = {
           file_upload_alerts: boolean | null
           file_upload_restrictions: Json | null
           fiscal_year_start: string | null
+          font_family: string | null
           font_selection: string | null
           fontselection: string | null
           gdpr_compliance: boolean | null
@@ -2079,6 +2080,7 @@ export type Database = {
           file_upload_alerts?: boolean | null
           file_upload_restrictions?: Json | null
           fiscal_year_start?: string | null
+          font_family?: string | null
           font_selection?: string | null
           fontselection?: string | null
           gdpr_compliance?: boolean | null
@@ -2215,6 +2217,7 @@ export type Database = {
           file_upload_alerts?: boolean | null
           file_upload_restrictions?: Json | null
           fiscal_year_start?: string | null
+          font_family?: string | null
           font_selection?: string | null
           fontselection?: string | null
           gdpr_compliance?: boolean | null

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -8,6 +7,8 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Palette, Monitor, Type, Layout, Zap } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
+import { FontFamilySelector } from './FontFamilySelector';
+import { GoogleFontsService } from '@/services/googleFontsService';
 
 const THEMES = [
   { value: 'light', label: 'Light', description: 'Clean and bright interface' },
@@ -96,13 +97,22 @@ export const AppearanceSettingsSection = () => {
       document.documentElement.style.setProperty('--primary', hslColor);
     }
 
-    // Apply font family
+    // Apply font family - updated implementation
     if (settings.fontFamily) {
-      const selectedFont = FONT_FAMILIES.find(f => f.value === settings.fontFamily);
-      if (selectedFont) {
-        document.documentElement.style.setProperty('--font-family', selectedFont.family);
-        document.body.className = document.body.className.replace(/font-\w+/g, '') + ` font-${selectedFont.value}`;
-      }
+      const fontSlug = GoogleFontsService.getFontSlug(settings.fontFamily);
+      const fontClass = `font-${fontSlug}`;
+      
+      // Remove existing font classes
+      document.body.className = document.body.className.replace(/font-[\w-]+/g, '');
+      
+      // Add new font class
+      document.body.classList.add(fontClass);
+      
+      // Set CSS custom property
+      document.documentElement.style.setProperty('--font-family', `"${settings.fontFamily}", system-ui, -apple-system, sans-serif`);
+      
+      // Load the font if not already loaded
+      GoogleFontsService.loadFont(settings.fontFamily);
     }
 
     // Apply font size
@@ -241,35 +251,16 @@ export const AppearanceSettingsSection = () => {
 
           {/* Font Settings */}
           <div className="space-y-6">
-            {/* Font Family */}
+            {/* Font Family - Updated with new selector */}
             <div className="space-y-3">
               <Label className="text-base font-medium flex items-center gap-2">
                 <Type className="h-4 w-4" />
                 Font Family
               </Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {FONT_FAMILIES.map((font) => (
-                  <div
-                    key={font.value}
-                    className={`p-3 rounded-lg border-2 cursor-pointer transition-colors ${
-                      settings.fontFamily === font.value 
-                        ? 'border-primary bg-primary/5' 
-                        : 'border-muted hover:border-muted-foreground/50'
-                    }`}
-                    onClick={() => handleFontFamilyChange(font.value)}
-                  >
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="font-medium">{font.label}</span>
-                      {settings.fontFamily === font.value && (
-                        <Badge variant="secondary" className="ml-auto">Active</Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground" style={{ fontFamily: font.family }}>
-                      The quick brown fox jumps
-                    </p>
-                  </div>
-                ))}
-              </div>
+              <FontFamilySelector
+                value={settings.fontFamily || 'Inter'}
+                onValueChange={handleFontFamilyChange}
+              />
             </div>
 
             {/* Font Size */}
