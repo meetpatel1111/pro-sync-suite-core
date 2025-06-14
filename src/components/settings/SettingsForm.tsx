@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Globe, Clock } from 'lucide-react';
 import {
   GeneralSetting,
   AppearanceSetting,
@@ -25,6 +25,136 @@ import {
 } from '@/utils/dbtypes';
 import { settingsService } from '@/services/settingsService';
 import { useAuth } from '@/hooks/useAuth';
+
+// Comprehensive timezone list
+const TIMEZONES = [
+  { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+  { value: 'America/New_York', label: 'Eastern Time (ET)' },
+  { value: 'America/Chicago', label: 'Central Time (CT)' },
+  { value: 'America/Denver', label: 'Mountain Time (MT)' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
+  { value: 'America/Anchorage', label: 'Alaska Time (AKT)' },
+  { value: 'Pacific/Honolulu', label: 'Hawaii Time (HST)' },
+  { value: 'America/Toronto', label: 'Toronto, Canada' },
+  { value: 'America/Vancouver', label: 'Vancouver, Canada' },
+  { value: 'America/Mexico_City', label: 'Mexico City, Mexico' },
+  { value: 'America/Sao_Paulo', label: 'São Paulo, Brazil' },
+  { value: 'America/Buenos_Aires', label: 'Buenos Aires, Argentina' },
+  { value: 'Europe/London', label: 'London, UK' },
+  { value: 'Europe/Paris', label: 'Paris, France' },
+  { value: 'Europe/Berlin', label: 'Berlin, Germany' },
+  { value: 'Europe/Rome', label: 'Rome, Italy' },
+  { value: 'Europe/Madrid', label: 'Madrid, Spain' },
+  { value: 'Europe/Amsterdam', label: 'Amsterdam, Netherlands' },
+  { value: 'Europe/Brussels', label: 'Brussels, Belgium' },
+  { value: 'Europe/Zurich', label: 'Zurich, Switzerland' },
+  { value: 'Europe/Vienna', label: 'Vienna, Austria' },
+  { value: 'Europe/Warsaw', label: 'Warsaw, Poland' },
+  { value: 'Europe/Prague', label: 'Prague, Czech Republic' },
+  { value: 'Europe/Budapest', label: 'Budapest, Hungary' },
+  { value: 'Europe/Bucharest', label: 'Bucharest, Romania' },
+  { value: 'Europe/Sofia', label: 'Sofia, Bulgaria' },
+  { value: 'Europe/Athens', label: 'Athens, Greece' },
+  { value: 'Europe/Istanbul', label: 'Istanbul, Turkey' },
+  { value: 'Europe/Moscow', label: 'Moscow, Russia' },
+  { value: 'Europe/Kiev', label: 'Kiev, Ukraine' },
+  { value: 'Europe/Stockholm', label: 'Stockholm, Sweden' },
+  { value: 'Europe/Oslo', label: 'Oslo, Norway' },
+  { value: 'Europe/Copenhagen', label: 'Copenhagen, Denmark' },
+  { value: 'Europe/Helsinki', label: 'Helsinki, Finland' },
+  { value: 'Africa/Cairo', label: 'Cairo, Egypt' },
+  { value: 'Africa/Lagos', label: 'Lagos, Nigeria' },
+  { value: 'Africa/Johannesburg', label: 'Johannesburg, South Africa' },
+  { value: 'Africa/Nairobi', label: 'Nairobi, Kenya' },
+  { value: 'Asia/Dubai', label: 'Dubai, UAE' },
+  { value: 'Asia/Riyadh', label: 'Riyadh, Saudi Arabia' },
+  { value: 'Asia/Tehran', label: 'Tehran, Iran' },
+  { value: 'Asia/Karachi', label: 'Karachi, Pakistan' },
+  { value: 'Asia/Mumbai', label: 'Mumbai, India' },
+  { value: 'Asia/Delhi', label: 'Delhi, India' },
+  { value: 'Asia/Kolkata', label: 'Kolkata, India' },
+  { value: 'Asia/Dhaka', label: 'Dhaka, Bangladesh' },
+  { value: 'Asia/Bangkok', label: 'Bangkok, Thailand' },
+  { value: 'Asia/Jakarta', label: 'Jakarta, Indonesia' },
+  { value: 'Asia/Singapore', label: 'Singapore' },
+  { value: 'Asia/Kuala_Lumpur', label: 'Kuala Lumpur, Malaysia' },
+  { value: 'Asia/Manila', label: 'Manila, Philippines' },
+  { value: 'Asia/Hong_Kong', label: 'Hong Kong' },
+  { value: 'Asia/Shanghai', label: 'Shanghai, China' },
+  { value: 'Asia/Beijing', label: 'Beijing, China' },
+  { value: 'Asia/Tokyo', label: 'Tokyo, Japan' },
+  { value: 'Asia/Seoul', label: 'Seoul, South Korea' },
+  { value: 'Australia/Sydney', label: 'Sydney, Australia' },
+  { value: 'Australia/Melbourne', label: 'Melbourne, Australia' },
+  { value: 'Australia/Brisbane', label: 'Brisbane, Australia' },
+  { value: 'Australia/Perth', label: 'Perth, Australia' },
+  { value: 'Pacific/Auckland', label: 'Auckland, New Zealand' },
+  { value: 'Pacific/Fiji', label: 'Fiji' },
+];
+
+// Comprehensive language list
+const LANGUAGES = [
+  { value: 'en', label: 'English', flag: '🇺🇸' },
+  { value: 'es', label: 'Español (Spanish)', flag: '🇪🇸' },
+  { value: 'fr', label: 'Français (French)', flag: '🇫🇷' },
+  { value: 'de', label: 'Deutsch (German)', flag: '🇩🇪' },
+  { value: 'it', label: 'Italiano (Italian)', flag: '🇮🇹' },
+  { value: 'pt', label: 'Português (Portuguese)', flag: '🇵🇹' },
+  { value: 'ru', label: 'Русский (Russian)', flag: '🇷🇺' },
+  { value: 'zh', label: '中文 (Chinese)', flag: '🇨🇳' },
+  { value: 'ja', label: '日本語 (Japanese)', flag: '🇯🇵' },
+  { value: 'ko', label: '한국어 (Korean)', flag: '🇰🇷' },
+  { value: 'ar', label: 'العربية (Arabic)', flag: '🇸🇦' },
+  { value: 'hi', label: 'हिन्दी (Hindi)', flag: '🇮🇳' },
+  { value: 'th', label: 'ไทย (Thai)', flag: '🇹🇭' },
+  { value: 'vi', label: 'Tiếng Việt (Vietnamese)', flag: '🇻🇳' },
+  { value: 'id', label: 'Bahasa Indonesia (Indonesian)', flag: '🇮🇩' },
+  { value: 'ms', label: 'Bahasa Melayu (Malay)', flag: '🇲🇾' },
+  { value: 'tl', label: 'Filipino (Tagalog)', flag: '🇵🇭' },
+  { value: 'nl', label: 'Nederlands (Dutch)', flag: '🇳🇱' },
+  { value: 'sv', label: 'Svenska (Swedish)', flag: '🇸🇪' },
+  { value: 'no', label: 'Norsk (Norwegian)', flag: '🇳🇴' },
+  { value: 'da', label: 'Dansk (Danish)', flag: '🇩🇰' },
+  { value: 'fi', label: 'Suomi (Finnish)', flag: '🇫🇮' },
+  { value: 'pl', label: 'Polski (Polish)', flag: '🇵🇱' },
+  { value: 'cs', label: 'Čeština (Czech)', flag: '🇨🇿' },
+  { value: 'sk', label: 'Slovenčina (Slovak)', flag: '🇸🇰' },
+  { value: 'hu', label: 'Magyar (Hungarian)', flag: '🇭🇺' },
+  { value: 'ro', label: 'Română (Romanian)', flag: '🇷🇴' },
+  { value: 'bg', label: 'Български (Bulgarian)', flag: '🇧🇬' },
+  { value: 'hr', label: 'Hrvatski (Croatian)', flag: '🇭🇷' },
+  { value: 'sr', label: 'Српски (Serbian)', flag: '🇷🇸' },
+  { value: 'sl', label: 'Slovenščina (Slovenian)', flag: '🇸🇮' },
+  { value: 'et', label: 'Eesti (Estonian)', flag: '🇪🇪' },
+  { value: 'lv', label: 'Latviešu (Latvian)', flag: '🇱🇻' },
+  { value: 'lt', label: 'Lietuvių (Lithuanian)', flag: '🇱🇹' },
+  { value: 'el', label: 'Ελληνικά (Greek)', flag: '🇬🇷' },
+  { value: 'tr', label: 'Türkçe (Turkish)', flag: '🇹🇷' },
+  { value: 'he', label: 'עברית (Hebrew)', flag: '🇮🇱' },
+  { value: 'fa', label: 'فارسی (Persian)', flag: '🇮🇷' },
+  { value: 'ur', label: 'اردو (Urdu)', flag: '🇵🇰' },
+  { value: 'bn', label: 'বাংলা (Bengali)', flag: '🇧🇩' },
+  { value: 'ta', label: 'தமிழ் (Tamil)', flag: '🇮🇳' },
+  { value: 'te', label: 'తెలుగు (Telugu)', flag: '🇮🇳' },
+  { value: 'mr', label: 'मराठी (Marathi)', flag: '🇮🇳' },
+  { value: 'gu', label: 'ગુજરાતી (Gujarati)', flag: '🇮🇳' },
+  { value: 'kn', label: 'ಕನ್ನಡ (Kannada)', flag: '🇮🇳' },
+  { value: 'ml', label: 'മലയാളം (Malayalam)', flag: '🇮🇳' },
+  { value: 'pa', label: 'ਪੰਜਾਬੀ (Punjabi)', flag: '🇮🇳' },
+  { value: 'ne', label: 'नेपाली (Nepali)', flag: '🇳🇵' },
+  { value: 'si', label: 'සිංහල (Sinhala)', flag: '🇱🇰' },
+  { value: 'my', label: 'မြန်မာ (Myanmar)', flag: '🇲🇲' },
+  { value: 'km', label: 'ខ្មែរ (Khmer)', flag: '🇰🇭' },
+  { value: 'lo', label: 'ລາວ (Lao)', flag: '🇱🇦' },
+  { value: 'ka', label: 'ქართული (Georgian)', flag: '🇬🇪' },
+  { value: 'hy', label: 'Հայերեն (Armenian)', flag: '🇦🇲' },
+  { value: 'az', label: 'Azərbaycan (Azerbaijani)', flag: '🇦🇿' },
+  { value: 'kk', label: 'Қазақша (Kazakh)', flag: '🇰🇿' },
+  { value: 'ky', label: 'Кыргызча (Kyrgyz)', flag: '🇰🇬' },
+  { value: 'uz', label: 'O\'zbek (Uzbek)', flag: '🇺🇿' },
+  { value: 'tj', label: 'Тоҷикӣ (Tajik)', flag: '🇹🇯' },
+  { value: 'mn', label: 'Монгол (Mongolian)', flag: '🇲🇳' },
+];
 
 interface SettingsSectionProps {
   title: string;
@@ -82,8 +212,8 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({ defaultTab = 'genera
     resolver: zodResolver(settingsSchema),
     defaultValues: {
       organization_name: '',
-      timezone: '',
-      language: '',
+      timezone: 'UTC',
+      language: 'en',
       theme: 'light',
       primary_color: '#2563eb',
       animations_enabled: true,
@@ -120,8 +250,8 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({ defaultTab = 'genera
         // Update form with loaded values
         const formData: SettingsFormData = {
           organization_name: general.data?.find(s => s.setting_key === 'organization_name')?.setting_value || '',
-          timezone: general.data?.find(s => s.setting_key === 'timezone')?.setting_value || '',
-          language: general.data?.find(s => s.setting_key === 'language')?.setting_value || '',
+          timezone: general.data?.find(s => s.setting_key === 'timezone')?.setting_value || 'UTC',
+          language: general.data?.find(s => s.setting_key === 'language')?.setting_value || 'en',
           theme: appearance?.theme || 'light',
           primary_color: appearance?.primary_color || '#2563eb',
           animations_enabled: appearance?.animations_enabled ?? true,
@@ -236,7 +366,10 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({ defaultTab = 'genera
         <TabsContent value="general">
           <Card>
             <CardHeader>
-              <CardTitle>General Settings</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5" />
+                General Settings
+              </CardTitle>
               <CardDescription>
                 Configure basic settings for your ProSync Suite experience
               </CardDescription>
@@ -253,10 +386,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({ defaultTab = 'genera
                         <FormControl>
                           <Input
                             {...field}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              handleGeneralSettingChange('organization_name', e.target.value);
-                            }}
+                            placeholder="Enter your organization name"
                           />
                         </FormControl>
                       </FormItem>
@@ -267,32 +397,36 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({ defaultTab = 'genera
 
               <Separator />
 
-              <SettingsSection title="Localization">
+              <SettingsSection title="Localization & Regional Settings">
                 <div className="grid gap-4">
                   <FormField
                     control={form.control}
                     name="timezone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Timezone</FormLabel>
-                        <Select
-                          value={field.value}
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            handleGeneralSettingChange('timezone', value);
-                          }}
-                        >
+                        <FormLabel className="flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          Timezone
+                        </FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select timezone" />
+                              <SelectValue placeholder="Select your timezone" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="UTC">UTC</SelectItem>
-                            <SelectItem value="America/New_York">Eastern Time</SelectItem>
-                            <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
+                            <ScrollArea className="h-[200px]">
+                              {TIMEZONES.map((timezone) => (
+                                <SelectItem key={timezone.value} value={timezone.value}>
+                                  {timezone.label}
+                                </SelectItem>
+                              ))}
+                            </ScrollArea>
                           </SelectContent>
                         </Select>
+                        <FormDescription>
+                          All timestamps will be displayed in your selected timezone
+                        </FormDescription>
                       </FormItem>
                     )}
                   />
@@ -302,25 +436,32 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({ defaultTab = 'genera
                     name="language"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Language</FormLabel>
-                        <Select
-                          value={field.value}
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            handleGeneralSettingChange('language', value);
-                          }}
-                        >
+                        <FormLabel className="flex items-center gap-2">
+                          <Globe className="h-4 w-4" />
+                          Language
+                        </FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select language" />
+                              <SelectValue placeholder="Select your language" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="en">English</SelectItem>
-                            <SelectItem value="es">Spanish</SelectItem>
-                            <SelectItem value="fr">French</SelectItem>
+                            <ScrollArea className="h-[200px]">
+                              {LANGUAGES.map((language) => (
+                                <SelectItem key={language.value} value={language.value}>
+                                  <div className="flex items-center gap-2">
+                                    <span>{language.flag}</span>
+                                    <span>{language.label}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </ScrollArea>
                           </SelectContent>
                         </Select>
+                        <FormDescription>
+                          Interface language for the application
+                        </FormDescription>
                       </FormItem>
                     )}
                   />
