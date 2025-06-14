@@ -172,6 +172,9 @@ export interface Contact {
   email?: string;
   phone?: string;
   company?: string;
+  role?: string;
+  emergency_contact?: boolean;
+  notes?: string;
   user_id: string;
   created_at: string;
 }
@@ -221,6 +224,8 @@ export interface Resource {
   allocation?: number;
   current_project_id?: string;
   availability?: string;
+  avatar_url?: string;
+  skills?: string[];
   schedule?: Record<string, any>;
   allocation_history?: Record<string, any>;
   utilization_history?: Record<string, any>;

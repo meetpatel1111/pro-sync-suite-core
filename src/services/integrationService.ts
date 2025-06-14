@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Task, TimeEntry, Project } from '@/utils/dbtypes';
 
@@ -84,14 +83,18 @@ export const integrationService = {
       }
       
       // Create time entry
+      const currentDate = new Date().toISOString();
       const { data, error } = await supabase
         .from('time_entries')
         .insert({
           description: description || `Work on task: ${taskData.title}`,
           project: projectId,
           time_spent: minutes,
-          date: new Date().toISOString(),
-          user_id: userData.user.id
+          date: currentDate,
+          user_id: userData.user.id,
+          manual: true,
+          task_id: taskId,
+          start_time: currentDate
         })
         .select()
         .single();
@@ -106,7 +109,10 @@ export const integrationService = {
           time_spent: data.time_spent,
           date: data.date,
           user_id: data.user_id,
-          manual: data.manual
+          manual: data.manual,
+          task_id: data.task_id,
+          start_time: data.start_time,
+          created_at: data.created_at || currentDate
         };
       }
       
