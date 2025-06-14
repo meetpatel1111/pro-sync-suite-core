@@ -6,11 +6,17 @@ import AppLayout from '@/components/AppLayout';
 import DashboardStats from '@/components/DashboardStats';
 import LoadingFallback from '@/components/ui/loading-fallback';
 import { useAuth } from '@/hooks/useAuth';
+import { useIntegration } from '@/context/IntegrationContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const { createTaskFromNote, logTimeForTask } = useIntegration();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
@@ -27,6 +33,79 @@ const Index = () => {
       setIsLoading(false);
     }
   }, [loading]);
+
+  const handleQuickAction = async (actionType: string) => {
+    if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please sign in to use quick actions.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      switch (actionType) {
+        case 'newTask':
+          const task = await createTaskFromNote(
+            'Quick Task',
+            'Task created from dashboard quick action',
+            undefined,
+            undefined,
+            user.id
+          );
+          if (task) {
+            toast({
+              title: 'Task Created',
+              description: 'New task has been created successfully.',
+            });
+            navigate('/taskmaster');
+          } else {
+            throw new Error('Failed to create task');
+          }
+          break;
+
+        case 'startTimer':
+          // Navigate to time tracking with auto-start intent
+          navigate('/timetrackpro?autostart=true');
+          toast({
+            title: 'Timer Ready',
+            description: 'Navigate to TimeTrackPro to start tracking.',
+          });
+          break;
+
+        case 'newProject':
+          navigate('/planboard');
+          toast({
+            title: 'Project Planning',
+            description: 'Navigate to PlanBoard to create a new project.',
+          });
+          break;
+
+        case 'teamChat':
+          navigate('/collabspace');
+          toast({
+            title: 'Team Collaboration',
+            description: 'Navigate to CollabSpace for team communication.',
+          });
+          break;
+
+        default:
+          toast({
+            title: 'Action Not Available',
+            description: 'This quick action is not yet implemented.',
+            variant: 'destructive',
+          });
+      }
+    } catch (error) {
+      console.error('Quick action error:', error);
+      toast({
+        title: 'Action Failed',
+        description: 'Failed to perform the requested action.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const appList = [
     {
@@ -162,20 +241,32 @@ const Index = () => {
           <CardContent className="p-0">
             <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <button className="flex items-center gap-3 p-4 rounded-lg border border-dashed border-gray-300 hover:border-primary hover:bg-primary/5 transition-colors">
-                <Calendar className="h-5 w-5 text-primary" />
+              <button 
+                onClick={() => handleQuickAction('newTask')}
+                className="flex items-center gap-3 p-4 rounded-lg border border-dashed border-gray-300 hover:border-primary hover:bg-primary/5 transition-colors group"
+              >
+                <Calendar className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
                 <span className="text-sm font-medium">New Task</span>
               </button>
-              <button className="flex items-center gap-3 p-4 rounded-lg border border-dashed border-gray-300 hover:border-primary hover:bg-primary/5 transition-colors">
-                <Clock className="h-5 w-5 text-primary" />
+              <button 
+                onClick={() => handleQuickAction('startTimer')}
+                className="flex items-center gap-3 p-4 rounded-lg border border-dashed border-gray-300 hover:border-primary hover:bg-primary/5 transition-colors group"
+              >
+                <Clock className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
                 <span className="text-sm font-medium">Start Timer</span>
               </button>
-              <button className="flex items-center gap-3 p-4 rounded-lg border border-dashed border-gray-300 hover:border-primary hover:bg-primary/5 transition-colors">
-                <FileText className="h-5 w-5 text-primary" />
+              <button 
+                onClick={() => handleQuickAction('newProject')}
+                className="flex items-center gap-3 p-4 rounded-lg border border-dashed border-gray-300 hover:border-primary hover:bg-primary/5 transition-colors group"
+              >
+                <FileText className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
                 <span className="text-sm font-medium">New Project</span>
               </button>
-              <button className="flex items-center gap-3 p-4 rounded-lg border border-dashed border-gray-300 hover:border-primary hover:bg-primary/5 transition-colors">
-                <MessageSquare className="h-5 w-5 text-primary" />
+              <button 
+                onClick={() => handleQuickAction('teamChat')}
+                className="flex items-center gap-3 p-4 rounded-lg border border-dashed border-gray-300 hover:border-primary hover:bg-primary/5 transition-colors group"
+              >
+                <MessageSquare className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
                 <span className="text-sm font-medium">Team Chat</span>
               </button>
             </div>
