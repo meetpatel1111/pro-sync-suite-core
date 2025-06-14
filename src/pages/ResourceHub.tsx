@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Filter, Plus, Users, Calendar, Clock, Briefcase, Search, BarChart } from 'lucide-react';
+import { ArrowLeft, Filter, Plus, Users, Calendar, Clock, Briefcase, Search, BarChart, Target } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -22,6 +22,9 @@ import UtilizationDashboard from '@/components/resourcehub/UtilizationDashboard'
 import SkillMatrix from '@/components/resourcehub/SkillMatrix';
 import ResourceSchedule from '@/components/resourcehub/ResourceSchedule';
 import EditableResourceCard from '@/components/resourcehub/EditableResourceCard';
+import SkillManagement from '@/components/resourcehub/SkillManagement';
+import ResourceDetailView from '@/components/resourcehub/ResourceDetailView';
+import CapacityPlanning from '@/components/resourcehub/CapacityPlanning';
 
 interface ResourceFormState {
   name: string;
@@ -41,6 +44,8 @@ const ResourceHub = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAddResourceOpen, setIsAddResourceOpen] = useState(false);
   const [session, setSession] = useState<any>(null);
+  const [selectedResource, setSelectedResource] = useState<any>(null);
+  const [isResourceDetailOpen, setIsResourceDetailOpen] = useState(false);
   
   // New resource form state
   const [newResource, setNewResource] = useState<ResourceFormState>({
@@ -315,6 +320,12 @@ const ResourceHub = () => {
     );
   };
 
+  // Add new function to handle resource detail view
+  const handleResourceDetail = (resource: Resource) => {
+    setSelectedResource(resource);
+    setIsResourceDetailOpen(true);
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -441,7 +452,7 @@ const ResourceHub = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 gap-2">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 gap-2">
             <TabsTrigger value="team" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               <span>Team</span>
@@ -461,6 +472,10 @@ const ResourceHub = () => {
             <TabsTrigger value="schedule" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               <span>Schedule</span>
+            </TabsTrigger>
+            <TabsTrigger value="capacity" className="flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              <span>Capacity</span>
             </TabsTrigger>
           </TabsList>
 
@@ -482,12 +497,13 @@ const ResourceHub = () => {
                 filteredResources.length > 0 ? (
                   <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                     {filteredResources.map((resource) => (
-                      <EditableResourceCard
-                        key={resource.id}
-                        resource={resource}
-                        onUpdate={handleResourceUpdate}
-                        onDelete={handleResourceDelete}
-                      />
+                      <div key={resource.id} onClick={() => handleResourceDetail(resource)} className="cursor-pointer">
+                        <EditableResourceCard
+                          resource={resource}
+                          onUpdate={handleResourceUpdate}
+                          onDelete={handleResourceDelete}
+                        />
+                      </div>
                     ))}
                   </div>
                 ) : (
@@ -519,10 +535,13 @@ const ResourceHub = () => {
             <ResourceAllocation />
           </TabsContent>
 
+          <TabsContent value="schedule">
+            <ResourceSchedule resources={resources} />
+          </TabsContent>
+
           <TabsContent value="skills">
-            <SkillMatrix 
+            <SkillManagement 
               resources={resources} 
-              skills={allSkills}
               onSkillUpdate={() => {
                 // Refresh resources when skills are updated
                 if (session) {
@@ -532,10 +551,20 @@ const ResourceHub = () => {
             />
           </TabsContent>
 
-          <TabsContent value="schedule">
-            <ResourceSchedule resources={resources} />
+          <TabsContent value="capacity">
+            <CapacityPlanning resources={resources} allocations={allocations} />
           </TabsContent>
         </Tabs>
+
+        {/* Resource Detail Modal */}
+        {selectedResource && (
+          <ResourceDetailView
+            resource={selectedResource}
+            isOpen={isResourceDetailOpen}
+            onClose={() => setIsResourceDetailOpen(false)}
+            onUpdate={handleResourceUpdate}
+          />
+        )}
       </div>
     </AppLayout>
   );
