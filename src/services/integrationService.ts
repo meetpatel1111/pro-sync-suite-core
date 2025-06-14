@@ -337,7 +337,7 @@ export const integrationService = {
 
       // Process each rule
       for (const rule of rules || []) {
-        // Log automation event with correct field names
+        // Log automation event with correct field names that match the database schema
         await supabase.from('automation_events').insert({
           event_type: eventType,
           source_module: rule.source_module,
