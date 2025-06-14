@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Calendar, Clock, MessageSquare, FileText, BarChart2, 
          PieChart, Users, Shield, FileCog, FolderLock, Sparkles, TrendingUp } from 'lucide-react';
@@ -36,7 +35,7 @@ const Index = () => {
       icon: Calendar,
       bgColor: 'bg-gradient-to-br from-blue-600 to-blue-700',
       route: '/taskmaster',
-      featureCount: 100,
+      featureCount: 0,
       category: 'Productivity'
     },
     {
@@ -45,7 +44,7 @@ const Index = () => {
       icon: Clock,
       bgColor: 'bg-gradient-to-br from-indigo-600 to-indigo-700',
       route: '/timetrackpro',
-      featureCount: 100,
+      featureCount: 0,
       category: 'Productivity'
     },
     {
@@ -54,7 +53,7 @@ const Index = () => {
       icon: MessageSquare,
       bgColor: 'bg-gradient-to-br from-emerald-600 to-emerald-700',
       route: '/collabspace',
-      featureCount: 100,
+      featureCount: 0,
       category: 'Communication'
     },
     {
@@ -63,7 +62,7 @@ const Index = () => {
       icon: FileText,
       bgColor: 'bg-gradient-to-br from-amber-600 to-amber-700',
       route: '/planboard',
-      featureCount: 100,
+      featureCount: 0,
       category: 'Planning'
     },
     {
@@ -72,7 +71,7 @@ const Index = () => {
       icon: FolderLock,
       bgColor: 'bg-gradient-to-br from-purple-600 to-purple-700',
       route: '/filevault',
-      featureCount: 100,
+      featureCount: 0,
       category: 'Storage'
     },
     {
@@ -81,7 +80,7 @@ const Index = () => {
       icon: PieChart,
       bgColor: 'bg-gradient-to-br from-green-600 to-green-700',
       route: '/budgetbuddy',
-      featureCount: 100,
+      featureCount: 0,
       category: 'Finance'
     },
     {
@@ -90,7 +89,7 @@ const Index = () => {
       icon: BarChart2,
       bgColor: 'bg-gradient-to-br from-red-600 to-red-700',
       route: '/insightiq',
-      featureCount: 100,
+      featureCount: 0,
       category: 'Analytics'
     },
     {
@@ -99,7 +98,7 @@ const Index = () => {
       icon: Users,
       bgColor: 'bg-gradient-to-br from-sky-600 to-sky-700',
       route: '/clientconnect',
-      featureCount: 100,
+      featureCount: 0,
       category: 'Communication'
     },
     {
@@ -108,7 +107,7 @@ const Index = () => {
       icon: Shield,
       bgColor: 'bg-gradient-to-br from-rose-600 to-rose-700',
       route: '/riskradar',
-      featureCount: 100,
+      featureCount: 0,
       category: 'Management'
     },
     {
@@ -117,7 +116,7 @@ const Index = () => {
       icon: Users,
       bgColor: 'bg-gradient-to-br from-orange-600 to-orange-700',
       route: '/resourcehub',
-      featureCount: 100,
+      featureCount: 0,
       category: 'Management'
     }
   ];

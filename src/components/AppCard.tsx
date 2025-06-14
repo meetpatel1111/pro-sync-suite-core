@@ -50,9 +50,15 @@ const AppCard: React.FC<AppCardProps> = ({
             
             {/* Footer */}
             <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
-              <span className="text-xs text-muted-foreground">
-                {featureCount}+ features
-              </span>
+              {featureCount > 0 ? (
+                <span className="text-xs text-muted-foreground">
+                  {featureCount}+ features
+                </span>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  Ready to use
+                </span>
+              )}
               <div className="w-2 h-2 rounded-full bg-green-500"></div>
             </div>
           </div>
