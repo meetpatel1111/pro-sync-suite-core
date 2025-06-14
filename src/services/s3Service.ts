@@ -8,32 +8,32 @@ const S3_BASE_URL = `https://${BUCKET_NAME}.s3.${REGION}.amazonaws.com`;
 export const s3Service = {
   async uploadFile(file: File, filePath: string): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('Uploading file to public S3 bucket:', filePath);
+      console.log('Uploading file to storage:', filePath);
       
-      // Try S3 first
-      const url = `${S3_BASE_URL}/${filePath}`;
-      
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': file.type,
-          'x-amz-meta-original-name': file.name,
-          'x-amz-meta-uploaded-at': new Date().toISOString(),
-        },
-        body: file,
-      });
-
-      if (!response.ok) {
-        throw new Error(`S3 upload failed: ${response.status} ${response.statusText}`);
-      }
-
-      console.log('File uploaded successfully to S3:', filePath);
-      return { success: true };
-    } catch (s3Error) {
-      console.warn('S3 upload failed, trying Supabase storage:', s3Error);
-      
-      // Fallback to Supabase storage
+      // Try S3 first if available
       try {
+        const url = `${S3_BASE_URL}/${filePath}`;
+        
+        const response = await fetch(url, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': file.type,
+            'x-amz-meta-original-name': file.name,
+            'x-amz-meta-uploaded-at': new Date().toISOString(),
+          },
+          body: file,
+        });
+
+        if (response.ok) {
+          console.log('File uploaded successfully to S3:', filePath);
+          return { success: true };
+        }
+        
+        throw new Error(`S3 upload failed: ${response.status}`);
+      } catch (s3Error) {
+        console.warn('S3 upload failed, using Supabase storage:', s3Error);
+        
+        // Fallback to Supabase storage
         const { data, error } = await supabase.storage
           .from('pro-sync-suit-core')
           .upload(filePath, file, {
@@ -47,33 +47,33 @@ export const s3Service = {
 
         console.log('File uploaded successfully to Supabase storage:', filePath);
         return { success: true };
-      } catch (supabaseError) {
-        console.error('Both S3 and Supabase upload failed:', supabaseError);
-        return { 
-          success: false, 
-          error: `Upload failed: ${supabaseError instanceof Error ? supabaseError.message : 'Unknown error'}` 
-        };
       }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Upload failed' 
+      };
     }
   },
 
   async downloadFile(filePath: string): Promise<{ data?: Blob; error?: string }> {
     try {
       // Try S3 first
-      const url = `${S3_BASE_URL}/${filePath}`;
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`S3 download failed: ${response.status} ${response.statusText}`);
-      }
-      
-      const blob = await response.blob();
-      return { data: blob };
-    } catch (s3Error) {
-      console.warn('S3 download failed, trying Supabase storage:', s3Error);
-      
-      // Fallback to Supabase storage
       try {
+        const url = `${S3_BASE_URL}/${filePath}`;
+        const response = await fetch(url);
+        
+        if (response.ok) {
+          const blob = await response.blob();
+          return { data: blob };
+        }
+        
+        throw new Error(`S3 download failed: ${response.status}`);
+      } catch (s3Error) {
+        console.warn('S3 download failed, trying Supabase storage:', s3Error);
+        
+        // Fallback to Supabase storage
         const { data, error } = await supabase.storage
           .from('pro-sync-suit-core')
           .download(filePath);
@@ -83,34 +83,34 @@ export const s3Service = {
         }
 
         return { data };
-      } catch (supabaseError) {
-        console.error('Both S3 and Supabase download failed:', supabaseError);
-        return { 
-          error: `Download failed: ${supabaseError instanceof Error ? supabaseError.message : 'Unknown error'}` 
-        };
       }
+    } catch (error) {
+      console.error('Download failed:', error);
+      return { 
+        error: error instanceof Error ? error.message : 'Download failed' 
+      };
     }
   },
 
   async deleteFile(filePath: string): Promise<{ success: boolean; error?: string }> {
     try {
       // Try S3 first
-      const url = `${S3_BASE_URL}/${filePath}`;
-      const response = await fetch(url, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error(`S3 delete failed: ${response.status} ${response.statusText}`);
-      }
-
-      console.log('File deleted successfully from S3:', filePath);
-      return { success: true };
-    } catch (s3Error) {
-      console.warn('S3 delete failed, trying Supabase storage:', s3Error);
-      
-      // Fallback to Supabase storage
       try {
+        const url = `${S3_BASE_URL}/${filePath}`;
+        const response = await fetch(url, {
+          method: 'DELETE',
+        });
+
+        if (response.ok) {
+          console.log('File deleted successfully from S3:', filePath);
+          return { success: true };
+        }
+        
+        throw new Error(`S3 delete failed: ${response.status}`);
+      } catch (s3Error) {
+        console.warn('S3 delete failed, trying Supabase storage:', s3Error);
+        
+        // Fallback to Supabase storage
         const { error } = await supabase.storage
           .from('pro-sync-suit-core')
           .remove([filePath]);
@@ -121,40 +121,40 @@ export const s3Service = {
 
         console.log('File deleted successfully from Supabase storage:', filePath);
         return { success: true };
-      } catch (supabaseError) {
-        console.error('Both S3 and Supabase delete failed:', supabaseError);
-        return { 
-          success: false, 
-          error: `Delete failed: ${supabaseError instanceof Error ? supabaseError.message : 'Unknown error'}` 
-        };
       }
+    } catch (error) {
+      console.error('Delete failed:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Delete failed' 
+      };
     }
   },
 
   async getFileInfo(filePath: string): Promise<{ size?: number; lastModified?: Date; error?: string }> {
     try {
       // Try S3 first
-      const url = `${S3_BASE_URL}/${filePath}`;
-      const response = await fetch(url, {
-        method: 'HEAD',
-      });
-
-      if (!response.ok) {
-        throw new Error(`S3 head request failed: ${response.status} ${response.statusText}`);
-      }
-      
-      const contentLength = response.headers.get('content-length');
-      const lastModified = response.headers.get('last-modified');
-      
-      return {
-        size: contentLength ? parseInt(contentLength) : undefined,
-        lastModified: lastModified ? new Date(lastModified) : undefined,
-      };
-    } catch (s3Error) {
-      console.warn('S3 file info failed, trying Supabase storage:', s3Error);
-      
-      // Fallback to Supabase storage
       try {
+        const url = `${S3_BASE_URL}/${filePath}`;
+        const response = await fetch(url, {
+          method: 'HEAD',
+        });
+
+        if (response.ok) {
+          const contentLength = response.headers.get('content-length');
+          const lastModified = response.headers.get('last-modified');
+          
+          return {
+            size: contentLength ? parseInt(contentLength) : undefined,
+            lastModified: lastModified ? new Date(lastModified) : undefined,
+          };
+        }
+        
+        throw new Error(`S3 head request failed: ${response.status}`);
+      } catch (s3Error) {
+        console.warn('S3 file info failed, trying Supabase storage:', s3Error);
+        
+        // Fallback to Supabase storage - list files to get info
         const { data, error } = await supabase.storage
           .from('pro-sync-suit-core')
           .list('', {
@@ -171,33 +171,33 @@ export const s3Service = {
           size: fileInfo?.metadata?.size,
           lastModified: fileInfo?.updated_at ? new Date(fileInfo.updated_at) : undefined,
         };
-      } catch (supabaseError) {
-        console.error('Both S3 and Supabase file info failed:', supabaseError);
-        return { 
-          error: `Failed to get file info: ${supabaseError instanceof Error ? supabaseError.message : 'Unknown error'}` 
-        };
       }
+    } catch (error) {
+      console.error('Get file info failed:', error);
+      return { 
+        error: error instanceof Error ? error.message : 'Failed to get file info' 
+      };
     }
   },
 
   async getSignedDownloadUrl(filePath: string, expiresIn: number = 3600): Promise<{ url?: string; error?: string }> {
     try {
-      // For S3 public bucket, return direct URL
-      const url = `${S3_BASE_URL}/${filePath}`;
-      
-      // Test if the file exists in S3
-      const response = await fetch(url, { method: 'HEAD' });
-      
-      if (response.ok) {
-        return { url };
-      }
-      
-      throw new Error('File not found in S3');
-    } catch (s3Error) {
-      console.warn('S3 signed URL failed, trying Supabase storage:', s3Error);
-      
-      // Fallback to Supabase storage
+      // Try S3 first (for public bucket, return direct URL)
       try {
+        const url = `${S3_BASE_URL}/${filePath}`;
+        
+        // Test if the file exists in S3
+        const response = await fetch(url, { method: 'HEAD' });
+        
+        if (response.ok) {
+          return { url };
+        }
+        
+        throw new Error('File not found in S3');
+      } catch (s3Error) {
+        console.warn('S3 signed URL failed, trying Supabase storage:', s3Error);
+        
+        // Fallback to Supabase storage
         const { data, error } = await supabase.storage
           .from('pro-sync-suit-core')
           .createSignedUrl(filePath, expiresIn);
@@ -207,12 +207,12 @@ export const s3Service = {
         }
 
         return { url: data.signedUrl };
-      } catch (supabaseError) {
-        console.error('Both S3 and Supabase signed URL failed:', supabaseError);
-        return { 
-          error: `Failed to generate signed URL: ${supabaseError instanceof Error ? supabaseError.message : 'Unknown error'}` 
-        };
       }
+    } catch (error) {
+      console.error('Get signed URL failed:', error);
+      return { 
+        error: error instanceof Error ? error.message : 'Failed to generate signed URL' 
+      };
     }
   }
 };
