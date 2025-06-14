@@ -1,4 +1,3 @@
-
 interface GoogleFont {
   family: string;
   variants: string[];
@@ -21,6 +20,32 @@ export class GoogleFontsService {
     }
 
     try {
+      // Common system fonts (these don't need to be loaded from Google Fonts)
+      const systemFonts: GoogleFont[] = [
+        { family: 'Arial', variants: ['400', '700'], subsets: ['latin'], category: 'sans-serif' },
+        { family: 'Helvetica', variants: ['400', '700'], subsets: ['latin'], category: 'sans-serif' },
+        { family: 'Times New Roman', variants: ['400', '700'], subsets: ['latin'], category: 'serif' },
+        { family: 'Times', variants: ['400', '700'], subsets: ['latin'], category: 'serif' },
+        { family: 'Calibri', variants: ['400', '700'], subsets: ['latin'], category: 'sans-serif' },
+        { family: 'Georgia', variants: ['400', '700'], subsets: ['latin'], category: 'serif' },
+        { family: 'Verdana', variants: ['400', '700'], subsets: ['latin'], category: 'sans-serif' },
+        { family: 'Tahoma', variants: ['400', '700'], subsets: ['latin'], category: 'sans-serif' },
+        { family: 'Trebuchet MS', variants: ['400', '700'], subsets: ['latin'], category: 'sans-serif' },
+        { family: 'Courier New', variants: ['400', '700'], subsets: ['latin'], category: 'monospace' },
+        { family: 'Impact', variants: ['400'], subsets: ['latin'], category: 'display' },
+        { family: 'Comic Sans MS', variants: ['400', '700'], subsets: ['latin'], category: 'handwriting' },
+        { family: 'Palatino', variants: ['400', '700'], subsets: ['latin'], category: 'serif' },
+        { family: 'Garamond', variants: ['400', '700'], subsets: ['latin'], category: 'serif' },
+        { family: 'Book Antiqua', variants: ['400', '700'], subsets: ['latin'], category: 'serif' },
+        { family: 'Century Gothic', variants: ['400', '700'], subsets: ['latin'], category: 'sans-serif' },
+        { family: 'Lucida Console', variants: ['400'], subsets: ['latin'], category: 'monospace' },
+        { family: 'Monaco', variants: ['400'], subsets: ['latin'], category: 'monospace' },
+        { family: 'Consolas', variants: ['400', '700'], subsets: ['latin'], category: 'monospace' },
+        { family: 'Segoe UI', variants: ['400', '600', '700'], subsets: ['latin'], category: 'sans-serif' },
+        { family: '-apple-system', variants: ['400', '500', '600', '700'], subsets: ['latin'], category: 'sans-serif' },
+        { family: 'system-ui', variants: ['400', '500', '600', '700'], subsets: ['latin'], category: 'sans-serif' },
+      ];
+
       // Comprehensive list of 200+ popular Google Fonts across categories
       const popularFonts: GoogleFont[] = [
         // Sans-serif fonts (most popular)
@@ -130,7 +155,6 @@ export class GoogleFontsService {
         { family: 'Red Hat Mono', variants: ['400', '500'], subsets: ['latin'], category: 'monospace' },
         { family: 'Azeret Mono', variants: ['400', '500'], subsets: ['latin'], category: 'monospace' },
         { family: 'DM Mono', variants: ['400', '500'], subsets: ['latin'], category: 'monospace' },
-        { family: 'JetBrains Mono', variants: ['400', '500'], subsets: ['latin'], category: 'monospace' },
         { family: 'Martian Mono', variants: ['400', '500'], subsets: ['latin'], category: 'monospace' },
 
         // Display fonts
@@ -157,7 +181,6 @@ export class GoogleFontsService {
         { family: 'Black Ops One', variants: ['400'], subsets: ['latin'], category: 'display' },
         { family: 'Orbitron', variants: ['400', '700'], subsets: ['latin'], category: 'display' },
         { family: 'Bai Jamjuree', variants: ['400', '500'], subsets: ['latin'], category: 'display' },
-        { family: 'Righteous', variants: ['400'], subsets: ['latin'], category: 'display' },
         { family: 'Chakra Petch', variants: ['400', '600'], subsets: ['latin'], category: 'display' },
 
         // Handwriting fonts
@@ -204,8 +227,11 @@ export class GoogleFontsService {
         { family: 'Cascadia Code', variants: ['400', '500'], subsets: ['latin'], category: 'monospace' },
       ];
 
-      this.cachedFonts = popularFonts;
-      return popularFonts;
+      // Combine system fonts first, then Google Fonts
+      const allFonts = [...systemFonts, ...popularFonts];
+      
+      this.cachedFonts = allFonts;
+      return allFonts;
     } catch (error) {
       console.error('Error fetching Google Fonts:', error);
       return this.getDefaultFonts();
@@ -214,6 +240,9 @@ export class GoogleFontsService {
 
   static getDefaultFonts(): GoogleFont[] {
     return [
+      { family: 'Arial', variants: ['400', '700'], subsets: ['latin'], category: 'sans-serif' },
+      { family: 'Times New Roman', variants: ['400', '700'], subsets: ['latin'], category: 'serif' },
+      { family: 'Calibri', variants: ['400', '700'], subsets: ['latin'], category: 'sans-serif' },
       { family: 'Inter', variants: ['400', '500', '600', '700'], subsets: ['latin'], category: 'sans-serif' },
       { family: 'Roboto', variants: ['400', '500', '700'], subsets: ['latin'], category: 'sans-serif' },
       { family: 'Open Sans', variants: ['400', '600', '700'], subsets: ['latin'], category: 'sans-serif' },
@@ -221,6 +250,16 @@ export class GoogleFontsService {
   }
 
   static loadFont(fontFamily: string, variants: string[] = ['400']): void {
+    // Don't try to load system fonts from Google Fonts
+    const systemFonts = ['Arial', 'Helvetica', 'Times New Roman', 'Times', 'Calibri', 'Georgia', 
+                         'Verdana', 'Tahoma', 'Trebuchet MS', 'Courier New', 'Impact', 'Comic Sans MS',
+                         'Palatino', 'Garamond', 'Book Antiqua', 'Century Gothic', 'Lucida Console',
+                         'Monaco', 'Consolas', 'Segoe UI', '-apple-system', 'system-ui'];
+    
+    if (systemFonts.includes(fontFamily)) {
+      return; // System fonts don't need to be loaded
+    }
+
     const fontName = fontFamily.replace(/\s+/g, '+');
     const variantString = variants.join(',');
     const link = document.createElement('link');

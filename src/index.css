@@ -93,7 +93,31 @@
     --sidebar-ring: 217 91% 60%;
   }
 
-  /* Font family classes - Extended for all Google Fonts */
+  /* System Font Family classes */
+  .font-arial { font-family: 'Arial', sans-serif; }
+  .font-helvetica { font-family: 'Helvetica', sans-serif; }
+  .font-times-new-roman { font-family: 'Times New Roman', serif; }
+  .font-times { font-family: 'Times', serif; }
+  .font-calibri { font-family: 'Calibri', sans-serif; }
+  .font-georgia { font-family: 'Georgia', serif; }
+  .font-verdana { font-family: 'Verdana', sans-serif; }
+  .font-tahoma { font-family: 'Tahoma', sans-serif; }
+  .font-trebuchet-ms { font-family: 'Trebuchet MS', sans-serif; }
+  .font-courier-new { font-family: 'Courier New', monospace; }
+  .font-impact { font-family: 'Impact', sans-serif; }
+  .font-comic-sans-ms { font-family: 'Comic Sans MS', cursive; }
+  .font-palatino { font-family: 'Palatino', serif; }
+  .font-garamond { font-family: 'Garamond', serif; }
+  .font-book-antiqua { font-family: 'Book Antiqua', serif; }
+  .font-century-gothic { font-family: 'Century Gothic', sans-serif; }
+  .font-lucida-console { font-family: 'Lucida Console', monospace; }
+  .font-monaco { font-family: 'Monaco', monospace; }
+  .font-consolas { font-family: 'Consolas', monospace; }
+  .font-segoe-ui { font-family: 'Segoe UI', sans-serif; }
+  .font--apple-system { font-family: '-apple-system', sans-serif; }
+  .font-system-ui { font-family: 'system-ui', sans-serif; }
+
+  /* Google Font family classes */
   .font-inter { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
   .font-roboto { font-family: 'Roboto', system-ui, -apple-system, sans-serif; }
   .font-open-sans { font-family: 'Open Sans', system-ui, -apple-system, sans-serif; }
