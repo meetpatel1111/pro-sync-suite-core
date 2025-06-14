@@ -5,7 +5,6 @@ import { Task } from '@/utils/dbtypes';
 import { Clock, AlertCircle, FileBox, User } from 'lucide-react';
 import { format } from 'date-fns';
 import TaskIntegrations from './TaskIntegrations';
-import IntegrationNotifications from '../IntegrationNotifications';
 import { Badge } from '@/components/ui/badge';
 
 interface TaskDetailWithIntegrationsProps {
@@ -21,16 +20,13 @@ const TaskDetailWithIntegrations: React.FC<TaskDetailWithIntegrationsProps> = ({
 }) => {
   if (!task) {
     return (
-      <div className="space-y-4">
-        <IntegrationNotifications />
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-8 text-muted-foreground">
-              <p>Select a task to view details</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-8 text-muted-foreground">
+            <p>Select a task to view details</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -57,8 +53,6 @@ const TaskDetailWithIntegrations: React.FC<TaskDetailWithIntegrationsProps> = ({
 
   return (
     <div className="space-y-4">
-      <IntegrationNotifications />
-      
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">

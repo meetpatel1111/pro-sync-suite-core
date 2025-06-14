@@ -3,7 +3,6 @@ import { ReactNode } from 'react';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
-import IntegrationNotifications from './IntegrationNotifications';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -16,7 +15,6 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       <div className="flex flex-1">
         <Sidebar />
         <main className="flex-1 p-6 lg:px-8">
-          <IntegrationNotifications />
           {children}
         </main>
       </div>
