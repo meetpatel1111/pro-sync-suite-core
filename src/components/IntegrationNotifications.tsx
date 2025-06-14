@@ -1,210 +1,248 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bell, Check, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { Bell, X, RefreshCw, CheckCircle, AlertTriangle, Clock, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIntegration } from '@/context/IntegrationContext';
-import { format } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Skeleton } from '@/components/ui/skeleton';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuthContext } from '@/context/AuthContext';
+import { formatDistanceToNow } from 'date-fns';
+
+interface AutomationEvent {
+  id: string;
+  event_type: string;
+  source_module: string;
+  target_module: string;
+  status: string;
+  triggered_at: string;
+  processed_at?: string;
+  payload: any;
+}
 
 const IntegrationNotifications = () => {
-  const { dueTasks, isLoadingIntegrations, refreshIntegrations } = useIntegration();
-  const { user } = useAuthContext();
-  const [isOpen, setIsOpen] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(0);
-  const [processingTasks, setProcessingTasks] = useState<string[]>([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { 
+    dueTasks, 
+    isLoadingIntegrations, 
+    refreshIntegrations, 
+    integrationActions, 
+    triggerAutomation 
+  } = useIntegration();
   const { toast } = useToast();
-  
+  const { user } = useAuthContext();
+  const [automationEvents, setAutomationEvents] = useState<AutomationEvent[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+
+  // Fetch automation events
   useEffect(() => {
-    // Calculate total number of due tasks
-    const count = dueTasks.reduce((sum, item) => sum + item.tasksDue.length, 0);
-    setNotificationCount(count);
-  }, [dueTasks]);
-  
-  const handleCompleteTask = async (taskId: string) => {
-    try {
-      // Add task to processing state to show loading
-      setProcessingTasks(prev => [...prev, taskId]);
-      
-      // Update task status to 'done' in the database
-      const { error } = await supabase
-        .from('tasks')
-        .update({ status: 'done' })
-        .eq('id', taskId);
-        
-      if (error) throw error;
-      
-      // Show success toast
-      toast({
-        title: 'Task completed',
-        description: 'The task has been marked as complete',
-      });
-      
-      // Refresh integrations to update the task list
-      if (refreshIntegrations) {
-        await refreshIntegrations();
+    if (!user) return;
+
+    const fetchAutomationEvents = async () => {
+      setIsLoadingEvents(true);
+      try {
+        const { data, error } = await supabase
+          .from('automation_events')
+          .select('*')
+          .order('triggered_at', { ascending: false })
+          .limit(10);
+
+        if (error) throw error;
+        setAutomationEvents(data || []);
+      } catch (error) {
+        console.error('Error fetching automation events:', error);
+      } finally {
+        setIsLoadingEvents(false);
       }
-    } catch (error) {
-      console.error('Error completing task:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to complete task',
-        variant: 'destructive',
-      });
-    } finally {
-      // Remove task from processing state
-      setProcessingTasks(prev => prev.filter(id => id !== taskId));
+    };
+
+    fetchAutomationEvents();
+
+    // Subscribe to real-time automation events
+    const channel = supabase
+      .channel('automation_events_changes')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'automation_events'
+      }, (payload) => {
+        console.log('New automation event:', payload);
+        setAutomationEvents(prev => [payload.new as AutomationEvent, ...prev.slice(0, 9)]);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  const getEventIcon = (eventType: string, status: string) => {
+    if (status === 'processed') return <CheckCircle className="h-4 w-4 text-green-500" />;
+    if (status === 'failed') return <AlertTriangle className="h-4 w-4 text-red-500" />;
+    if (status === 'triggered') return <Zap className="h-4 w-4 text-blue-500" />;
+    return <Clock className="h-4 w-4 text-gray-500" />;
+  };
+
+  const getEventStatusColor = (status: string) => {
+    switch (status) {
+      case 'processed': return 'default';
+      case 'failed': return 'destructive';
+      case 'triggered': return 'secondary';
+      default: return 'outline';
     }
   };
 
-  const handleManualRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await refreshIntegrations();
-    } catch (error) {
-      console.error('Error refreshing notifications:', error);
+  const handleTestAutomation = async () => {
+    const testData = {
+      id: 'test-' + Date.now(),
+      title: 'Test Automation Task',
+      description: 'This task was created via automation test',
+      project_id: null
+    };
+
+    const success = await triggerAutomation('test_event', testData);
+    
+    if (success) {
       toast({
-        title: 'Error',
-        description: 'Failed to refresh notifications',
-        variant: 'destructive',
+        title: 'Automation Triggered',
+        description: 'Test automation has been triggered successfully',
       });
-    } finally {
-      setIsRefreshing(false);
+    } else {
+      toast({
+        title: 'Automation Failed',
+        description: 'Failed to trigger test automation',
+        variant: 'destructive'
+      });
     }
   };
 
-  if (!user) {
-    return null; // Don't show the component at all if user is not logged in
-  }
-  
-  if (isLoadingIntegrations) {
-    return (
-      <Card className="mb-4">
-        <CardHeader className="py-2">
-          <CardTitle className="text-sm font-medium">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Bell className="mr-2 h-4 w-4" />
-                <Skeleton className="h-4 w-40" />
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                disabled
-                className="h-7 w-7 p-0"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-20 w-full mb-2" />
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  if (notificationCount === 0) {
-    return (
-      <Card className="mb-4">
-        <CardHeader className="py-2">
-          <CardTitle className="text-sm font-medium">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Bell className="mr-2 h-4 w-4" />
-                <span>No tasks due soon</span>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleManualRefresh}
-                disabled={isRefreshing}
-                className="h-7 w-7 p-0"
-              >
-                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </Button>
-            </div>
-          </CardTitle>
-        </CardHeader>
-      </Card>
-    );
-  }
-  
+  const totalDueTasks = dueTasks.reduce((sum, item) => sum + item.tasksDue.length, 0);
+
   return (
-    <Card className="mb-4">
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CardHeader className="py-2">
-          <CollapsibleTrigger asChild>
-            <CardTitle className="text-sm font-medium cursor-pointer">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Bell className="mr-2 h-4 w-4" />
-                  <span>{notificationCount} Integration {notificationCount === 1 ? 'Alert' : 'Alerts'}</span>
-                </div>
-                <div className="flex items-center">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleManualRefresh();
-                    }}
-                    disabled={isRefreshing}
-                    className="h-7 w-7 p-0 mr-2"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  </Button>
-                  {isOpen ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </div>
-              </div>
-            </CardTitle>
-          </CollapsibleTrigger>
-        </CardHeader>
-        <CollapsibleContent>
-          <CardContent>
-            <div className="space-y-2">
-              {dueTasks.map((item, index) => (
-                <div key={index} className="border rounded-md p-2">
-                  <div className="font-medium mb-1">{item.project.name}</div>
-                  <ul className="space-y-1">
-                    {item.tasksDue.map((task) => (
-                      <li key={task.id} className="flex items-center justify-between text-sm">
-                        <div>
-                          <span className="font-medium">{task.title}</span>
-                          {task.due_date && (
-                            <span className="text-muted-foreground ml-2">
-                              Due: {format(new Date(task.due_date), 'MMM d')}
-                            </span>
-                          )}
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-6 w-6 p-0"
-                          onClick={() => handleCompleteTask(task.id)}
-                          disabled={processingTasks.includes(task.id)}
-                        >
-                          <Check className={`h-4 w-4 ${processingTasks.includes(task.id) ? 'opacity-50' : ''}`} />
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+    <Card className="w-full">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            <CardTitle className="text-lg">Integration Hub</CardTitle>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={refreshIntegrations}
+            disabled={isLoadingIntegrations}
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoadingIntegrations ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
+        <CardDescription>
+          Real-time integration notifications and automation status
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Due Tasks Section */}
+        {totalDueTasks > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium">Tasks Due Soon</h4>
+              <Badge variant="secondary">{totalDueTasks}</Badge>
             </div>
-          </CardContent>
-        </CollapsibleContent>
-      </Collapsible>
+            <ScrollArea className="h-24">
+              <div className="space-y-1">
+                {dueTasks.map((item) => 
+                  item.tasksDue.map((task) => (
+                    <div key={task.id} className="text-xs p-2 bg-muted rounded flex justify-between items-center">
+                      <span className="truncate">{task.title}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {item.project.name}
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        )}
+
+        {/* Integration Actions */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium">Active Integrations</h4>
+            <Badge variant="secondary">{integrationActions.length}</Badge>
+          </div>
+          {integrationActions.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No active integrations configured</p>
+          ) : (
+            <ScrollArea className="h-20">
+              <div className="space-y-1">
+                {integrationActions.map((action) => (
+                  <div key={action.id} className="text-xs p-2 bg-muted rounded flex justify-between items-center">
+                    <span>{action.source_app} → {action.target_app}</span>
+                    <Badge variant={action.enabled ? "default" : "secondary"} className="text-xs">
+                      {action.action_type}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </div>
+
+        {/* Recent Automation Events */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium">Recent Automation Events</h4>
+            <Button variant="ghost" size="sm" onClick={handleTestAutomation}>
+              <Zap className="h-3 w-3 mr-1" />
+              Test
+            </Button>
+          </div>
+          {isLoadingEvents ? (
+            <p className="text-xs text-muted-foreground">Loading events...</p>
+          ) : automationEvents.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No automation events yet</p>
+          ) : (
+            <ScrollArea className="h-32">
+              <div className="space-y-2">
+                {automationEvents.map((event) => (
+                  <div key={event.id} className="text-xs p-2 bg-muted rounded">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-1">
+                        {getEventIcon(event.event_type, event.status)}
+                        <span className="font-medium">{event.event_type}</span>
+                      </div>
+                      <Badge variant={getEventStatusColor(event.status)} className="text-xs">
+                        {event.status}
+                      </Badge>
+                    </div>
+                    <div className="text-muted-foreground">
+                      {event.source_module} → {event.target_module}
+                    </div>
+                    <div className="text-muted-foreground">
+                      {formatDistanceToNow(new Date(event.triggered_at), { addSuffix: true })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </div>
+
+        {/* Quick Actions */}
+        <div className="pt-2 border-t">
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="flex-1">
+              <Zap className="h-3 w-3 mr-1" />
+              Configure
+            </Button>
+            <Button variant="outline" size="sm" className="flex-1">
+              <Bell className="h-3 w-3 mr-1" />
+              Settings
+            </Button>
+          </div>
+        </div>
+      </CardContent>
     </Card>
   );
 };

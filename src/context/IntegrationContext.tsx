@@ -14,35 +14,66 @@ interface IntegrationContextType {
   dueTasks: { project: Project, tasksDue: Task[] }[];
   isLoadingIntegrations: boolean;
   refreshIntegrations: () => Promise<void>;
+  liveProjectData: any;
+  subscribeToProject: (projectId: string) => void;
+  unsubscribeFromProject: () => void;
+  integrationActions: any[];
+  triggerAutomation: (eventType: string, sourceData: any) => Promise<boolean>;
 }
 
 const IntegrationContext = createContext<IntegrationContextType | undefined>(undefined);
 
 export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
-  const { user } = useAuthContext(); // Get authentication state
+  const { user } = useAuthContext();
   const [dueTasks, setDueTasks] = useState<{ project: Project, tasksDue: Task[] }[]>([]);
   const [isLoadingIntegrations, setIsLoadingIntegrations] = useState(false);
-  const [initialized, setInitialized] = useState(false);
-  const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
-  const [checkAttempts, setCheckAttempts] = useState(0);
+  const [liveProjectData, setLiveProjectData] = useState<any>(null);
+  const [integrationActions, setIntegrationActions] = useState<any[]>([]);
+  const [projectChannel, setProjectChannel] = useState<any>(null);
 
+  // Real-time subscription to integration actions
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchIntegrationActions = async () => {
+      const actions = await integrationService.getUserIntegrationActions(user.id);
+      setIntegrationActions(actions);
+    };
+
+    fetchIntegrationActions();
+
+    // Subscribe to integration actions changes
+    const channel = supabase
+      .channel('integration_actions_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'integration_actions',
+        filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        console.log('Integration action change:', payload);
+        fetchIntegrationActions();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  // Real-time milestone checking
   const checkMilestones = async () => {
+    if (!user) {
+      setDueTasks([]);
+      return [];
+    }
+
     try {
       setIsLoadingIntegrations(true);
-      
-      // Only proceed if user is authenticated
-      if (!user) {
-        console.log("No authenticated user found, skipping milestone check");
-        setDueTasks([]);
-        setIsLoadingIntegrations(false);
-        return [];
-      }
-      
       const milestones = await integrationService.checkProjectMilestones();
       setDueTasks(milestones);
-      
-      // Notify about due tasks
+
       if (milestones.length > 0) {
         const totalTasks = milestones.reduce((sum, item) => sum + item.tasksDue.length, 0);
         toast({
@@ -51,97 +82,73 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
           duration: 5000,
         });
       }
-      
+
       return milestones;
     } catch (error) {
       console.error('Error checking milestones:', error);
-      // Provide feedback about the error
       toast({
         title: 'Error',
-        description: 'Failed to check project milestones. Please try again later.',
+        description: 'Failed to check project milestones.',
         variant: 'destructive',
-        duration: 5000,
       });
       return [];
     } finally {
       setIsLoadingIntegrations(false);
-      setInitialized(true);
-      // Reset attempt counter on successful completion (whether it found data or not)
-      setCheckAttempts(0);
     }
   };
 
-  // Check for due tasks when component mounts or when user auth state changes
+  // Subscribe to project data changes
+  const subscribeToProject = async (projectId: string) => {
+    if (projectChannel) {
+      supabase.removeChannel(projectChannel);
+    }
+
+    // Get initial project data
+    const projectData = await integrationService.getLiveProjectData(projectId);
+    setLiveProjectData(projectData);
+
+    // Subscribe to real-time changes
+    const channel = integrationService.subscribeToProjectChanges(projectId, (payload) => {
+      console.log('Project data changed:', payload);
+      // Refresh project data when changes occur
+      integrationService.getLiveProjectData(projectId).then(setLiveProjectData);
+    });
+
+    setProjectChannel(channel);
+  };
+
+  const unsubscribeFromProject = () => {
+    if (projectChannel) {
+      supabase.removeChannel(projectChannel);
+      setProjectChannel(null);
+    }
+    setLiveProjectData(null);
+  };
+
+  // Auto-check milestones periodically
   useEffect(() => {
-    const loadData = async () => {
-      // Only check if not initialized yet
-      if (!initialized) {
-        if (user) {
-          console.log("Checking milestones on mount, user is authenticated");
-          await checkMilestones();
-        } else if (checkAttempts < 3) {
-          // If no user but we haven't tried too many times, we'll wait and try again
-          console.log(`No user yet, will retry milestone check (attempt ${checkAttempts + 1})`);
-          setCheckAttempts(prev => prev + 1);
-          
-          // Set a timeout to retry
-          setTimeout(() => {
-            setInitialized(false); // Reset initialized to trigger useEffect again
-          }, 3000); // Wait 3 seconds before retrying
-        } else {
-          // If we've tried too many times, just give up and reset state
-          console.log("Maximum milestone check attempts reached, giving up");
-          setDueTasks([]);
-          setInitialized(true);
-          setIsLoadingIntegrations(false);
-        }
-      }
-    };
-    
-    loadData();
-    
-    // Set up interval to check periodically
-    const intervalId = setInterval(() => {
-      if (user) {
-        console.log("Checking milestones on interval");
-        checkMilestones();
-      }
-    }, 1000 * 60 * 60); // Check every hour
-    
-    return () => clearInterval(intervalId);
-  }, [user, initialized, checkAttempts]);
+    if (user) {
+      checkMilestones();
+      const interval = setInterval(checkMilestones, 5 * 60 * 1000); // Every 5 minutes
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   const refreshIntegrations = async () => {
-    // Prevent multiple refreshes in quick succession
-    const now = Date.now();
-    if (now - lastRefreshTime < 5000) { // 5 second cooldown
-      console.log("Refresh throttled, try again in a few seconds");
-      toast({
-        title: 'Please wait',
-        description: 'Refresh is on cooldown. Please try again in a few seconds.',
-        duration: 3000,
-      });
-      return;
-    }
-    
-    setLastRefreshTime(now);
-    console.log("Manually refreshing integrations");
-    
+    await checkMilestones();
     if (user) {
-      await checkMilestones();
-      toast({
-        title: 'Refreshed',
-        description: 'Integration data has been refreshed',
-        duration: 3000,
-      });
-    } else {
-      toast({
-        title: 'Not logged in',
-        description: 'Please log in to refresh integration data',
-        variant: 'destructive',
-        duration: 3000,
-      });
+      const actions = await integrationService.getUserIntegrationActions(user.id);
+      setIntegrationActions(actions);
     }
+    toast({
+      title: 'Refreshed',
+      description: 'Integration data has been refreshed',
+      duration: 3000,
+    });
+  };
+
+  const triggerAutomation = async (eventType: string, sourceData: any) => {
+    return await integrationService.triggerAutomation(eventType, sourceData);
   };
 
   const value: IntegrationContextType = {
@@ -151,7 +158,12 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
     linkDocumentToTask: integrationService.linkDocumentToTask,
     dueTasks,
     isLoadingIntegrations,
-    refreshIntegrations
+    refreshIntegrations,
+    liveProjectData,
+    subscribeToProject,
+    unsubscribeFromProject,
+    integrationActions,
+    triggerAutomation
   };
 
   return (

@@ -111,8 +111,8 @@ export const integrationService = {
           user_id: data.user_id,
           manual: data.manual,
           task_id: data.task_id,
-          start_time: data.date, // Use date as start_time for interface compatibility
-          created_at: data.date // Use date as created_at for interface compatibility
+          start_time: data.date,
+          created_at: data.date
         };
       }
       
@@ -129,7 +129,7 @@ export const integrationService = {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return [];
       
-      // Get all projects
+      // Get all projects for the current user
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
         .select('*')
@@ -142,16 +142,16 @@ export const integrationService = {
       const projects = projectsData as Project[];
       const result: { project: Project, tasksDue: Task[] }[] = [];
       
-      // For each project, check for tasks due soon
+      // For each project, check for tasks due soon (within 7 days)
+      const sevenDaysFromNow = new Date();
+      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+      
       for (const project of projects) {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
         const { data: tasksData, error: tasksError } = await supabase
           .from('tasks')
           .select('*')
           .eq('project_id', project.id)
-          .lt('due_date', tomorrow.toISOString())
+          .lte('due_date', sevenDaysFromNow.toISOString())
           .neq('status', 'done');
           
         if (tasksError) {
@@ -164,8 +164,8 @@ export const integrationService = {
             id: task.id,
             title: task.title,
             description: task.description || '',
-            status: task.status as 'todo' | 'inProgress' | 'review' | 'done',
-            priority: task.priority as 'low' | 'medium' | 'high',
+            status: task.status,
+            priority: task.priority,
             due_date: task.due_date,
             assignee: task.assigned_to?.[0] || undefined,
             project: task.project_id,
@@ -197,7 +197,6 @@ export const integrationService = {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return false;
 
-      // In a real implementation, we'd insert into the files table
       const { error } = await supabase
         .from('files')
         .insert({
@@ -246,6 +245,134 @@ export const integrationService = {
       return true;
     } catch (error) {
       console.error('Error creating integration action:', error);
+      return false;
+    }
+  },
+
+  // Real-time method to get live project data
+  async getLiveProjectData(projectId: string) {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return null;
+
+      // Get project with tasks, time entries, and expenses
+      const [projectResponse, tasksResponse, timeEntriesResponse, expensesResponse] = await Promise.all([
+        supabase.from('projects').select('*').eq('id', projectId).eq('user_id', userData.user.id).single(),
+        supabase.from('tasks').select('*').eq('project_id', projectId),
+        supabase.from('time_entries').select('*').eq('project_id', projectId).eq('user_id', userData.user.id),
+        supabase.from('expenses').select('*').eq('project_id', projectId).eq('user_id', userData.user.id)
+      ]);
+
+      if (projectResponse.error) throw projectResponse.error;
+
+      return {
+        project: projectResponse.data,
+        tasks: tasksResponse.data || [],
+        timeEntries: timeEntriesResponse.data || [],
+        expenses: expensesResponse.data || []
+      };
+    } catch (error) {
+      console.error('Error getting live project data:', error);
+      return null;
+    }
+  },
+
+  // Real-time method to subscribe to project changes
+  subscribeToProjectChanges(projectId: string, callback: (data: any) => void) {
+    const channel = supabase
+      .channel(`project_${projectId}_changes`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tasks',
+        filter: `project_id=eq.${projectId}`
+      }, callback)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'time_entries',
+        filter: `project_id=eq.${projectId}`
+      }, callback)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'expenses',
+        filter: `project_id=eq.${projectId}`
+      }, callback)
+      .subscribe();
+
+    return channel;
+  },
+
+  // Real-time method to get integration actions for a user
+  async getUserIntegrationActions(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('integration_actions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('enabled', true);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting user integration actions:', error);
+      return [];
+    }
+  },
+
+  // Real-time method to trigger automation based on events
+  async triggerAutomation(eventType: string, sourceData: any) {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return false;
+
+      // Get applicable automation rules
+      const { data: rules, error } = await supabase
+        .from('automation_rules')
+        .select('*')
+        .eq('trigger_event', eventType)
+        .eq('enabled', true);
+
+      if (error) throw error;
+
+      // Process each rule
+      for (const rule of rules || []) {
+        // Log automation event
+        await supabase.from('automation_events').insert({
+          event_type: eventType,
+          source_module: rule.source_module,
+          target_module: rule.action_module,
+          source_id: sourceData.id,
+          payload: sourceData,
+          status: 'triggered'
+        });
+
+        // Execute the automation based on action type
+        switch (rule.action_type) {
+          case 'create_task':
+            await this.createTaskFromNote(
+              sourceData.title || 'Automated Task',
+              sourceData.description || 'Task created automatically',
+              sourceData.project_id
+            );
+            break;
+          case 'log_time':
+            if (sourceData.task_id && sourceData.duration) {
+              await this.logTimeForTask(
+                sourceData.task_id,
+                sourceData.duration,
+                'Time logged automatically'
+              );
+            }
+            break;
+          // Add more automation actions as needed
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error triggering automation:', error);
       return false;
     }
   }
