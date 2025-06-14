@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -123,21 +122,50 @@ export const fileVaultService = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      console.log('Starting file upload for:', file.name, 'Size:', file.size);
+
       // Create file path: user_id/folder_id?/filename
       const fileExt = file.name.split('.').pop();
       const fileName = metadata.name || file.name;
       const sanitizedName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
       const timestamp = Date.now();
-      const filePath = metadata.folder_id 
-        ? `${user.id}/${metadata.folder_id}/${timestamp}_${sanitizedName}`
-        : `${user.id}/${timestamp}_${sanitizedName}`;
+      
+      // Simple file path structure
+      const filePath = `${user.id}/${timestamp}_${sanitizedName}`;
+
+      console.log('Uploading to path:', filePath);
+
+      // First, let's try to create the bucket if it doesn't exist
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const filesBucket = buckets?.find(bucket => bucket.name === 'files');
+      
+      if (!filesBucket) {
+        console.log('Files bucket not found, attempting to create...');
+        const { error: bucketError } = await supabase.storage.createBucket('files', {
+          public: false,
+          fileSizeLimit: 52428800, // 50MB
+        });
+        
+        if (bucketError) {
+          console.error('Error creating bucket:', bucketError);
+          throw new Error('Storage bucket setup failed');
+        }
+      }
 
       // Upload to Supabase storage
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('files')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('File uploaded successfully:', uploadData);
 
       // Save metadata to database
       const fileData = {
@@ -158,13 +186,22 @@ export const fileVaultService = {
         version: 1
       };
 
+      console.log('Saving file metadata:', fileData);
+
       const { data, error: dbError } = await supabase
         .from('files')
         .insert(fileData)
         .select()
         .single();
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('Database error:', dbError);
+        // Clean up uploaded file if database insert fails
+        await supabase.storage.from('files').remove([filePath]);
+        throw dbError;
+      }
+
+      console.log('File metadata saved successfully:', data);
 
       // Log activity
       await this.logActivity('upload', 'file', data.id, { fileName: fileName });
