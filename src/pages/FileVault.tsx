@@ -16,7 +16,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { fileVaultService, FileItem, Folder } from '@/services/fileVaultService';
+import { fileVaultService, FileItem, Folder as FolderType } from '@/services/fileVaultService';
 import FileGrid from '@/components/filevault/FileGrid';
 import FileList from '@/components/filevault/FileList';
 import UploadDialog from '@/components/filevault/UploadDialog';
@@ -30,7 +30,7 @@ const FileVault = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [files, setFiles] = useState<FileItem[]>([]);
-  const [folders, setFolders] = useState<Folder[]>([]);
+  const [folders, setFolders] = useState<FolderType[]>([]);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
