@@ -23,10 +23,10 @@ export const integrationService = {
           description,
           status: 'todo',
           priority: 'medium',
-          project: projectId,
+          project_id: projectId,
           due_date: dueDate,
-          assignee: assigneeId,
-          user_id: userData.user.id
+          assigned_to: assigneeId ? [assigneeId] : null,
+          created_by: userData.user.id
         })
         .select()
         .single();
@@ -41,10 +41,10 @@ export const integrationService = {
           status: data.status as 'todo' | 'inProgress' | 'review' | 'done',
           priority: data.priority as 'low' | 'medium' | 'high',
           due_date: data.due_date,
-          assignee: data.assignee,
-          project: data.project,
+          assignee: data.assigned_to?.[0] || undefined,
+          project: data.project_id,
           created_at: data.created_at,
-          user_id: data.user_id
+          user_id: data.created_by
         };
       }
       
@@ -76,7 +76,7 @@ export const integrationService = {
       
       if (!taskData) return null;
       
-      const projectId = taskData.project;
+      const projectId = taskData.project_id;
       
       if (!projectId) {
         console.error('Task has no associated project');
@@ -144,7 +144,7 @@ export const integrationService = {
         const { data: tasksData, error: tasksError } = await supabase
           .from('tasks')
           .select('*')
-          .eq('project', project.id)
+          .eq('project_id', project.id)
           .lt('due_date', tomorrow.toISOString())
           .neq('status', 'done');
           
@@ -161,10 +161,10 @@ export const integrationService = {
             status: task.status as 'todo' | 'inProgress' | 'review' | 'done',
             priority: task.priority as 'low' | 'medium' | 'high',
             due_date: task.due_date,
-            assignee: task.assignee,
-            project: task.project,
+            assignee: task.assigned_to?.[0] || undefined,
+            project: task.project_id,
             created_at: task.created_at,
-            user_id: task.user_id
+            user_id: task.created_by
           }));
           
           result.push({

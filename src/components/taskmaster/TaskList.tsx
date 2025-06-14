@@ -52,7 +52,7 @@ const TaskList = ({ tasks: initialTasks = [], onTaskUpdate, onTaskDelete }: Task
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
-        .eq('user_id', userData.user.id)
+        .eq('created_by', userData.user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -66,10 +66,10 @@ const TaskList = ({ tasks: initialTasks = [], onTaskUpdate, onTaskDelete }: Task
           status: task.status as 'todo' | 'inProgress' | 'review' | 'done',
           priority: task.priority as 'low' | 'medium' | 'high',
           due_date: task.due_date,
-          assignee: task.assignee,
-          project: task.project,
+          assignee: task.assigned_to?.[0] || undefined,
+          project: task.project_id,
           created_at: task.created_at,
-          user_id: task.user_id
+          user_id: task.created_by
         }));
         setTasks(mappedTasks);
       } else {
@@ -116,9 +116,9 @@ const TaskList = ({ tasks: initialTasks = [], onTaskUpdate, onTaskDelete }: Task
         status: newTask.status || "todo",
         priority: newTask.priority || "medium", 
         due_date: newTask.due_date || null,
-        assignee: newTask.assignee || null,
-        project: newTask.project || null,
-        user_id: userData.user.id
+        assigned_to: newTask.assignee ? [newTask.assignee] : null,
+        project_id: newTask.project || null,
+        created_by: userData.user.id
       };
 
       const { error } = await supabase
@@ -175,8 +175,8 @@ const TaskList = ({ tasks: initialTasks = [], onTaskUpdate, onTaskDelete }: Task
           status: updatedTask.status,
           priority: updatedTask.priority,
           due_date: updatedTask.due_date,
-          assignee: updatedTask.assignee,
-          project: updatedTask.project
+          assigned_to: updatedTask.assignee ? [updatedTask.assignee] : null,
+          project_id: updatedTask.project
         })
         .eq('id', updatedTask.id);
 

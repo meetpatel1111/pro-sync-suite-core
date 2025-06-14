@@ -133,10 +133,10 @@ const TaskBoard = () => {
             status: validateStatus(task.status),
             priority: validatePriority(task.priority),
             dueDate: task.due_date,
-            assignee: task.assignee,
-            project: task.project,
+            assignee: task.assigned_to?.[0] || undefined,
+            project: task.project_id,
             createdAt: task.created_at,
-            user_id: task.user_id
+            user_id: task.created_by
           }));
           
           setTasks(mappedTasks);
@@ -215,9 +215,9 @@ const TaskBoard = () => {
             status: taskData.status,
             priority: taskData.priority,
             due_date: taskData.dueDate,
-            assignee: taskData.assignee,
-            project: taskData.project,
-            user_id: session.user.id
+            assigned_to: taskData.assignee ? [taskData.assignee] : null,
+            project_id: taskData.project,
+            created_by: session.user.id
           })
           .select();
         
@@ -280,8 +280,8 @@ const TaskBoard = () => {
             status: editingTask.status,
             priority: editingTask.priority,
             due_date: editingTask.dueDate,
-            assignee: editingTask.assignee,
-            project: editingTask.project
+            assigned_to: editingTask.assignee ? [editingTask.assignee] : null,
+            project_id: editingTask.project
           })
           .eq('id', editingTask.id);
         

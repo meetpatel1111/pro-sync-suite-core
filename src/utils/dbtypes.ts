@@ -28,9 +28,13 @@ export interface Task {
   status: 'todo' | 'inProgress' | 'review' | 'done';
   priority: 'low' | 'medium' | 'high';
   due_date?: string;
+  assigned_to?: string[];
+  project_id?: string;
+  created_by?: string;
+  created_at: string;
+  // Legacy fields for backward compatibility
   assignee?: string;
   project?: string;
-  created_at: string;
   user_id?: string;
 }
 
@@ -159,6 +163,8 @@ export interface WidgetConfig {
   filters?: Record<string, unknown>;
   columns?: string[];
   settings?: Record<string, unknown>;
+  data_source?: string;
+  group_by?: string;
 }
 
 export interface Widget {

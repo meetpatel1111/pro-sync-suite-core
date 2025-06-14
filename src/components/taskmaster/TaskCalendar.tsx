@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -70,10 +71,10 @@ const TaskCalendar = () => {
             status: validateStatus(task.status),
             priority: validatePriority(task.priority),
             dueDate: task.due_date,
-            assignee: task.assignee,
-            project: task.project,
+            assignee: task.assigned_to?.[0] || undefined,
+            project: task.project_id,
             createdAt: task.created_at,
-            user_id: task.user_id
+            user_id: task.created_by
           }));
           
           setTasks(mappedTasks);
