@@ -21,6 +21,15 @@ const UI_DENSITIES = [
   { value: 'comfortable', label: 'Comfortable', description: 'More spacing, easier to read' },
 ];
 
+const FONT_FAMILIES = [
+  { value: 'inter', label: 'Inter', family: 'Inter, system-ui, -apple-system, sans-serif' },
+  { value: 'roboto', label: 'Roboto', family: 'Roboto, system-ui, -apple-system, sans-serif' },
+  { value: 'open-sans', label: 'Open Sans', family: 'Open Sans, system-ui, -apple-system, sans-serif' },
+  { value: 'lato', label: 'Lato', family: 'Lato, system-ui, -apple-system, sans-serif' },
+  { value: 'poppins', label: 'Poppins', family: 'Poppins, system-ui, -apple-system, sans-serif' },
+  { value: 'montserrat', label: 'Montserrat', family: 'Montserrat, system-ui, -apple-system, sans-serif' },
+];
+
 const FONT_SIZES = [
   { value: 'small', label: 'Small', size: '14px' },
   { value: 'medium', label: 'Medium', size: '16px' },
@@ -65,7 +74,7 @@ export const AppearanceSettingsSection = () => {
     setCustomColor(settings.primaryColor || '#2563eb');
   }, [settings.primaryColor]);
 
-  // Apply initial styles on component mount
+  // Apply settings immediately when they change
   useEffect(() => {
     // Apply theme
     if (settings.theme === 'dark') {
@@ -87,6 +96,15 @@ export const AppearanceSettingsSection = () => {
       document.documentElement.style.setProperty('--primary', hslColor);
     }
 
+    // Apply font family
+    if (settings.fontFamily) {
+      const selectedFont = FONT_FAMILIES.find(f => f.value === settings.fontFamily);
+      if (selectedFont) {
+        document.documentElement.style.setProperty('--font-family', selectedFont.family);
+        document.body.className = document.body.className.replace(/font-\w+/g, '') + ` font-${selectedFont.value}`;
+      }
+    }
+
     // Apply font size
     const fontSizeMap = {
       small: '14px',
@@ -94,23 +112,26 @@ export const AppearanceSettingsSection = () => {
       large: '18px'
     };
     if (settings.fontSize && fontSizeMap[settings.fontSize as keyof typeof fontSizeMap]) {
-      document.documentElement.style.setProperty('--base-font-size', fontSizeMap[settings.fontSize as keyof typeof fontSizeMap]);
-      document.documentElement.style.fontSize = fontSizeMap[settings.fontSize as keyof typeof fontSizeMap];
+      const size = fontSizeMap[settings.fontSize as keyof typeof fontSizeMap];
+      document.documentElement.style.setProperty('--base-font-size', size);
+      document.documentElement.style.fontSize = size;
     }
 
     // Apply animations
     if (!settings.animationsEnabled) {
       document.documentElement.style.setProperty('--animation-duration', '0s');
+      document.documentElement.style.setProperty('transition-duration', '0s');
     } else {
       document.documentElement.style.removeProperty('--animation-duration');
+      document.documentElement.style.removeProperty('transition-duration');
     }
 
-    // Apply UI density
+    // Apply UI density - remove existing density classes first
+    document.documentElement.className = document.documentElement.className.replace(/density-\w+/g, '');
     if (settings.uiDensity) {
-      document.documentElement.className = document.documentElement.className
-        .replace(/density-\w+/g, '') + ` density-${settings.uiDensity}`;
+      document.documentElement.classList.add(`density-${settings.uiDensity}`);
     }
-  }, [settings.theme, settings.primaryColor, settings.fontSize, settings.animationsEnabled, settings.uiDensity]);
+  }, [settings.theme, settings.primaryColor, settings.fontFamily, settings.fontSize, settings.animationsEnabled, settings.uiDensity]);
 
   const handleThemeChange = async (theme: string) => {
     await updateSetting('theme', theme);
@@ -119,6 +140,10 @@ export const AppearanceSettingsSection = () => {
   const handleColorChange = async (color: string) => {
     setCustomColor(color);
     await updateSetting('primaryColor', color);
+  };
+
+  const handleFontFamilyChange = async (fontFamily: string) => {
+    await updateSetting('fontFamily', fontFamily);
   };
 
   const handleAnimationsChange = async (enabled: boolean) => {
@@ -214,34 +239,65 @@ export const AppearanceSettingsSection = () => {
 
           <Separator />
 
-          {/* Font Size */}
-          <div className="space-y-3">
-            <Label className="text-base font-medium flex items-center gap-2">
-              <Type className="h-4 w-4" />
-              Font Size
-            </Label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {FONT_SIZES.map((font) => (
-                <div
-                  key={font.value}
-                  className={`p-3 rounded-lg border-2 cursor-pointer transition-colors ${
-                    settings.fontSize === font.value 
-                      ? 'border-primary bg-primary/5' 
-                      : 'border-muted hover:border-muted-foreground/50'
-                  }`}
-                  onClick={() => handleFontSizeChange(font.value)}
-                >
-                  <div className="flex items-center space-x-2 mb-1">
-                    <span className="font-medium">{font.label}</span>
-                    {settings.fontSize === font.value && (
-                      <Badge variant="secondary" className="ml-auto">Active</Badge>
-                    )}
+          {/* Font Settings */}
+          <div className="space-y-6">
+            {/* Font Family */}
+            <div className="space-y-3">
+              <Label className="text-base font-medium flex items-center gap-2">
+                <Type className="h-4 w-4" />
+                Font Family
+              </Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {FONT_FAMILIES.map((font) => (
+                  <div
+                    key={font.value}
+                    className={`p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                      settings.fontFamily === font.value 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-muted hover:border-muted-foreground/50'
+                    }`}
+                    onClick={() => handleFontFamilyChange(font.value)}
+                  >
+                    <div className="flex items-center space-x-2 mb-1">
+                      <span className="font-medium">{font.label}</span>
+                      {settings.fontFamily === font.value && (
+                        <Badge variant="secondary" className="ml-auto">Active</Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground" style={{ fontFamily: font.family }}>
+                      The quick brown fox jumps
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground" style={{ fontSize: font.size }}>
-                    Sample text
-                  </p>
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
+
+            {/* Font Size */}
+            <div className="space-y-3">
+              <Label className="text-base font-medium">Font Size</Label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {FONT_SIZES.map((font) => (
+                  <div
+                    key={font.value}
+                    className={`p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                      settings.fontSize === font.value 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-muted hover:border-muted-foreground/50'
+                    }`}
+                    onClick={() => handleFontSizeChange(font.value)}
+                  >
+                    <div className="flex items-center space-x-2 mb-1">
+                      <span className="font-medium">{font.label}</span>
+                      {settings.fontSize === font.value && (
+                        <Badge variant="secondary" className="ml-auto">Active</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground" style={{ fontSize: font.size }}>
+                      Sample text
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

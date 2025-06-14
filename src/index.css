@@ -43,6 +43,15 @@
     --sidebar-accent-foreground: 240 6% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217 91% 60%;
+
+    /* Font variables */
+    --base-font-size: 16px;
+    --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    
+    /* Density variables */
+    --spacing-unit: 1rem;
+    --component-padding: 0.75rem;
+    --component-gap: 0.5rem;
   }
 
   .dark {
@@ -83,6 +92,55 @@
     --sidebar-border: 240 4% 16%;
     --sidebar-ring: 217 91% 60%;
   }
+
+  /* Font family classes */
+  .font-inter { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+  .font-roboto { font-family: 'Roboto', system-ui, -apple-system, sans-serif; }
+  .font-open-sans { font-family: 'Open Sans', system-ui, -apple-system, sans-serif; }
+  .font-lato { font-family: 'Lato', system-ui, -apple-system, sans-serif; }
+  .font-poppins { font-family: 'Poppins', system-ui, -apple-system, sans-serif; }
+  .font-montserrat { font-family: 'Montserrat', system-ui, -apple-system, sans-serif; }
+
+  /* Interface Density Classes */
+  .density-compact {
+    --spacing-unit: 0.75rem;
+    --component-padding: 0.5rem;
+    --component-gap: 0.25rem;
+  }
+
+  .density-compact .space-y-6 > * + * { margin-top: 1rem; }
+  .density-compact .space-y-4 > * + * { margin-top: 0.75rem; }
+  .density-compact .space-y-3 > * + * { margin-top: 0.5rem; }
+  .density-compact .p-6 { padding: 1rem; }
+  .density-compact .p-4 { padding: 0.75rem; }
+  .density-compact .p-3 { padding: 0.5rem; }
+  .density-compact .py-4 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+  .density-compact .px-4 { padding-left: 0.75rem; padding-right: 0.75rem; }
+  .density-compact .gap-3 { gap: 0.5rem; }
+  .density-compact .gap-2 { gap: 0.25rem; }
+
+  .density-standard {
+    --spacing-unit: 1rem;
+    --component-padding: 0.75rem;
+    --component-gap: 0.5rem;
+  }
+
+  .density-comfortable {
+    --spacing-unit: 1.5rem;
+    --component-padding: 1rem;
+    --component-gap: 0.75rem;
+  }
+
+  .density-comfortable .space-y-6 > * + * { margin-top: 2rem; }
+  .density-comfortable .space-y-4 > * + * { margin-top: 1.5rem; }
+  .density-comfortable .space-y-3 > * + * { margin-top: 1rem; }
+  .density-comfortable .p-6 { padding: 2rem; }
+  .density-comfortable .p-4 { padding: 1.5rem; }
+  .density-comfortable .p-3 { padding: 1rem; }
+  .density-comfortable .py-4 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+  .density-comfortable .px-4 { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .density-comfortable .gap-3 { gap: 1rem; }
+  .density-comfortable .gap-2 { gap: 0.75rem; }
 }
 
 @layer base {
@@ -92,6 +150,8 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-family);
+    font-size: var(--base-font-size);
   }
 }
 

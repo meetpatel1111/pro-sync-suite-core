@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export const settingsService = {
@@ -199,6 +198,7 @@ export const settingsService = {
       theme: 'light',
       primaryColor: '#2563eb',
       accentColor: '#3b82f6',
+      fontFamily: 'inter',
       fontSize: 'medium',
       sidebarLayout: 'expanded',
       uiDensity: 'standard',
@@ -269,6 +269,7 @@ export const settingsService = {
       'theme': 'theme',
       'primaryColor': 'primary_color',
       'accentColor': 'accent_color',
+      'fontFamily': 'font_family',
       'fontSize': 'font_selection',
       'sidebarLayout': 'sidebar_layout',
       'uiDensity': 'interface_spacing',
@@ -314,6 +315,7 @@ export const settingsService = {
       theme: data.theme || settings.theme,
       primaryColor: data.primary_color || settings.primaryColor,
       accentColor: data.accent_color || settings.accentColor,
+      fontFamily: data.font_family || settings.fontFamily,
       fontSize: data.font_selection || settings.fontSize,
       sidebarLayout: data.sidebar_layout || settings.sidebarLayout,
       uiDensity: data.interface_spacing || settings.uiDensity,

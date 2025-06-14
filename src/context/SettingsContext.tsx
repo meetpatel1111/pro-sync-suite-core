@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { settingsService } from '@/services/settingsService';
@@ -22,6 +21,7 @@ interface AppSettings {
   theme: string;
   primaryColor: string;
   accentColor: string;
+  fontFamily: string;
   fontSize: string;
   sidebarLayout: string;
   uiDensity: string;
@@ -111,6 +111,7 @@ const defaultSettings: AppSettings = {
   theme: 'light',
   primaryColor: '#2563eb',
   accentColor: '#3b82f6',
+  fontFamily: 'inter',
   fontSize: 'medium',
   sidebarLayout: 'expanded',
   uiDensity: 'standard',
