@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Task, TimeEntry, Project } from '@/utils/dbtypes';
 
@@ -338,7 +337,7 @@ export const integrationService = {
 
       // Process each rule
       for (const rule of rules || []) {
-        // Log automation event
+        // Log automation event with correct field names
         await supabase.from('automation_events').insert({
           event_type: eventType,
           source_module: rule.source_module,
