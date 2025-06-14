@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Task, TimeEntry, Project } from '@/utils/dbtypes';
 
@@ -93,8 +94,7 @@ export const integrationService = {
           date: currentDate,
           user_id: userData.user.id,
           manual: true,
-          task_id: taskId,
-          start_time: currentDate
+          task_id: taskId
         })
         .select()
         .single();
@@ -111,8 +111,8 @@ export const integrationService = {
           user_id: data.user_id,
           manual: data.manual,
           task_id: data.task_id,
-          start_time: data.start_time,
-          created_at: data.created_at || currentDate
+          start_time: data.date, // Use date as start_time for interface compatibility
+          created_at: data.date // Use date as created_at for interface compatibility
         };
       }
       
