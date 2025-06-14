@@ -86,6 +86,8 @@ const UploadDialog: React.FC<UploadDialogProps> = ({
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
         
+        console.log(`Uploading file ${i + 1}/${totalFiles}: ${file.name}`);
+        
         const { data, error } = await fileVaultService.uploadFile(file, {
           description: description || undefined,
           folder_id: currentFolderId || undefined,
@@ -97,27 +99,38 @@ const UploadDialog: React.FC<UploadDialogProps> = ({
           console.error(`Error uploading ${file.name}:`, error);
           toast({
             title: "Upload failed",
-            description: `Failed to upload ${file.name}`,
+            description: `Failed to upload ${file.name}: ${error.message || 'Unknown error'}`,
             variant: "destructive",
           });
         } else if (data) {
           uploadedFiles.push(data);
+          console.log(`Successfully uploaded: ${file.name}`);
         }
 
         setUploadProgress(((i + 1) / totalFiles) * 100);
       }
 
       if (uploadedFiles.length > 0) {
+        toast({
+          title: "Upload successful",
+          description: `Successfully uploaded ${uploadedFiles.length} file(s)`,
+        });
         onUploadComplete(uploadedFiles);
         resetForm();
         onOpenChange(false);
+      } else {
+        toast({
+          title: "Upload failed",
+          description: "No files were uploaded successfully",
+          variant: "destructive",
+        });
       }
 
     } catch (error) {
       console.error('Upload error:', error);
       toast({
         title: "Upload failed",
-        description: "An error occurred during upload",
+        description: `An error occurred during upload: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
