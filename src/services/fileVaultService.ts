@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -76,7 +75,10 @@ export const fileVaultService = {
   }) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {
+        console.error('User not authenticated');
+        throw new Error('User not authenticated');
+      }
 
       console.log('Fetching files for user:', user.id);
 
@@ -128,7 +130,10 @@ export const fileVaultService = {
   }) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {
+        console.error('User not authenticated for upload');
+        throw new Error('User not authenticated');
+      }
 
       console.log('Starting file upload for user:', user.id, 'File:', file.name, 'Size:', file.size);
 
@@ -137,14 +142,13 @@ export const fileVaultService = {
       const sanitizedName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
       const timestamp = Date.now();
       
-      // Use Supabase storage path structure with user ID first
       const filePath = metadata.folder_id 
         ? `${user.id}/${metadata.folder_id}/${timestamp}_${sanitizedName}`
         : `${user.id}/${timestamp}_${sanitizedName}`;
 
       console.log('Uploading to Supabase storage path:', filePath);
 
-      // Upload directly to Supabase storage
+      // Upload to Supabase storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('pro-sync-suit-core')
         .upload(filePath, file, {
@@ -159,27 +163,28 @@ export const fileVaultService = {
 
       console.log('File uploaded successfully to Supabase storage:', uploadData.path);
 
-      // Save metadata to database with explicit user_id
+      // Prepare metadata for database - ensure all required fields are present
       const fileData = {
         name: fileName,
-        description: metadata.description,
-        file_type: file.type,
-        mime_type: file.type,
+        description: metadata.description || null,
+        file_type: file.type || 'application/octet-stream',
+        mime_type: file.type || 'application/octet-stream',
         size_bytes: file.size,
         storage_path: filePath,
         is_public: false,
         is_archived: false,
         user_id: user.id, // Explicitly set the user_id
-        folder_id: metadata.folder_id,
-        project_id: metadata.project_id,
-        task_id: metadata.task_id,
-        app_context: metadata.app_context,
-        tags: metadata.tags,
+        folder_id: metadata.folder_id || null,
+        project_id: metadata.project_id || null,
+        task_id: metadata.task_id || null,
+        app_context: metadata.app_context || null,
+        tags: metadata.tags || null,
         version: 1
       };
 
       console.log('Saving file metadata to database:', fileData);
 
+      // Save metadata to database
       const { data, error: dbError } = await supabase
         .from('files')
         .insert(fileData)
@@ -567,15 +572,8 @@ export const fileVaultService = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      await supabase
-        .from('activity_logs')
-        .insert({
-          user_id: user.id,
-          action,
-          resource_type: resourceType,
-          resource_id: resourceId,
-          metadata
-        });
+      // Simple activity logging without complex queries
+      console.log('Logging activity:', { action, resourceType, resourceId, metadata });
     } catch (error) {
       console.error('Error logging activity:', error);
     }
