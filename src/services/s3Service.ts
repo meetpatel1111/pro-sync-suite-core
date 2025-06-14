@@ -1,38 +1,31 @@
 
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-
 const BUCKET_NAME = 'pro-sync-suit-core';
-const REGION = 'us-east-1'; // Update with your bucket's region
-
-// S3 client configuration
-const s3Client = new S3Client({
-  region: REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-  },
-});
+const REGION = 'us-east-1';
+const S3_BASE_URL = `https://${BUCKET_NAME}.s3.${REGION}.amazonaws.com`;
 
 export const s3Service = {
   async uploadFile(file: File, filePath: string): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('Uploading file directly to S3:', filePath);
+      console.log('Uploading file to public S3 bucket:', filePath);
       
-      const command = new PutObjectCommand({
-        Bucket: BUCKET_NAME,
-        Key: filePath,
-        Body: file,
-        ContentType: file.type,
-        Metadata: {
-          originalName: file.name,
-          uploadedAt: new Date().toISOString(),
+      // For public buckets, we'll use a simple PUT request
+      const url = `${S3_BASE_URL}/${filePath}`;
+      
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type,
+          'x-amz-meta-original-name': file.name,
+          'x-amz-meta-uploaded-at': new Date().toISOString(),
         },
+        body: file,
       });
 
-      await s3Client.send(command);
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+      }
+
       console.log('File uploaded successfully to S3:', filePath);
-      
       return { success: true };
     } catch (error) {
       console.error('S3 upload error:', error);
@@ -42,29 +35,16 @@ export const s3Service = {
 
   async downloadFile(filePath: string): Promise<{ data?: Blob; error?: string }> {
     try {
-      const command = new GetObjectCommand({
-        Bucket: BUCKET_NAME,
-        Key: filePath,
-      });
-
-      const response = await s3Client.send(command);
+      const url = `${S3_BASE_URL}/${filePath}`;
       
-      if (response.Body) {
-        // Convert stream to blob
-        const chunks: Uint8Array[] = [];
-        const reader = response.Body.transformToWebStream().getReader();
-        
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunks.push(value);
-        }
-        
-        const blob = new Blob(chunks, { type: response.ContentType });
-        return { data: blob };
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
       }
       
-      return { error: 'No file data received' };
+      const blob = await response.blob();
+      return { data: blob };
     } catch (error) {
       console.error('S3 download error:', error);
       return { error: error instanceof Error ? error.message : 'Download failed' };
@@ -73,14 +53,17 @@ export const s3Service = {
 
   async deleteFile(filePath: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const command = new DeleteObjectCommand({
-        Bucket: BUCKET_NAME,
-        Key: filePath,
+      const url = `${S3_BASE_URL}/${filePath}`;
+      
+      const response = await fetch(url, {
+        method: 'DELETE',
       });
 
-      await s3Client.send(command);
+      if (!response.ok) {
+        throw new Error(`Delete failed: ${response.status} ${response.statusText}`);
+      }
+
       console.log('File deleted successfully from S3:', filePath);
-      
       return { success: true };
     } catch (error) {
       console.error('S3 delete error:', error);
@@ -90,16 +73,22 @@ export const s3Service = {
 
   async getFileInfo(filePath: string): Promise<{ size?: number; lastModified?: Date; error?: string }> {
     try {
-      const command = new HeadObjectCommand({
-        Bucket: BUCKET_NAME,
-        Key: filePath,
+      const url = `${S3_BASE_URL}/${filePath}`;
+      
+      const response = await fetch(url, {
+        method: 'HEAD',
       });
 
-      const response = await s3Client.send(command);
+      if (!response.ok) {
+        throw new Error(`Failed to get file info: ${response.status} ${response.statusText}`);
+      }
+      
+      const contentLength = response.headers.get('content-length');
+      const lastModified = response.headers.get('last-modified');
       
       return {
-        size: response.ContentLength,
-        lastModified: response.LastModified,
+        size: contentLength ? parseInt(contentLength) : undefined,
+        lastModified: lastModified ? new Date(lastModified) : undefined,
       };
     } catch (error) {
       console.error('S3 head object error:', error);
@@ -109,12 +98,8 @@ export const s3Service = {
 
   async getSignedDownloadUrl(filePath: string, expiresIn: number = 3600): Promise<{ url?: string; error?: string }> {
     try {
-      const command = new GetObjectCommand({
-        Bucket: BUCKET_NAME,
-        Key: filePath,
-      });
-
-      const url = await getSignedUrl(s3Client, command, { expiresIn });
+      // For public buckets, we can just return the direct URL
+      const url = `${S3_BASE_URL}/${filePath}`;
       return { url };
     } catch (error) {
       console.error('S3 signed URL error:', error);
