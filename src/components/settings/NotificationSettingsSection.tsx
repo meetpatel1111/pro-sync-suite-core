@@ -192,7 +192,6 @@ export const NotificationSettingsSection = () => {
                       <div className="flex items-center space-x-2">
                         <div className="flex items-center space-x-1">
                           <Switch 
-                            size="sm" 
                             defaultChecked 
                             onCheckedChange={(checked) => 
                               handleNotificationToggle(type.id, 'email', checked)
@@ -203,7 +202,6 @@ export const NotificationSettingsSection = () => {
                         
                         <div className="flex items-center space-x-1">
                           <Switch 
-                            size="sm" 
                             defaultChecked 
                             onCheckedChange={(checked) => 
                               handleNotificationToggle(type.id, 'push', checked)
@@ -214,7 +212,6 @@ export const NotificationSettingsSection = () => {
                         
                         <div className="flex items-center space-x-1">
                           <Switch 
-                            size="sm" 
                             defaultChecked 
                             onCheckedChange={(checked) => 
                               handleNotificationToggle(type.id, 'inapp', checked)
