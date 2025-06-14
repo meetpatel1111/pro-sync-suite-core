@@ -46,11 +46,24 @@ export const settingsService = {
     try {
       const updateData: any = { updated_at: new Date().toISOString() };
       
-      // Map our setting keys to database columns
-      const columnMapping = this.getColumnMapping();
-      const dbColumn = columnMapping[key] || key;
-      
-      updateData[dbColumn] = value;
+      // Handle fontSize specially since it maps to multiple columns
+      if (key === 'fontSize') {
+        if (typeof value === 'number') {
+          updateData.font_size_value = value;
+          updateData.font_size_type = 'number';
+          updateData.font_size_preset = null;
+        } else {
+          // It's a preset
+          updateData.font_size_preset = value;
+          updateData.font_size_type = 'preset';
+          updateData.font_size_value = this.getPresetSizeValue(value);
+        }
+      } else {
+        // Map our setting keys to database columns
+        const columnMapping = this.getColumnMapping();
+        const dbColumn = columnMapping[key] || key;
+        updateData[dbColumn] = value;
+      }
 
       const { error } = await supabase
         .from('user_settings')
@@ -198,8 +211,8 @@ export const settingsService = {
       theme: 'light',
       primaryColor: '#2563eb',
       accentColor: '#3b82f6',
-      fontFamily: 'inter',
-      fontSize: 'medium',
+      fontFamily: 'Inter',
+      fontSize: 16, // Default to number value
       sidebarLayout: 'expanded',
       uiDensity: 'standard',
       animationsEnabled: true,
@@ -304,8 +317,28 @@ export const settingsService = {
     };
   },
 
+  getPresetSizeValue(preset: string): number {
+    const presetMap: Record<string, number> = {
+      'xs': 12,
+      'sm': 14,
+      'base': 16,
+      'lg': 18,
+      'xl': 20,
+      '2xl': 24,
+    };
+    return presetMap[preset] || 16;
+  },
+
   mapDatabaseToSettings(data: any) {
     const settings = this.getDefaultSettings();
+    
+    // Handle fontSize specially
+    let fontSize = settings.fontSize;
+    if (data.font_size_type === 'preset' && data.font_size_preset) {
+      fontSize = data.font_size_preset;
+    } else if (data.font_size_value) {
+      fontSize = data.font_size_value;
+    }
     
     return {
       ...settings,
@@ -316,7 +349,7 @@ export const settingsService = {
       primaryColor: data.primary_color || settings.primaryColor,
       accentColor: data.accent_color || settings.accentColor,
       fontFamily: data.font_family || settings.fontFamily,
-      fontSize: data.font_selection || settings.fontSize,
+      fontSize: fontSize,
       sidebarLayout: data.sidebar_layout || settings.sidebarLayout,
       uiDensity: data.interface_spacing || settings.uiDensity,
       animationsEnabled: data.interface_animation ?? settings.animationsEnabled,
@@ -354,8 +387,21 @@ export const settingsService = {
     const dbData: any = {};
     
     Object.keys(settings).forEach(key => {
-      const dbColumn = mapping[key] || key;
-      dbData[dbColumn] = settings[key];
+      if (key === 'fontSize') {
+        // Handle fontSize specially
+        if (typeof settings.fontSize === 'number') {
+          dbData.font_size_value = settings.fontSize;
+          dbData.font_size_type = 'number';
+          dbData.font_size_preset = null;
+        } else {
+          dbData.font_size_preset = settings.fontSize;
+          dbData.font_size_type = 'preset';
+          dbData.font_size_value = this.getPresetSizeValue(settings.fontSize);
+        }
+      } else {
+        const dbColumn = mapping[key] || key;
+        dbData[dbColumn] = settings[key];
+      }
     });
     
     return dbData;

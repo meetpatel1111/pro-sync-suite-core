@@ -1945,6 +1945,9 @@ export type Database = {
           fiscal_year_start: string | null
           font_family: string | null
           font_selection: string | null
+          font_size_preset: string | null
+          font_size_type: string | null
+          font_size_value: number | null
           fontselection: string | null
           gdpr_compliance: boolean | null
           header_behavior: string | null
@@ -2082,6 +2085,9 @@ export type Database = {
           fiscal_year_start?: string | null
           font_family?: string | null
           font_selection?: string | null
+          font_size_preset?: string | null
+          font_size_type?: string | null
+          font_size_value?: number | null
           fontselection?: string | null
           gdpr_compliance?: boolean | null
           header_behavior?: string | null
@@ -2219,6 +2225,9 @@ export type Database = {
           fiscal_year_start?: string | null
           font_family?: string | null
           font_selection?: string | null
+          font_size_preset?: string | null
+          font_size_type?: string | null
+          font_size_value?: number | null
           fontselection?: string | null
           gdpr_compliance?: boolean | null
           header_behavior?: string | null
