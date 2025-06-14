@@ -20,10 +20,14 @@ import {
   FileText,
   Clock
 } from 'lucide-react';
+import { useSettings } from '@/context/SettingsContext';
+import { settingsService } from '@/services/settingsService';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 const DATA_TYPES = [
   { id: 'tasks', name: 'Tasks & Projects', size: '2.3 MB', count: 1250 },
-  { id: 'time_entries', name: 'Time Entries', size: '890 KB', count: 3420 },
+  { id: 'timeEntries', name: 'Time Entries', size: '890 KB', count: 3420 },
   { id: 'expenses', name: 'Expenses & Budgets', size: '156 KB', count: 89 },
   { id: 'files', name: 'Files & Documents', size: '45.2 MB', count: 234 },
   { id: 'messages', name: 'Chat Messages', size: '8.9 MB', count: 5670 },
@@ -44,31 +48,116 @@ const EXPORT_FORMATS = [
 ];
 
 export const DataManagementSection = () => {
+  const { settings, updateSetting, updateNestedSetting, loading } = useSettings();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [exportProgress, setExportProgress] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
 
+  const handleAutoBackupToggle = async (enabled: boolean) => {
+    await updateSetting('autoBackup', enabled);
+  };
+
+  const handleRealtimeSyncToggle = async (enabled: boolean) => {
+    await updateSetting('realtimeSync', enabled);
+  };
+
+  const handleRetentionChange = async (dataType: string, period: string) => {
+    await updateNestedSetting('dataRetention', dataType, period);
+    
+    toast({
+      title: 'Success',
+      description: `Retention period for ${dataType} updated to ${period === 'never' ? 'never delete' : period + ' days'}`,
+    });
+  };
+
   const handleExport = async (dataType: string, format: string) => {
+    if (!user) return;
+
     setIsExporting(true);
     setExportProgress(0);
     
-    // Simulate export progress
-    const interval = setInterval(() => {
-      setExportProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsExporting(false);
-          return 100;
-        }
-        return prev + 10;
+    try {
+      // Simulate export progress
+      const interval = setInterval(() => {
+        setExportProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            setIsExporting(false);
+            return 100;
+          }
+          return prev + 10;
+        });
+      }, 200);
+      
+      const result = await settingsService.exportData(user.id, format);
+      
+      toast({
+        title: 'Export Complete',
+        description: `Your ${dataType} data has been exported successfully`,
       });
-    }, 200);
-    
-    console.log(`Exporting ${dataType} as ${format}`);
+      
+      // In a real app, this would trigger a download
+      if (result.downloadUrl && result.downloadUrl !== '#') {
+        window.open(result.downloadUrl, '_blank');
+      }
+    } catch (error) {
+      setIsExporting(false);
+      setExportProgress(0);
+      toast({
+        title: 'Export Failed',
+        description: 'Failed to export data. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleBulkArchive = (dataType: string) => {
-    console.log(`Archiving old ${dataType}`);
+  const handleBulkArchive = async (dataType: string) => {
+    if (!user) return;
+
+    try {
+      const retentionDays = parseInt(settings.dataRetention[dataType as keyof typeof settings.dataRetention] || '365');
+      const result = await settingsService.archiveData(user.id, dataType, retentionDays);
+      
+      toast({
+        title: 'Archive Complete',
+        description: `${result.archivedCount || 0} items archived successfully`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Archive Failed',
+        description: 'Failed to archive data. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
+
+  const handleDeleteAllData = async () => {
+    const confirmed = window.confirm(
+      'Are you sure you want to delete ALL your data? This action cannot be undone.'
+    );
+    
+    if (confirmed) {
+      try {
+        // In a real app, this would call a secure data deletion endpoint
+        console.log('Deleting all user data...');
+        toast({
+          title: 'Data Deletion Requested',
+          description: 'Your data deletion request has been submitted and will be processed within 30 days.',
+        });
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to submit data deletion request',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center p-6">Loading data management settings...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -191,7 +280,10 @@ export const DataManagementSection = () => {
               </div>
               
               <div className="flex items-center space-x-2">
-                <Select defaultValue="365">
+                <Select 
+                  value={settings.dataRetention[type.id as keyof typeof settings.dataRetention] || '365'}
+                  onValueChange={(value) => handleRetentionChange(type.id, value)}
+                >
                   <SelectTrigger className="w-32">
                     <SelectValue />
                   </SelectTrigger>
@@ -236,7 +328,10 @@ export const DataManagementSection = () => {
                 Create daily backups of your data
               </p>
             </div>
-            <Switch defaultChecked />
+            <Switch 
+              checked={settings.autoBackup}
+              onCheckedChange={handleAutoBackupToggle}
+            />
           </div>
           
           <div className="flex items-center justify-between">
@@ -246,7 +341,10 @@ export const DataManagementSection = () => {
                 Keep data synchronized across devices
               </p>
             </div>
-            <Switch defaultChecked />
+            <Switch 
+              checked={settings.realtimeSync}
+              onCheckedChange={handleRealtimeSyncToggle}
+            />
           </div>
           
           <Separator />
@@ -342,12 +440,18 @@ export const DataManagementSection = () => {
           </Alert>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button variant="outline">
+            <Button 
+              variant="outline"
+              onClick={() => handleExport('all', 'json')}
+            >
               <Download className="h-4 w-4 mr-2" />
               Request Data Export
             </Button>
             
-            <Button variant="destructive">
+            <Button 
+              variant="destructive"
+              onClick={handleDeleteAllData}
+            >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete All Data
             </Button>

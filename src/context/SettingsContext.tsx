@@ -5,42 +5,184 @@ import { settingsService } from '@/services/settingsService';
 import { useToast } from '@/hooks/use-toast';
 
 interface AppSettings {
+  // General Settings
   language: string;
   timezone: string;
+  dateFormat: string;
+  defaultCurrency: string;
+  sessionTimeout: number;
+  defaultLandingPage: string;
+  workingHoursStart: string;
+  workingHoursEnd: string;
+  workingDays: string[];
+  organizationName: string;
+  displayName: string;
+  
+  // Appearance Settings
   theme: string;
   primaryColor: string;
-  animationsEnabled: boolean;
+  accentColor: string;
+  fontSize: string;
+  sidebarLayout: string;
   uiDensity: string;
+  animationsEnabled: boolean;
+  
+  // Notification Settings
+  emailNotifications: {
+    taskAssigned: boolean;
+    taskDue: boolean;
+    taskCompleted: boolean;
+    mentions: boolean;
+    fileShared: boolean;
+    timeTracker: boolean;
+    budgetAlerts: boolean;
+  };
+  pushNotifications: {
+    taskAssigned: boolean;
+    taskDue: boolean;
+    taskCompleted: boolean;
+    mentions: boolean;
+    fileShared: boolean;
+    timeTracker: boolean;
+    budgetAlerts: boolean;
+  };
+  inappNotifications: {
+    taskAssigned: boolean;
+    taskDue: boolean;
+    taskCompleted: boolean;
+    mentions: boolean;
+    fileShared: boolean;
+    timeTracker: boolean;
+    budgetAlerts: boolean;
+  };
+  notificationSounds: boolean;
+  alertTone: string;
+  quietHoursEnabled: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
+  weeklyDigest: boolean;
+  weeklyDigestDay: string;
+  weeklyDigestTime: string;
+  
+  // Security Settings
+  twoFactorAuth: boolean;
+  autoLogout: boolean;
+  loginNotifications: boolean;
+  requirePasswordForSensitive: boolean;
+  
+  // Data Management Settings
+  autoBackup: boolean;
+  realtimeSync: boolean;
+  dataRetention: {
+    tasks: string;
+    timeEntries: string;
+    expenses: string;
+    files: string;
+    messages: string;
+  };
 }
 
 interface SettingsContextType {
   settings: AppSettings;
-  updateSetting: (key: keyof AppSettings, value: any) => Promise<void>;
+  updateSetting: (key: keyof AppSettings | string, value: any) => Promise<void>;
+  updateNestedSetting: (category: string, key: string, value: any) => Promise<void>;
   loading: boolean;
   formatDate: (date: Date | string) => string;
   formatTime: (date: Date | string) => string;
   t: (key: string) => string;
+  resetToDefaults: (category?: string) => Promise<void>;
 }
 
 const defaultSettings: AppSettings = {
+  // General
   language: 'en',
   timezone: 'UTC',
+  dateFormat: 'MM/DD/YYYY',
+  defaultCurrency: 'USD',
+  sessionTimeout: 60,
+  defaultLandingPage: 'dashboard',
+  workingHoursStart: '09:00',
+  workingHoursEnd: '17:00',
+  workingDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+  organizationName: '',
+  displayName: '',
+  
+  // Appearance
   theme: 'light',
   primaryColor: '#2563eb',
-  animationsEnabled: true,
+  accentColor: '#3b82f6',
+  fontSize: 'medium',
+  sidebarLayout: 'expanded',
   uiDensity: 'standard',
+  animationsEnabled: true,
+  
+  // Notifications
+  emailNotifications: {
+    taskAssigned: true,
+    taskDue: true,
+    taskCompleted: false,
+    mentions: true,
+    fileShared: true,
+    timeTracker: false,
+    budgetAlerts: true,
+  },
+  pushNotifications: {
+    taskAssigned: true,
+    taskDue: true,
+    taskCompleted: false,
+    mentions: true,
+    fileShared: true,
+    timeTracker: true,
+    budgetAlerts: true,
+  },
+  inappNotifications: {
+    taskAssigned: true,
+    taskDue: true,
+    taskCompleted: true,
+    mentions: true,
+    fileShared: true,
+    timeTracker: true,
+    budgetAlerts: true,
+  },
+  notificationSounds: true,
+  alertTone: 'default',
+  quietHoursEnabled: false,
+  quietHoursStart: '22:00',
+  quietHoursEnd: '08:00',
+  weeklyDigest: true,
+  weeklyDigestDay: 'monday',
+  weeklyDigestTime: '09:00',
+  
+  // Security
+  twoFactorAuth: false,
+  autoLogout: true,
+  loginNotifications: true,
+  requirePasswordForSensitive: true,
+  
+  // Data Management
+  autoBackup: true,
+  realtimeSync: true,
+  dataRetention: {
+    tasks: '365',
+    timeEntries: '365',
+    expenses: '365',
+    files: '365',
+    messages: '90',
+  },
 };
 
 const SettingsContext = createContext<SettingsContextType>({
   settings: defaultSettings,
   updateSetting: async () => {},
+  updateNestedSetting: async () => {},
   loading: false,
   formatDate: (date) => new Date(date).toLocaleDateString(),
   formatTime: (date) => new Date(date).toLocaleTimeString(),
   t: (key) => key,
+  resetToDefaults: async () => {},
 });
 
-// Basic translations - in a real app, you'd load these from JSON files
+// Basic translations
 const translations: Record<string, Record<string, string>> = {
   en: {
     'dashboard': 'Dashboard',
@@ -105,27 +247,6 @@ const translations: Record<string, Record<string, string>> = {
     'login': 'Connexion',
     'signup': 'S\'inscrire',
   },
-  de: {
-    'dashboard': 'Dashboard',
-    'settings': 'Einstellungen',
-    'profile': 'Profil',
-    'notifications': 'Benachrichtigungen',
-    'security': 'Sicherheit',
-    'appearance': 'Aussehen',
-    'general': 'Allgemein',
-    'language': 'Sprache',
-    'timezone': 'Zeitzone',
-    'theme': 'Design',
-    'save': 'Speichern',
-    'cancel': 'Abbrechen',
-    'loading': 'Lädt...',
-    'success': 'Erfolg',
-    'error': 'Fehler',
-    'welcome': 'Willkommen',
-    'logout': 'Abmelden',
-    'login': 'Anmelden',
-    'signup': 'Registrieren',
-  },
 };
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -145,29 +266,21 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     
     setLoading(true);
     try {
-      const [generalSettings, appearanceSettings] = await Promise.all([
-        settingsService.getGeneralSettings(user.id),
-        settingsService.getAppearanceSettings(user.id)
-      ]);
-
-      const newSettings: AppSettings = {
-        language: generalSettings.data?.find(s => s.setting_key === 'language')?.setting_value || 'en',
-        timezone: generalSettings.data?.find(s => s.setting_key === 'timezone')?.setting_value || 'UTC',
-        theme: appearanceSettings?.theme || 'light',
-        primaryColor: appearanceSettings?.primary_color || '#2563eb',
-        animationsEnabled: appearanceSettings?.animations_enabled ?? true,
-        uiDensity: appearanceSettings?.ui_density || 'standard',
-      };
-
-      setSettings(newSettings);
+      const userSettings = await settingsService.getAllSettings(user.id);
+      setSettings(userSettings);
     } catch (error) {
       console.error('Error loading settings:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load settings',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const updateSetting = async (key: keyof AppSettings, value: any) => {
+  const updateSetting = async (key: keyof AppSettings | string, value: any) => {
     if (!user) return;
 
     try {
@@ -175,11 +288,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setSettings(prev => ({ ...prev, [key]: value }));
 
       // Update in database
-      if (key === 'language' || key === 'timezone') {
-        await settingsService.updateGeneralSetting(user.id, key, value);
-      } else {
-        await settingsService.updateAppearanceSettings(user.id, { [key]: value });
-      }
+      await settingsService.updateSetting(user.id, key, value);
 
       toast({
         title: 'Success',
@@ -192,6 +301,65 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       toast({
         title: 'Error',
         description: 'Failed to update setting',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const updateNestedSetting = async (category: string, key: string, value: any) => {
+    if (!user) return;
+
+    try {
+      // Update local state immediately
+      setSettings(prev => ({
+        ...prev,
+        [category]: {
+          ...prev[category as keyof AppSettings],
+          [key]: value
+        }
+      }));
+
+      // Update in database
+      await settingsService.updateNestedSetting(user.id, category, key, value);
+
+      toast({
+        title: 'Success',
+        description: 'Setting updated successfully',
+      });
+    } catch (error) {
+      console.error('Error updating nested setting:', error);
+      // Revert local state on error
+      await loadUserSettings();
+      toast({
+        title: 'Error',
+        description: 'Failed to update setting',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const resetToDefaults = async (category?: string) => {
+    if (!user) return;
+
+    try {
+      if (category) {
+        const defaultCategorySettings = defaultSettings[category as keyof AppSettings];
+        setSettings(prev => ({ ...prev, [category]: defaultCategorySettings }));
+        await settingsService.resetCategoryToDefaults(user.id, category);
+      } else {
+        setSettings(defaultSettings);
+        await settingsService.resetAllToDefaults(user.id);
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Settings reset to defaults',
+      });
+    } catch (error) {
+      console.error('Error resetting settings:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reset settings',
         variant: 'destructive',
       });
     }
@@ -232,10 +400,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     <SettingsContext.Provider value={{
       settings,
       updateSetting,
+      updateNestedSetting,
       loading,
       formatDate,
       formatTime,
       t,
+      resetToDefaults,
     }}>
       {children}
     </SettingsContext.Provider>

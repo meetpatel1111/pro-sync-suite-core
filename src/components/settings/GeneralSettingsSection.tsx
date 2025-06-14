@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,10 +8,27 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } fr
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Globe, Building, Clock, Calendar } from 'lucide-react';
+import { Building, Globe } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
+
+const LANGUAGES = [
+  { value: 'en', label: 'English' },
+  { value: 'es', label: 'Español' },
+  { value: 'fr', label: 'Français' },
+  { value: 'de', label: 'Deutsch' },
+];
+
+const TIMEZONES = [
+  { value: 'UTC', label: 'UTC' },
+  { value: 'America/New_York', label: 'Eastern Time' },
+  { value: 'America/Chicago', label: 'Central Time' },
+  { value: 'America/Denver', label: 'Mountain Time' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time' },
+  { value: 'Europe/London', label: 'London' },
+  { value: 'Europe/Paris', label: 'Paris' },
+  { value: 'Asia/Tokyo', label: 'Tokyo' },
+];
 
 const CURRENCIES = [
   { value: 'USD', label: 'US Dollar ($)', symbol: '$' },
@@ -40,41 +57,82 @@ const WORKING_DAYS = [
 ];
 
 const generalSettingsSchema = z.object({
-  organization_name: z.string().min(1, 'Organization name is required'),
-  display_name: z.string().min(1, 'Display name is required'),
-  default_currency: z.string(),
-  date_format: z.string(),
-  session_timeout: z.number().min(15).max(480),
-  default_landing_page: z.string(),
-  working_hours_start: z.string(),
-  working_hours_end: z.string(),
-  working_days: z.array(z.string()),
+  organizationName: z.string().min(1, 'Organization name is required'),
+  displayName: z.string().min(1, 'Display name is required'),
+  language: z.string(),
+  timezone: z.string(),
+  defaultCurrency: z.string(),
+  dateFormat: z.string(),
+  sessionTimeout: z.number().min(15).max(480),
+  defaultLandingPage: z.string(),
+  workingHoursStart: z.string(),
+  workingHoursEnd: z.string(),
+  workingDays: z.array(z.string()),
 });
 
 type GeneralSettingsFormData = z.infer<typeof generalSettingsSchema>;
 
 export const GeneralSettingsSection = () => {
-  const { settings, updateSetting, t } = useSettings();
+  const { settings, updateSetting, loading } = useSettings();
 
   const form = useForm<GeneralSettingsFormData>({
     resolver: zodResolver(generalSettingsSchema),
     defaultValues: {
-      organization_name: '',
-      display_name: '',
-      default_currency: 'USD',
-      date_format: 'MM/DD/YYYY',
-      session_timeout: 60,
-      default_landing_page: 'dashboard',
-      working_hours_start: '09:00',
-      working_hours_end: '17:00',
-      working_days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+      organizationName: settings.organizationName || '',
+      displayName: settings.displayName || '',
+      language: settings.language || 'en',
+      timezone: settings.timezone || 'UTC',
+      defaultCurrency: settings.defaultCurrency || 'USD',
+      dateFormat: settings.dateFormat || 'MM/DD/YYYY',
+      sessionTimeout: settings.sessionTimeout || 60,
+      defaultLandingPage: settings.defaultLandingPage || 'dashboard',
+      workingHoursStart: settings.workingHoursStart || '09:00',
+      workingHoursEnd: settings.workingHoursEnd || '17:00',
+      workingDays: settings.workingDays || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
     },
   });
 
+  // Update form when settings change
+  useEffect(() => {
+    form.reset({
+      organizationName: settings.organizationName || '',
+      displayName: settings.displayName || '',
+      language: settings.language || 'en',
+      timezone: settings.timezone || 'UTC',
+      defaultCurrency: settings.defaultCurrency || 'USD',
+      dateFormat: settings.dateFormat || 'MM/DD/YYYY',
+      sessionTimeout: settings.sessionTimeout || 60,
+      defaultLandingPage: settings.defaultLandingPage || 'dashboard',
+      workingHoursStart: settings.workingHoursStart || '09:00',
+      workingHoursEnd: settings.workingHoursEnd || '17:00',
+      workingDays: settings.workingDays || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+    });
+  }, [settings, form]);
+
   const onSubmit = async (data: GeneralSettingsFormData) => {
-    // Handle form submission for all general settings
-    console.log('Saving general settings:', data);
+    try {
+      // Update each setting individually
+      await Promise.all([
+        updateSetting('organizationName', data.organizationName),
+        updateSetting('displayName', data.displayName),
+        updateSetting('language', data.language),
+        updateSetting('timezone', data.timezone),
+        updateSetting('defaultCurrency', data.defaultCurrency),
+        updateSetting('dateFormat', data.dateFormat),
+        updateSetting('sessionTimeout', data.sessionTimeout),
+        updateSetting('defaultLandingPage', data.defaultLandingPage),
+        updateSetting('workingHoursStart', data.workingHoursStart),
+        updateSetting('workingHoursEnd', data.workingHoursEnd),
+        updateSetting('workingDays', data.workingDays),
+      ]);
+    } catch (error) {
+      console.error('Error saving general settings:', error);
+    }
   };
+
+  if (loading) {
+    return <div className="flex items-center justify-center p-6">Loading settings...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -93,7 +151,7 @@ export const GeneralSettingsSection = () => {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
-                name="organization_name"
+                name="organizationName"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Organization Name</FormLabel>
@@ -109,7 +167,7 @@ export const GeneralSettingsSection = () => {
 
               <FormField
                 control={form.control}
-                name="display_name"
+                name="displayName"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Display Name</FormLabel>
@@ -123,54 +181,113 @@ export const GeneralSettingsSection = () => {
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="default_currency"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Default Currency</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select currency" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {CURRENCIES.map((currency) => (
-                            <SelectItem key={currency.value} value={currency.value}>
-                              {currency.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
+              <Separator />
 
-                <FormField
-                  control={form.control}
-                  name="date_format"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date Format</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select format" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {DATE_FORMATS.map((format) => (
-                            <SelectItem key={format.value} value={format.value}>
-                              {format.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
+              <div className="space-y-4">
+                <h4 className="font-medium flex items-center gap-2">
+                  <Globe className="h-4 w-4" />
+                  Localization
+                </h4>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="language"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Language</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select language" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {LANGUAGES.map((language) => (
+                              <SelectItem key={language.value} value={language.value}>
+                                {language.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="timezone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Timezone</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select timezone" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {TIMEZONES.map((timezone) => (
+                              <SelectItem key={timezone.value} value={timezone.value}>
+                                {timezone.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="defaultCurrency"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Default Currency</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select currency" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {CURRENCIES.map((currency) => (
+                              <SelectItem key={currency.value} value={currency.value}>
+                                {currency.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="dateFormat"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date Format</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select format" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {DATE_FORMATS.map((format) => (
+                              <SelectItem key={format.value} value={format.value}>
+                                {format.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
               <Separator />
@@ -181,7 +298,7 @@ export const GeneralSettingsSection = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="working_hours_start"
+                    name="workingHoursStart"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Start Time</FormLabel>
@@ -194,7 +311,7 @@ export const GeneralSettingsSection = () => {
 
                   <FormField
                     control={form.control}
-                    name="working_hours_end"
+                    name="workingHoursEnd"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>End Time</FormLabel>
@@ -208,7 +325,7 @@ export const GeneralSettingsSection = () => {
 
                 <FormField
                   control={form.control}
-                  name="working_days"
+                  name="workingDays"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Working Days</FormLabel>
@@ -243,7 +360,7 @@ export const GeneralSettingsSection = () => {
 
               <FormField
                 control={form.control}
-                name="session_timeout"
+                name="sessionTimeout"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Session Timeout (minutes)</FormLabel>
@@ -267,7 +384,7 @@ export const GeneralSettingsSection = () => {
                 <Button type="button" variant="outline" onClick={() => form.reset()}>
                   Reset
                 </Button>
-                <Button type="submit">
+                <Button type="submit" disabled={loading}>
                   Save Changes
                 </Button>
               </div>

@@ -1,11 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Palette, Monitor, Type, Layout, Zap } from 'lucide-react';
@@ -36,25 +34,73 @@ const PRESET_COLORS = [
 ];
 
 export const AppearanceSettingsSection = () => {
-  const { settings, updateSetting, t } = useSettings();
+  const { settings, updateSetting, loading } = useSettings();
   const [customColor, setCustomColor] = useState(settings.primaryColor || '#2563eb');
+
+  useEffect(() => {
+    setCustomColor(settings.primaryColor || '#2563eb');
+  }, [settings.primaryColor]);
 
   const handleThemeChange = async (theme: string) => {
     await updateSetting('theme', theme);
+    
+    // Apply theme to document root for immediate effect
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else if (theme === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else if (theme === 'system') {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      if (systemTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
   };
 
   const handleColorChange = async (color: string) => {
     setCustomColor(color);
     await updateSetting('primaryColor', color);
+    
+    // Apply color to CSS custom property for immediate effect
+    document.documentElement.style.setProperty('--primary', color);
   };
 
   const handleAnimationsChange = async (enabled: boolean) => {
     await updateSetting('animationsEnabled', enabled);
+    
+    // Apply animation preference for immediate effect
+    if (!enabled) {
+      document.documentElement.style.setProperty('--animation-duration', '0s');
+    } else {
+      document.documentElement.style.removeProperty('--animation-duration');
+    }
   };
 
   const handleDensityChange = async (density: string) => {
     await updateSetting('uiDensity', density);
+    
+    // Apply density class for immediate effect
+    document.documentElement.className = document.documentElement.className
+      .replace(/density-\w+/g, '') + ` density-${density}`;
   };
+
+  const handleFontSizeChange = async (fontSize: string) => {
+    await updateSetting('fontSize', fontSize);
+    
+    // Apply font size for immediate effect
+    const fontSizeMap = {
+      small: '14px',
+      medium: '16px',
+      large: '18px'
+    };
+    document.documentElement.style.setProperty('--base-font-size', fontSizeMap[fontSize as keyof typeof fontSizeMap]);
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center p-6">Loading appearance settings...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -128,6 +174,39 @@ export const AppearanceSettingsSection = () => {
                 />
                 <span className="text-sm text-muted-foreground">{customColor}</span>
               </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Font Size */}
+          <div className="space-y-3">
+            <Label className="text-base font-medium flex items-center gap-2">
+              <Type className="h-4 w-4" />
+              Font Size
+            </Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {FONT_SIZES.map((font) => (
+                <div
+                  key={font.value}
+                  className={`p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                    settings.fontSize === font.value 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-muted hover:border-muted-foreground/50'
+                  }`}
+                  onClick={() => handleFontSizeChange(font.value)}
+                >
+                  <div className="flex items-center space-x-2 mb-1">
+                    <span className="font-medium">{font.label}</span>
+                    {settings.fontSize === font.value && (
+                      <Badge variant="secondary" className="ml-auto">Active</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground" style={{ fontSize: font.size }}>
+                    Sample text
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
 

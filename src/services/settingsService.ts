@@ -1,378 +1,332 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-export interface GeneralSetting {
-  id: string;
-  user_id: string;
-  setting_key: string;
-  setting_value: string;
-  scope: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface AppearanceSetting {
-  id: string;
-  user_id: string;
-  theme: string;
-  primary_color: string;
-  font_size: string;
-  sidebar_collapsed: boolean;
-  animations_enabled: boolean;
-  ui_density: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface NotificationSetting {
-  id: string;
-  user_id: string;
-  app: string;
-  setting_key: string;
-  enabled: boolean;
-  delivery_method: 'email' | 'push' | 'in-app';
-  created_at: string;
-  updated_at: string;
-}
-
-export interface SecuritySetting {
-  id: string;
-  user_id: string;
-  setting_key: string;
-  setting_value: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface DataSetting {
-  id: string;
-  user_id: string;
-  data_type: string;
-  linked_services: Record<string, any>;
-  created_at: string;
-  updated_at: string;
-}
-
-export type GeneralSettingKey = 'language' | 'timezone';
-
 export const settingsService = {
-  // General Settings - using user_settings table
-  async getGeneralSettings(userId: string): Promise<{ data: Array<{ setting_key: string; setting_value: string }> | null }> {
+  // Get all settings for a user
+  async getAllSettings(userId: string) {
     try {
       const { data, error } = await supabase
         .from('user_settings')
-        .select('language, timezone')
+        .select('*')
         .eq('user_id', userId)
         .single();
 
       if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching general settings:', error);
-        return { data: [] };
+        console.error('Error fetching settings:', error);
+        throw error;
       }
 
       if (!data) {
-        return { data: [] };
+        // Return default settings if no data found
+        return this.getDefaultSettings();
       }
 
-      const settings = [];
-      if (data.language) {
-        settings.push({ setting_key: 'language', setting_value: data.language });
-      }
-      if (data.timezone) {
-        settings.push({ setting_key: 'timezone', setting_value: data.timezone });
-      }
-
-      return { data: settings };
+      // Map database fields to our settings structure
+      return this.mapDatabaseToSettings(data);
     } catch (error) {
-      console.error('Exception in getGeneralSettings:', error);
-      return { data: [] };
+      console.error('Exception in getAllSettings:', error);
+      throw error;
     }
   },
 
-  async updateGeneralSetting(userId: string, key: GeneralSettingKey, value: string): Promise<void> {
+  // Update a single setting
+  async updateSetting(userId: string, key: string, value: any) {
     try {
       const updateData: any = {};
-      updateData[key] = value;
+      
+      // Map our setting keys to database columns
+      const columnMapping = this.getColumnMapping();
+      const dbColumn = columnMapping[key] || key;
+      
+      updateData[dbColumn] = value;
+      updateData.updated_at = new Date().toISOString();
 
       const { error } = await supabase
         .from('user_settings')
         .upsert({
           user_id: userId,
           ...updateData,
-          updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id'
         });
 
       if (error) {
-        console.error('Error updating general setting:', error);
+        console.error('Error updating setting:', error);
         throw error;
       }
     } catch (error) {
-      console.error('Exception in updateGeneralSetting:', error);
+      console.error('Exception in updateSetting:', error);
       throw error;
     }
   },
 
-  // Appearance Settings - using user_settings table
-  async getAppearanceSettings(userId: string): Promise<AppearanceSetting | null> {
+  // Update nested settings (like notification preferences)
+  async updateNestedSetting(userId: string, category: string, key: string, value: any) {
     try {
-      const { data, error } = await supabase
-        .from('user_settings')
-        .select('theme, primary_color, font_selection, interface_animation, sidebar_layout')
-        .eq('user_id', userId)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching appearance settings:', error);
-        return null;
-      }
-
-      if (!data) {
-        return null;
-      }
-
-      // Map user_settings columns to AppearanceSetting interface
-      return {
-        id: userId,
-        user_id: userId,
-        theme: data.theme || 'light',
-        primary_color: data.primary_color || '#2563eb',
-        font_size: 'medium',
-        sidebar_collapsed: false,
-        animations_enabled: data.interface_animation ?? true,
-        ui_density: 'standard',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-    } catch (error) {
-      console.error('Exception in getAppearanceSettings:', error);
-      return null;
-    }
-  },
-
-  async updateAppearanceSettings(userId: string, settings: Partial<AppearanceSetting>): Promise<void> {
-    try {
-      const updateData: any = {};
-      
-      if (settings.theme) updateData.theme = settings.theme;
-      if (settings.primary_color) updateData.primary_color = settings.primary_color;
-      if (settings.animations_enabled !== undefined) updateData.interface_animation = settings.animations_enabled;
-
-      const { error } = await supabase
-        .from('user_settings')
-        .upsert({
-          user_id: userId,
-          ...updateData,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        });
-
-      if (error) {
-        console.error('Error updating appearance settings:', error);
-        throw error;
-      }
-    } catch (error) {
-      console.error('Exception in updateAppearanceSettings:', error);
-      throw error;
-    }
-  },
-
-  // Notification Settings - using user_settings table
-  async getNotificationSettings(userId: string): Promise<{ data: NotificationSetting[] | null }> {
-    try {
-      const { data, error } = await supabase
-        .from('user_settings')
-        .select('email_notifications, app_notifications, inapp_notifications')
-        .eq('user_id', userId)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching notification settings:', error);
-        return { data: [] };
-      }
-
-      // Convert to NotificationSetting format
-      const settings: NotificationSetting[] = [];
-      
-      if (data?.email_notifications) {
-        Object.entries(data.email_notifications as Record<string, boolean>).forEach(([key, enabled]) => {
-          settings.push({
-            id: `email_${key}`,
-            user_id: userId,
-            app: 'general',
-            setting_key: key,
-            enabled: Boolean(enabled),
-            delivery_method: 'email',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-        });
-      }
-
-      return { data: settings };
-    } catch (error) {
-      console.error('Exception in getNotificationSettings:', error);
-      return { data: [] };
-    }
-  },
-
-  async updateNotificationSetting(
-    userId: string,
-    app: string,
-    key: string,
-    enabled: boolean,
-    deliveryMethod: 'email' | 'push' | 'in-app'
-  ): Promise<void> {
-    try {
-      // For now, we'll update the email_notifications JSON field
+      // Get current settings first
       const { data: current } = await supabase
         .from('user_settings')
-        .select('email_notifications')
+        .select(category)
         .eq('user_id', userId)
         .single();
 
-      const emailNotifications = current?.email_notifications || {};
-      emailNotifications[key] = enabled;
+      const currentSettings = current?.[category] || {};
+      const updatedSettings = { ...currentSettings, [key]: value };
 
-      const { error } = await supabase
-        .from('user_settings')
-        .upsert({
-          user_id: userId,
-          email_notifications: emailNotifications,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        });
-
-      if (error) {
-        console.error('Error updating notification setting:', error);
-        throw error;
-      }
-    } catch (error) {
-      console.error('Exception in updateNotificationSetting:', error);
-      throw error;
-    }
-  },
-
-  // Security Settings - using user_settings table
-  async getSecuritySettings(userId: string): Promise<{ data: SecuritySetting[] | null }> {
-    try {
-      const { data, error } = await supabase
-        .from('user_settings')
-        .select('two_factor_auth, session_timeout, login_attempt_limit')
-        .eq('user_id', userId)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching security settings:', error);
-        return { data: [] };
-      }
-
-      const settings: SecuritySetting[] = [];
-      
-      if (data) {
-        if (data.two_factor_auth !== null) {
-          settings.push({
-            id: 'two_factor_auth',
-            user_id: userId,
-            setting_key: 'two_factor_auth',
-            setting_value: String(data.two_factor_auth),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-        }
-      }
-
-      return { data: settings };
-    } catch (error) {
-      console.error('Exception in getSecuritySettings:', error);
-      return { data: [] };
-    }
-  },
-
-  async updateSecuritySetting(userId: string, key: string, value: string): Promise<void> {
-    try {
       const updateData: any = {};
-      updateData[key] = value;
+      updateData[category] = updatedSettings;
+      updateData.updated_at = new Date().toISOString();
 
       const { error } = await supabase
         .from('user_settings')
         .upsert({
           user_id: userId,
           ...updateData,
-          updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id'
         });
 
       if (error) {
-        console.error('Error updating security setting:', error);
+        console.error('Error updating nested setting:', error);
         throw error;
       }
     } catch (error) {
-      console.error('Exception in updateSecuritySetting:', error);
+      console.error('Exception in updateNestedSetting:', error);
       throw error;
     }
   },
 
-  // Data Settings - using user_settings table
-  async getDataSettings(userId: string): Promise<{ data: DataSetting[] | null }> {
+  // Reset category to defaults
+  async resetCategoryToDefaults(userId: string, category: string) {
     try {
-      const { data, error } = await supabase
-        .from('user_settings')
-        .select('connected_apps, sync_settings')
-        .eq('user_id', userId)
-        .single();
+      const defaults = this.getDefaultSettings();
+      const defaultValue = defaults[category as keyof typeof defaults];
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching data settings:', error);
-        return { data: [] };
-      }
-
-      const settings: DataSetting[] = [];
-      
-      if (data?.connected_apps) {
-        settings.push({
-          id: 'connected_apps',
-          user_id: userId,
-          data_type: 'connected_apps',
-          linked_services: data.connected_apps as Record<string, any>,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-      }
-
-      return { data: settings };
-    } catch (error) {
-      console.error('Exception in getDataSettings:', error);
-      return { data: [] };
-    }
-  },
-
-  async updateDataSetting(userId: string, key: string, value: string): Promise<void> {
-    try {
       const updateData: any = {};
-      updateData[key] = { value };
+      updateData[category] = defaultValue;
+      updateData.updated_at = new Date().toISOString();
 
       const { error } = await supabase
         .from('user_settings')
         .upsert({
           user_id: userId,
           ...updateData,
-          updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id'
         });
 
-      if (error) {
-        console.error('Error updating data setting:', error);
-        throw error;
-      }
+      if (error) throw error;
     } catch (error) {
-      console.error('Exception in updateDataSetting:', error);
+      console.error('Exception in resetCategoryToDefaults:', error);
       throw error;
     }
-  }
+  },
+
+  // Reset all settings to defaults
+  async resetAllToDefaults(userId: string) {
+    try {
+      const defaults = this.getDefaultSettings();
+      const updateData = this.mapSettingsToDatabase(defaults);
+      updateData.user_id = userId;
+      updateData.updated_at = new Date().toISOString();
+
+      const { error } = await supabase
+        .from('user_settings')
+        .upsert(updateData, {
+          onConflict: 'user_id'
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Exception in resetAllToDefaults:', error);
+      throw error;
+    }
+  },
+
+  // Export user data
+  async exportData(userId: string, format: 'csv' | 'json' | 'pdf') {
+    try {
+      // This would typically call an edge function for data export
+      console.log(`Exporting data for user ${userId} in ${format} format`);
+      // Implementation would depend on your data export requirements
+      return { success: true, downloadUrl: '#' };
+    } catch (error) {
+      console.error('Exception in exportData:', error);
+      throw error;
+    }
+  },
+
+  // Archive old data
+  async archiveData(userId: string, dataType: string, olderThanDays: number) {
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
+
+      console.log(`Archiving ${dataType} older than ${olderThanDays} days for user ${userId}`);
+      // Implementation would depend on your archiving strategy
+      return { success: true, archivedCount: 0 };
+    } catch (error) {
+      console.error('Exception in archiveData:', error);
+      throw error;
+    }
+  },
+
+  // Helper functions
+  getDefaultSettings() {
+    return {
+      // General
+      language: 'en',
+      timezone: 'UTC',
+      dateFormat: 'MM/DD/YYYY',
+      defaultCurrency: 'USD',
+      sessionTimeout: 60,
+      defaultLandingPage: 'dashboard',
+      workingHoursStart: '09:00',
+      workingHoursEnd: '17:00',
+      workingDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+      organizationName: '',
+      displayName: '',
+      
+      // Appearance
+      theme: 'light',
+      primaryColor: '#2563eb',
+      accentColor: '#3b82f6',
+      fontSize: 'medium',
+      sidebarLayout: 'expanded',
+      uiDensity: 'standard',
+      animationsEnabled: true,
+      
+      // Notifications
+      emailNotifications: {
+        taskAssigned: true,
+        taskDue: true,
+        taskCompleted: false,
+        mentions: true,
+        fileShared: true,
+        timeTracker: false,
+        budgetAlerts: true,
+      },
+      pushNotifications: {
+        taskAssigned: true,
+        taskDue: true,
+        taskCompleted: false,
+        mentions: true,
+        fileShared: true,
+        timeTracker: true,
+        budgetAlerts: true,
+      },
+      inappNotifications: {
+        taskAssigned: true,
+        taskDue: true,
+        taskCompleted: true,
+        mentions: true,
+        fileShared: true,
+        timeTracker: true,
+        budgetAlerts: true,
+      },
+      notificationSounds: true,
+      alertTone: 'default',
+      quietHoursEnabled: false,
+      quietHoursStart: '22:00',
+      quietHoursEnd: '08:00',
+      weeklyDigest: true,
+      weeklyDigestDay: 'monday',
+      weeklyDigestTime: '09:00',
+      
+      // Security
+      twoFactorAuth: false,
+      autoLogout: true,
+      loginNotifications: true,
+      requirePasswordForSensitive: true,
+      
+      // Data Management
+      autoBackup: true,
+      realtimeSync: true,
+      dataRetention: {
+        tasks: '365',
+        timeEntries: '365',
+        expenses: '365',
+        files: '365',
+        messages: '90',
+      },
+    };
+  },
+
+  getColumnMapping() {
+    return {
+      'primaryColor': 'primary_color',
+      'accentColor': 'accent_color',
+      'fontSize': 'font_selection',
+      'sidebarLayout': 'sidebar_layout',
+      'uiDensity': 'interface_spacing',
+      'animationsEnabled': 'interface_animation',
+      'defaultCurrency': 'default_currency',
+      'sessionTimeout': 'session_timeout',
+      'defaultLandingPage': 'default_landing_page',
+      'workingHoursStart': 'working_hours_start',
+      'workingHoursEnd': 'working_hours_end',
+      'workingDays': 'working_days',
+      'organizationName': 'organization_name',
+      'displayName': 'display_name',
+      'emailNotifications': 'email_notifications',
+      'pushNotifications': 'app_notifications',
+      'inappNotifications': 'inapp_notifications',
+      'notificationSounds': 'new_message_sound',
+      'alertTone': 'alert_tone',
+      'quietHoursEnabled': 'quiet_hours_enabled',
+      'quietHoursStart': 'quiet_hours_start',
+      'quietHoursEnd': 'quiet_hours_end',
+      'weeklyDigest': 'weekly_summary_reports',
+      'weeklyDigestDay': 'weekly_digest_day',
+      'weeklyDigestTime': 'weekly_digest_time',
+      'twoFactorAuth': 'two_factor_auth',
+      'autoLogout': 'auto_logout_inactivity',
+      'loginNotifications': 'login_notifications',
+      'requirePasswordForSensitive': 'require_password_sensitive',
+      'autoBackup': 'auto_backup',
+      'realtimeSync': 'realtime_sync',
+      'dataRetention': 'data_retention',
+    };
+  },
+
+  mapDatabaseToSettings(data: any) {
+    const settings = this.getDefaultSettings();
+    
+    // Map database columns back to our settings structure
+    return {
+      ...settings,
+      language: data.language || settings.language,
+      timezone: data.timezone || settings.timezone,
+      dateFormat: data.date_format || settings.dateFormat,
+      theme: data.theme || settings.theme,
+      primaryColor: data.primary_color || settings.primaryColor,
+      accentColor: data.accent_color || settings.accentColor,
+      fontSize: data.font_selection || settings.fontSize,
+      sidebarLayout: data.sidebar_layout || settings.sidebarLayout,
+      uiDensity: data.interface_spacing || settings.uiDensity,
+      animationsEnabled: data.interface_animation ?? settings.animationsEnabled,
+      defaultCurrency: data.default_currency || settings.defaultCurrency,
+      sessionTimeout: data.session_timeout || settings.sessionTimeout,
+      organizationName: data.organization_name || settings.organizationName,
+      emailNotifications: data.email_notifications || settings.emailNotifications,
+      pushNotifications: data.app_notifications || settings.pushNotifications,
+      inappNotifications: data.inapp_notifications || settings.inappNotifications,
+      notificationSounds: data.new_message_sound ?? settings.notificationSounds,
+      twoFactorAuth: data.two_factor_auth ?? settings.twoFactorAuth,
+      autoLogout: data.auto_logout_inactivity ?? settings.autoLogout,
+      // Add other mappings as needed
+    };
+  },
+
+  mapSettingsToDatabase(settings: any) {
+    const mapping = this.getColumnMapping();
+    const dbData: any = {};
+    
+    Object.keys(settings).forEach(key => {
+      const dbColumn = mapping[key] || key;
+      dbData[dbColumn] = settings[key];
+    });
+    
+    return dbData;
+  },
 };

@@ -20,22 +20,72 @@ const APPS = [
 ];
 
 const NOTIFICATION_TYPES = [
-  { id: 'task_assigned', label: 'Task Assigned', description: 'When a task is assigned to you' },
-  { id: 'task_due', label: 'Task Due Soon', description: 'Reminders for upcoming deadlines' },
-  { id: 'task_completed', label: 'Task Completed', description: 'When tasks are marked as done' },
+  { id: 'taskAssigned', label: 'Task Assigned', description: 'When a task is assigned to you' },
+  { id: 'taskDue', label: 'Task Due Soon', description: 'Reminders for upcoming deadlines' },
+  { id: 'taskCompleted', label: 'Task Completed', description: 'When tasks are marked as done' },
   { id: 'mentions', label: 'Mentions', description: 'When you are mentioned in comments' },
-  { id: 'file_shared', label: 'File Shared', description: 'When files are shared with you' },
-  { id: 'time_tracker', label: 'Time Tracker', description: 'Session reminders and idle alerts' },
-  { id: 'budget_alerts', label: 'Budget Alerts', description: 'When budgets exceed thresholds' },
+  { id: 'fileShared', label: 'File Shared', description: 'When files are shared with you' },
+  { id: 'timeTracker', label: 'Time Tracker', description: 'Session reminders and idle alerts' },
+  { id: 'budgetAlerts', label: 'Budget Alerts', description: 'When budgets exceed thresholds' },
 ];
 
 export const NotificationSettingsSection = () => {
-  const { settings, updateSetting } = useSettings();
+  const { settings, updateSetting, updateNestedSetting, loading } = useSettings();
+
+  const handleGlobalNotificationToggle = async (method: 'email' | 'push' | 'inapp', enabled: boolean) => {
+    console.log(`Toggle global ${method} notifications:`, enabled);
+    // This would typically disable/enable all notifications of this type
+    // For now, we'll just log it
+  };
 
   const handleNotificationToggle = async (type: string, method: 'email' | 'push' | 'inapp', enabled: boolean) => {
-    console.log(`Toggle ${type} ${method} notifications:`, enabled);
-    // Implementation would update the specific notification setting
+    const settingKey = method === 'email' ? 'emailNotifications' : 
+                      method === 'push' ? 'pushNotifications' : 'inappNotifications';
+    
+    await updateNestedSetting(settingKey, type, enabled);
   };
+
+  const handleQuietHoursToggle = async (enabled: boolean) => {
+    await updateSetting('quietHoursEnabled', enabled);
+  };
+
+  const handleQuietHoursTimeChange = async (field: 'start' | 'end', time: string) => {
+    await updateSetting(`quietHours${field === 'start' ? 'Start' : 'End'}`, time);
+  };
+
+  const handleSoundToggle = async (enabled: boolean) => {
+    await updateSetting('notificationSounds', enabled);
+  };
+
+  const handleAlertToneChange = async (tone: string) => {
+    await updateSetting('alertTone', tone);
+  };
+
+  const handleWeeklyDigestToggle = async (enabled: boolean) => {
+    await updateSetting('weeklyDigest', enabled);
+  };
+
+  const handleWeeklyDigestDayChange = async (day: string) => {
+    await updateSetting('weeklyDigestDay', day);
+  };
+
+  const handleWeeklyDigestTimeChange = async (time: string) => {
+    await updateSetting('weeklyDigestTime', time);
+  };
+
+  const testSound = () => {
+    // Play a test notification sound
+    if (settings.notificationSounds) {
+      const audio = new Audio('/notification-sound.mp3');
+      audio.play().catch(() => {
+        console.log('Could not play test sound');
+      });
+    }
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center p-6">Loading notification settings...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -61,7 +111,10 @@ export const NotificationSettingsSection = () => {
                   <p className="text-xs text-muted-foreground">Send to inbox</p>
                 </div>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={Object.values(settings.emailNotifications).some(Boolean)}
+                onCheckedChange={(checked) => handleGlobalNotificationToggle('email', checked)}
+              />
             </div>
 
             <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -72,7 +125,10 @@ export const NotificationSettingsSection = () => {
                   <p className="text-xs text-muted-foreground">Browser alerts</p>
                 </div>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={Object.values(settings.pushNotifications).some(Boolean)}
+                onCheckedChange={(checked) => handleGlobalNotificationToggle('push', checked)}
+              />
             </div>
 
             <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -83,7 +139,10 @@ export const NotificationSettingsSection = () => {
                   <p className="text-xs text-muted-foreground">Show in interface</p>
                 </div>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={Object.values(settings.inappNotifications).some(Boolean)}
+                onCheckedChange={(checked) => handleGlobalNotificationToggle('inapp', checked)}
+              />
             </div>
           </div>
 
@@ -105,7 +164,8 @@ export const NotificationSettingsSection = () => {
                 <Input
                   id="quiet-start"
                   type="time"
-                  defaultValue="22:00"
+                  value={settings.quietHoursStart}
+                  onChange={(e) => handleQuietHoursTimeChange('start', e.target.value)}
                   className="w-32"
                 />
               </div>
@@ -115,12 +175,16 @@ export const NotificationSettingsSection = () => {
                 <Input
                   id="quiet-end"
                   type="time"
-                  defaultValue="08:00"
+                  value={settings.quietHoursEnd}
+                  onChange={(e) => handleQuietHoursTimeChange('end', e.target.value)}
                   className="w-32"
                 />
               </div>
               
-              <Switch defaultChecked />
+              <Switch 
+                checked={settings.quietHoursEnabled}
+                onCheckedChange={handleQuietHoursToggle}
+              />
             </div>
           </div>
 
@@ -136,12 +200,18 @@ export const NotificationSettingsSection = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="text-sm">Play notification sounds</Label>
-                <Switch defaultChecked />
+                <Switch 
+                  checked={settings.notificationSounds}
+                  onCheckedChange={handleSoundToggle}
+                />
               </div>
               
               <div className="flex items-center space-x-3">
                 <Label className="text-sm">Alert tone:</Label>
-                <Select defaultValue="default">
+                <Select 
+                  value={settings.alertTone}
+                  onValueChange={handleAlertToneChange}
+                >
                   <SelectTrigger className="w-40">
                     <SelectValue />
                   </SelectTrigger>
@@ -152,7 +222,7 @@ export const NotificationSettingsSection = () => {
                     <SelectItem value="pop">Pop</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={testSound}>
                   Test
                 </Button>
               </div>
@@ -161,70 +231,54 @@ export const NotificationSettingsSection = () => {
         </CardContent>
       </Card>
 
-      {/* Per-App Notification Settings */}
+      {/* Per-Type Notification Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>App-Specific Notifications</CardTitle>
+          <CardTitle>Notification Types</CardTitle>
           <CardDescription>
-            Fine-tune notifications for each application
+            Fine-tune notifications for each type of activity
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6">
-            {APPS.map((app) => (
-              <div key={app.id}>
-                <div className="flex items-center space-x-2 mb-3">
-                  <span className="text-lg">{app.icon}</span>
-                  <Label className="text-base font-medium">{app.name}</Label>
-                  <Badge variant="secondary" className="ml-auto">
-                    5 active
-                  </Badge>
+          <div className="space-y-4">
+            {NOTIFICATION_TYPES.map((type) => (
+              <div key={type.id} className="flex items-center justify-between py-3 border-b last:border-b-0">
+                <div>
+                  <Label className="text-sm font-medium">{type.label}</Label>
+                  <p className="text-xs text-muted-foreground">{type.description}</p>
                 </div>
                 
-                <div className="space-y-2 pl-6">
-                  {NOTIFICATION_TYPES.map((type) => (
-                    <div key={type.id} className="flex items-center justify-between py-2">
-                      <div>
-                        <Label className="text-sm font-medium">{type.label}</Label>
-                        <p className="text-xs text-muted-foreground">{type.description}</p>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <div className="flex items-center space-x-1">
-                          <Switch 
-                            defaultChecked 
-                            onCheckedChange={(checked) => 
-                              handleNotificationToggle(type.id, 'email', checked)
-                            }
-                          />
-                          <Mail className="h-3 w-3 text-muted-foreground" />
-                        </div>
-                        
-                        <div className="flex items-center space-x-1">
-                          <Switch 
-                            defaultChecked 
-                            onCheckedChange={(checked) => 
-                              handleNotificationToggle(type.id, 'push', checked)
-                            }
-                          />
-                          <Smartphone className="h-3 w-3 text-muted-foreground" />
-                        </div>
-                        
-                        <div className="flex items-center space-x-1">
-                          <Switch 
-                            defaultChecked 
-                            onCheckedChange={(checked) => 
-                              handleNotificationToggle(type.id, 'inapp', checked)
-                            }
-                          />
-                          <Bell className="h-3 w-3 text-muted-foreground" />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-1">
+                    <Switch 
+                      checked={settings.emailNotifications[type.id as keyof typeof settings.emailNotifications] ?? false}
+                      onCheckedChange={(checked) => 
+                        handleNotificationToggle(type.id, 'email', checked)
+                      }
+                    />
+                    <Mail className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  
+                  <div className="flex items-center space-x-1">
+                    <Switch 
+                      checked={settings.pushNotifications[type.id as keyof typeof settings.pushNotifications] ?? false}
+                      onCheckedChange={(checked) => 
+                        handleNotificationToggle(type.id, 'push', checked)
+                      }
+                    />
+                    <Smartphone className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  
+                  <div className="flex items-center space-x-1">
+                    <Switch 
+                      checked={settings.inappNotifications[type.id as keyof typeof settings.inappNotifications] ?? false}
+                      onCheckedChange={(checked) => 
+                        handleNotificationToggle(type.id, 'inapp', checked)
+                      }
+                    />
+                    <Bell className="h-3 w-3 text-muted-foreground" />
+                  </div>
                 </div>
-                
-                {app.id !== APPS[APPS.length - 1].id && <Separator className="mt-4" />}
               </div>
             ))}
           </div>
@@ -248,15 +302,21 @@ export const NotificationSettingsSection = () => {
               <div>
                 <Label className="text-sm font-medium">Enable weekly digest</Label>
                 <p className="text-xs text-muted-foreground">
-                  Get a summary every Monday morning
+                  Get a summary every week
                 </p>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={settings.weeklyDigest}
+                onCheckedChange={handleWeeklyDigestToggle}
+              />
             </div>
             
             <div className="flex items-center space-x-3">
               <Label className="text-sm">Send on:</Label>
-              <Select defaultValue="monday">
+              <Select 
+                value={settings.weeklyDigestDay}
+                onValueChange={handleWeeklyDigestDayChange}
+              >
                 <SelectTrigger className="w-40">
                   <SelectValue />
                 </SelectTrigger>
@@ -270,7 +330,8 @@ export const NotificationSettingsSection = () => {
               <Label className="text-sm">at:</Label>
               <Input
                 type="time"
-                defaultValue="09:00"
+                value={settings.weeklyDigestTime}
+                onChange={(e) => handleWeeklyDigestTimeChange(e.target.value)}
                 className="w-32"
               />
             </div>

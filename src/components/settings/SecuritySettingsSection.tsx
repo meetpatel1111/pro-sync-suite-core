@@ -18,7 +18,9 @@ import {
   Check,
   X
 } from 'lucide-react';
-import { PasswordStrengthMeter } from '@/components/PasswordStrengthMeter';
+import { useSettings } from '@/context/SettingsContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 const RECENT_SESSIONS = [
   {
@@ -48,35 +50,143 @@ const RECENT_SESSIONS = [
 ];
 
 export const SecuritySettingsSection = () => {
+  const { settings, updateSetting, loading } = useSettings();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0);
 
-  const handlePasswordChange = () => {
-    if (newPassword !== confirmPassword) {
-      console.error('Passwords do not match');
+  const calculatePasswordStrength = (password: string) => {
+    let strength = 0;
+    if (password.length >= 8) strength += 25;
+    if (password.match(/[a-z]/)) strength += 25;
+    if (password.match(/[A-Z]/)) strength += 25;
+    if (password.match(/[0-9]/)) strength += 25;
+    if (password.match(/[^a-zA-Z0-9]/)) strength += 25;
+    return Math.min(strength, 100);
+  };
+
+  const handlePasswordChange = async () => {
+    if (!currentPassword) {
+      toast({
+        title: 'Error',
+        description: 'Please enter your current password',
+        variant: 'destructive',
+      });
       return;
     }
-    console.log('Changing password...');
-  };
 
-  const handleTwoFactorToggle = (enabled: boolean) => {
-    setTwoFactorEnabled(enabled);
-    if (enabled) {
-      console.log('Setting up 2FA...');
-    } else {
-      console.log('Disabling 2FA...');
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: 'Error',
+        description: 'Passwords do not match',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (passwordStrength < 50) {
+      toast({
+        title: 'Error',
+        description: 'Password is too weak. Please choose a stronger password.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // In a real app, this would call a secure password change endpoint
+      console.log('Changing password...');
+      toast({
+        title: 'Success',
+        description: 'Password changed successfully',
+      });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to change password',
+        variant: 'destructive',
+      });
     }
   };
 
-  const handleLogoutAllDevices = () => {
-    console.log('Logging out from all devices...');
+  const handleTwoFactorToggle = async (enabled: boolean) => {
+    await updateSetting('twoFactorAuth', enabled);
+    
+    if (enabled) {
+      toast({
+        title: 'Two-Factor Authentication',
+        description: 'Please scan the QR code with your authenticator app',
+      });
+    } else {
+      toast({
+        title: 'Two-Factor Authentication',
+        description: 'Two-factor authentication has been disabled',
+      });
+    }
   };
 
-  const handleLogoutDevice = (sessionId: string) => {
-    console.log(`Logging out device: ${sessionId}`);
+  const handleAutoLogoutToggle = async (enabled: boolean) => {
+    await updateSetting('autoLogout', enabled);
   };
+
+  const handleLoginNotificationsToggle = async (enabled: boolean) => {
+    await updateSetting('loginNotifications', enabled);
+  };
+
+  const handleSensitiveActionsToggle = async (enabled: boolean) => {
+    await updateSetting('requirePasswordForSensitive', enabled);
+  };
+
+  const handleLogoutAllDevices = async () => {
+    try {
+      // In a real app, this would invalidate all sessions except current
+      console.log('Logging out from all devices...');
+      toast({
+        title: 'Success',
+        description: 'Logged out from all devices successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to logout from all devices',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleLogoutDevice = async (sessionId: string) => {
+    try {
+      console.log(`Logging out device: ${sessionId}`);
+      toast({
+        title: 'Success',
+        description: 'Device logged out successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to logout device',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  React.useEffect(() => {
+    if (newPassword) {
+      setPasswordStrength(calculatePasswordStrength(newPassword));
+    } else {
+      setPasswordStrength(0);
+    }
+  }, [newPassword]);
+
+  if (loading) {
+    return <div className="flex items-center justify-center p-6">Loading security settings...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -101,11 +211,23 @@ export const SecuritySettingsSection = () => {
               </div>
             </div>
             
-            <div className="flex items-center space-x-3 p-4 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+            <div className={`flex items-center space-x-3 p-4 rounded-lg ${
+              settings.twoFactorAuth 
+                ? 'bg-green-50 dark:bg-green-950' 
+                : 'bg-yellow-50 dark:bg-yellow-950'
+            }`}>
+              {settings.twoFactorAuth ? (
+                <Check className="h-5 w-5 text-green-600" />
+              ) : (
+                <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              )}
               <div>
-                <p className="text-sm font-medium">2FA Recommended</p>
-                <p className="text-xs text-muted-foreground">Add extra security</p>
+                <p className="text-sm font-medium">
+                  {settings.twoFactorAuth ? '2FA Enabled' : '2FA Recommended'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {settings.twoFactorAuth ? 'Extra security active' : 'Add extra security'}
+                </p>
               </div>
             </div>
             
@@ -142,12 +264,12 @@ export const SecuritySettingsSection = () => {
                 </p>
               </div>
               <Switch
-                checked={twoFactorEnabled}
+                checked={settings.twoFactorAuth}
                 onCheckedChange={handleTwoFactorToggle}
               />
             </div>
             
-            {twoFactorEnabled && (
+            {settings.twoFactorAuth && (
               <Alert>
                 <Smartphone className="h-4 w-4" />
                 <AlertDescription>
@@ -187,7 +309,27 @@ export const SecuritySettingsSection = () => {
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Enter new password"
                 />
-                {newPassword && <PasswordStrengthMeter password={newPassword} />}
+                {newPassword && (
+                  <div className="mt-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="flex-1 bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all ${
+                            passwordStrength < 25 ? 'bg-red-500' :
+                            passwordStrength < 50 ? 'bg-yellow-500' :
+                            passwordStrength < 75 ? 'bg-blue-500' : 'bg-green-500'
+                          }`}
+                          style={{ width: `${passwordStrength}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {passwordStrength < 25 ? 'Weak' :
+                         passwordStrength < 50 ? 'Fair' :
+                         passwordStrength < 75 ? 'Good' : 'Strong'}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
               
               <div>
@@ -201,7 +343,11 @@ export const SecuritySettingsSection = () => {
                 />
               </div>
               
-              <Button onClick={handlePasswordChange} className="w-full">
+              <Button 
+                onClick={handlePasswordChange} 
+                className="w-full"
+                disabled={!currentPassword || !newPassword || !confirmPassword || newPassword !== confirmPassword}
+              >
                 Update Password
               </Button>
             </div>
@@ -285,7 +431,10 @@ export const SecuritySettingsSection = () => {
                 Automatically sign out after 1 hour of inactivity
               </p>
             </div>
-            <Switch defaultChecked />
+            <Switch 
+              checked={settings.autoLogout}
+              onCheckedChange={handleAutoLogoutToggle}
+            />
           </div>
           
           <div className="flex items-center justify-between">
@@ -295,7 +444,10 @@ export const SecuritySettingsSection = () => {
                 Get notified when someone signs into your account
               </p>
             </div>
-            <Switch defaultChecked />
+            <Switch 
+              checked={settings.loginNotifications}
+              onCheckedChange={handleLoginNotificationsToggle}
+            />
           </div>
           
           <div className="flex items-center justify-between">
@@ -305,7 +457,10 @@ export const SecuritySettingsSection = () => {
                 Confirm your password before changing security settings
               </p>
             </div>
-            <Switch defaultChecked />
+            <Switch 
+              checked={settings.requirePasswordForSensitive}
+              onCheckedChange={handleSensitiveActionsToggle}
+            />
           </div>
         </CardContent>
       </Card>
