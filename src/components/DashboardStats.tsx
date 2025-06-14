@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, CheckCircle, Clock, TrendingUp, AlertTriangle, Calendar } from 'lucide-react';
@@ -177,16 +176,16 @@ const DashboardStats = () => {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {Array.from({ length: 6 }).map((_, index) => (
           <Card key={index} className="animate-pulse">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="h-4 bg-gray-200 rounded w-24"></div>
-              <div className="h-8 w-8 bg-gray-200 rounded-lg"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-8 bg-gray-200 rounded w-16 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-20"></div>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="h-3 bg-gray-200 rounded w-16"></div>
+                <div className="h-6 w-6 bg-gray-200 rounded"></div>
+              </div>
+              <div className="h-6 bg-gray-200 rounded w-12 mb-1"></div>
+              <div className="h-3 bg-gray-200 rounded w-14"></div>
             </CardContent>
           </Card>
         ))}
@@ -195,37 +194,36 @@ const DashboardStats = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
       {stats.map((stat, index) => (
         <Card key={index} className="relative overflow-hidden hover:shadow-md transition-shadow duration-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {stat.title}
-            </CardTitle>
-            <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-muted-foreground truncate">
+                {stat.title}
+              </span>
+              <div className={`p-1.5 rounded-md ${stat.bgColor}`}>
+                <stat.icon className={`h-3 w-3 ${stat.color}`} />
+              </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="flex items-center gap-2">
+            <div className="space-y-1">
+              <div className="text-lg font-bold">{stat.value}</div>
+              <div className="flex items-center gap-1">
                 <Badge 
                   variant={stat.trend === 'up' ? 'default' : 'destructive'} 
-                  className={`text-xs ${
+                  className={`text-xs px-1 py-0 h-4 ${
                     stat.trend === 'up' 
                       ? 'bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400' 
                       : 'bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400'
                   }`}
                 >
-                  <TrendingUp className={`h-3 w-3 mr-1 ${stat.trend === 'down' ? 'rotate-180' : ''}`} />
+                  <TrendingUp className={`h-2 w-2 mr-0.5 ${stat.trend === 'down' ? 'rotate-180' : ''}`} />
                   {stat.change}
                 </Badge>
-                <span className="text-xs text-muted-foreground">vs last month</span>
               </div>
             </div>
           </CardContent>
-          <div className={`absolute bottom-0 left-0 right-0 h-1 ${
+          <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${
             stat.trend === 'up' ? 'bg-gradient-to-r from-green-400 to-green-600' : 'bg-gradient-to-r from-red-400 to-red-600'
           }`}></div>
         </Card>
