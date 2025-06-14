@@ -56,7 +56,7 @@ const App = () => (
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
-                <Route path="/app/:appName" element={<AppPlaceholder />} />
+                <Route path="/app/:appName" element={<AppPlaceholder title="App" description="Application placeholder" />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </IntegrationProvider>
