@@ -3,135 +3,68 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { IntegrationProvider } from "@/context/IntegrationContext";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
-import { useAuthContext } from "@/context/AuthContext";
-import LoadingFallback from "@/components/ui/loading-fallback";
+import { SettingsProvider } from "@/context/SettingsContext";
+import { IntegrationProvider } from "@/context/IntegrationContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import UserSettings from "./pages/UserSettings";
+import ProfileSettings from "./pages/ProfileSettings";
+import BudgetBuddy from "./pages/BudgetBuddy";
 import TaskMaster from "./pages/TaskMaster";
 import TimeTrackPro from "./pages/TimeTrackPro";
 import CollabSpace from "./pages/CollabSpace";
-import PlanBoard from "./pages/PlanBoard";
 import FileVault from "./pages/FileVault";
-import BudgetBuddy from "./pages/BudgetBuddy";
-import InsightIQ from "./pages/InsightIQ";
 import ClientConnect from "./pages/ClientConnect";
+import PlanBoard from "./pages/PlanBoard";
 import RiskRadar from "./pages/RiskRadar";
+import InsightIQ from "./pages/InsightIQ";
 import ResourceHub from "./pages/ResourceHub";
-import NotFound from "./pages/NotFound";
-import ProfileSettings from "./pages/ProfileSettings";
-import UserSettings from "./pages/UserSettings";
+import AppPlaceholder from "./pages/AppPlaceholder";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 import Notifications from "./pages/Notifications";
-import { useState, useEffect } from "react";
+import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 60 * 1000, // 1 minute
-    },
-  },
-});
+const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuthContext();
-  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
-
-  // If auth loading takes too long, we'll show the user a way to proceed
-  useEffect(() => {
-    // If loading is already false, no need to set up timeout
-    if (!loading) return;
-    
-    // Set a longer timeout for the initial auth check
-    const timeoutId = setTimeout(() => {
-      console.log("Auth loading timed out, redirecting to auth page");
-      setLoadingTimedOut(true);
-    }, 10000); // 10 seconds timeout
-    
-    return () => clearTimeout(timeoutId);
-  }, [loading]);
-
-  // If not loading or already timed out and no user, redirect to auth
-  if ((!loading || loadingTimedOut) && !user) {
-    console.log("No authenticated user, redirecting to /auth");
-    return <Navigate to="/auth" replace />;
-  }
-
-  // Show loading state only if we're still loading and haven't timed out
-  if (loading && !loadingTimedOut) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center">
-        <LoadingFallback 
-          message="Loading user information..." 
-          timeout={8000}
-          onTimeout={() => {
-            console.log("Loading user timed out");
-            setLoadingTimedOut(true);
-          }}
-        />
-      </div>
-    );
-  }
-
-  // If we reach here, user is authenticated
-  return <>{children}</>;
-};
-
-const App = () => {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <IntegrationProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <AuthProvider>
+          <SettingsProvider>
+            <IntegrationProvider>
               <Routes>
+                <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
-                
-                {/* Make Index route protected */}
-                <Route 
-                  path="/" 
-                  element={
-                    <ProtectedRoute>
-                      <Index />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                <Route 
-                  path="/taskmaster" 
-                  element={
-                    <ProtectedRoute>
-                      <TaskMaster />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                <Route path="/timetrackpro" element={<ProtectedRoute><TimeTrackPro /></ProtectedRoute>} />
-                <Route path="/collabspace" element={<ProtectedRoute><CollabSpace /></ProtectedRoute>} />
-                <Route path="/planboard" element={<ProtectedRoute><PlanBoard /></ProtectedRoute>} />
-                <Route path="/filevault" element={<ProtectedRoute><FileVault /></ProtectedRoute>} />
-                <Route path="/budgetbuddy" element={<ProtectedRoute><BudgetBuddy /></ProtectedRoute>} />
-                <Route path="/insightiq" element={<ProtectedRoute><InsightIQ /></ProtectedRoute>} />
-                <Route path="/clientconnect" element={<ProtectedRoute><ClientConnect /></ProtectedRoute>} />
-                <Route path="/riskradar" element={<ProtectedRoute><RiskRadar /></ProtectedRoute>} />
-                <Route path="/resourcehub" element={<ProtectedRoute><ResourceHub /></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
-                <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                
+                <Route path="/settings" element={<UserSettings />} />
+                <Route path="/profile" element={<ProfileSettings />} />
+                <Route path="/budgetbuddy" element={<BudgetBuddy />} />
+                <Route path="/taskmaster" element={<TaskMaster />} />
+                <Route path="/timetrackpro" element={<TimeTrackPro />} />
+                <Route path="/collabspace" element={<CollabSpace />} />
+                <Route path="/filevault" element={<FileVault />} />
+                <Route path="/clientconnect" element={<ClientConnect />} />
+                <Route path="/planboard" element={<PlanBoard />} />
+                <Route path="/riskradar" element={<RiskRadar />} />
+                <Route path="/insightiq" element={<InsightIQ />} />
+                <Route path="/resourcehub" element={<ResourceHub />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/app/:appName" element={<AppPlaceholder />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </BrowserRouter>
-          </IntegrationProvider>
-        </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
-  );
-};
+            </IntegrationProvider>
+          </SettingsProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;

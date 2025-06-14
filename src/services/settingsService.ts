@@ -12,30 +12,107 @@ import {
 export const settingsService = {
   // General Settings
   async getGeneralSettings(userId: string): Promise<{ data: GeneralSetting[] | null }> {
-    console.warn('getGeneralSettings: Not implemented as general_settings table is not in DB schema');
-    return { data: [] };
+    try {
+      const { data, error } = await supabase
+        .from('general_settings')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error fetching general settings:', error);
+        return { data: [] };
+      }
+
+      return { data };
+    } catch (error) {
+      console.error('Exception in getGeneralSettings:', error);
+      return { data: [] };
+    }
   },
 
   async updateGeneralSetting(userId: string, key: GeneralSettingKey, value: string): Promise<void> {
-    console.warn('updateGeneralSetting: Not implemented as general_settings table is not in DB schema');
-    return Promise.resolve();
+    try {
+      const { error } = await supabase
+        .from('general_settings')
+        .upsert({
+          user_id: userId,
+          setting_key: key,
+          setting_value: value,
+          scope: 'user'
+        }, {
+          onConflict: 'user_id,setting_key'
+        });
+
+      if (error) {
+        console.error('Error updating general setting:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Exception in updateGeneralSetting:', error);
+      throw error;
+    }
   },
 
   // Appearance Settings
   async getAppearanceSettings(userId: string): Promise<AppearanceSetting | null> {
-    console.warn('getAppearanceSettings: Not implemented as appearance_settings table is not in DB schema');
-    return null;
+    try {
+      const { data, error } = await supabase
+        .from('appearance_settings')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching appearance settings:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Exception in getAppearanceSettings:', error);
+      return null;
+    }
   },
 
   async updateAppearanceSettings(userId: string, settings: Partial<AppearanceSetting>): Promise<void> {
-    console.warn('updateAppearanceSettings: Not implemented as appearance_settings table is not in DB schema');
-    return Promise.resolve();
+    try {
+      const { error } = await supabase
+        .from('appearance_settings')
+        .upsert({
+          user_id: userId,
+          ...settings
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) {
+        console.error('Error updating appearance settings:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Exception in updateAppearanceSettings:', error);
+      throw error;
+    }
   },
 
   // Notification Settings
   async getNotificationSettings(userId: string): Promise<{ data: NotificationSetting[] | null }> {
-    console.warn('getNotificationSettings: Not implemented as notification_settings table is not in DB schema');
-    return { data: [] };
+    try {
+      const { data, error } = await supabase
+        .from('notification_settings')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error fetching notification settings:', error);
+        return { data: [] };
+      }
+
+      return { data };
+    } catch (error) {
+      console.error('Exception in getNotificationSettings:', error);
+      return { data: [] };
+    }
   },
 
   async updateNotificationSetting(
@@ -45,29 +122,110 @@ export const settingsService = {
     enabled: boolean,
     deliveryMethod: 'email' | 'push' | 'in-app'
   ): Promise<void> {
-    console.warn('updateNotificationSetting: Not implemented as notification_settings table is not in DB schema');
-    return Promise.resolve();
+    try {
+      const { error } = await supabase
+        .from('notification_settings')
+        .upsert({
+          user_id: userId,
+          app,
+          setting_key: key,
+          enabled,
+          delivery_method: deliveryMethod
+        }, {
+          onConflict: 'user_id,app,setting_key,delivery_method'
+        });
+
+      if (error) {
+        console.error('Error updating notification setting:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Exception in updateNotificationSetting:', error);
+      throw error;
+    }
   },
 
   // Security Settings
   async getSecuritySettings(userId: string): Promise<{ data: SecuritySetting[] | null }> {
-    console.warn('getSecuritySettings: Not implemented as security_settings table is not in DB schema');
-    return { data: [] };
+    try {
+      const { data, error } = await supabase
+        .from('security_settings')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error fetching security settings:', error);
+        return { data: [] };
+      }
+
+      return { data };
+    } catch (error) {
+      console.error('Exception in getSecuritySettings:', error);
+      return { data: [] };
+    }
   },
 
   async updateSecuritySetting(userId: string, key: string, value: string): Promise<void> {
-    console.warn('updateSecuritySetting: Not implemented as security_settings table is not in DB schema');
-    return Promise.resolve();
+    try {
+      const { error } = await supabase
+        .from('security_settings')
+        .upsert({
+          user_id: userId,
+          setting_key: key,
+          setting_value: value
+        }, {
+          onConflict: 'user_id,setting_key'
+        });
+
+      if (error) {
+        console.error('Error updating security setting:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Exception in updateSecuritySetting:', error);
+      throw error;
+    }
   },
 
   // Data Settings
   async getDataSettings(userId: string): Promise<{ data: DataSetting[] | null }> {
-    console.warn('getDataSettings: Not implemented as data_settings table is not in DB schema');
-    return { data: [] };
+    try {
+      const { data, error } = await supabase
+        .from('data_settings')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error fetching data settings:', error);
+        return { data: [] };
+      }
+
+      return { data };
+    } catch (error) {
+      console.error('Exception in getDataSettings:', error);
+      return { data: [] };
+    }
   },
 
   async updateDataSetting(userId: string, key: string, value: string): Promise<void> {
-    console.warn('updateDataSetting: Not implemented as data_settings table is not in DB schema');
-    return Promise.resolve();
+    try {
+      const { error } = await supabase
+        .from('data_settings')
+        .upsert({
+          user_id: userId,
+          data_type: key,
+          linked_services: { value }
+        }, {
+          onConflict: 'user_id,data_type'
+        });
+
+      if (error) {
+        console.error('Error updating data setting:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Exception in updateDataSetting:', error);
+      throw error;
+    }
   }
 };

@@ -1,12 +1,15 @@
+
 import React from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import SettingsForm from '@/components/settings/SettingsForm';
+import { useSettings } from '@/context/SettingsContext';
 
 const UserSettings = () => {
   const navigate = useNavigate();
+  const { t } = useSettings();
   
   return (
     <AppLayout>
@@ -19,9 +22,9 @@ const UserSettings = () => {
             onClick={() => navigate('/')}
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
+            Back to {t('dashboard')}
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('settings')}</h1>
           <p className="text-muted-foreground">
             Configure your ProSync Suite preferences and account settings
           </p>
