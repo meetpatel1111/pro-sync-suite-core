@@ -97,8 +97,8 @@ const PlanBoard = () => {
       // This is a placeholder - in a real app, milestones would be in their own table
       const { data, error } = await supabase
         .from('tasks')
-        .select('*')
-        .eq('user_id', userData.user.id)
+        .select('id, title, project_id, due_date, priority, status')
+        .eq('created_by', userData.user.id)
         .eq('priority', 'high')
         .order('due_date', { ascending: true })
         .limit(5);

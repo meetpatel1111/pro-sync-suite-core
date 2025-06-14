@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Calendar, Clock, MessageSquare, FileText, BarChart2, 
          PieChart, Users, Shield, FileCog, FolderLock } from 'lucide-react';
@@ -143,21 +142,6 @@ const Index = () => {
               />
             ))}
           </div>
-        </div>
-
-        <div className="mt-8 rounded-lg border bg-card p-6 shadow-sm">
-          <h2 className="text-xl font-semibold mb-2">Getting Started</h2>
-          <p className="text-muted-foreground mb-4">
-            ProSync Suite offers ten powerful applications to streamline your project management workflow. 
-            Here's how to get started:
-          </p>
-          <ol className="list-decimal pl-5 space-y-2">
-            <li className="text-sm">Explore the apps in the dashboard</li>
-            <li className="text-sm">Set up your team and project in TaskMaster</li>
-            <li className="text-sm">Start tracking time with TimeTrackPro</li>
-            <li className="text-sm">Plan your project timeline in PlanBoard</li>
-            <li className="text-sm">Configure custom dashboards in InsightIQ</li>
-          </ol>
         </div>
       </div>
     </AppLayout>
