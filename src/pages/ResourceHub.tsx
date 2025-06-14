@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -21,6 +20,8 @@ import { Resource, ResourceSkill } from '@/utils/dbtypes';
 import ResourceAllocation from '@/components/resourcehub/ResourceAllocation';
 import UtilizationDashboard from '@/components/resourcehub/UtilizationDashboard';
 import SkillMatrix from '@/components/resourcehub/SkillMatrix';
+import ResourceSchedule from '@/components/resourcehub/ResourceSchedule';
+import EditableResourceCard from '@/components/resourcehub/EditableResourceCard';
 
 interface ResourceFormState {
   name: string;
@@ -298,6 +299,22 @@ const ResourceHub = () => {
     </div>
   );
 
+  // Add function to handle resource updates
+  const handleResourceUpdate = (updatedResource: Resource) => {
+    setResources(prevResources => 
+      prevResources.map(resource => 
+        resource.id === updatedResource.id ? updatedResource : resource
+      )
+    );
+  };
+
+  // Add function to handle resource deletion
+  const handleResourceDelete = (resourceId: string) => {
+    setResources(prevResources => 
+      prevResources.filter(resource => resource.id !== resourceId)
+    );
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -465,52 +482,12 @@ const ResourceHub = () => {
                 filteredResources.length > 0 ? (
                   <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                     {filteredResources.map((resource) => (
-                      <Card key={resource.id}>
-                        <CardHeader className="flex flex-row items-center gap-4">
-                          <Avatar>
-                            <AvatarImage src={resource.avatar_url} alt={resource.name} />
-                            <AvatarFallback>{resource.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <CardTitle className="text-base">{resource.name}</CardTitle>
-                            <CardDescription>{resource.role}</CardDescription>
-                            <div className="flex gap-2 mt-1">
-                              <Badge variant={getBadgeVariant(resource.availability)}>
-                                {resource.availability}
-                              </Badge>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div>
-                            <p className="text-sm text-muted-foreground mb-1">Utilization</p>
-                            <div className="flex items-center gap-2">
-                              <Progress value={resource.utilization} className="h-2" />
-                              <span className="text-sm">{resource.utilization}%</span>
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground mb-1">Availability This Week</p>
-                            <div className="flex items-center gap-2">
-                              <Progress value={100 - resource.utilization} className="h-2" />
-                              <span className="text-sm">{100 - resource.utilization}%</span>
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground mb-1">Skills</p>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {resource.skills && resource.skills.map((skill, idx) => (
-                                <Badge key={idx} variant="outline">
-                                  {skill}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                          <Button variant="outline" size="sm" className="w-full">
-                            View Details
-                          </Button>
-                        </CardContent>
-                      </Card>
+                      <EditableResourceCard
+                        key={resource.id}
+                        resource={resource}
+                        onUpdate={handleResourceUpdate}
+                        onDelete={handleResourceDelete}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -556,15 +533,7 @@ const ResourceHub = () => {
           </TabsContent>
 
           <TabsContent value="schedule">
-            <Card>
-              <CardHeader>
-                <CardTitle>Resource Schedule</CardTitle>
-                <CardDescription>View and manage team member schedules</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Schedule content will be implemented soon.</p>
-              </CardContent>
-            </Card>
+            <ResourceSchedule resources={resources} />
           </TabsContent>
         </Tabs>
       </div>
