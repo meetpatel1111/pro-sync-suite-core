@@ -1,7 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { s3Service } from './s3Service';
 
 export interface FileItem {
   id: string;
@@ -82,6 +80,7 @@ export const fileVaultService = {
       let query = supabase
         .from('files')
         .select('*')
+        .eq('user_id', user.id)
         .eq('is_archived', false)
         .order('created_at', { ascending: false });
 
@@ -127,7 +126,6 @@ export const fileVaultService = {
       console.log('Starting file upload for:', file.name, 'Size:', file.size);
 
       // Create file path: user_id/folder_id?/filename
-      const fileExt = file.name.split('.').pop();
       const fileName = metadata.name || file.name;
       const sanitizedName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
       const timestamp = Date.now();
@@ -154,7 +152,7 @@ export const fileVaultService = {
 
       console.log('File uploaded successfully to Supabase storage:', filePath);
 
-      // Save metadata to database
+      // Save metadata to database with explicit user_id
       const fileData = {
         name: fileName,
         description: metadata.description,
@@ -164,7 +162,7 @@ export const fileVaultService = {
         storage_path: filePath,
         is_public: false,
         is_archived: false,
-        user_id: user.id,
+        user_id: user.id, // Explicitly set the user_id
         folder_id: metadata.folder_id,
         project_id: metadata.project_id,
         task_id: metadata.task_id,
