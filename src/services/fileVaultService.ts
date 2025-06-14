@@ -130,42 +130,25 @@ export const fileVaultService = {
       const sanitizedName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
       const timestamp = Date.now();
       
-      // Simple file path structure
+      // Simple file path structure for S3
       const filePath = `${user.id}/${timestamp}_${sanitizedName}`;
 
-      console.log('Uploading to path:', filePath);
+      console.log('Uploading to S3 path:', filePath);
 
-      // First, let's try to create the bucket if it doesn't exist
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const filesBucket = buckets?.find(bucket => bucket.name === 'files');
-      
-      if (!filesBucket) {
-        console.log('Files bucket not found, attempting to create...');
-        const { error: bucketError } = await supabase.storage.createBucket('files', {
-          public: false,
-          fileSizeLimit: 52428800, // 50MB
-        });
-        
-        if (bucketError) {
-          console.error('Error creating bucket:', bucketError);
-          throw new Error('Storage bucket setup failed');
-        }
-      }
-
-      // Upload to Supabase storage
+      // Upload to S3 bucket via Supabase storage
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('files')
+        .from('pro-sync-suit-core')
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: false
         });
 
       if (uploadError) {
-        console.error('Upload error:', uploadError);
+        console.error('S3 upload error:', uploadError);
         throw uploadError;
       }
 
-      console.log('File uploaded successfully:', uploadData);
+      console.log('File uploaded successfully to S3:', uploadData);
 
       // Save metadata to database
       const fileData = {
@@ -197,7 +180,7 @@ export const fileVaultService = {
       if (dbError) {
         console.error('Database error:', dbError);
         // Clean up uploaded file if database insert fails
-        await supabase.storage.from('files').remove([filePath]);
+        await supabase.storage.from('pro-sync-suit-core').remove([filePath]);
         throw dbError;
       }
 
@@ -224,7 +207,7 @@ export const fileVaultService = {
       if (fileError) throw fileError;
 
       const { data, error } = await supabase.storage
-        .from('files')
+        .from('pro-sync-suit-core')
         .download(file.storage_path);
 
       if (error) throw error;
@@ -252,9 +235,9 @@ export const fileVaultService = {
 
       if (fileError) throw fileError;
 
-      // Delete from storage
+      // Delete from S3 storage
       const { error: storageError } = await supabase.storage
-        .from('files')
+        .from('pro-sync-suit-core')
         .remove([file.storage_path]);
 
       if (storageError) throw storageError;
@@ -510,9 +493,9 @@ export const fileVaultService = {
       const timestamp = Date.now();
       const versionPath = `${user.id}/versions/${fileId}/${timestamp}_v${currentFile.version + 1}.${fileExt}`;
 
-      // Upload new version
+      // Upload new version to S3
       const { error: uploadError } = await supabase.storage
-        .from('files')
+        .from('pro-sync-suit-core')
         .upload(versionPath, file);
 
       if (uploadError) throw uploadError;
