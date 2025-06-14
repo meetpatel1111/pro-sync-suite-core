@@ -345,6 +345,24 @@ export default function Auth() {
             >
               {loading ? "Logging in..." : "Log In"}
             </Button>
+            
+            {/* Terms and Privacy Policy links for login (no checkbox required) */}
+            <div className="text-center text-xs text-muted-foreground">
+              By logging in, you agree to our{" "}
+              <a href="/terms" className="text-primary hover:underline" onClick={(e) => {
+                e.preventDefault();
+                alert("Terms of Service would open here");
+              }}>
+                Terms of Service
+              </a>{" "}
+              and{" "}
+              <a href="/privacy" className="text-primary hover:underline" onClick={(e) => {
+                e.preventDefault();
+                alert("Privacy Policy would open here");
+              }}>
+                Privacy Policy
+              </a>
+            </div>
           </form>
         </TabsContent>
         
@@ -429,7 +447,6 @@ export default function Auth() {
                 I accept the{" "}
                 <a href="/terms" className="text-primary hover:underline" onClick={(e) => {
                   e.preventDefault();
-                  // Open terms in a modal or new tab
                   alert("Terms of Service would open here");
                 }}>
                   Terms of Service
@@ -437,7 +454,6 @@ export default function Auth() {
                 and{" "}
                 <a href="/privacy" className="text-primary hover:underline" onClick={(e) => {
                   e.preventDefault();
-                  // Open privacy policy in a modal or new tab
                   alert("Privacy Policy would open here");
                 }}>
                   Privacy Policy
