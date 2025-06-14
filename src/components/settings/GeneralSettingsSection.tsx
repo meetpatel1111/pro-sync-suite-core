@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,36 +13,156 @@ import { useSettings } from '@/context/SettingsContext';
 
 const LANGUAGES = [
   { value: 'en', label: 'English' },
-  { value: 'es', label: 'Español' },
-  { value: 'fr', label: 'Français' },
-  { value: 'de', label: 'Deutsch' },
+  { value: 'es', label: 'Español (Spanish)' },
+  { value: 'fr', label: 'Français (French)' },
+  { value: 'de', label: 'Deutsch (German)' },
+  { value: 'it', label: 'Italiano (Italian)' },
+  { value: 'pt', label: 'Português (Portuguese)' },
+  { value: 'ru', label: 'Русский (Russian)' },
+  { value: 'zh', label: '中文 (Chinese)' },
+  { value: 'ja', label: '日本語 (Japanese)' },
+  { value: 'ko', label: '한국어 (Korean)' },
+  { value: 'ar', label: 'العربية (Arabic)' },
+  { value: 'hi', label: 'हिन्दी (Hindi)' },
+  { value: 'nl', label: 'Nederlands (Dutch)' },
+  { value: 'sv', label: 'Svenska (Swedish)' },
+  { value: 'no', label: 'Norsk (Norwegian)' },
+  { value: 'da', label: 'Dansk (Danish)' },
+  { value: 'fi', label: 'Suomi (Finnish)' },
+  { value: 'pl', label: 'Polski (Polish)' },
+  { value: 'tr', label: 'Türkçe (Turkish)' },
+  { value: 'th', label: 'ไทย (Thai)' },
 ];
 
 const TIMEZONES = [
-  { value: 'UTC', label: 'UTC' },
-  { value: 'America/New_York', label: 'Eastern Time' },
-  { value: 'America/Chicago', label: 'Central Time' },
-  { value: 'America/Denver', label: 'Mountain Time' },
-  { value: 'America/Los_Angeles', label: 'Pacific Time' },
-  { value: 'Europe/London', label: 'London' },
-  { value: 'Europe/Paris', label: 'Paris' },
-  { value: 'Asia/Tokyo', label: 'Tokyo' },
+  // UTC
+  { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+  
+  // Americas
+  { value: 'America/New_York', label: 'Eastern Time (New York)' },
+  { value: 'America/Chicago', label: 'Central Time (Chicago)' },
+  { value: 'America/Denver', label: 'Mountain Time (Denver)' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (Los Angeles)' },
+  { value: 'America/Phoenix', label: 'Arizona Time (Phoenix)' },
+  { value: 'America/Anchorage', label: 'Alaska Time (Anchorage)' },
+  { value: 'Pacific/Honolulu', label: 'Hawaii Time (Honolulu)' },
+  { value: 'America/Toronto', label: 'Eastern Time (Toronto)' },
+  { value: 'America/Vancouver', label: 'Pacific Time (Vancouver)' },
+  { value: 'America/Sao_Paulo', label: 'Brazil Time (São Paulo)' },
+  { value: 'America/Mexico_City', label: 'Central Time (Mexico City)' },
+  { value: 'America/Buenos_Aires', label: 'Argentina Time (Buenos Aires)' },
+  { value: 'America/Lima', label: 'Peru Time (Lima)' },
+  
+  // Europe
+  { value: 'Europe/London', label: 'Greenwich Mean Time (London)' },
+  { value: 'Europe/Paris', label: 'Central European Time (Paris)' },
+  { value: 'Europe/Berlin', label: 'Central European Time (Berlin)' },
+  { value: 'Europe/Rome', label: 'Central European Time (Rome)' },
+  { value: 'Europe/Madrid', label: 'Central European Time (Madrid)' },
+  { value: 'Europe/Amsterdam', label: 'Central European Time (Amsterdam)' },
+  { value: 'Europe/Brussels', label: 'Central European Time (Brussels)' },
+  { value: 'Europe/Vienna', label: 'Central European Time (Vienna)' },
+  { value: 'Europe/Stockholm', label: 'Central European Time (Stockholm)' },
+  { value: 'Europe/Oslo', label: 'Central European Time (Oslo)' },
+  { value: 'Europe/Copenhagen', label: 'Central European Time (Copenhagen)' },
+  { value: 'Europe/Helsinki', label: 'Eastern European Time (Helsinki)' },
+  { value: 'Europe/Warsaw', label: 'Central European Time (Warsaw)' },
+  { value: 'Europe/Moscow', label: 'Moscow Time (Moscow)' },
+  { value: 'Europe/Istanbul', label: 'Turkey Time (Istanbul)' },
+  
+  // Asia
+  { value: 'Asia/Tokyo', label: 'Japan Standard Time (Tokyo)' },
+  { value: 'Asia/Shanghai', label: 'China Standard Time (Shanghai)' },
+  { value: 'Asia/Hong_Kong', label: 'Hong Kong Time (Hong Kong)' },
+  { value: 'Asia/Singapore', label: 'Singapore Time (Singapore)' },
+  { value: 'Asia/Seoul', label: 'Korea Standard Time (Seoul)' },
+  { value: 'Asia/Bangkok', label: 'Indochina Time (Bangkok)' },
+  { value: 'Asia/Jakarta', label: 'Western Indonesia Time (Jakarta)' },
+  { value: 'Asia/Manila', label: 'Philippines Time (Manila)' },
+  { value: 'Asia/Kolkata', label: 'India Standard Time (Kolkata)' },
+  { value: 'Asia/Karachi', label: 'Pakistan Standard Time (Karachi)' },
+  { value: 'Asia/Dubai', label: 'Gulf Standard Time (Dubai)' },
+  { value: 'Asia/Riyadh', label: 'Arabia Standard Time (Riyadh)' },
+  { value: 'Asia/Tehran', label: 'Iran Standard Time (Tehran)' },
+  
+  // Australia & Oceania
+  { value: 'Australia/Sydney', label: 'Australian Eastern Time (Sydney)' },
+  { value: 'Australia/Melbourne', label: 'Australian Eastern Time (Melbourne)' },
+  { value: 'Australia/Brisbane', label: 'Australian Eastern Time (Brisbane)' },
+  { value: 'Australia/Perth', label: 'Australian Western Time (Perth)' },
+  { value: 'Australia/Adelaide', label: 'Australian Central Time (Adelaide)' },
+  { value: 'Pacific/Auckland', label: 'New Zealand Time (Auckland)' },
+  
+  // Africa
+  { value: 'Africa/Cairo', label: 'Eastern European Time (Cairo)' },
+  { value: 'Africa/Lagos', label: 'West Africa Time (Lagos)' },
+  { value: 'Africa/Johannesburg', label: 'South Africa Time (Johannesburg)' },
+  { value: 'Africa/Nairobi', label: 'East Africa Time (Nairobi)' },
 ];
 
 const CURRENCIES = [
+  // Major currencies
   { value: 'USD', label: 'US Dollar ($)', symbol: '$' },
   { value: 'EUR', label: 'Euro (€)', symbol: '€' },
   { value: 'GBP', label: 'British Pound (£)', symbol: '£' },
   { value: 'JPY', label: 'Japanese Yen (¥)', symbol: '¥' },
+  { value: 'CNY', label: 'Chinese Yuan (¥)', symbol: '¥' },
+  
+  // Americas
   { value: 'CAD', label: 'Canadian Dollar (C$)', symbol: 'C$' },
   { value: 'AUD', label: 'Australian Dollar (A$)', symbol: 'A$' },
+  { value: 'BRL', label: 'Brazilian Real (R$)', symbol: 'R$' },
+  { value: 'MXN', label: 'Mexican Peso ($)', symbol: '$' },
+  { value: 'ARS', label: 'Argentine Peso ($)', symbol: '$' },
+  { value: 'CLP', label: 'Chilean Peso ($)', symbol: '$' },
+  { value: 'COP', label: 'Colombian Peso ($)', symbol: '$' },
+  { value: 'PEN', label: 'Peruvian Sol (S/)', symbol: 'S/' },
+  
+  // Europe
+  { value: 'CHF', label: 'Swiss Franc (CHF)', symbol: 'CHF' },
+  { value: 'SEK', label: 'Swedish Krona (kr)', symbol: 'kr' },
+  { value: 'NOK', label: 'Norwegian Krone (kr)', symbol: 'kr' },
+  { value: 'DKK', label: 'Danish Krone (kr)', symbol: 'kr' },
+  { value: 'PLN', label: 'Polish Zloty (zł)', symbol: 'zł' },
+  { value: 'CZK', label: 'Czech Koruna (Kč)', symbol: 'Kč' },
+  { value: 'HUF', label: 'Hungarian Forint (Ft)', symbol: 'Ft' },
+  { value: 'RUB', label: 'Russian Ruble (₽)', symbol: '₽' },
+  { value: 'TRY', label: 'Turkish Lira (₺)', symbol: '₺' },
+  
+  // Asia
+  { value: 'KRW', label: 'South Korean Won (₩)', symbol: '₩' },
+  { value: 'INR', label: 'Indian Rupee (₹)', symbol: '₹' },
+  { value: 'SGD', label: 'Singapore Dollar (S$)', symbol: 'S$' },
+  { value: 'HKD', label: 'Hong Kong Dollar (HK$)', symbol: 'HK$' },
+  { value: 'THB', label: 'Thai Baht (฿)', symbol: '฿' },
+  { value: 'MYR', label: 'Malaysian Ringgit (RM)', symbol: 'RM' },
+  { value: 'IDR', label: 'Indonesian Rupiah (Rp)', symbol: 'Rp' },
+  { value: 'PHP', label: 'Philippine Peso (₱)', symbol: '₱' },
+  { value: 'VND', label: 'Vietnamese Dong (₫)', symbol: '₫' },
+  { value: 'PKR', label: 'Pakistani Rupee (Rs)', symbol: 'Rs' },
+  { value: 'AED', label: 'UAE Dirham (د.إ)', symbol: 'د.إ' },
+  { value: 'SAR', label: 'Saudi Riyal (﷼)', symbol: '﷼' },
+  { value: 'ILS', label: 'Israeli Shekel (₪)', symbol: '₪' },
+  
+  // Africa
+  { value: 'ZAR', label: 'South African Rand (R)', symbol: 'R' },
+  { value: 'EGP', label: 'Egyptian Pound (£)', symbol: '£' },
+  { value: 'NGN', label: 'Nigerian Naira (₦)', symbol: '₦' },
+  { value: 'KES', label: 'Kenyan Shilling (KSh)', symbol: 'KSh' },
+  
+  // Others
+  { value: 'NZD', label: 'New Zealand Dollar (NZ$)', symbol: 'NZ$' },
 ];
 
 const DATE_FORMATS = [
-  { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY (US)' },
-  { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY (UK)' },
-  { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD (ISO)' },
-  { value: 'DD.MM.YYYY', label: 'DD.MM.YYYY (German)' },
+  { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY (US - 12/31/2024)' },
+  { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY (UK - 31/12/2024)' },
+  { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD (ISO - 2024-12-31)' },
+  { value: 'DD.MM.YYYY', label: 'DD.MM.YYYY (German - 31.12.2024)' },
+  { value: 'DD-MM-YYYY', label: 'DD-MM-YYYY (European - 31-12-2024)' },
+  { value: 'YYYY/MM/DD', label: 'YYYY/MM/DD (Japanese - 2024/12/31)' },
+  { value: 'MMM DD, YYYY', label: 'MMM DD, YYYY (Long - Dec 31, 2024)' },
+  { value: 'DD MMM YYYY', label: 'DD MMM YYYY (British - 31 Dec 2024)' },
 ];
 
 const WORKING_DAYS = [
@@ -186,10 +305,10 @@ export const GeneralSettingsSection = () => {
               <div className="space-y-4">
                 <h4 className="font-medium flex items-center gap-2">
                   <Globe className="h-4 w-4" />
-                  Localization
+                  Localization & Regional Settings
                 </h4>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="language"
@@ -202,7 +321,7 @@ export const GeneralSettingsSection = () => {
                               <SelectValue placeholder="Select language" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent className="max-h-60">
                             {LANGUAGES.map((language) => (
                               <SelectItem key={language.value} value={language.value}>
                                 {language.label}
@@ -210,6 +329,9 @@ export const GeneralSettingsSection = () => {
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormDescription>
+                          Select your preferred interface language
+                        </FormDescription>
                       </FormItem>
                     )}
                   />
@@ -226,7 +348,7 @@ export const GeneralSettingsSection = () => {
                               <SelectValue placeholder="Select timezone" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent className="max-h-60">
                             {TIMEZONES.map((timezone) => (
                               <SelectItem key={timezone.value} value={timezone.value}>
                                 {timezone.label}
@@ -234,12 +356,15 @@ export const GeneralSettingsSection = () => {
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormDescription>
+                          Your local timezone for dates and times
+                        </FormDescription>
                       </FormItem>
                     )}
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="defaultCurrency"
@@ -252,7 +377,7 @@ export const GeneralSettingsSection = () => {
                               <SelectValue placeholder="Select currency" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent className="max-h-60">
                             {CURRENCIES.map((currency) => (
                               <SelectItem key={currency.value} value={currency.value}>
                                 {currency.label}
@@ -260,6 +385,9 @@ export const GeneralSettingsSection = () => {
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormDescription>
+                          Currency for financial data and reports
+                        </FormDescription>
                       </FormItem>
                     )}
                   />
@@ -284,6 +412,9 @@ export const GeneralSettingsSection = () => {
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormDescription>
+                          How dates are displayed throughout the app
+                        </FormDescription>
                       </FormItem>
                     )}
                   />
