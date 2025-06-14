@@ -21,7 +21,7 @@ interface FontFamilySelectorProps {
 }
 
 const FONT_CATEGORIES = [
-  { value: 'all', label: 'All Fonts' },
+  { value: 'all', label: 'All' },
   { value: 'sans-serif', label: 'Sans Serif' },
   { value: 'serif', label: 'Serif' },
   { value: 'monospace', label: 'Monospace' },
@@ -44,6 +44,7 @@ export const FontFamilySelector: React.FC<FontFamilySelectorProps> = ({
     const loadFonts = async () => {
       try {
         const googleFonts = await GoogleFontsService.getPopularFonts();
+        console.log('Loaded fonts:', googleFonts.length);
         setFonts(googleFonts);
         setFilteredFonts(googleFonts);
       } catch (error) {
@@ -60,20 +61,22 @@ export const FontFamilySelector: React.FC<FontFamilySelectorProps> = ({
   }, []);
 
   useEffect(() => {
-    let filtered = fonts;
+    let filtered = [...fonts];
 
-    // Filter by category
+    // Filter by category first
     if (selectedCategory !== 'all') {
-      filtered = fonts.filter(font => font.category === selectedCategory);
+      filtered = filtered.filter(font => font.category === selectedCategory);
     }
 
-    // Filter by search query
+    // Then filter by search query
     if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(font => 
-        font.family.toLowerCase().includes(searchQuery.toLowerCase())
+        font.family.toLowerCase().includes(query)
       );
     }
 
+    console.log('Filtered fonts:', filtered.length, 'from', fonts.length, 'total fonts');
     setFilteredFonts(filtered);
   }, [fonts, selectedCategory, searchQuery]);
 
@@ -98,11 +101,6 @@ export const FontFamilySelector: React.FC<FontFamilySelectorProps> = ({
       case 'handwriting': return 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-300';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
     }
-  };
-
-  const getFontsByCategory = (category: string) => {
-    if (category === 'all') return filteredFonts;
-    return filteredFonts.filter(font => font.category === category);
   };
 
   if (loading) {
@@ -160,7 +158,7 @@ export const FontFamilySelector: React.FC<FontFamilySelectorProps> = ({
             </TabsList>
           </div>
           
-          <Command>
+          <Command shouldFilter={false}>
             <CommandInput 
               placeholder="Search fonts..." 
               className="h-9" 
