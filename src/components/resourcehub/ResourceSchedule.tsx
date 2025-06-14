@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, Plus, Users, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, Plus, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ScheduleEvent {
@@ -39,32 +39,6 @@ const ResourceSchedule = ({ resources }: ResourceScheduleProps) => {
     type: 'project' as const,
     description: ''
   });
-
-  // Sample schedule data
-  useEffect(() => {
-    const sampleEvents: ScheduleEvent[] = [
-      {
-        id: '1',
-        resourceId: resources[0]?.id || '',
-        title: 'Project Alpha Development',
-        startDate: '2024-06-15',
-        endDate: '2024-06-20',
-        type: 'project',
-        status: 'in-progress',
-        description: 'Frontend development phase'
-      },
-      {
-        id: '2',
-        resourceId: resources[0]?.id || '',
-        title: 'Annual Leave',
-        startDate: '2024-06-21',
-        endDate: '2024-06-25',
-        type: 'vacation',
-        status: 'scheduled'
-      }
-    ];
-    setScheduleEvents(sampleEvents);
-  }, [resources]);
 
   const handleAddEvent = () => {
     if (!newEvent.resourceId || !newEvent.title || !newEvent.startDate || !newEvent.endDate) {
@@ -298,41 +272,47 @@ const ResourceSchedule = ({ resources }: ResourceScheduleProps) => {
               </div>
 
               {/* Resource Rows */}
-              {filteredResources.map((resource) => (
-                <div key={resource.id} className="grid grid-cols-8 gap-2 mb-3 p-2 border rounded-lg">
-                  <div className="flex items-center">
-                    <div>
-                      <div className="font-medium text-sm">{resource.name}</div>
-                      <div className="text-xs text-muted-foreground">{resource.role}</div>
-                    </div>
-                  </div>
-                  {weekDays.map((day, dayIndex) => {
-                    const dayEvents = scheduleEvents.filter(event => {
-                      const eventStart = new Date(event.startDate);
-                      const eventEnd = new Date(event.endDate);
-                      return event.resourceId === resource.id && 
-                             day >= eventStart && day <= eventEnd;
-                    });
-
-                    return (
-                      <div key={dayIndex} className="min-h-[60px] p-1">
-                        {dayEvents.map((event) => (
-                          <div
-                            key={event.id}
-                            className={`text-xs p-1 rounded mb-1 ${getEventTypeColor(event.type)}`}
-                          >
-                            <div className="font-medium truncate">{event.title}</div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-2 w-2" />
-                              <span className="capitalize">{event.type}</span>
-                            </div>
-                          </div>
-                        ))}
+              {filteredResources.length > 0 ? (
+                filteredResources.map((resource) => (
+                  <div key={resource.id} className="grid grid-cols-8 gap-2 mb-3 p-2 border rounded-lg">
+                    <div className="flex items-center">
+                      <div>
+                        <div className="font-medium text-sm">{resource.name}</div>
+                        <div className="text-xs text-muted-foreground">{resource.role}</div>
                       </div>
-                    );
-                  })}
+                    </div>
+                    {weekDays.map((day, dayIndex) => {
+                      const dayEvents = scheduleEvents.filter(event => {
+                        const eventStart = new Date(event.startDate);
+                        const eventEnd = new Date(event.endDate);
+                        return event.resourceId === resource.id && 
+                               day >= eventStart && day <= eventEnd;
+                      });
+
+                      return (
+                        <div key={dayIndex} className="min-h-[60px] p-1">
+                          {dayEvents.map((event) => (
+                            <div
+                              key={event.id}
+                              className={`text-xs p-1 rounded mb-1 ${getEventTypeColor(event.type)}`}
+                            >
+                              <div className="font-medium truncate">{event.title}</div>
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-2 w-2" />
+                                <span className="capitalize">{event.type}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  No resources available. Add resources to view their schedules.
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </CardContent>
@@ -345,35 +325,41 @@ const ResourceSchedule = ({ resources }: ResourceScheduleProps) => {
           <CardDescription>Upcoming events and conflicts</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {scheduleEvents
-              .filter(event => {
-                if (selectedResource === 'all') return true;
-                return event.resourceId === selectedResource;
-              })
-              .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
-              .map((event) => {
-                const resource = resources.find(r => r.id === event.resourceId);
-                return (
-                  <div key={event.id} className="flex items-center justify-between p-3 border rounded">
-                    <div className="flex items-center gap-3">
-                      <Badge className={getEventTypeColor(event.type)}>
-                        {event.type}
-                      </Badge>
-                      <div>
-                        <div className="font-medium">{event.title}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {resource?.name} • {event.startDate} to {event.endDate}
+          {scheduleEvents.length > 0 ? (
+            <div className="space-y-3">
+              {scheduleEvents
+                .filter(event => {
+                  if (selectedResource === 'all') return true;
+                  return event.resourceId === selectedResource;
+                })
+                .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+                .map((event) => {
+                  const resource = resources.find(r => r.id === event.resourceId);
+                  return (
+                    <div key={event.id} className="flex items-center justify-between p-3 border rounded">
+                      <div className="flex items-center gap-3">
+                        <Badge className={getEventTypeColor(event.type)}>
+                          {event.type}
+                        </Badge>
+                        <div>
+                          <div className="font-medium">{event.title}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {resource?.name} • {event.startDate} to {event.endDate}
+                          </div>
                         </div>
                       </div>
+                      <Badge variant={event.status === 'in-progress' ? 'default' : 'secondary'}>
+                        {event.status}
+                      </Badge>
                     </div>
-                    <Badge variant={event.status === 'in-progress' ? 'default' : 'secondary'}>
-                      {event.status}
-                    </Badge>
-                  </div>
-                );
-              })}
-          </div>
+                  );
+                })}
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground py-8">
+              No scheduled events. Add events to see them here.
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

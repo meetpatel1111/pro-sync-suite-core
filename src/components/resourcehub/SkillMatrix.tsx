@@ -59,12 +59,6 @@ const SkillMatrix = ({ resources, skills, onSkillUpdate }: SkillMatrixProps) => 
     return matchesSearch && skillCategory === selectedCategory;
   });
 
-  const getResourceSkillLevel = (resourceId: string, skillName: string): number => {
-    // This would normally come from a resource_skills table with proficiency levels
-    // For now, return a random level between 1-5 for demo purposes
-    return Math.floor(Math.random() * 5) + 1;
-  };
-
   const hasResourceSkill = (resourceId: string, skillName: string): boolean => {
     const resource = resources.find(r => r.id === resourceId);
     return resource?.skills?.includes(skillName) || false;
@@ -214,56 +208,50 @@ const SkillMatrix = ({ resources, skills, onSkillUpdate }: SkillMatrixProps) => 
           <CardDescription>Team skill distribution and proficiency levels</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {filteredSkills.map((skill) => {
-              const coverage = getSkillCoverage(skill);
-              const resourcesWithSkill = resources.filter(resource => hasResourceSkill(resource.id, skill));
-              
-              return (
-                <div key={skill} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <h4 className="font-medium">{skill}</h4>
-                      <Badge variant="outline">
-                        <Users className="h-3 w-3 mr-1" />
-                        {coverage.count} of {resources.length}
-                      </Badge>
+          {filteredSkills.length > 0 ? (
+            <div className="space-y-4">
+              {filteredSkills.map((skill) => {
+                const coverage = getSkillCoverage(skill);
+                const resourcesWithSkill = resources.filter(resource => hasResourceSkill(resource.id, skill));
+                
+                return (
+                  <div key={skill} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <h4 className="font-medium">{skill}</h4>
+                        <Badge variant="outline">
+                          <Users className="h-3 w-3 mr-1" />
+                          {coverage.count} of {resources.length}
+                        </Badge>
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        {coverage.percentage.toFixed(0)}% coverage
+                      </span>
                     </div>
-                    <span className="text-sm text-muted-foreground">
-                      {coverage.percentage.toFixed(0)}% coverage
-                    </span>
-                  </div>
-                  
-                  {resourcesWithSkill.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {resourcesWithSkill.map((resource) => {
-                        const skillLevel = getResourceSkillLevel(resource.id, skill);
-                        return (
+                    
+                    {resourcesWithSkill.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {resourcesWithSkill.map((resource) => (
                           <div key={resource.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                             <div>
                               <span className="text-sm font-medium">{resource.name}</span>
                               <div className="text-xs text-muted-foreground">{resource.role}</div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              {renderStarRating(skillLevel)}
-                              <Badge 
-                                variant="outline" 
-                                className={`text-xs ${getSkillProficiencyColor(skillLevel)}`}
-                              >
-                                {getProficiencyLabel(skillLevel)}
-                              </Badge>
-                            </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No team members have this skill</p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No team members have this skill</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground py-8">
+              No skills found. Add resources with skills to see the skill matrix.
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -274,36 +262,48 @@ const SkillMatrix = ({ resources, skills, onSkillUpdate }: SkillMatrixProps) => 
           <CardDescription>Individual skill profiles for each team member</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {resources.map((resource) => (
-              <div key={resource.id} className="border rounded-lg p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <div>
-                    <h4 className="font-medium">{resource.name}</h4>
-                    <p className="text-sm text-muted-foreground">{resource.role}</p>
+          {resources.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {resources.map((resource) => (
+                <div key={resource.id} className="border rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div>
+                      <h4 className="font-medium">{resource.name}</h4>
+                      <p className="text-sm text-muted-foreground">{resource.role}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Skills</span>
+                      <Badge variant="outline">{resource.skills?.length || 0}</Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {resource.skills?.length > 0 ? (
+                        <>
+                          {resource.skills.slice(0, 5).map((skill: string, index: number) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {skill}
+                            </Badge>
+                          ))}
+                          {resource.skills.length > 5 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{resource.skills.length - 5} more
+                            </Badge>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">No skills listed</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Skills</span>
-                    <Badge variant="outline">{resource.skills?.length || 0}</Badge>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {resource.skills?.slice(0, 5).map((skill: string, index: number) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        {skill}
-                      </Badge>
-                    )) || <span className="text-xs text-muted-foreground">No skills listed</span>}
-                    {resource.skills?.length > 5 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{resource.skills.length - 5} more
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground py-8">
+              No resources available. Add team members to view their skills.
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
