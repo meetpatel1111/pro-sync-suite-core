@@ -5,7 +5,7 @@ import AppCard from '@/components/AppCard';
 import AppLayout from '@/components/AppLayout';
 import DashboardStats from '@/components/DashboardStats';
 import LoadingFallback from '@/components/ui/loading-fallback';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthContext } from '@/context/AuthContext';
 import { useIntegration } from '@/context/IntegrationContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,8 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
-  const { user, loading } = useAuth();
-  const { createTaskFromNote, logTimeForTask } = useIntegration();
+  const { user, loading } = useAuthContext();
+  const { createTaskFromNote } = useIntegration();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
@@ -47,30 +47,39 @@ const Index = () => {
     try {
       switch (actionType) {
         case 'newTask':
-          const task = await createTaskFromNote(
-            'Quick Task',
-            'Task created from dashboard quick action',
-            undefined,
-            undefined,
-            user.id
-          );
-          if (task) {
+          try {
+            const task = await createTaskFromNote(
+              'Quick Task from Dashboard',
+              'Task created from dashboard quick action',
+              undefined,
+              undefined,
+              user.id
+            );
+            if (task) {
+              toast({
+                title: 'Task Created',
+                description: 'New task has been created successfully.',
+              });
+              navigate('/taskmaster');
+            } else {
+              throw new Error('Failed to create task');
+            }
+          } catch (error) {
+            console.error('Error creating task:', error);
             toast({
-              title: 'Task Created',
-              description: 'New task has been created successfully.',
+              title: 'Task Creation Failed',
+              description: 'Could not create task. Please try again.',
+              variant: 'destructive',
             });
-            navigate('/taskmaster');
-          } else {
-            throw new Error('Failed to create task');
           }
           break;
 
         case 'startTimer':
-          // Navigate to time tracking with auto-start intent
-          navigate('/timetrackpro?autostart=true');
+          // Navigate to time tracking
+          navigate('/timetrackpro');
           toast({
-            title: 'Timer Ready',
-            description: 'Navigate to TimeTrackPro to start tracking.',
+            title: 'Time Tracking',
+            description: 'Navigated to TimeTrackPro.',
           });
           break;
 
@@ -78,7 +87,7 @@ const Index = () => {
           navigate('/planboard');
           toast({
             title: 'Project Planning',
-            description: 'Navigate to PlanBoard to create a new project.',
+            description: 'Navigated to PlanBoard to create a new project.',
           });
           break;
 
@@ -86,22 +95,21 @@ const Index = () => {
           navigate('/collabspace');
           toast({
             title: 'Team Collaboration',
-            description: 'Navigate to CollabSpace for team communication.',
+            description: 'Navigated to CollabSpace for team communication.',
           });
           break;
 
         default:
           toast({
-            title: 'Action Not Available',
-            description: 'This quick action is not yet implemented.',
-            variant: 'destructive',
+            title: 'Feature Coming Soon',
+            description: 'This quick action will be available soon.',
           });
       }
     } catch (error) {
       console.error('Quick action error:', error);
       toast({
         title: 'Action Failed',
-        description: 'Failed to perform the requested action.',
+        description: 'Failed to perform the requested action. Please try again.',
         variant: 'destructive',
       });
     }

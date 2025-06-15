@@ -1,12 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, CheckCircle, Clock, TrendingUp, AlertTriangle, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthContext } from '@/context/AuthContext';
 
 const DashboardStats = () => {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const [stats, setStats] = useState([
     {
       title: 'Active Projects',
@@ -83,19 +84,34 @@ const DashboardStats = () => {
         .select('id')
         .eq('user_id', user.id);
 
+      if (projectsError) {
+        console.log('Projects error:', projectsError);
+      }
+
       // Fetch completed tasks count
       const { data: completedTasks, error: tasksError } = await supabase
         .from('tasks')
         .select('id')
         .eq('created_by', user.id)
-        .eq('status', 'completed');
+        .eq('status', 'done');
 
-      // Fetch team members count (unique users who have tasks assigned by this user)
-      const { data: teamMembers, error: teamError } = await supabase
+      if (tasksError) {
+        console.log('Tasks error:', tasksError);
+      }
+
+      // Fetch all tasks for productivity calculation
+      const { data: allTasks, error: allTasksError } = await supabase
         .from('tasks')
-        .select('assigned_to')
-        .eq('created_by', user.id)
-        .not('assigned_to', 'is', null);
+        .select('id, status, assigned_to')
+        .eq('created_by', user.id);
+
+      if (allTasksError) {
+        console.log('All tasks error:', allTasksError);
+      }
+
+      // Calculate unique team members from task assignments
+      const uniqueTeamMembers = allTasks ? 
+        new Set(allTasks.flatMap(t => t.assigned_to || [])).size : 0;
 
       // Fetch total hours tracked
       const { data: timeEntries, error: timeError } = await supabase
@@ -103,66 +119,60 @@ const DashboardStats = () => {
         .select('time_spent')
         .eq('user_id', user.id);
 
+      if (timeError) {
+        console.log('Time entries error:', timeError);
+      }
+
+      // Calculate total hours (convert seconds to hours)
+      const totalHours = timeEntries ? 
+        Math.round(timeEntries.reduce((sum, entry) => sum + (entry.time_spent || 0), 0) / 3600) : 0;
+
+      // Calculate productivity (completed tasks / total tasks * 100)
+      const totalTasks = allTasks?.length || 0;
+      const completedCount = completedTasks?.length || 0;
+      const productivity = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
+
       // Fetch risks/issues count
       const { data: risks, error: risksError } = await supabase
         .from('risks')
         .select('id')
         .in('status', ['open', 'active']);
 
-      if (projectsError || tasksError || teamError || timeError || risksError) {
-        console.error('Error fetching dashboard data:', { projectsError, tasksError, teamError, timeError, risksError });
-        return;
+      if (risksError) {
+        console.log('Risks error:', risksError);
       }
-
-      // Calculate unique team members
-      const uniqueTeamMembers = teamMembers ? 
-        new Set(teamMembers.flatMap(t => t.assigned_to || [])).size : 0;
-
-      // Calculate total hours (convert seconds to hours)
-      const totalHours = timeEntries ? 
-        Math.round(timeEntries.reduce((sum, entry) => sum + (entry.time_spent || 0), 0) / 3600) : 0;
-
-      // Calculate productivity (simplified: completed tasks / total tasks * 100)
-      const { data: allTasks } = await supabase
-        .from('tasks')
-        .select('id, status')
-        .eq('created_by', user.id);
-
-      const totalTasks = allTasks?.length || 0;
-      const completedCount = completedTasks?.length || 0;
-      const productivity = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
 
       // Update stats with real data
       setStats(prevStats => [
         {
           ...prevStats[0],
           value: projects?.length.toString() || '0',
-          change: '+0%', // Would need historical data to calculate real change
+          change: projects?.length > 0 ? '+' + projects.length.toString() : '0',
         },
         {
           ...prevStats[1],
           value: completedCount.toString(),
-          change: '+0%',
+          change: completedCount > 0 ? '+' + completedCount.toString() : '0',
         },
         {
           ...prevStats[2],
           value: uniqueTeamMembers.toString(),
-          change: '+0',
+          change: uniqueTeamMembers > 0 ? '+' + uniqueTeamMembers.toString() : '0',
         },
         {
           ...prevStats[3],
           value: totalHours.toString(),
-          change: '+0%',
+          change: totalHours > 0 ? '+' + totalHours.toString() + 'h' : '0h',
         },
         {
           ...prevStats[4],
           value: `${productivity}%`,
-          change: '+0%',
+          change: productivity > 0 ? '+' + productivity.toString() + '%' : '0%',
         },
         {
           ...prevStats[5],
           value: risks?.length.toString() || '0',
-          change: '0',
+          change: (risks?.length || 0).toString(),
           trend: (risks?.length || 0) > 0 ? 'up' : 'down',
         }
       ]);
