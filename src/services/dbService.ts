@@ -763,7 +763,7 @@ export const dbService = {
     );
   },
 
-  async getTaskDependencies(taskId: string) {
+  async getTaskDependenciesForTask(taskId: string) {
     return await safeQueryTable('task_dependencies', (query) => 
       query
         .select(`

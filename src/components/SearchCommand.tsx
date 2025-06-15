@@ -38,20 +38,20 @@ interface SearchCommandProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Simplified type for Lucide icons
-type IconType = typeof Calendar;
+// Updated type for Lucide icons
+type LucideIcon = React.ComponentType<{ className?: string; size?: number }>;
 
 interface AppItem {
   name: string;
   path: string;
-  icon: IconType;
+  icon: LucideIcon;
   description: string;
 }
 
 interface ActionItem {
   name: string;
   action: () => void;
-  icon: IconType;
+  icon: LucideIcon;
   description: string;
 }
 

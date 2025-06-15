@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { BarChart3, Calendar, Kanban, Timeline } from 'lucide-react';
+import { BarChart3, Calendar, Kanban, Clock } from 'lucide-react';
 
 type ViewType = 'gantt' | 'timeline' | 'calendar' | 'board';
 
@@ -13,7 +13,7 @@ interface ViewSelectorProps {
 const ViewSelector = ({ currentView, onViewChange }: ViewSelectorProps) => {
   const views = [
     { id: 'gantt' as const, label: 'Gantt', icon: BarChart3 },
-    { id: 'timeline' as const, label: 'Timeline', icon: Timeline },
+    { id: 'timeline' as const, label: 'Timeline', icon: Clock },
     { id: 'calendar' as const, label: 'Calendar', icon: Calendar },
     { id: 'board' as const, label: 'Board', icon: Kanban },
   ];
