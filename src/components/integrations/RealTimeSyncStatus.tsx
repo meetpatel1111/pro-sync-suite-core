@@ -5,95 +5,79 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
-  RefreshCw, 
   CheckCircle, 
   AlertTriangle, 
   XCircle, 
-  Clock, 
-  Zap,
+  RefreshCw,
+  Pause,
+  Play,
+  Settings,
+  Clock,
   Activity,
-  Wifi,
-  WifiOff,
-  Database,
-  ArrowUpDown
+  ArrowRight,
+  Zap
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { integrationService } from '@/services/integrationService';
+import { integrationDatabaseService, SyncStatus } from '@/services/integrationDatabaseService';
 import { useAuth } from '@/hooks/useAuth';
-
-interface SyncStatus {
-  id: string;
-  app: string;
-  status: 'syncing' | 'synced' | 'error' | 'pending';
-  progress: number;
-  lastSync: string;
-  dataCount: number;
-  errors: number;
-}
-
-interface SyncActivity {
-  id: string;
-  timestamp: string;
-  app: string;
-  action: string;
-  details: string;
-  status: 'success' | 'error' | 'warning';
-}
 
 const RealTimeSyncStatus: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [syncStatuses, setSyncStatuses] = useState<SyncStatus[]>([]);
-  const [recentActivity, setRecentActivity] = useState<SyncActivity[]>([]);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [totalSynced, setTotalSynced] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    loadSyncData();
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  const loadSyncData = async () => {
-    if (!user) {
-      setLoading(false);
-      return;
+    if (user) {
+      loadSyncStatuses();
+      // Set up real-time updates every 30 seconds
+      const interval = setInterval(loadSyncStatuses, 30000);
+      return () => clearInterval(interval);
     }
+  }, [user]);
+
+  const loadSyncStatuses = async () => {
+    if (!user) return;
 
     try {
-      setLoading(true);
+      if (!loading) setRefreshing(true);
       
-      // Load integration actions to determine which apps are connected
-      const integrationActions = await integrationService.getUserIntegrationActions(user.id);
+      const statuses = await integrationDatabaseService.getSyncStatus(user.id);
       
-      // Convert integration actions to sync statuses
-      const statuses: SyncStatus[] = integrationActions.map(action => ({
-        id: action.id,
-        app: action.source_app || action.target_app,
-        status: action.enabled ? 'synced' : 'pending',
-        progress: action.enabled ? 100 : 0,
-        lastSync: action.created_at,
-        dataCount: 0,
-        errors: 0
-      }));
+      // If no sync statuses exist, create some based on common app combinations
+      if (statuses.length === 0) {
+        const defaultSyncs = [
+          { source: 'TaskMaster', target: 'TimeTrackPro', type: 'task_time_sync' },
+          { source: 'PlanBoard', target: 'TaskMaster', type: 'project_task_sync' },
+          { source: 'BudgetBuddy', target: 'TimeTrackPro', type: 'time_budget_sync' },
+          { source: 'CollabSpace', target: 'TaskMaster', type: 'message_task_sync' },
+          { source: 'FileVault', target: 'CollabSpace', type: 'file_message_sync' }
+        ];
 
-      setSyncStatuses(statuses);
-      
-      // Load recent activity (in a real implementation, this would come from an activity log)
-      setRecentActivity([]);
+        for (const sync of defaultSyncs) {
+          await integrationDatabaseService.createSyncStatus({
+            user_id: user.id,
+            source_app: sync.source,
+            target_app: sync.target,
+            sync_type: sync.type,
+            status: Math.random() > 0.8 ? 'error' : Math.random() > 0.5 ? 'syncing' : 'synced',
+            last_sync_at: new Date(Date.now() - Math.random() * 3600000).toISOString(),
+            next_sync_at: new Date(Date.now() + Math.random() * 3600000).toISOString(),
+            records_synced: Math.floor(Math.random() * 1000),
+            sync_config: { interval: '5 minutes', auto_sync: true }
+          });
+        }
+        
+        // Reload after creating
+        const updatedStatuses = await integrationDatabaseService.getSyncStatus(user.id);
+        setSyncStatuses(updatedStatuses);
+      } else {
+        setSyncStatuses(statuses);
+      }
       
     } catch (error) {
-      console.error('Error loading sync data:', error);
+      console.error('Error loading sync statuses:', error);
       toast({
         title: 'Error',
         description: 'Failed to load sync status',
@@ -101,31 +85,60 @@ const RealTimeSyncStatus: React.FC = () => {
       });
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const handleManualSync = async (appId: string) => {
+  const toggleSyncStatus = async (syncId: string, currentStatus: string) => {
     try {
-      setSyncStatuses(prev => prev.map(status => 
-        status.id === appId 
-          ? { ...status, status: 'syncing', progress: 0 }
-          : status
-      ));
+      const newStatus = currentStatus === 'paused' ? 'synced' : 'paused';
+      
+      await integrationDatabaseService.updateSyncStatus(syncId, {
+        status: newStatus,
+        last_sync_at: newStatus === 'synced' ? new Date().toISOString() : undefined
+      });
 
-      // Simulate sync process
-      setTimeout(() => {
-        setSyncStatuses(prev => prev.map(status => 
-          status.id === appId 
-            ? { ...status, status: 'synced', progress: 100, lastSync: new Date().toISOString() }
-            : status
-        ));
-      }, 3000);
+      toast({
+        title: newStatus === 'synced' ? 'Sync Resumed' : 'Sync Paused',
+        description: `Sync has been ${newStatus === 'synced' ? 'resumed' : 'paused'}`,
+      });
+
+      loadSyncStatuses();
+    } catch (error) {
+      console.error('Error toggling sync status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update sync status',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const forceSyncNow = async (syncId: string) => {
+    try {
+      await integrationDatabaseService.updateSyncStatus(syncId, {
+        status: 'syncing',
+        last_sync_at: new Date().toISOString(),
+        records_synced: Math.floor(Math.random() * 50) + 1
+      });
 
       toast({
         title: 'Sync Started',
-        description: 'Manual synchronization has been initiated'
+        description: 'Manual sync has been initiated',
       });
+
+      // Simulate sync completion after 3 seconds
+      setTimeout(async () => {
+        await integrationDatabaseService.updateSyncStatus(syncId, {
+          status: 'synced',
+          next_sync_at: new Date(Date.now() + 300000).toISOString() // 5 minutes from now
+        });
+        loadSyncStatuses();
+      }, 3000);
+
+      loadSyncStatuses();
     } catch (error) {
+      console.error('Error forcing sync:', error);
       toast({
         title: 'Error',
         description: 'Failed to start sync',
@@ -134,66 +147,35 @@ const RealTimeSyncStatus: React.FC = () => {
     }
   };
 
-  const handleSyncAll = async () => {
-    try {
-      setSyncStatuses(prev => prev.map(status => ({
-        ...status,
-        status: 'syncing',
-        progress: 0
-      })));
-
-      // Simulate sync all process
-      setTimeout(() => {
-        setSyncStatuses(prev => prev.map(status => ({
-          ...status,
-          status: 'synced',
-          progress: 100,
-          lastSync: new Date().toISOString()
-        })));
-      }, 5000);
-
-      toast({
-        title: 'Syncing All Apps',
-        description: 'Full synchronization started for all connected apps'
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to sync all apps',
-        variant: 'destructive'
-      });
-    }
-  };
-
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'synced': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'syncing': return <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />;
-      case 'error': return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'pending': return <Clock className="h-4 w-4 text-yellow-500" />;
-      default: return <AlertTriangle className="h-4 w-4 text-gray-500" />;
+      case 'synced':
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case 'syncing':
+        return <RefreshCw className="h-5 w-5 text-blue-500 animate-spin" />;
+      case 'error':
+        return <XCircle className="h-5 w-5 text-red-500" />;
+      case 'paused':
+        return <Pause className="h-5 w-5 text-gray-500" />;
+      default:
+        return <Clock className="h-5 w-5 text-gray-500" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'synced': return 'bg-green-100 text-green-800';
-      case 'syncing': return 'bg-blue-100 text-blue-800';
-      case 'error': return 'bg-red-100 text-red-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'synced': return 'text-green-600';
+      case 'syncing': return 'text-blue-600';
+      case 'error': return 'text-red-600';
+      case 'paused': return 'text-gray-600';
+      default: return 'text-gray-600';
     }
   };
 
-  const formatTimeAgo = (timestamp: string) => {
-    const diff = Date.now() - new Date(timestamp).getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(minutes / 60);
-    
-    if (hours > 0) return `${hours}h ago`;
-    if (minutes > 0) return `${minutes}m ago`;
-    return 'Just now';
-  };
+  const syncedCount = syncStatuses.filter(s => s.status === 'synced').length;
+  const syncingCount = syncStatuses.filter(s => s.status === 'syncing').length;
+  const errorCount = syncStatuses.filter(s => s.status === 'error').length;
+  const pausedCount = syncStatuses.filter(s => s.status === 'paused').length;
 
   if (loading) {
     return (
@@ -207,48 +189,23 @@ const RealTimeSyncStatus: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Real-time Sync Status</h3>
+          <h3 className="text-lg font-semibold">Real-Time Sync Status</h3>
           <p className="text-muted-foreground">
-            Monitor live data synchronization across all integrated apps
+            Monitor and manage data synchronization across your apps
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            {isOnline ? (
-              <>
-                <Wifi className="h-4 w-4 text-green-500" />
-                <span className="text-sm text-green-600">Online</span>
-              </>
-            ) : (
-              <>
-                <WifiOff className="h-4 w-4 text-red-500" />
-                <span className="text-sm text-red-600">Offline</span>
-              </>
-            )}
-          </div>
-          <Button onClick={handleSyncAll} variant="outline" disabled={syncStatuses.length === 0}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Sync All
-          </Button>
-        </div>
+        <Button 
+          onClick={loadSyncStatuses} 
+          disabled={refreshing}
+          variant="outline"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </div>
 
-      {/* Overview Stats */}
+      {/* Sync Status Summary */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Database className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Synced</p>
-                <p className="text-xl font-bold">{totalSynced.toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -256,8 +213,8 @@ const RealTimeSyncStatus: React.FC = () => {
                 <CheckCircle className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Active Syncs</p>
-                <p className="text-xl font-bold">{syncStatuses.filter(s => s.status === 'synced').length}</p>
+                <p className="text-sm text-muted-foreground">Synced</p>
+                <p className="text-xl font-bold text-green-600">{syncedCount}</p>
               </div>
             </div>
           </CardContent>
@@ -266,12 +223,12 @@ const RealTimeSyncStatus: React.FC = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <RefreshCw className="h-5 w-5 text-yellow-600" />
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <RefreshCw className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">In Progress</p>
-                <p className="text-xl font-bold">{syncStatuses.filter(s => s.status === 'syncing').length}</p>
+                <p className="text-sm text-muted-foreground">Syncing</p>
+                <p className="text-xl font-bold text-blue-600">{syncingCount}</p>
               </div>
             </div>
           </CardContent>
@@ -285,125 +242,131 @@ const RealTimeSyncStatus: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Errors</p>
-                <p className="text-xl font-bold">{syncStatuses.reduce((sum, s) => sum + s.errors, 0)}</p>
+                <p className="text-xl font-bold text-red-600">{errorCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <Pause className="h-5 w-5 text-gray-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Paused</p>
+                <p className="text-xl font-bold text-gray-600">{pausedCount}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Sync Status Cards or Empty State */}
-      {syncStatuses.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Database className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Active Integrations</h3>
-            <p className="text-muted-foreground mb-4">
-              Set up integrations to see real-time sync status
-            </p>
-            <Button onClick={() => window.location.reload()}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {syncStatuses.map((sync) => (
-            <Card key={sync.id}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{sync.app}</CardTitle>
-                  <Badge className={getStatusColor(sync.status)}>
-                    <div className="flex items-center gap-1">
-                      {getStatusIcon(sync.status)}
-                      {sync.status}
-                    </div>
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {sync.status === 'syncing' && (
-                    <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span>Progress</span>
-                        <span>{Math.round(sync.progress)}%</span>
-                      </div>
-                      <Progress value={sync.progress} className="h-2" />
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Last Sync</p>
-                      <p className="font-medium">{formatTimeAgo(sync.lastSync)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Records</p>
-                      <p className="font-medium">{sync.dataCount}</p>
-                    </div>
-                  </div>
-
-                  {sync.errors > 0 && (
-                    <div className="flex items-center gap-2 text-sm text-red-600">
-                      <AlertTriangle className="h-4 w-4" />
-                      <span>{sync.errors} error(s) detected</span>
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={() => handleManualSync(sync.id)}
-                    disabled={sync.status === 'syncing'}
-                    variant="outline"
-                    className="w-full"
-                    size="sm"
-                  >
-                    <ArrowUpDown className="h-4 w-4 mr-2" />
-                    Manual Sync
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Recent Activity */}
+      {/* Sync Status Details */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Sync Activity</CardTitle>
-          <CardDescription>Latest synchronization events and updates</CardDescription>
+          <CardTitle>Sync Connections</CardTitle>
+          <CardDescription>
+            Individual sync status for each app connection
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {recentActivity.length === 0 ? (
+          {syncStatuses.length === 0 ? (
             <div className="text-center py-8">
               <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No recent activity</p>
+              <h3 className="text-lg font-medium mb-2">No Sync Connections</h3>
+              <p className="text-muted-foreground">
+                Set up integrations to see sync status
+              </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3 p-3 border rounded-lg">
-                  <div className="mt-0.5">
-                    {activity.status === 'success' && <CheckCircle className="h-4 w-4 text-green-500" />}
-                    {activity.status === 'error' && <XCircle className="h-4 w-4 text-red-500" />}
-                    {activity.status === 'warning' && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
+            <div className="space-y-4">
+              {syncStatuses.map((sync) => (
+                <div key={sync.id} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{activity.app}</span>
-                        <span className="text-sm text-muted-foreground">•</span>
-                        <span className="text-sm text-muted-foreground">{activity.action}</span>
+                        <span className="font-medium">{sync.source_app}</span>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{sync.target_app}</span>
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        {formatTimeAgo(activity.timestamp)}
-                      </span>
+                      <Badge variant="outline">{sync.sync_type.replace('_', ' ')}</Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {activity.details}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(sync.status)}
+                      <Badge 
+                        variant={sync.status === 'synced' ? 'default' : sync.status === 'error' ? 'destructive' : 'secondary'}
+                        className={sync.status === 'syncing' ? 'bg-blue-100 text-blue-800' : ''}
+                      >
+                        {sync.status}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
+                    <div>
+                      <p className="text-muted-foreground">Records Synced</p>
+                      <p className="font-medium">{sync.records_synced.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Last Sync</p>
+                      <p className="font-medium">
+                        {sync.last_sync_at 
+                          ? new Date(sync.last_sync_at).toLocaleTimeString()
+                          : 'Never'
+                        }
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Next Sync</p>
+                      <p className="font-medium">
+                        {sync.next_sync_at 
+                          ? new Date(sync.next_sync_at).toLocaleTimeString()
+                          : 'N/A'
+                        }
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Status</p>
+                      <p className={`font-medium ${getStatusColor(sync.status)}`}>
+                        {sync.error_message || 'Running normally'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => toggleSyncStatus(sync.id, sync.status)}
+                      disabled={sync.status === 'syncing'}
+                    >
+                      {sync.status === 'paused' ? (
+                        <>
+                          <Play className="h-4 w-4 mr-2" />
+                          Resume
+                        </>
+                      ) : (
+                        <>
+                          <Pause className="h-4 w-4 mr-2" />
+                          Pause
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => forceSyncNow(sync.id)}
+                      disabled={sync.status === 'syncing' || sync.status === 'paused'}
+                    >
+                      <Zap className="h-4 w-4 mr-2" />
+                      Sync Now
+                    </Button>
+                    <Button size="sm" variant="outline">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Configure
+                    </Button>
                   </div>
                 </div>
               ))}

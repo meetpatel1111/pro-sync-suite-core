@@ -87,6 +87,57 @@ export type Database = {
           },
         ]
       }
+      api_endpoints: {
+        Row: {
+          auth_config: Json | null
+          created_at: string | null
+          headers: Json | null
+          id: string
+          is_active: boolean | null
+          last_tested_at: string | null
+          method: string | null
+          name: string
+          rate_limit: number | null
+          test_status: string | null
+          timeout_seconds: number | null
+          updated_at: string | null
+          url: string
+          user_id: string | null
+        }
+        Insert: {
+          auth_config?: Json | null
+          created_at?: string | null
+          headers?: Json | null
+          id?: string
+          is_active?: boolean | null
+          last_tested_at?: string | null
+          method?: string | null
+          name: string
+          rate_limit?: number | null
+          test_status?: string | null
+          timeout_seconds?: number | null
+          updated_at?: string | null
+          url: string
+          user_id?: string | null
+        }
+        Update: {
+          auth_config?: Json | null
+          created_at?: string | null
+          headers?: Json | null
+          id?: string
+          is_active?: boolean | null
+          last_tested_at?: string | null
+          method?: string | null
+          name?: string
+          rate_limit?: number | null
+          test_status?: string | null
+          timeout_seconds?: number | null
+          updated_at?: string | null
+          url?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       approvals: {
         Row: {
           approval_type: string | null
@@ -191,6 +242,51 @@ export type Database = {
           id?: string
           source_module?: string | null
           trigger_event?: string | null
+        }
+        Relationships: []
+      }
+      automation_workflows: {
+        Row: {
+          actions_config: Json | null
+          conditions_config: Json | null
+          created_at: string | null
+          description: string | null
+          execution_count: number | null
+          id: string
+          is_active: boolean | null
+          last_executed_at: string | null
+          name: string
+          trigger_config: Json | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          actions_config?: Json | null
+          conditions_config?: Json | null
+          created_at?: string | null
+          description?: string | null
+          execution_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_executed_at?: string | null
+          name: string
+          trigger_config?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          actions_config?: Json | null
+          conditions_config?: Json | null
+          created_at?: string | null
+          description?: string | null
+          execution_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_executed_at?: string | null
+          name?: string
+          trigger_config?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1066,6 +1162,183 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      integration_health_status: {
+        Row: {
+          created_at: string | null
+          error_details: string | null
+          id: string
+          integration_id: string | null
+          last_checked_at: string | null
+          response_time: number | null
+          service_name: string
+          status: string | null
+          updated_at: string | null
+          uptime_percentage: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_details?: string | null
+          id?: string
+          integration_id?: string | null
+          last_checked_at?: string | null
+          response_time?: number | null
+          service_name: string
+          status?: string | null
+          updated_at?: string | null
+          uptime_percentage?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_details?: string | null
+          id?: string
+          integration_id?: string | null
+          last_checked_at?: string | null
+          response_time?: number | null
+          service_name?: string
+          status?: string | null
+          updated_at?: string | null
+          uptime_percentage?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_health_status_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "integration_actions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_logs: {
+        Row: {
+          created_at: string | null
+          details: Json | null
+          id: string
+          integration_id: string | null
+          log_level: string | null
+          message: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          integration_id?: string | null
+          log_level?: string | null
+          message: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          integration_id?: string | null
+          log_level?: string | null
+          message?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_logs_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "integration_actions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_templates: {
+        Row: {
+          apps: string[] | null
+          category: string
+          created_at: string | null
+          description: string | null
+          difficulty: string | null
+          downloads: number | null
+          id: string
+          is_public: boolean | null
+          is_verified: boolean | null
+          name: string
+          rating: number | null
+          tags: string[] | null
+          template_config: Json | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          apps?: string[] | null
+          category: string
+          created_at?: string | null
+          description?: string | null
+          difficulty?: string | null
+          downloads?: number | null
+          id?: string
+          is_public?: boolean | null
+          is_verified?: boolean | null
+          name: string
+          rating?: number | null
+          tags?: string[] | null
+          template_config?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          apps?: string[] | null
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          difficulty?: string | null
+          downloads?: number | null
+          id?: string
+          is_public?: boolean | null
+          is_verified?: boolean | null
+          name?: string
+          rating?: number | null
+          tags?: string[] | null
+          template_config?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      marketplace_installations: {
+        Row: {
+          configuration: Json | null
+          id: string
+          installed_at: string | null
+          is_active: boolean | null
+          template_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          configuration?: Json | null
+          id?: string
+          installed_at?: string | null
+          is_active?: boolean | null
+          template_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          configuration?: Json | null
+          id?: string
+          installed_at?: string | null
+          is_active?: boolean | null
+          template_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_installations_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "integration_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       meeting_notes: {
         Row: {
@@ -1944,6 +2217,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sync_status: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          last_sync_at: string | null
+          next_sync_at: string | null
+          records_synced: number | null
+          source_app: string
+          status: string | null
+          sync_config: Json | null
+          sync_type: string
+          target_app: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          last_sync_at?: string | null
+          next_sync_at?: string | null
+          records_synced?: number | null
+          source_app: string
+          status?: string | null
+          sync_config?: Json | null
+          sync_type: string
+          target_app: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          last_sync_at?: string | null
+          next_sync_at?: string | null
+          records_synced?: number | null
+          source_app?: string
+          status?: string | null
+          sync_config?: Json | null
+          sync_type?: string
+          target_app?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       task_activity_log: {
         Row: {

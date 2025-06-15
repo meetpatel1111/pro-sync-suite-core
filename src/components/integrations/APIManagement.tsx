@@ -1,193 +1,214 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  Key, 
-  Globe, 
-  Shield, 
-  Clock, 
+  Plus,
+  Edit,
+  Trash2,
+  Play,
+  Settings,
+  Globe,
+  Key,
+  Clock,
   CheckCircle,
-  AlertTriangle,
-  Copy,
-  Eye,
-  EyeOff
+  XCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-interface APIEndpoint {
-  id: string;
-  name: string;
-  url: string;
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-  headers: Record<string, string>;
-  authentication: {
-    type: 'none' | 'api_key' | 'bearer' | 'basic';
-    value: string;
-  };
-  rateLimit: {
-    requests: number;
-    period: string;
-  };
-  lastTested: string;
-  status: 'active' | 'inactive' | 'error';
-  responseTime: number;
-}
+import { integrationDatabaseService, APIEndpoint } from '@/services/integrationDatabaseService';
+import { useAuth } from '@/hooks/useAuth';
 
 const APIManagement: React.FC = () => {
   const { toast } = useToast();
-  const [endpoints, setEndpoints] = useState<APIEndpoint[]>([
-    {
-      id: '1',
-      name: 'TaskMaster API',
-      url: 'https://api.taskmaster.com/v1',
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      authentication: { type: 'api_key', value: 'tm_***************' },
-      rateLimit: { requests: 1000, period: 'hour' },
-      lastTested: '2024-01-15T10:30:00Z',
-      status: 'active',
-      responseTime: 150
-    },
-    {
-      id: '2',
-      name: 'TimeTrackPro Webhook',
-      url: 'https://webhook.timetrackpro.com/events',
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      authentication: { type: 'bearer', value: 'tt_***************' },
-      rateLimit: { requests: 500, period: 'hour' },
-      lastTested: '2024-01-15T09:45:00Z',
-      status: 'active',
-      responseTime: 89
-    }
-  ]);
-
-  const [isAddingEndpoint, setIsAddingEndpoint] = useState(false);
-  const [editingEndpoint, setEditingEndpoint] = useState<string | null>(null);
-  const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
-  const [newEndpoint, setNewEndpoint] = useState<Partial<APIEndpoint>>({
+  const { user } = useAuth();
+  const [endpoints, setEndpoints] = useState<APIEndpoint[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingEndpoint, setEditingEndpoint] = useState<APIEndpoint | null>(null);
+  const [formData, setFormData] = useState({
     name: '',
     url: '',
-    method: 'GET',
-    headers: {},
-    authentication: { type: 'none', value: '' },
-    rateLimit: { requests: 1000, period: 'hour' }
+    method: 'GET' as const,
+    headers: '{}',
+    auth_config: '{}',
+    rate_limit: 100,
+    timeout_seconds: 30
   });
 
-  const handleAddEndpoint = () => {
-    if (!newEndpoint.name || !newEndpoint.url) {
+  useEffect(() => {
+    if (user) {
+      loadEndpoints();
+    }
+  }, [user]);
+
+  const loadEndpoints = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      const data = await integrationDatabaseService.getAPIEndpoints(user.id);
+      setEndpoints(data);
+    } catch (error) {
+      console.error('Error loading API endpoints:', error);
       toast({
         title: 'Error',
-        description: 'Please provide name and URL for the endpoint',
+        description: 'Failed to load API endpoints',
         variant: 'destructive'
       });
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    const endpoint: APIEndpoint = {
-      id: Date.now().toString(),
-      name: newEndpoint.name,
-      url: newEndpoint.url,
-      method: newEndpoint.method || 'GET',
-      headers: newEndpoint.headers || {},
-      authentication: newEndpoint.authentication || { type: 'none', value: '' },
-      rateLimit: newEndpoint.rateLimit || { requests: 1000, period: 'hour' },
-      lastTested: new Date().toISOString(),
-      status: 'inactive',
-      responseTime: 0
-    };
-
-    setEndpoints([...endpoints, endpoint]);
-    setNewEndpoint({
-      name: '',
-      url: '',
-      method: 'GET',
-      headers: {},
-      authentication: { type: 'none', value: '' },
-      rateLimit: { requests: 1000, period: 'hour' }
-    });
-    setIsAddingEndpoint(false);
-
-    toast({
-      title: 'Endpoint Added',
-      description: `API endpoint "${endpoint.name}" has been added successfully`
-    });
   };
 
-  const handleTestEndpoint = async (endpoint: APIEndpoint) => {
-    toast({
-      title: 'Testing Endpoint',
-      description: `Testing connection to ${endpoint.name}...`
-    });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
 
-    // Simulate API test
-    setTimeout(() => {
-      const updatedEndpoints = endpoints.map(ep => 
-        ep.id === endpoint.id 
-          ? { ...ep, status: 'active' as const, lastTested: new Date().toISOString(), responseTime: Math.floor(Math.random() * 200) + 50 }
-          : ep
-      );
-      setEndpoints(updatedEndpoints);
+    try {
+      let headers, authConfig;
+      
+      try {
+        headers = JSON.parse(formData.headers || '{}');
+        authConfig = JSON.parse(formData.auth_config || '{}');
+      } catch (error) {
+        toast({
+          title: 'Invalid JSON',
+          description: 'Please check your headers and auth configuration JSON',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      const endpointData = {
+        user_id: user.id,
+        name: formData.name,
+        url: formData.url,
+        method: formData.method,
+        headers,
+        auth_config: authConfig,
+        rate_limit: formData.rate_limit,
+        timeout_seconds: formData.timeout_seconds,
+        is_active: true
+      };
+
+      if (editingEndpoint) {
+        await integrationDatabaseService.updateAPIEndpoint(editingEndpoint.id, endpointData);
+        toast({
+          title: 'Endpoint Updated',
+          description: 'API endpoint has been updated successfully'
+        });
+      } else {
+        await integrationDatabaseService.createAPIEndpoint(endpointData);
+        toast({
+          title: 'Endpoint Created',
+          description: 'New API endpoint has been created successfully'
+        });
+      }
+
+      setShowCreateForm(false);
+      setEditingEndpoint(null);
+      setFormData({
+        name: '',
+        url: '',
+        method: 'GET',
+        headers: '{}',
+        auth_config: '{}',
+        rate_limit: 100,
+        timeout_seconds: 30
+      });
+      loadEndpoints();
+    } catch (error) {
+      console.error('Error saving endpoint:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save API endpoint',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleEdit = (endpoint: APIEndpoint) => {
+    setEditingEndpoint(endpoint);
+    setFormData({
+      name: endpoint.name,
+      url: endpoint.url,
+      method: endpoint.method,
+      headers: JSON.stringify(endpoint.headers, null, 2),
+      auth_config: JSON.stringify(endpoint.auth_config, null, 2),
+      rate_limit: endpoint.rate_limit || 100,
+      timeout_seconds: endpoint.timeout_seconds
+    });
+    setShowCreateForm(true);
+  };
+
+  const handleDelete = async (endpointId: string) => {
+    try {
+      await integrationDatabaseService.deleteAPIEndpoint(endpointId);
+      toast({
+        title: 'Endpoint Deleted',
+        description: 'API endpoint has been deleted successfully'
+      });
+      loadEndpoints();
+    } catch (error) {
+      console.error('Error deleting endpoint:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete API endpoint',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const testEndpoint = async (endpoint: APIEndpoint) => {
+    try {
+      // Update status to pending
+      await integrationDatabaseService.updateAPIEndpoint(endpoint.id, {
+        test_status: 'pending',
+        last_tested_at: new Date().toISOString()
+      });
 
       toast({
-        title: 'Test Successful',
-        description: `${endpoint.name} is responding correctly`
+        title: 'Testing Endpoint',
+        description: 'Testing API endpoint...'
       });
-    }, 2000);
-  };
 
-  const handleDeleteEndpoint = (endpointId: string) => {
-    setEndpoints(endpoints.filter(ep => ep.id !== endpointId));
-    toast({
-      title: 'Endpoint Deleted',
-      description: 'API endpoint has been removed'
-    });
-  };
+      // Simulate API test (in real implementation, this would make actual HTTP request)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const success = Math.random() > 0.3; // 70% success rate
+      
+      await integrationDatabaseService.updateAPIEndpoint(endpoint.id, {
+        test_status: success ? 'success' : 'failed',
+        last_tested_at: new Date().toISOString()
+      });
 
-  const toggleSecretVisibility = (endpointId: string) => {
-    setShowSecrets(prev => ({
-      ...prev,
-      [endpointId]: !prev[endpointId]
-    }));
-  };
+      toast({
+        title: success ? 'Test Successful' : 'Test Failed',
+        description: success 
+          ? 'API endpoint is responding correctly'
+          : 'API endpoint test failed',
+        variant: success ? 'default' : 'destructive'
+      });
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: 'Copied',
-      description: 'Copied to clipboard'
-    });
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'active': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'error': return <AlertTriangle className="h-4 w-4 text-red-500" />;
-      default: return <Clock className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'error': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      loadEndpoints();
+    } catch (error) {
+      console.error('Error testing endpoint:', error);
+      toast({
+        title: 'Test Error',
+        description: 'Failed to test API endpoint',
+        variant: 'destructive'
+      });
     }
   };
 
   const getMethodColor = (method: string) => {
     switch (method) {
-      case 'GET': return 'bg-blue-100 text-blue-800';
-      case 'POST': return 'bg-green-100 text-green-800';
+      case 'GET': return 'bg-green-100 text-green-800';
+      case 'POST': return 'bg-blue-100 text-blue-800';
       case 'PUT': return 'bg-yellow-100 text-yellow-800';
       case 'DELETE': return 'bg-red-100 text-red-800';
       case 'PATCH': return 'bg-purple-100 text-purple-800';
@@ -195,222 +216,261 @@ const APIManagement: React.FC = () => {
     }
   };
 
+  const getTestStatusIcon = (status?: string) => {
+    switch (status) {
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'failed':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'pending':
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      default:
+        return <AlertTriangle className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">API Endpoint Management</h3>
+          <h3 className="text-lg font-semibold">API Management</h3>
           <p className="text-muted-foreground">
-            Manage and monitor your integration API endpoints
+            Manage and test your API endpoints and connections
           </p>
         </div>
-        <Button onClick={() => setIsAddingEndpoint(true)}>
-          <Plus className="h-4 w-4 mr-2" />
+        <Button onClick={() => setShowCreateForm(true)}>
+          <Plus className="mr-2 h-4 w-4" />
           Add Endpoint
         </Button>
       </div>
 
-      {/* Add New Endpoint Form */}
-      {isAddingEndpoint && (
+      {/* Create/Edit Form */}
+      {showCreateForm && (
         <Card>
           <CardHeader>
-            <CardTitle>Add New API Endpoint</CardTitle>
-            <CardDescription>Configure a new API endpoint for integration</CardDescription>
+            <CardTitle>
+              {editingEndpoint ? 'Edit Endpoint' : 'Create New Endpoint'}
+            </CardTitle>
+            <CardDescription>
+              Configure your API endpoint settings
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Name</label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Endpoint name"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Method</label>
+                  <select
+                    value={formData.method}
+                    onChange={(e) => setFormData(prev => ({ ...prev, method: e.target.value as any }))}
+                    className="w-full px-3 py-2 border rounded-md"
+                  >
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                    <option value="PATCH">PATCH</option>
+                  </select>
+                </div>
+              </div>
+
               <div>
-                <Label htmlFor="endpoint-name">Endpoint Name</Label>
+                <label className="text-sm font-medium">URL</label>
                 <Input
-                  id="endpoint-name"
-                  value={newEndpoint.name}
-                  onChange={(e) => setNewEndpoint({...newEndpoint, name: e.target.value})}
-                  placeholder="Enter endpoint name"
+                  value={formData.url}
+                  onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
+                  placeholder="https://api.example.com/endpoint"
+                  required
                 />
               </div>
-              <div>
-                <Label htmlFor="endpoint-method">HTTP Method</Label>
-                <Select value={newEndpoint.method} onValueChange={(value) => setNewEndpoint({...newEndpoint, method: value as any})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="GET">GET</SelectItem>
-                    <SelectItem value="POST">POST</SelectItem>
-                    <SelectItem value="PUT">PUT</SelectItem>
-                    <SelectItem value="DELETE">DELETE</SelectItem>
-                    <SelectItem value="PATCH">PATCH</SelectItem>
-                  </SelectContent>
-                </Select>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Rate Limit (req/min)</label>
+                  <Input
+                    type="number"
+                    value={formData.rate_limit}
+                    onChange={(e) => setFormData(prev => ({ ...prev, rate_limit: parseInt(e.target.value) }))}
+                    placeholder="100"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Timeout (seconds)</label>
+                  <Input
+                    type="number"
+                    value={formData.timeout_seconds}
+                    onChange={(e) => setFormData(prev => ({ ...prev, timeout_seconds: parseInt(e.target.value) }))}
+                    placeholder="30"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div>
-              <Label htmlFor="endpoint-url">URL</Label>
-              <Input
-                id="endpoint-url"
-                value={newEndpoint.url}
-                onChange={(e) => setNewEndpoint({...newEndpoint, url: e.target.value})}
-                placeholder="https://api.example.com/v1"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="auth-type">Authentication Type</Label>
-                <Select 
-                  value={newEndpoint.authentication?.type} 
-                  onValueChange={(value) => setNewEndpoint({
-                    ...newEndpoint, 
-                    authentication: { ...newEndpoint.authentication!, type: value as any }
-                  })}
+                <label className="text-sm font-medium">Headers (JSON)</label>
+                <Textarea
+                  value={formData.headers}
+                  onChange={(e) => setFormData(prev => ({ ...prev, headers: e.target.value }))}
+                  placeholder='{"Content-Type": "application/json"}'
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Auth Configuration (JSON)</label>
+                <Textarea
+                  value={formData.auth_config}
+                  onChange={(e) => setFormData(prev => ({ ...prev, auth_config: e.target.value }))}
+                  placeholder='{"type": "bearer", "token": "your-token"}'
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button type="submit">
+                  {editingEndpoint ? 'Update' : 'Create'} Endpoint
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setEditingEndpoint(null);
+                  }}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="api_key">API Key</SelectItem>
-                    <SelectItem value="bearer">Bearer Token</SelectItem>
-                    <SelectItem value="basic">Basic Auth</SelectItem>
-                  </SelectContent>
-                </Select>
+                  Cancel
+                </Button>
               </div>
-              <div>
-                <Label htmlFor="auth-value">Authentication Value</Label>
-                <Input
-                  id="auth-value"
-                  type="password"
-                  value={newEndpoint.authentication?.value}
-                  onChange={(e) => setNewEndpoint({
-                    ...newEndpoint, 
-                    authentication: { ...newEndpoint.authentication!, value: e.target.value }
-                  })}
-                  placeholder="Enter authentication value"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button onClick={handleAddEndpoint}>Add Endpoint</Button>
-              <Button variant="outline" onClick={() => setIsAddingEndpoint(false)}>Cancel</Button>
-            </div>
+            </form>
           </CardContent>
         </Card>
       )}
 
       {/* Endpoints List */}
-      <div className="space-y-4">
-        {endpoints.map((endpoint) => (
-          <Card key={endpoint.id}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <CardTitle className="text-lg">{endpoint.name}</CardTitle>
-                    <Badge className={getMethodColor(endpoint.method)}>
-                      {endpoint.method}
-                    </Badge>
-                    <Badge className={getStatusColor(endpoint.status)}>
-                      <div className="flex items-center gap-1">
-                        {getStatusIcon(endpoint.status)}
-                        {endpoint.status}
+      <Card>
+        <CardHeader>
+          <CardTitle>API Endpoints</CardTitle>
+          <CardDescription>
+            Your configured API endpoints and their status
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {endpoints.length === 0 ? (
+            <div className="text-center py-8">
+              <Globe className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">No API Endpoints</h3>
+              <p className="text-muted-foreground mb-4">
+                Create your first API endpoint to get started
+              </p>
+              <Button onClick={() => setShowCreateForm(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Endpoint
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {endpoints.map((endpoint) => (
+                <div key={endpoint.id} className="border rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-medium">{endpoint.name}</h4>
+                        <Badge className={getMethodColor(endpoint.method)}>
+                          {endpoint.method}
+                        </Badge>
+                        {!endpoint.is_active && (
+                          <Badge variant="secondary">Inactive</Badge>
+                        )}
                       </div>
-                    </Badge>
+                      <p className="text-sm text-muted-foreground break-all">
+                        {endpoint.url}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {getTestStatusIcon(endpoint.test_status)}
+                      <span className="text-xs text-muted-foreground">
+                        {endpoint.last_tested_at 
+                          ? new Date(endpoint.last_tested_at).toLocaleString()
+                          : 'Never tested'
+                        }
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Globe className="h-4 w-4" />
-                    <code className="bg-muted px-2 py-1 rounded">{endpoint.url}</code>
-                    <Button 
-                      variant="ghost" 
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
+                    <div>
+                      <p className="text-muted-foreground">Rate Limit</p>
+                      <p className="font-medium">
+                        {endpoint.rate_limit ? `${endpoint.rate_limit}/min` : 'Unlimited'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Timeout</p>
+                      <p className="font-medium">{endpoint.timeout_seconds}s</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Auth Type</p>
+                      <p className="font-medium">
+                        {endpoint.auth_config?.type || 'None'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Status</p>
+                      <p className="font-medium">
+                        {endpoint.is_active ? 'Active' : 'Inactive'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
                       size="sm"
-                      onClick={() => copyToClipboard(endpoint.url)}
+                      variant="outline"
+                      onClick={() => testEndpoint(endpoint)}
+                      disabled={endpoint.test_status === 'pending'}
                     >
-                      <Copy className="h-3 w-3" />
+                      <Play className="h-4 w-4 mr-2" />
+                      Test
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEdit(endpoint)}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDelete(endpoint.id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
                     </Button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleTestEndpoint(endpoint)}
-                  >
-                    Test
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setEditingEndpoint(endpoint.id)}
-                  >
-                    <Edit3 className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleDeleteEndpoint(endpoint.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm font-medium mb-1">Authentication</p>
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{endpoint.authentication.type}</span>
-                    {endpoint.authentication.type !== 'none' && (
-                      <>
-                        <code className="bg-muted px-2 py-1 rounded text-xs">
-                          {showSecrets[endpoint.id] 
-                            ? endpoint.authentication.value 
-                            : endpoint.authentication.value.replace(/./g, '*')
-                          }
-                        </code>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleSecretVisibility(endpoint.id)}
-                        >
-                          {showSecrets[endpoint.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-medium mb-1">Rate Limit</p>
-                  <p className="text-sm text-muted-foreground">
-                    {endpoint.rateLimit.requests} requests per {endpoint.rateLimit.period}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium mb-1">Performance</p>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <span>{endpoint.responseTime}ms avg</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {endpoints.length === 0 && (
-        <div className="text-center py-12">
-          <Key className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">No API endpoints configured</h3>
-          <p className="text-muted-foreground mb-4">Add your first API endpoint to start managing integrations</p>
-          <Button onClick={() => setIsAddingEndpoint(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Your First Endpoint
-          </Button>
-        </div>
-      )}
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

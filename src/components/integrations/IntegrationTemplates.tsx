@@ -14,24 +14,12 @@ import {
   Users, 
   TrendingUp,
   CheckCircle,
-  Play
+  Play,
+  Plus
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { integrationService } from '@/services/integrationService';
+import { integrationDatabaseService, IntegrationTemplate } from '@/services/integrationDatabaseService';
 import { useAuth } from '@/hooks/useAuth';
-
-interface IntegrationTemplate {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  rating: number;
-  downloads: number;
-  apps: string[];
-  template: any;
-  tags: string[];
-}
 
 const IntegrationTemplates: React.FC = () => {
   const { toast } = useToast();
@@ -46,15 +34,28 @@ const IntegrationTemplates: React.FC = () => {
   const difficulties = ['all', 'Beginner', 'Intermediate', 'Advanced'];
 
   useEffect(() => {
-    loadTemplates();
-  }, []);
+    if (user) {
+      loadTemplates();
+    }
+  }, [user]);
 
   const loadTemplates = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
-      // In a real implementation, this would fetch from a templates API or database
-      // For now, we'll show an empty state or loading message
-      setTemplates([]);
+      const userTemplates = await integrationDatabaseService.getIntegrationTemplates(user.id);
+      const publicTemplates = await integrationDatabaseService.getPublicTemplates();
+      
+      // Combine user templates and public templates, removing duplicates
+      const allTemplates = [...userTemplates];
+      publicTemplates.forEach(publicTemplate => {
+        if (!userTemplates.find(ut => ut.id === publicTemplate.id)) {
+          allTemplates.push(publicTemplate);
+        }
+      });
+      
+      setTemplates(allTemplates);
     } catch (error) {
       console.error('Error loading templates:', error);
       toast({
@@ -69,7 +70,7 @@ const IntegrationTemplates: React.FC = () => {
 
   const filteredTemplates = templates.filter(template => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         template.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          template.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory;
     const matchesDifficulty = selectedDifficulty === 'all' || template.difficulty === selectedDifficulty;
@@ -88,23 +89,76 @@ const IntegrationTemplates: React.FC = () => {
     }
 
     try {
-      const success = await integrationService.createIntegrationAction(
-        'TemplateEngine',
-        'WorkflowBuilder',
-        'apply_template',
-        { template_id: template.id, user_id: user.id }
-      );
+      // Create a new workflow based on the template
+      await integrationDatabaseService.createAutomationWorkflow({
+        user_id: user.id,
+        name: `${template.name} Workflow`,
+        description: `Auto-generated from template: ${template.name}`,
+        trigger_config: template.template_config.trigger || {},
+        actions_config: template.template_config.actions || {},
+        conditions_config: template.template_config.conditions || {},
+        is_active: false,
+        execution_count: 0
+      });
 
-      if (success) {
-        toast({
-          title: 'Template Applied',
-          description: `Integration template "${template.name}" has been applied to your workflow builder`,
-        });
-      }
+      // Update template usage count
+      await integrationDatabaseService.updateIntegrationTemplate(template.id, {
+        downloads: template.downloads + 1
+      });
+
+      toast({
+        title: 'Template Applied',
+        description: `Integration template "${template.name}" has been applied to your workflow builder`,
+      });
+      
+      loadTemplates(); // Refresh to show updated download count
     } catch (error) {
+      console.error('Error applying template:', error);
       toast({
         title: 'Error',
         description: 'Failed to apply template',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleCreateTemplate = async () => {
+    if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please log in to create templates',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      await integrationDatabaseService.createIntegrationTemplate({
+        user_id: user.id,
+        name: 'New Integration Template',
+        description: 'A custom integration template',
+        category: 'Productivity',
+        difficulty: 'Beginner',
+        rating: 0,
+        downloads: 0,
+        apps: [],
+        tags: [],
+        template_config: {},
+        is_public: false,
+        is_verified: false
+      });
+
+      toast({
+        title: 'Template Created',
+        description: 'New integration template has been created',
+      });
+      
+      loadTemplates();
+    } catch (error) {
+      console.error('Error creating template:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create template',
         variant: 'destructive'
       });
     }
@@ -136,6 +190,10 @@ const IntegrationTemplates: React.FC = () => {
             Pre-built integration workflows to get you started quickly
           </p>
         </div>
+        <Button onClick={handleCreateTemplate}>
+          <Plus className="mr-2 h-4 w-4" />
+          Create Template
+        </Button>
       </div>
 
       {/* Search and Filters */}
@@ -181,21 +239,16 @@ const IntegrationTemplates: React.FC = () => {
       {filteredTemplates.length === 0 ? (
         <div className="text-center py-12">
           <Filter className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">No templates available</h3>
-          <p className="text-muted-foreground">
-            Integration templates will appear here once they're configured
+          <h3 className="text-lg font-medium mb-2">No templates found</h3>
+          <p className="text-muted-foreground mb-4">
+            {templates.length === 0 
+              ? 'Create your first integration template to get started'
+              : 'Try adjusting your search filters'
+            }
           </p>
-          <Button 
-            className="mt-4" 
-            onClick={() => {
-              toast({
-                title: 'Coming Soon',
-                description: 'Template marketplace will be available soon'
-              });
-            }}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Browse Template Marketplace
+          <Button onClick={handleCreateTemplate}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Your First Template
           </Button>
         </div>
       ) : (
@@ -205,7 +258,12 @@ const IntegrationTemplates: React.FC = () => {
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{template.name}</CardTitle>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      {template.name}
+                      {template.is_verified && (
+                        <CheckCircle className="h-4 w-4 text-blue-500" />
+                      )}
+                    </CardTitle>
                     <CardDescription className="mt-2">
                       {template.description}
                     </CardDescription>
@@ -218,34 +276,38 @@ const IntegrationTemplates: React.FC = () => {
               <CardContent>
                 <div className="space-y-4">
                   {/* Apps */}
-                  <div>
-                    <p className="text-sm font-medium mb-2">Connected Apps:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {template.apps.map(app => (
-                        <Badge key={app} variant="outline" className="text-xs">
-                          {app}
-                        </Badge>
-                      ))}
+                  {template.apps.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium mb-2">Connected Apps:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {template.apps.map(app => (
+                          <Badge key={app} variant="outline" className="text-xs">
+                            {app}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Tags */}
-                  <div>
-                    <p className="text-sm font-medium mb-2">Tags:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {template.tags.map(tag => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          #{tag}
-                        </Badge>
-                      ))}
+                  {template.tags.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium mb-2">Tags:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {template.tags.map(tag => (
+                          <Badge key={tag} variant="secondary" className="text-xs">
+                            #{tag}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Stats */}
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span>{template.rating}</span>
+                      <span>{template.rating.toFixed(1)}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Download className="h-4 w-4" />

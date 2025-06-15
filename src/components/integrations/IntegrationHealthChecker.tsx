@@ -17,23 +17,14 @@ import {
   Server
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { integrationDatabaseService, IntegrationHealthStatus } from '@/services/integrationDatabaseService';
 import { integrationService } from '@/services/integrationService';
 import { useAuth } from '@/hooks/useAuth';
-
-interface HealthCheck {
-  id: string;
-  name: string;
-  status: 'healthy' | 'warning' | 'error' | 'checking';
-  lastChecked: string;
-  responseTime: number;
-  uptime: number;
-  details: string;
-}
 
 const IntegrationHealthChecker: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [healthChecks, setHealthChecks] = useState<HealthCheck[]>([]);
+  const [healthChecks, setHealthChecks] = useState<IntegrationHealthStatus[]>([]);
   const [isChecking, setIsChecking] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -50,21 +41,33 @@ const IntegrationHealthChecker: React.FC = () => {
     try {
       setLoading(true);
       
-      // Load integration actions to determine which services to check
-      const integrationActions = await integrationService.getUserIntegrationActions(user.id);
+      // Load existing health status
+      const existingHealth = await integrationDatabaseService.getIntegrationHealthStatus(user.id);
       
-      // Convert integration actions to health checks
-      const checks: HealthCheck[] = integrationActions.map(action => ({
-        id: action.id,
-        name: `${action.source_app} Integration`,
-        status: action.enabled ? 'healthy' : 'warning',
-        lastChecked: action.created_at,
-        responseTime: Math.floor(Math.random() * 500) + 50, // Simulate response time
-        uptime: action.enabled ? 99.9 : 95.0,
-        details: action.enabled ? 'Integration active and responding' : 'Integration disabled'
-      }));
-
-      setHealthChecks(checks);
+      // If no health records exist, create them based on integration actions
+      if (existingHealth.length === 0) {
+        const integrationActions = await integrationService.getUserIntegrationActions(user.id);
+        
+        for (const action of integrationActions) {
+          await integrationDatabaseService.createIntegrationHealthStatus({
+            user_id: user.id,
+            integration_id: action.id,
+            service_name: `${action.source_app} → ${action.target_app}`,
+            status: action.enabled ? 'healthy' : 'warning',
+            response_time: Math.floor(Math.random() * 500) + 50,
+            uptime_percentage: action.enabled ? 99.9 : 95.0,
+            last_checked_at: new Date().toISOString(),
+            error_details: action.enabled ? undefined : 'Integration disabled'
+          });
+        }
+        
+        // Reload after creating
+        const updatedHealth = await integrationDatabaseService.getIntegrationHealthStatus(user.id);
+        setHealthChecks(updatedHealth);
+      } else {
+        setHealthChecks(existingHealth);
+      }
+      
       setLastUpdate(new Date().toLocaleTimeString());
       
     } catch (error) {
@@ -80,19 +83,38 @@ const IntegrationHealthChecker: React.FC = () => {
   };
 
   const runHealthCheck = async () => {
+    if (!user || healthChecks.length === 0) return;
+    
     setIsChecking(true);
     
     try {
       // Update all checks to "checking" status
-      setHealthChecks(prev => prev.map(check => ({
+      const updatedChecks = healthChecks.map(check => ({
         ...check,
-        status: 'checking'
-      })));
+        status: 'checking' as const
+      }));
+      setHealthChecks(updatedChecks);
 
-      // Simulate health check process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Simulate health check process with real database updates
+      for (const check of healthChecks) {
+        // Simulate checking delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Generate random health results
+        const newStatus = Math.random() > 0.8 ? 'warning' : 'healthy';
+        const newResponseTime = Math.floor(Math.random() * 1000) + 50;
+        const newUptime = Math.random() * 10 + 90;
+        
+        await integrationDatabaseService.updateIntegrationHealthStatus(check.id, {
+          status: newStatus,
+          response_time: newResponseTime,
+          uptime_percentage: newUptime,
+          last_checked_at: new Date().toISOString(),
+          error_details: newStatus === 'warning' ? 'Slow response detected' : undefined
+        });
+      }
       
-      // Update with new results
+      // Reload updated data
       await loadHealthStatus();
       
       toast({
@@ -284,11 +306,11 @@ const IntegrationHealthChecker: React.FC = () => {
                 <div key={check.id} className="border rounded-lg p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      {getServiceIcon(check.name)}
+                      {getServiceIcon(check.service_name)}
                       <div>
-                        <h4 className="font-medium">{check.name}</h4>
+                        <h4 className="font-medium">{check.service_name}</h4>
                         <p className="text-sm text-muted-foreground">
-                          {check.details}
+                          {check.error_details || 'Service running normally'}
                         </p>
                       </div>
                     </div>
@@ -307,17 +329,17 @@ const IntegrationHealthChecker: React.FC = () => {
                     <div>
                       <p className="text-muted-foreground">Response Time</p>
                       <p className="font-medium">
-                        {check.responseTime > 0 ? `${check.responseTime}ms` : 'N/A'}
+                        {check.response_time}ms
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Uptime</p>
-                      <p className="font-medium">{check.uptime}%</p>
+                      <p className="font-medium">{check.uptime_percentage.toFixed(1)}%</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Last Checked</p>
                       <p className="font-medium">
-                        {new Date(check.lastChecked).toLocaleTimeString()}
+                        {new Date(check.last_checked_at).toLocaleTimeString()}
                       </p>
                     </div>
                   </div>
