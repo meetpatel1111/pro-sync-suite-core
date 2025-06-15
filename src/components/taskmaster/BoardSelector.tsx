@@ -38,7 +38,7 @@ const BoardSelector: React.FC<BoardSelectorProps> = ({ project, onBoardSelect, s
         });
         return;
       }
-      setBoards(data || []);
+      setBoards((data || []) as Board[]);
     } catch (error) {
       console.error('Error fetching boards:', error);
     } finally {
@@ -67,7 +67,7 @@ const BoardSelector: React.FC<BoardSelectorProps> = ({ project, onBoardSelect, s
           ]
         },
         created_by: user.id
-      });
+      } as Omit<Board, 'id' | 'created_at' | 'updated_at'>);
 
       if (error) {
         toast({

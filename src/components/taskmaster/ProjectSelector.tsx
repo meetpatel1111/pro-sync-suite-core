@@ -39,7 +39,7 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({ onProjectSelect, sele
         });
         return;
       }
-      setProjects(data || []);
+      setProjects((data || []) as Project[]);
     } catch (error) {
       console.error('Error fetching projects:', error);
     } finally {
@@ -63,7 +63,7 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({ onProjectSelect, sele
         status: 'active',
         created_by: user.id,
         user_id: user.id
-      });
+      } as Omit<Project, 'id' | 'created_at' | 'updated_at'>);
 
       if (error) {
         toast({

@@ -39,7 +39,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
         });
         return;
       }
-      setTasks(data || []);
+      setTasks((data || []) as TaskMasterTask[]);
     } catch (error) {
       console.error('Error fetching tasks:', error);
     } finally {

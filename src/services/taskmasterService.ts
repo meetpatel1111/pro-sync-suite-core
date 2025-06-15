@@ -10,17 +10,24 @@ class TaskmasterService {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
-    return { data, error };
+    return { data: data as Project[] | null, error };
   }
 
   async createProject(projectData: Omit<Project, 'id' | 'created_at' | 'updated_at'>) {
     const { data, error } = await supabase
       .from('projects')
-      .insert([projectData])
+      .insert([{
+        name: projectData.name,
+        key: projectData.key,
+        description: projectData.description || '',
+        status: projectData.status || 'active',
+        created_by: projectData.created_by,
+        user_id: projectData.user_id
+      }])
       .select()
       .single();
 
-    return { data, error };
+    return { data: data as Project | null, error };
   }
 
   async updateProject(projectId: string, updates: Partial<Project>) {
@@ -31,7 +38,7 @@ class TaskmasterService {
       .select()
       .single();
 
-    return { data, error };
+    return { data: data as Project | null, error };
   }
 
   async deleteProject(projectId: string) {
@@ -50,17 +57,24 @@ class TaskmasterService {
       .eq('project_id', projectId)
       .order('created_at', { ascending: false });
 
-    return { data, error };
+    return { data: data as Board[] | null, error };
   }
 
   async createBoard(boardData: Omit<Board, 'id' | 'created_at' | 'updated_at'>) {
     const { data, error } = await supabase
       .from('boards')
-      .insert([boardData])
+      .insert([{
+        project_id: boardData.project_id,
+        name: boardData.name,
+        type: boardData.type,
+        description: boardData.description || '',
+        config: boardData.config,
+        created_by: boardData.created_by
+      }])
       .select()
       .single();
 
-    return { data, error };
+    return { data: data as Board | null, error };
   }
 
   async updateBoard(boardId: string, updates: Partial<Board>) {
@@ -71,7 +85,7 @@ class TaskmasterService {
       .select()
       .single();
 
-    return { data, error };
+    return { data: data as Board | null, error };
   }
 
   async deleteBoard(boardId: string) {
@@ -90,17 +104,33 @@ class TaskmasterService {
       .eq('board_id', boardId)
       .order('position', { ascending: true });
 
-    return { data, error };
+    return { data: data as TaskMasterTask[] | null, error };
   }
 
   async createTask(taskData: Omit<TaskMasterTask, 'id' | 'task_number' | 'task_key' | 'created_at' | 'updated_at'>) {
     const { data, error } = await supabase
       .from('tasks')
-      .insert([taskData])
+      .insert([{
+        board_id: taskData.board_id,
+        project_id: taskData.project_id,
+        title: taskData.title,
+        description: taskData.description || '',
+        status: taskData.status,
+        priority: taskData.priority,
+        type: taskData.type,
+        visibility: taskData.visibility,
+        position: taskData.position,
+        actual_hours: taskData.actual_hours,
+        created_by: taskData.created_by,
+        assignee_id: taskData.assignee_id,
+        estimate_hours: taskData.estimate_hours,
+        due_date: taskData.due_date,
+        start_date: taskData.start_date
+      }])
       .select()
       .single();
 
-    return { data, error };
+    return { data: data as TaskMasterTask | null, error };
   }
 
   async updateTask(taskId: string, updates: Partial<TaskMasterTask>, userId: string) {
@@ -115,7 +145,7 @@ class TaskmasterService {
       .select()
       .single();
 
-    return { data, error };
+    return { data: data as TaskMasterTask | null, error };
   }
 
   async deleteTask(taskId: string) {
@@ -134,7 +164,7 @@ class TaskmasterService {
       .eq('project_id', projectId)
       .order('created_at', { ascending: false });
 
-    return { data, error };
+    return { data: data as TaskMasterTask[] | null, error };
   }
 
   async getTasksByAssignee(assigneeId: string) {
@@ -144,7 +174,7 @@ class TaskmasterService {
       .eq('assignee_id', assigneeId)
       .order('created_at', { ascending: false });
 
-    return { data, error };
+    return { data: data as TaskMasterTask[] | null, error };
   }
 
   async updateTaskStatus(taskId: string, status: string, userId: string) {
