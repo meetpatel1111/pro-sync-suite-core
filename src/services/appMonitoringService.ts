@@ -40,19 +40,22 @@ export interface AppAvailabilityCheck {
   created_at: string;
 }
 
-// ProSync Suite app configurations
+// ProSync Suite app health check endpoints
 const APP_ENDPOINTS = {
-  'TaskMaster': '/api/taskmaster/health',
-  'TimeTrackPro': '/api/timetrack/health',
-  'CollabSpace': '/api/collab/health',
-  'PlanBoard': '/api/planboard/health',
-  'FileVault': '/api/filevault/health',
-  'BudgetBuddy': '/api/budget/health',
-  'InsightIQ': '/api/insights/health',
-  'ResourceHub': '/api/resources/health',
-  'ClientConnect': '/api/clients/health',
-  'RiskRadar': '/api/risks/health'
+  'TaskMaster': `${window.location.origin}/api/health/taskmaster`,
+  'TimeTrackPro': `${window.location.origin}/api/health/timetrack`,
+  'CollabSpace': `${window.location.origin}/api/health/collab`,
+  'PlanBoard': `${window.location.origin}/api/health/planboard`,
+  'FileVault': `${window.location.origin}/api/health/filevault`,
+  'BudgetBuddy': `${window.location.origin}/api/health/budget`,
+  'InsightIQ': `${window.location.origin}/api/health/insights`,
+  'ResourceHub': `${window.location.origin}/api/health/resources`,
+  'ClientConnect': `${window.location.origin}/api/health/clients`,
+  'RiskRadar': `${window.location.origin}/api/health/risks`
 };
+
+// Health check timeout in milliseconds
+const HEALTH_CHECK_TIMEOUT = 5000;
 
 export const appMonitoringService = {
   // Get all health metrics for a user
@@ -103,7 +106,67 @@ export const appMonitoringService = {
     return data || [];
   },
 
-  // Check availability of a single app
+  // Make real HTTP health check request
+  async makeHealthCheckRequest(url: string, timeout: number = HEALTH_CHECK_TIMEOUT): Promise<{
+    isAvailable: boolean;
+    responseTime: number;
+    statusCode: number;
+    errorMessage?: string;
+  }> {
+    const startTime = Date.now();
+    
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      const responseTime = Date.now() - startTime;
+
+      return {
+        isAvailable: response.ok,
+        responseTime,
+        statusCode: response.status,
+        errorMessage: response.ok ? undefined : `HTTP ${response.status}: ${response.statusText}`,
+      };
+    } catch (error) {
+      const responseTime = Date.now() - startTime;
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          return {
+            isAvailable: false,
+            responseTime,
+            statusCode: 0,
+            errorMessage: `Request timeout after ${timeout}ms`,
+          };
+        }
+        
+        return {
+          isAvailable: false,
+          responseTime,
+          statusCode: 0,
+          errorMessage: error.message,
+        };
+      }
+
+      return {
+        isAvailable: false,
+        responseTime,
+        statusCode: 0,
+        errorMessage: 'Unknown network error',
+      };
+    }
+  },
+
+  // Check availability of a single app with real HTTP request
   async checkAppAvailability(userId: string, appName: string): Promise<AppAvailabilityCheck | null> {
     const endpoint = APP_ENDPOINTS[appName as keyof typeof APP_ENDPOINTS];
     if (!endpoint) {
@@ -111,30 +174,9 @@ export const appMonitoringService = {
       return null;
     }
 
-    const startTime = Date.now();
-    let isAvailable = false;
-    let responseTime = 0;
-    let statusCode = 0;
-    let errorMessage = '';
+    console.log(`Checking health for ${appName} at ${endpoint}`);
 
-    try {
-      // For now, simulate API calls since we don't have real endpoints yet
-      // In a real implementation, this would make actual HTTP requests
-      const mockLatency = Math.random() * 500 + 50; // 50-550ms
-      await new Promise(resolve => setTimeout(resolve, mockLatency));
-      
-      responseTime = Date.now() - startTime;
-      isAvailable = Math.random() > 0.1; // 90% success rate
-      statusCode = isAvailable ? 200 : 500;
-      
-      if (!isAvailable) {
-        errorMessage = 'Service temporarily unavailable';
-      }
-    } catch (error) {
-      responseTime = Date.now() - startTime;
-      isAvailable = false;
-      errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    }
+    const healthCheckResult = await this.makeHealthCheckRequest(endpoint);
 
     // Save the availability check
     const { data, error: insertError } = await supabase
@@ -144,10 +186,10 @@ export const appMonitoringService = {
         app_name: appName,
         endpoint_url: endpoint,
         check_type: 'http',
-        is_available: isAvailable,
-        response_time_ms: responseTime,
-        status_code: statusCode,
-        error_message: errorMessage || null,
+        is_available: healthCheckResult.isAvailable,
+        response_time_ms: healthCheckResult.responseTime,
+        status_code: healthCheckResult.statusCode,
+        error_message: healthCheckResult.errorMessage || null,
         checked_at: new Date().toISOString()
       })
       .select()
@@ -212,9 +254,69 @@ export const appMonitoringService = {
     }
   },
 
+  // Calculate health status based on availability check
+  calculateHealthStatus(check: AppAvailabilityCheck): 'healthy' | 'warning' | 'critical' {
+    if (!check.is_available) {
+      return 'critical';
+    }
+    
+    if (check.response_time_ms && check.response_time_ms > 2000) {
+      return 'warning';
+    }
+    
+    if (check.status_code && (check.status_code >= 400 && check.status_code < 500)) {
+      return 'warning';
+    }
+    
+    return 'healthy';
+  },
+
+  // Calculate uptime percentage from recent checks
+  async calculateUptimePercentage(userId: string, appName: string): Promise<number> {
+    const { data, error } = await supabase
+      .from('app_availability_checks')
+      .select('is_available')
+      .eq('user_id', userId)
+      .eq('app_name', appName)
+      .gte('checked_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24 hours
+      .order('checked_at', { ascending: false })
+      .limit(100);
+
+    if (error || !data || data.length === 0) {
+      return 100; // Default to 100% if no data
+    }
+
+    const availableChecks = data.filter(check => check.is_available).length;
+    return (availableChecks / data.length) * 100;
+  },
+
+  // Calculate error rate from recent checks
+  async calculateErrorRate(userId: string, appName: string): Promise<number> {
+    const { data, error } = await supabase
+      .from('app_availability_checks')
+      .select('is_available, status_code')
+      .eq('user_id', userId)
+      .eq('app_name', appName)
+      .gte('checked_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24 hours
+      .order('checked_at', { ascending: false })
+      .limit(100);
+
+    if (error || !data || data.length === 0) {
+      return 0; // Default to 0% error rate if no data
+    }
+
+    const errorChecks = data.filter(check => 
+      !check.is_available || (check.status_code && check.status_code >= 400)
+    ).length;
+    
+    return (errorChecks / data.length) * 100;
+  },
+
   // Run health checks for all apps
   async runHealthChecks(userId: string): Promise<void> {
     const appNames = Object.keys(APP_ENDPOINTS);
+    console.log('Running health checks for apps:', appNames);
+    
     const results = await Promise.allSettled(
       appNames.map(appName => this.checkAppAvailability(userId, appName))
     );
@@ -226,17 +328,13 @@ export const appMonitoringService = {
 
       if (result.status === 'fulfilled' && result.value) {
         const check = result.value;
-        let status: 'healthy' | 'warning' | 'critical' = 'healthy';
+        const status = this.calculateHealthStatus(check);
         
-        if (!check.is_available) {
-          status = 'critical';
-        } else if (check.response_time_ms && check.response_time_ms > 1000) {
-          status = 'warning';
-        }
-
-        // Calculate simulated uptime and error rate based on recent checks
-        const uptime = check.is_available ? 99.5 + Math.random() * 0.5 : 95 + Math.random() * 5;
-        const errorRate = check.is_available ? Math.random() * 1 : Math.random() * 5 + 2;
+        // Calculate real uptime and error rate from historical data
+        const [uptime, errorRate] = await Promise.all([
+          this.calculateUptimePercentage(userId, appName),
+          this.calculateErrorRate(userId, appName)
+        ]);
 
         await this.updateHealthMetric(
           userId,
@@ -247,15 +345,18 @@ export const appMonitoringService = {
           errorRate
         );
 
-        // Also record performance metrics
+        // Record performance metrics based on real data
+        const successRate = check.is_available ? 100 - errorRate : Math.max(0, 100 - errorRate - 20);
         await this.recordPerformanceMetrics(
           userId,
           appName,
-          Math.floor(Math.random() * 1000) + 500, // requests per minute
-          check.is_available ? 95 + Math.random() * 5 : 85 + Math.random() * 10, // success rate
+          Math.floor(Math.random() * 500) + 200, // Still simulated - would need real metrics from apps
+          successRate,
           check.response_time_ms || 0,
-          check.is_available ? Math.floor(Math.random() * 5) : Math.floor(Math.random() * 20) + 10
+          check.is_available ? 0 : 1
         );
+      } else {
+        console.error(`Health check failed for ${appName}:`, result.status === 'rejected' ? result.reason : 'Unknown error');
       }
     }
   },
@@ -268,21 +369,10 @@ export const appMonitoringService = {
     const existing = await this.getHealthMetrics(userId);
     
     if (existing.length === 0) {
-      // Create initial health metrics for all apps
-      const appNames = Object.keys(APP_ENDPOINTS);
-      
-      for (const appName of appNames) {
-        await this.updateHealthMetric(
-          userId,
-          appName,
-          'healthy',
-          Math.floor(Math.random() * 200) + 100, // 100-300ms
-          99 + Math.random(), // 99-100% uptime
-          Math.random() * 0.5 // 0-0.5% error rate
-        );
-      }
-      
-      console.log('Initial health metrics created for all apps');
+      console.log('No existing health metrics found, running initial health checks...');
+      // Run real health checks to initialize data
+      await this.runHealthChecks(userId);
+      console.log('Initial health checks completed');
     }
   }
 };

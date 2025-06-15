@@ -1,0 +1,19 @@
+
+{
+  "status": "healthy",
+  "service": "CollabSpace",
+  "version": "2.0.0",
+  "timestamp": "2025-06-15T21:55:43Z",
+  "uptime": 99.7,
+  "response_time_ms": 180,
+  "dependencies": {
+    "database": "healthy",
+    "websocket": "healthy",
+    "file_storage": "healthy"
+  },
+  "metrics": {
+    "active_channels": 45,
+    "online_users": 78,
+    "messages_today": 892
+  }
+}

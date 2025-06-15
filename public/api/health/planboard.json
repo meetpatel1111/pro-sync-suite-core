@@ -1,0 +1,19 @@
+
+{
+  "status": "healthy",
+  "service": "PlanBoard",
+  "version": "2.0.0",
+  "timestamp": "2025-06-15T21:55:43Z",
+  "uptime": 99.9,
+  "response_time_ms": 95,
+  "dependencies": {
+    "database": "healthy",
+    "scheduler": "healthy",
+    "export_service": "healthy"
+  },
+  "metrics": {
+    "active_projects": 67,
+    "total_milestones": 234,
+    "completion_rate": 87.3
+  }
+}

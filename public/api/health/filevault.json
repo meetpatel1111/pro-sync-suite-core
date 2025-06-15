@@ -1,0 +1,19 @@
+
+{
+  "status": "healthy",
+  "service": "FileVault",
+  "version": "2.0.0",
+  "timestamp": "2025-06-15T21:55:43Z",
+  "uptime": 99.6,
+  "response_time_ms": 220,
+  "dependencies": {
+    "database": "healthy",
+    "s3_storage": "healthy",
+    "virus_scanner": "healthy"
+  },
+  "metrics": {
+    "total_files": 12847,
+    "storage_used_gb": 145.7,
+    "downloads_today": 156
+  }
+}

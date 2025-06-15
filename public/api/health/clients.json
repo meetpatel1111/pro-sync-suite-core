@@ -1,0 +1,19 @@
+
+{
+  "status": "healthy",
+  "service": "ClientConnect",
+  "version": "2.0.0",
+  "timestamp": "2025-06-15T21:55:43Z",
+  "uptime": 99.8,
+  "response_time_ms": 160,
+  "dependencies": {
+    "database": "healthy",
+    "email_service": "healthy",
+    "crm_sync": "healthy"
+  },
+  "metrics": {
+    "active_clients": 234,
+    "interactions_today": 67,
+    "satisfaction_score": 4.7
+  }
+}

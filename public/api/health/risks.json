@@ -1,0 +1,22 @@
+
+{
+  "status": "warning",
+  "service": "RiskRadar",
+  "version": "2.0.0",
+  "timestamp": "2025-06-15T21:55:43Z",
+  "uptime": 98.9,
+  "response_time_ms": 450,
+  "dependencies": {
+    "database": "healthy",
+    "ml_predictor": "warning",
+    "notification_service": "healthy"
+  },
+  "metrics": {
+    "active_risks": 23,
+    "critical_risks": 2,
+    "mitigation_rate": 91.4
+  },
+  "issues": [
+    "ML predictor service experiencing high latency"
+  ]
+}

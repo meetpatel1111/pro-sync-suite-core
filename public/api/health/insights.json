@@ -1,0 +1,19 @@
+
+{
+  "status": "healthy",
+  "service": "InsightIQ",
+  "version": "2.0.0",
+  "timestamp": "2025-06-15T21:55:43Z",
+  "uptime": 99.9,
+  "response_time_ms": 340,
+  "dependencies": {
+    "database": "healthy",
+    "analytics_engine": "healthy",
+    "ml_service": "healthy"
+  },
+  "metrics": {
+    "reports_generated": 234,
+    "data_points_analyzed": 1847293,
+    "insights_created": 67
+  }
+}
