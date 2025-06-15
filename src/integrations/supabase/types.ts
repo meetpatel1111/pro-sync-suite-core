@@ -175,7 +175,9 @@ export type Database = {
       }
       automation_events: {
         Row: {
+          error_message: string | null
           event_type: string | null
+          execution_time_ms: number | null
           id: string
           payload: Json | null
           processed_at: string | null
@@ -185,9 +187,13 @@ export type Database = {
           target_id: string | null
           target_module: string | null
           triggered_at: string | null
+          user_id: string | null
+          workflow_id: string | null
         }
         Insert: {
+          error_message?: string | null
           event_type?: string | null
+          execution_time_ms?: number | null
           id?: string
           payload?: Json | null
           processed_at?: string | null
@@ -197,9 +203,13 @@ export type Database = {
           target_id?: string | null
           target_module?: string | null
           triggered_at?: string | null
+          user_id?: string | null
+          workflow_id?: string | null
         }
         Update: {
+          error_message?: string | null
           event_type?: string | null
+          execution_time_ms?: number | null
           id?: string
           payload?: Json | null
           processed_at?: string | null
@@ -209,6 +219,8 @@ export type Database = {
           target_id?: string | null
           target_module?: string | null
           triggered_at?: string | null
+          user_id?: string | null
+          workflow_id?: string | null
         }
         Relationships: []
       }
@@ -1133,8 +1145,13 @@ export type Database = {
           config: Json | null
           created_at: string
           enabled: boolean | null
+          error_count: number | null
+          execution_count: number | null
           id: string
+          last_error_message: string | null
+          last_executed_at: string | null
           source_app: string
+          success_count: number | null
           target_app: string
           trigger_condition: string | null
           user_id: string
@@ -1144,8 +1161,13 @@ export type Database = {
           config?: Json | null
           created_at?: string
           enabled?: boolean | null
+          error_count?: number | null
+          execution_count?: number | null
           id?: string
+          last_error_message?: string | null
+          last_executed_at?: string | null
           source_app: string
+          success_count?: number | null
           target_app: string
           trigger_condition?: string | null
           user_id: string
@@ -1155,8 +1177,13 @@ export type Database = {
           config?: Json | null
           created_at?: string
           enabled?: boolean | null
+          error_count?: number | null
+          execution_count?: number | null
           id?: string
+          last_error_message?: string | null
+          last_executed_at?: string | null
           source_app?: string
+          success_count?: number | null
           target_app?: string
           trigger_condition?: string | null
           user_id?: string
@@ -1259,11 +1286,14 @@ export type Database = {
           description: string | null
           difficulty: string | null
           downloads: number | null
+          execution_count: number | null
           id: string
           is_public: boolean | null
           is_verified: boolean | null
+          last_used_at: string | null
           name: string
           rating: number | null
+          success_rate: number | null
           tags: string[] | null
           template_config: Json | null
           updated_at: string | null
@@ -1276,11 +1306,14 @@ export type Database = {
           description?: string | null
           difficulty?: string | null
           downloads?: number | null
+          execution_count?: number | null
           id?: string
           is_public?: boolean | null
           is_verified?: boolean | null
+          last_used_at?: string | null
           name: string
           rating?: number | null
+          success_rate?: number | null
           tags?: string[] | null
           template_config?: Json | null
           updated_at?: string | null
@@ -1293,11 +1326,14 @@ export type Database = {
           description?: string | null
           difficulty?: string | null
           downloads?: number | null
+          execution_count?: number | null
           id?: string
           is_public?: boolean | null
           is_verified?: boolean | null
+          last_used_at?: string | null
           name?: string
           rating?: number | null
+          success_rate?: number | null
           tags?: string[] | null
           template_config?: Json | null
           updated_at?: string | null

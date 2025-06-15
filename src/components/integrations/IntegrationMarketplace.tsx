@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Download, 
   Star, 
@@ -23,11 +24,15 @@ import {
   FileText,
   MessageSquare,
   Calendar,
-  DollarSign
+  DollarSign,
+  TestTube,
+  Settings
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { integrationDatabaseService, IntegrationTemplate, MarketplaceInstallation } from '@/services/integrationDatabaseService';
 import { useAuth } from '@/hooks/useAuth';
+import TemplateValidator from './TemplateValidator';
+import TemplateTestRunner from './TemplateTestRunner';
 
 const IntegrationMarketplace: React.FC = () => {
   const { toast } = useToast();
@@ -39,6 +44,8 @@ const IntegrationMarketplace: React.FC = () => {
   const [installations, setInstallations] = useState<MarketplaceInstallation[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewingTemplate, setPreviewingTemplate] = useState<IntegrationTemplate | null>(null);
+  const [validatingTemplate, setValidatingTemplate] = useState<IntegrationTemplate | null>(null);
+  const [testingTemplate, setTestingTemplate] = useState<IntegrationTemplate | null>(null);
 
   const categories = ['all', 'Productivity', 'Finance', 'Communication', 'Resource Management', 'Data Management', 'Project Management', 'Risk Management'];
   const difficulties = ['all', 'Beginner', 'Intermediate', 'Advanced'];
@@ -52,12 +59,10 @@ const IntegrationMarketplace: React.FC = () => {
       setLoading(true);
       console.log('Loading marketplace data...');
       
-      // Get public templates (these are the ones we want to show in marketplace)
       const publicTemplates = await integrationDatabaseService.getPublicTemplates();
       console.log('Loaded public templates:', publicTemplates);
       setTemplates(publicTemplates || []);
       
-      // Get user installations if user is logged in
       if (user) {
         const userInstallations = await integrationDatabaseService.getMarketplaceInstallations(user.id);
         console.log('Loaded user installations:', userInstallations);
@@ -113,7 +118,6 @@ const IntegrationMarketplace: React.FC = () => {
     }
 
     try {
-      // Create marketplace installation record
       await integrationDatabaseService.createMarketplaceInstallation({
         user_id: user.id,
         template_id: template.id,
@@ -121,7 +125,6 @@ const IntegrationMarketplace: React.FC = () => {
         configuration: template.template_config
       });
 
-      // Create a new workflow based on the template
       await integrationDatabaseService.createAutomationWorkflow({
         user_id: user.id,
         name: `${template.name}`,
@@ -133,7 +136,6 @@ const IntegrationMarketplace: React.FC = () => {
         execution_count: 0
       });
 
-      // Update template download count
       await integrationDatabaseService.updateIntegrationTemplate(template.id, {
         downloads: template.downloads + 1
       });
@@ -143,7 +145,7 @@ const IntegrationMarketplace: React.FC = () => {
         description: `"${template.name}" has been installed and activated in your workflows`,
       });
       
-      loadMarketplaceData(); // Refresh data
+      loadMarketplaceData();
     } catch (error) {
       console.error('Error installing template:', error);
       toast({
@@ -188,6 +190,14 @@ const IntegrationMarketplace: React.FC = () => {
     setPreviewingTemplate(template);
   };
 
+  const handleValidateTemplate = (template: IntegrationTemplate) => {
+    setValidatingTemplate(template);
+  };
+
+  const handleTestTemplate = (template: IntegrationTemplate) => {
+    setTestingTemplate(template);
+  };
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'Beginner': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
@@ -208,6 +218,66 @@ const IntegrationMarketplace: React.FC = () => {
       case 'Risk Management': return <Shield className="h-4 w-4" />;
       default: return <BarChart3 className="h-4 w-4" />;
     }
+  };
+
+  const renderValidationModal = () => {
+    if (!validatingTemplate) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+          <div className="p-6">
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-xl font-semibold">Validate Template: {validatingTemplate.name}</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setValidatingTemplate(null)}
+              >
+                ×
+              </Button>
+            </div>
+            
+            <TemplateValidator 
+              template={validatingTemplate}
+              onValidationComplete={(result) => {
+                console.log('Validation completed:', result);
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderTestModal = () => {
+    if (!testingTemplate) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+          <div className="p-6">
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-xl font-semibold">Test Template: {testingTemplate.name}</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setTestingTemplate(null)}
+              >
+                ×
+              </Button>
+            </div>
+            
+            <TemplateTestRunner 
+              template={testingTemplate}
+              onTestComplete={(results) => {
+                console.log('Tests completed:', results);
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const renderTemplatePreview = () => {
@@ -353,7 +423,7 @@ const IntegrationMarketplace: React.FC = () => {
             Integration Marketplace
           </h3>
           <p className="text-muted-foreground">
-            Browse and install pre-built integration templates from the community
+            Browse, validate, and install pre-built integration templates from the community
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -543,34 +613,58 @@ const IntegrationMarketplace: React.FC = () => {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-2">
-                      {installed ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        {installed ? (
+                          <Button 
+                            onClick={() => handleUninstallTemplate(template.id)}
+                            className="flex-1"
+                            size="sm"
+                            variant="outline"
+                          >
+                            Uninstall
+                          </Button>
+                        ) : (
+                          <Button 
+                            onClick={() => handleInstallTemplate(template)}
+                            className="flex-1"
+                            size="sm"
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Install
+                          </Button>
+                        )}
                         <Button 
-                          onClick={() => handleUninstallTemplate(template.id)}
-                          className="flex-1"
+                          variant="outline" 
                           size="sm"
-                          variant="outline"
+                          onClick={() => handlePreviewTemplate(template)}
                         >
-                          Uninstall
+                          <Eye className="h-4 w-4 mr-1" />
+                          Preview
                         </Button>
-                      ) : (
+                      </div>
+                      
+                      {/* Validation and Testing Actions */}
+                      <div className="flex gap-2">
                         <Button 
-                          onClick={() => handleInstallTemplate(template)}
-                          className="flex-1"
+                          variant="outline" 
                           size="sm"
+                          onClick={() => handleValidateTemplate(template)}
+                          className="flex-1"
                         >
-                          <Download className="h-4 w-4 mr-2" />
-                          Install
+                          <TestTube className="h-4 w-4 mr-1" />
+                          Validate
                         </Button>
-                      )}
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handlePreviewTemplate(template)}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        Preview
-                      </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleTestTemplate(template)}
+                          className="flex-1"
+                        >
+                          <Play className="h-4 w-4 mr-1" />
+                          Test
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -580,8 +674,10 @@ const IntegrationMarketplace: React.FC = () => {
         </div>
       )}
 
-      {/* Template Preview Modal */}
+      {/* Modals */}
       {renderTemplatePreview()}
+      {renderValidationModal()}
+      {renderTestModal()}
     </div>
   );
 };
