@@ -274,12 +274,6 @@ const CollabSpace = () => {
           </Button>
           
           <div className="flex items-center justify-between mb-8">
-            <div className="space-y-2">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                CollabSpace
-              </h1>
-              <p className="text-lg text-muted-foreground">Team communication & collaboration platform</p>
-            </div>
             <div className="flex gap-3">
               <Button variant="outline" size="sm" className="gap-2">
                 <Bell className="h-4 w-4" />
