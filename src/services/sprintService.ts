@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Sprint, SprintTask, BoardBacklog, BoardReport } from '@/types/taskmaster';
 
@@ -20,7 +19,7 @@ class SprintService {
       goal: item.goal,
       start_date: item.start_date,
       end_date: item.end_date,
-      status: item.status,
+      status: item.status as 'planned' | 'active' | 'completed',
       capacity: item.capacity || 0,
       velocity: item.velocity || 0,
       created_by: item.created_by,
@@ -59,7 +58,7 @@ class SprintService {
       goal: data.goal,
       start_date: data.start_date,
       end_date: data.end_date,
-      status: data.status,
+      status: data.status as 'planned' | 'active' | 'completed',
       capacity: data.capacity || 0,
       velocity: data.velocity || 0,
       created_by: data.created_by,
@@ -88,7 +87,7 @@ class SprintService {
       goal: data.goal,
       start_date: data.start_date,
       end_date: data.end_date,
-      status: data.status,
+      status: data.status as 'planned' | 'active' | 'completed',
       capacity: data.capacity || 0,
       velocity: data.velocity || 0,
       created_by: data.created_by,
