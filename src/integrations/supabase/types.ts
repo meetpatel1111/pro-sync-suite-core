@@ -2359,6 +2359,7 @@ export type Database = {
       sprints: {
         Row: {
           board_id: string | null
+          capacity: number | null
           created_at: string | null
           created_by: string | null
           end_date: string | null
@@ -2369,9 +2370,11 @@ export type Database = {
           start_date: string | null
           status: string | null
           updated_at: string | null
+          velocity: number | null
         }
         Insert: {
           board_id?: string | null
+          capacity?: number | null
           created_at?: string | null
           created_by?: string | null
           end_date?: string | null
@@ -2382,9 +2385,11 @@ export type Database = {
           start_date?: string | null
           status?: string | null
           updated_at?: string | null
+          velocity?: number | null
         }
         Update: {
           board_id?: string | null
+          capacity?: number | null
           created_at?: string | null
           created_by?: string | null
           end_date?: string | null
@@ -2395,6 +2400,7 @@ export type Database = {
           start_date?: string | null
           status?: string | null
           updated_at?: string | null
+          velocity?: number | null
         }
         Relationships: [
           {

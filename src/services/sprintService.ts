@@ -5,7 +5,7 @@ class SprintService {
   async getSprints(boardId: string) {
     const { data, error } = await supabase
       .from('sprints')
-      .select('*, capacity, velocity')
+      .select('*')
       .eq('board_id', boardId)
       .order('created_at', { ascending: false });
 
@@ -45,7 +45,7 @@ class SprintService {
         velocity: sprintData.velocity || 0,
         created_by: sprintData.created_by
       }])
-      .select('*, capacity, velocity')
+      .select('*')
       .single();
 
     if (error) return { data: null, error };
@@ -74,7 +74,7 @@ class SprintService {
       .from('sprints')
       .update(updates)
       .eq('id', sprintId)
-      .select('*, capacity, velocity')
+      .select('*')
       .single();
 
     if (error) return { data: null, error };
