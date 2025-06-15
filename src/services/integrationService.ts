@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { taskmasterService } from './taskmasterService';
 import type { TaskMasterTask } from '@/types/taskmaster';
@@ -98,8 +97,7 @@ class IntegrationService {
         start_time: new Date().toISOString(),
         end_time: new Date(Date.now() + minutes * 60000).toISOString(),
         time_spent: minutes,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: new Date().toISOString()
       };
     } catch (error) {
       console.error('Error logging time for task:', error);
