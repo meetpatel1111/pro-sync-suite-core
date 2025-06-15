@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -17,32 +17,37 @@ import {
 } from 'lucide-react';
 
 const DashboardAnalytics: React.FC = () => {
-  // Mock data - in real implementation, this would come from your analytics service
-  const analytics = {
+  const [analytics, setAnalytics] = useState({
     productivity: {
-      score: 87,
-      trend: 5.2,
-      timeTracked: 42.5,
-      tasksCompleted: 23,
-      efficiency: 92
+      score: 0,
+      trend: 0,
+      timeTracked: 0,
+      tasksCompleted: 0,
+      efficiency: 0
     },
     projects: {
-      active: 8,
-      completed: 15,
-      onTrack: 6,
-      atRisk: 2
+      active: 0,
+      completed: 0,
+      onTrack: 0,
+      atRisk: 0
     },
     team: {
-      totalMembers: 12,
-      activeToday: 9,
-      utilization: 78
+      totalMembers: 0,
+      activeToday: 0,
+      utilization: 0
     },
     upcoming: {
-      deadlines: 5,
-      meetings: 3,
-      reviews: 2
+      deadlines: 0,
+      meetings: 0,
+      reviews: 0
     }
-  };
+  });
+
+  useEffect(() => {
+    // TODO: Replace with actual API calls to fetch analytics data
+    // This is where you would fetch real data from your backend
+    console.log('Analytics component ready for real data integration');
+  }, []);
 
   const getTrendIcon = (trend: number) => {
     return trend > 0 ? (
@@ -65,7 +70,7 @@ const DashboardAnalytics: React.FC = () => {
             <div className="text-2xl font-bold text-primary">{analytics.productivity.score}%</div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               {getTrendIcon(analytics.productivity.trend)}
-              <span>+{analytics.productivity.trend}% from last week</span>
+              <span>{analytics.productivity.trend >= 0 ? '+' : ''}{analytics.productivity.trend}% from last week</span>
             </div>
             <Progress value={analytics.productivity.score} className="mt-2" />
           </CardContent>
@@ -158,27 +163,39 @@ const DashboardAnalytics: React.FC = () => {
             <CardDescription>What's coming up in your schedule</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg border-l-4 border-orange-400">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-orange-600" />
-                <span className="text-sm font-medium">Upcoming Deadlines</span>
+            {analytics.upcoming.deadlines > 0 && (
+              <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg border-l-4 border-orange-400">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                  <span className="text-sm font-medium">Upcoming Deadlines</span>
+                </div>
+                <Badge variant="secondary">{analytics.upcoming.deadlines}</Badge>
               </div>
-              <Badge variant="secondary">{analytics.upcoming.deadlines}</Badge>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-medium">Scheduled Meetings</span>
+            )}
+            {analytics.upcoming.meetings > 0 && (
+              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium">Scheduled Meetings</span>
+                </div>
+                <Badge variant="secondary">{analytics.upcoming.meetings}</Badge>
               </div>
-              <Badge variant="secondary">{analytics.upcoming.meetings}</Badge>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg border-l-4 border-purple-400">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-purple-600" />
-                <span className="text-sm font-medium">Pending Reviews</span>
+            )}
+            {analytics.upcoming.reviews > 0 && (
+              <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg border-l-4 border-purple-400">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-purple-600" />
+                  <span className="text-sm font-medium">Pending Reviews</span>
+                </div>
+                <Badge variant="secondary">{analytics.upcoming.reviews}</Badge>
               </div>
-              <Badge variant="secondary">{analytics.upcoming.reviews}</Badge>
-            </div>
+            )}
+            {analytics.upcoming.deadlines === 0 && analytics.upcoming.meetings === 0 && analytics.upcoming.reviews === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No upcoming items</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

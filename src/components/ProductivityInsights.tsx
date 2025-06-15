@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -18,64 +18,33 @@ import {
 } from 'lucide-react';
 
 const ProductivityInsights: React.FC = () => {
-  const insights = {
+  const [insights, setInsights] = useState({
     focusTime: {
-      today: 4.2,
-      average: 3.8,
-      trend: 10.5,
+      today: 0,
+      average: 0,
+      trend: 0,
       goal: 6
     },
     taskCompletion: {
-      rate: 87,
-      trend: 5,
-      completed: 23,
-      total: 26
+      rate: 0,
+      trend: 0,
+      completed: 0,
+      total: 0
     },
     timeDistribution: {
-      coding: 45,
-      meetings: 20,
-      planning: 15,
-      communication: 20
+      coding: 0,
+      meetings: 0,
+      planning: 0,
+      communication: 0
     },
-    recommendations: [
-      {
-        type: 'focus',
-        title: 'Schedule Focus Time',
-        description: 'You perform best during 9-11 AM. Block this time for deep work.',
-        impact: 'high'
-      },
-      {
-        type: 'break',
-        title: 'Take Regular Breaks',
-        description: 'Your productivity drops after 90 minutes. Consider the Pomodoro technique.',
-        impact: 'medium'
-      },
-      {
-        type: 'meeting',
-        title: 'Optimize Meeting Schedule',
-        description: 'Too many meetings on Tuesdays. Try to spread them throughout the week.',
-        impact: 'medium'
-      }
-    ]
-  };
+    recommendations: []
+  });
 
-  const getImpactColor = (impact: string) => {
-    switch (impact) {
-      case 'high': return 'destructive';
-      case 'medium': return 'default';
-      case 'low': return 'secondary';
-      default: return 'outline';
-    }
-  };
-
-  const getRecommendationIcon = (type: string) => {
-    switch (type) {
-      case 'focus': return <Brain className="h-4 w-4" />;
-      case 'break': return <Clock className="h-4 w-4" />;
-      case 'meeting': return <Calendar className="h-4 w-4" />;
-      default: return <Target className="h-4 w-4" />;
-    }
-  };
+  useEffect(() => {
+    // TODO: Replace with actual API calls to fetch productivity insights
+    // This is where you would fetch real data from your analytics service
+    console.log('ProductivityInsights component ready for real data integration');
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -185,39 +154,44 @@ const ProductivityInsights: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {insights.recommendations.map((rec, index) => (
-              <div 
-                key={index}
-                className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 p-2 bg-primary/10 rounded-lg">
-                    {getRecommendationIcon(rec.type)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium text-sm">{rec.title}</h4>
-                      <Badge variant={getImpactColor(rec.impact)} className="text-xs">
-                        {rec.impact} impact
-                      </Badge>
+          {insights.recommendations.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No recommendations available yet</p>
+              <p className="text-sm">Start tracking your time to get personalized insights</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {insights.recommendations.map((rec, index) => (
+                <div 
+                  key={index}
+                  className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 p-2 bg-primary/10 rounded-lg">
+                      <Target className="h-4 w-4" />
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      {rec.description}
-                    </p>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline">
-                        Apply Suggestion
-                      </Button>
-                      <Button size="sm" variant="ghost">
-                        Dismiss
-                      </Button>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-medium text-sm">Recommendation</h4>
+                        <Badge variant="outline" className="text-xs">
+                          AI Generated
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Connect your time tracking to get personalized recommendations
+                      </p>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline">
+                          Learn More
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

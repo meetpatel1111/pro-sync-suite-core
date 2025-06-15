@@ -35,63 +35,10 @@ const EnhancedNotificationSystem: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread' | 'high'>('all');
 
-  // Mock notifications - in real implementation, fetch from your notification service
   useEffect(() => {
-    const mockNotifications: Notification[] = [
-      {
-        id: '1',
-        type: 'warning',
-        title: 'Project Deadline Approaching',
-        message: 'TaskMaster Project Alpha is due in 2 days',
-        timestamp: new Date(Date.now() - 1000 * 60 * 30),
-        read: false,
-        category: 'deadline',
-        priority: 'high',
-        actionable: true
-      },
-      {
-        id: '2',
-        type: 'success',
-        title: 'Task Completed',
-        message: 'Design wireframes task has been completed by Sarah',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60),
-        read: false,
-        category: 'task',
-        priority: 'medium'
-      },
-      {
-        id: '3',
-        type: 'info',
-        title: 'New Team Member',
-        message: 'John Doe has joined the Development team',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-        read: true,
-        category: 'team',
-        priority: 'low'
-      },
-      {
-        id: '4',
-        type: 'error',
-        title: 'Integration Failed',
-        message: 'TimeTrackPro sync encountered an error',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3),
-        read: false,
-        category: 'system',
-        priority: 'high',
-        actionable: true
-      },
-      {
-        id: '5',
-        type: 'info',
-        title: 'Weekly Report Available',
-        message: 'Your productivity report for this week is ready',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-        read: true,
-        category: 'project',
-        priority: 'low'
-      }
-    ];
-    setNotifications(mockNotifications);
+    // TODO: Replace with actual API calls to fetch notifications
+    // This is where you would fetch real notifications from your backend
+    console.log('NotificationSystem component ready for real data integration');
   }, []);
 
   const getIcon = (type: string) => {
@@ -174,7 +121,12 @@ const EnhancedNotificationSystem: React.FC = () => {
               </Badge>
             )}
           </div>
-          <Button variant="outline" size="sm" onClick={markAllAsRead}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={markAllAsRead}
+            disabled={unreadCount === 0}
+          >
             Mark all read
           </Button>
         </div>
@@ -201,6 +153,7 @@ const EnhancedNotificationSystem: React.FC = () => {
               <div className="text-center py-8 text-muted-foreground">
                 <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No notifications to show</p>
+                <p className="text-sm">You're all caught up!</p>
               </div>
             ) : (
               filteredNotifications.map((notification) => (
