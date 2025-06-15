@@ -1,349 +1,354 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+
+import React, { useEffect, useState } from 'react';
+import { Calendar, Clock, MessageSquare, FileText, BarChart2, 
+         PieChart, Users, Shield, FileCog, FolderLock, Sparkles, TrendingUp, 
+         Zap, Target, Rocket } from 'lucide-react';
+import AppCard from '@/components/AppCard';
+import AppLayout from '@/components/AppLayout';
+import DashboardStats from '@/components/DashboardStats';
+import LoadingFallback from '@/components/ui/loading-fallback';
+import { useAuthContext } from '@/context/AuthContext';
+import { useIntegration } from '@/context/IntegrationContext';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { useAuthContext } from '@/context/AuthContext';
-import { taskmasterService } from '@/services/taskmasterService';
-import { integrationService } from '@/services/integrationService';
-import AppLayout from '@/components/AppLayout';
-import AppGrid from '@/components/AppGrid';
-import { 
-  Plus, 
-  Clock, 
-  CheckSquare, 
-  TrendingUp, 
-  Users, 
-  MessageCircle,
-  Calendar,
-  FileText,
-  Zap
-} from 'lucide-react';
-import type { Project } from '@/types/taskmaster';
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
-  const { user } = useAuthContext();
+  const { user, loading } = useAuthContext();
+  const { createTaskFromNote } = useIntegration();
   const { toast } = useToast();
-  const [quickNote, setQuickNote] = useState('');
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [defaultProject, setDefaultProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    // Set a timeout to ensure we don't get stuck in loading state
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
-    if (user) {
-      fetchProjects();
+    if (!loading) {
+      setIsLoading(false);
     }
-  }, [user]);
+  }, [loading]);
 
-  const fetchProjects = async () => {
-    if (!user) return;
-    
-    try {
-      const { data } = await taskmasterService.getProjects(user.id);
-      if (data && data.length > 0) {
-        setProjects(data);
-        setDefaultProject(data[0]); // Use first project as default
-      } else {
-        // Create a default project if none exists
-        await createDefaultProject();
-      }
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-    }
-  };
-
-  const createDefaultProject = async () => {
-    if (!user) return;
-
-    try {
-      const { data } = await taskmasterService.createProject({
-        name: 'My Project',
-        key: 'MP',
-        description: 'Default project for quick tasks',
-        status: 'active',
-        created_by: user.id,
-        user_id: user.id
-      });
-
-      if (data) {
-        setProjects([data]);
-        setDefaultProject(data);
-        
-        // Create a default board for the project
-        await taskmasterService.createBoard({
-          project_id: data.id,
-          name: 'Main Board',
-          type: 'kanban',
-          description: 'Default board for tasks',
-          config: {
-            columns: [
-              { id: 'todo', name: 'To Do' },
-              { id: 'in_progress', name: 'In Progress' },
-              { id: 'done', name: 'Done' }
-            ]
-          },
-          created_by: user.id
-        });
-      }
-    } catch (error) {
-      console.error('Error creating default project:', error);
-    }
-  };
-
-  const handleQuickAction = async (action: string) => {
-    if (!user || !defaultProject) {
+  const handleQuickAction = async (actionType: string) => {
+    if (!user) {
       toast({
-        title: 'Setup Required',
-        description: 'Please wait while we set up your workspace',
+        title: 'Authentication Required',
+        description: 'Please sign in to use quick actions.',
         variant: 'destructive',
       });
       return;
     }
 
-    setLoading(true);
     try {
-      let result = null;
-
-      switch (action) {
-        case 'create-task':
-          if (!quickNote.trim()) {
+      switch (actionType) {
+        case 'newTask':
+          try {
+            const task = await createTaskFromNote(
+              'Quick Task from Dashboard',
+              'Task created from dashboard quick action',
+              undefined,
+              undefined,
+              user.id
+            );
+            if (task) {
+              toast({
+                title: 'Task Created',
+                description: 'New task has been created successfully.',
+              });
+              navigate('/taskmaster');
+            } else {
+              throw new Error('Failed to create task');
+            }
+          } catch (error) {
+            console.error('Error creating task:', error);
             toast({
-              title: 'Note Required',
-              description: 'Please enter a note to create a task from',
+              title: 'Task Creation Failed',
+              description: 'Could not create task. Please try again.',
               variant: 'destructive',
             });
-            setLoading(false);
-            return;
-          }
-          
-          result = await integrationService.createTaskFromNote(quickNote, defaultProject.id);
-          if (result) {
-            toast({
-              title: 'Task Created',
-              description: `Task "${result.title}" created successfully`,
-            });
-            setQuickNote('');
-          } else {
-            throw new Error('Failed to create task');
           }
           break;
 
-        case 'log-time':
-          result = await integrationService.logTimeForTask('sample-task', 30, 'Quick time log');
-          if (result) {
-            toast({
-              title: 'Time Logged',
-              description: '30 minutes logged successfully',
-            });
-          }
-          break;
-
-        case 'check-status':
-          const status = await integrationService.getIntegrationStatus();
-          const activeCount = Object.values(status).filter(s => s.connected).length;
+        case 'startTimer':
+          // Navigate to time tracking
+          navigate('/timetrackpro');
           toast({
-            title: 'Integration Status',
-            description: `${activeCount} apps connected and active`,
+            title: 'Time Tracking',
+            description: 'Navigated to TimeTrackPro.',
+          });
+          break;
+
+        case 'newProject':
+          navigate('/planboard');
+          toast({
+            title: 'Project Planning',
+            description: 'Navigated to PlanBoard to create a new project.',
+          });
+          break;
+
+        case 'teamChat':
+          navigate('/collabspace');
+          toast({
+            title: 'Team Collaboration',
+            description: 'Navigated to CollabSpace for team communication.',
           });
           break;
 
         default:
           toast({
-            title: 'Coming Soon',
-            description: 'This quick action will be available soon',
+            title: 'Feature Coming Soon',
+            description: 'This quick action will be available soon.',
           });
       }
     } catch (error) {
-      console.error('Error creating task:', error);
+      console.error('Quick action error:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to complete the action. Please try again.',
+        title: 'Action Failed',
+        description: 'Failed to perform the requested action. Please try again.',
         variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const stats = [
+  const appList = [
     {
-      title: 'Active Projects',
-      value: projects.length.toString(),
-      description: 'Currently managed',
-      icon: <CheckSquare className="h-4 w-4" />,
-      trend: '+2 this month'
+      title: 'TaskMaster',
+      description: 'Task & Workflow Management',
+      icon: Calendar,
+      bgColor: 'bg-gradient-to-br from-blue-500 to-blue-600',
+      route: '/taskmaster',
+      featureCount: 0,
+      category: 'Productivity'
     },
     {
-      title: 'Team Members',
-      value: '8',
-      description: 'Across all projects',
-      icon: <Users className="h-4 w-4" />,
-      trend: '+1 this week'
+      title: 'TimeTrackPro',
+      description: 'Time Tracking & Productivity',
+      icon: Clock,
+      bgColor: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
+      route: '/timetrackpro',
+      featureCount: 0,
+      category: 'Productivity'
     },
     {
-      title: 'Completion Rate',
-      value: '94%',
-      description: 'Tasks completed on time',
-      icon: <TrendingUp className="h-4 w-4" />,
-      trend: '+5% vs last month'
+      title: 'CollabSpace',
+      description: 'Team Communication & Collaboration',
+      icon: MessageSquare,
+      bgColor: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+      route: '/collabspace',
+      featureCount: 0,
+      category: 'Communication'
     },
     {
-      title: 'Hours Tracked',
-      value: '342',
-      description: 'This month',
-      icon: <Clock className="h-4 w-4" />,
-      trend: '+12% vs last month'
+      title: 'PlanBoard',
+      description: 'Project Planning & Gantt Charts',
+      icon: FileText,
+      bgColor: 'bg-gradient-to-br from-amber-500 to-amber-600',
+      route: '/planboard',
+      featureCount: 0,
+      category: 'Planning'
+    },
+    {
+      title: 'FileVault',
+      description: 'Document & File Management',
+      icon: FolderLock,
+      bgColor: 'bg-gradient-to-br from-purple-500 to-purple-600',
+      route: '/filevault',
+      featureCount: 0,
+      category: 'Storage'
+    },
+    {
+      title: 'BudgetBuddy',
+      description: 'Budgeting & Expense Tracking',
+      icon: PieChart,
+      bgColor: 'bg-gradient-to-br from-green-500 to-green-600',
+      route: '/budgetbuddy',
+      featureCount: 0,
+      category: 'Finance'
+    },
+    {
+      title: 'InsightIQ',
+      description: 'Analytics & Reporting',
+      icon: BarChart2,
+      bgColor: 'bg-gradient-to-br from-red-500 to-red-600',
+      route: '/insightiq',
+      featureCount: 0,
+      category: 'Analytics'
+    },
+    {
+      title: 'ClientConnect',
+      description: 'Client & Stakeholder Engagement',
+      icon: Users,
+      bgColor: 'bg-gradient-to-br from-sky-500 to-sky-600',
+      route: '/clientconnect',
+      featureCount: 0,
+      category: 'Communication'
+    },
+    {
+      title: 'RiskRadar',
+      description: 'Risk & Issue Tracking',
+      icon: Shield,
+      bgColor: 'bg-gradient-to-br from-rose-500 to-rose-600',
+      route: '/riskradar',
+      featureCount: 0,
+      category: 'Management'
+    },
+    {
+      title: 'ResourceHub',
+      description: 'Resource Allocation & Management',
+      icon: Users,
+      bgColor: 'bg-gradient-to-br from-orange-500 to-orange-600',
+      route: '/resourcehub',
+      featureCount: 0,
+      category: 'Management'
     }
   ];
 
-  const quickActions = [
-    {
-      icon: <Plus className="h-4 w-4" />,
-      label: 'Create Task',
-      description: 'From your note below',
-      action: 'create-task',
-      color: 'text-blue-600'
-    },
-    {
-      icon: <Clock className="h-4 w-4" />,
-      label: 'Log Time',
-      description: 'Quick time entry',
-      action: 'log-time',
-      color: 'text-green-600'
-    },
-    {
-      icon: <MessageCircle className="h-4 w-4" />,
-      label: 'Team Chat',
-      description: 'Open CollabSpace',
-      action: 'open-chat',
-      color: 'text-purple-600'
-    },
-    {
-      icon: <Calendar className="h-4 w-4" />,
-      label: 'Schedule',
-      description: 'View timeline',
-      action: 'view-schedule',
-      color: 'text-orange-600'
-    },
-    {
-      icon: <FileText className="h-4 w-4" />,
-      label: 'Files',
-      description: 'Access FileVault',
-      action: 'access-files',
-      color: 'text-cyan-600'
-    },
-    {
-      icon: <Zap className="h-4 w-4" />,
-      label: 'Status',
-      description: 'Check integrations',
-      action: 'check-status',
-      color: 'text-yellow-600'
-    }
-  ];
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">
+      <LoadingFallback message="Loading dashboard..." />
+    </div>;
+  }
 
   return (
     <AppLayout>
       <div className="space-y-8 animate-fade-in-up">
-        {/* Welcome Header */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-prosync-500 via-prosync-600 to-prosync-700 p-8 text-white shadow-2xl">
+        {/* Modern Hero Section */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-prosync-500 via-prosync-600 to-prosync-700 p-6 text-white shadow-2xl">
           <div className="absolute inset-0 bg-black/10"></div>
           <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
           <div className="relative z-10">
-            <h1 className="text-4xl font-bold mb-3">Welcome to ProSync Suite</h1>
-            <p className="text-lg text-prosync-100 max-w-2xl leading-relaxed">
-              Your comprehensive project management ecosystem. Manage tasks, track time, collaborate, and deliver successful projects.
-            </p>
-            {defaultProject && (
-              <div className="mt-4">
-                <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm">
-                  Active Project: {defaultProject.name}
-                </Badge>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                <Sparkles className="h-6 w-6" />
               </div>
-            )}
-          </div>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32 backdrop-blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24 backdrop-blur-3xl"></div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, index) => (
-            <Card key={index} className="modern-card hover:shadow-lg transition-all duration-300 animate-scale-in">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-muted-foreground">
-                    {stat.icon}
-                  </div>
-                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
-                    {stat.trend}
-                  </Badge>
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-2xl font-bold">{stat.value}</h3>
-                  <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                  <p className="text-xs text-muted-foreground">{stat.description}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Quick Actions */}
-        <Card className="modern-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-prosync-600" />
-              Quick Actions
-            </CardTitle>
-            <CardDescription>
-              Perform common tasks across your ProSync Suite apps
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Input
-                placeholder="Add a quick note or task..."
-                value={quickNote}
-                onChange={(e) => setQuickNote(e.target.value)}
-                className="flex-1"
-                onKeyPress={(e) => e.key === 'Enter' && handleQuickAction('create-task')}
-              />
-              <Button 
-                onClick={() => handleQuickAction('create-task')}
-                disabled={loading || !quickNote.trim()}
-                className="sm:w-auto"
-              >
-                {loading ? 'Creating...' : 'Create Task'}
-              </Button>
+              <h1 className="text-3xl font-bold tracking-tight">Welcome to ProSync Suite</h1>
             </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              {quickActions.map((action, index) => (
-                <Button
-                  key={index}
-                  variant="outline"
-                  className="h-auto p-4 flex flex-col items-center space-y-2 hover:shadow-md transition-all duration-200"
-                  onClick={() => handleQuickAction(action.action)}
-                  disabled={loading}
-                >
-                  <div className={action.color}>
-                    {action.icon}
-                  </div>
-                  <div className="text-center">
-                    <div className="text-xs font-medium">{action.label}</div>
-                    <div className="text-xs text-muted-foreground">{action.description}</div>
-                  </div>
-                </Button>
-              ))}
+            <p className="text-lg text-blue-100 max-w-2xl mb-6 leading-relaxed">
+              Your comprehensive project management solution designed to streamline workflows and boost productivity
+            </p>
+            <div className="flex items-center gap-4">
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                10 Integrated Apps
+              </Badge>
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
+                <Rocket className="h-4 w-4 mr-2" />
+                Enterprise Ready
+              </Badge>
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
+                <Zap className="h-4 w-4 mr-2" />
+                AI Powered
+              </Badge>
+            </div>
+          </div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32 backdrop-blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24 backdrop-blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/2 w-32 h-32 bg-white/5 rounded-full -translate-x-16 -translate-y-16 backdrop-blur-3xl"></div>
+        </div>
+        
+        <div className="animate-scale-in">
+          <DashboardStats />
+        </div>
+
+        {/* Modern Quick Actions */}
+        <Card className="modern-card animate-slide-in-right">
+          <CardContent className="p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-gradient-to-br from-primary to-primary/80 rounded-xl">
+                <Target className="h-5 w-5 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold">Quick Actions</h3>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <button 
+                onClick={() => handleQuickAction('newTask')}
+                className="group flex flex-col items-center gap-4 p-6 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+              >
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                  <Calendar className="h-6 w-6 text-white" />
+                </div>
+                <span className="font-medium text-gray-700 group-hover:text-primary">New Task</span>
+              </button>
+              <button 
+                onClick={() => handleQuickAction('startTimer')}
+                className="group flex flex-col items-center gap-4 p-6 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+              >
+                <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                  <Clock className="h-6 w-6 text-white" />
+                </div>
+                <span className="font-medium text-gray-700 group-hover:text-primary">Start Timer</span>
+              </button>
+              <button 
+                onClick={() => handleQuickAction('newProject')}
+                className="group flex flex-col items-center gap-4 p-6 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+              >
+                <div className="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                  <FileText className="h-6 w-6 text-white" />
+                </div>
+                <span className="font-medium text-gray-700 group-hover:text-primary">New Project</span>
+              </button>
+              <button 
+                onClick={() => handleQuickAction('teamChat')}
+                className="group flex flex-col items-center gap-4 p-6 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+              >
+                <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                  <MessageSquare className="h-6 w-6 text-white" />
+                </div>
+                <span className="font-medium text-gray-700 group-hover:text-primary">Team Chat</span>
+              </button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Apps Grid */}
-        <div>
-          <h2 className="text-2xl font-bold mb-6">Your Apps</h2>
-          <AppGrid />
+        {/* Modern Apps Section */}
+        <div className="animate-fade-in-up">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight text-gradient mb-2">Your Applications</h2>
+              <p className="text-muted-foreground text-lg">Access all your productivity tools in one place</p>
+            </div>
+            <Badge variant="outline" className="px-4 py-2 text-sm font-medium backdrop-blur-sm">
+              {appList.length} Apps Available
+            </Badge>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
+            {appList.map((app, index) => (
+              <div 
+                key={app.title}
+                className="animate-scale-in"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <AppCard 
+                  title={app.title}
+                  description={app.description}
+                  icon={app.icon}
+                  bgColor={app.bgColor}
+                  route={app.route}
+                  featureCount={app.featureCount}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Modern Footer Section */}
+        <div className="pt-12 border-t border-border/50">
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary/10 to-primary/5 rounded-2xl border border-primary/20 backdrop-blur-sm">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <p className="text-sm font-medium text-muted-foreground">
+                ProSync Suite v2.0 - Built for teams that value efficiency and collaboration
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </AppLayout>
