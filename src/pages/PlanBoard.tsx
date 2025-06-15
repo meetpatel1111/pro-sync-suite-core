@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { FileText, Calendar, Gantt, Target, Clock, BarChart3 } from 'lucide-react';
+import { FileText, Calendar, BarChart3, Target, Clock, TrendingUp } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +38,7 @@ const PlanBoard = () => {
             
             <div className="flex flex-wrap items-center gap-3">
               <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2">
-                <Gantt className="h-4 w-4 mr-2" />
+                <BarChart3 className="h-4 w-4 mr-2" />
                 Gantt Charts
               </Badge>
               <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2">
@@ -50,7 +50,7 @@ const PlanBoard = () => {
                 Timeline View
               </Badge>
               <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2">
-                <BarChart3 className="h-4 w-4 mr-2" />
+                <TrendingUp className="h-4 w-4 mr-2" />
                 Progress Tracking
               </Badge>
             </div>
