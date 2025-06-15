@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, MessageSquare, FileText, BarChart2, 
@@ -226,90 +227,89 @@ const Index = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-8 animate-fade-in-up">
-        {/* Modern Hero Section */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-prosync-500 via-prosync-600 to-prosync-700 p-6 text-white shadow-2xl">
+      <div className="space-y-6 animate-fade-in-up">
+        {/* Compact Hero Section */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-prosync-500 via-prosync-600 to-prosync-700 p-4 text-white shadow-lg">
           <div className="absolute inset-0 bg-black/10"></div>
           <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
           <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-                <Sparkles className="h-6 w-6" />
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <Sparkles className="h-5 w-5" />
               </div>
-              <h1 className="text-3xl font-bold tracking-tight">Welcome to ProSync Suite</h1>
+              <h1 className="text-2xl font-bold tracking-tight">Welcome to ProSync Suite</h1>
             </div>
-            <p className="text-lg text-blue-100 max-w-2xl mb-6 leading-relaxed">
+            <p className="text-sm text-blue-100 max-w-2xl mb-3 leading-relaxed">
               Your comprehensive project management solution designed to streamline workflows and boost productivity
             </p>
-            <div className="flex items-center gap-4">
-              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
-                <TrendingUp className="h-4 w-4 mr-2" />
+            <div className="flex items-center gap-3">
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 text-xs">
+                <TrendingUp className="h-3 w-3 mr-1" />
                 10 Integrated Apps
               </Badge>
-              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
-                <Rocket className="h-4 w-4 mr-2" />
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 text-xs">
+                <Rocket className="h-3 w-3 mr-1" />
                 Enterprise Ready
               </Badge>
-              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
-                <Zap className="h-4 w-4 mr-2" />
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 text-xs">
+                <Zap className="h-3 w-3 mr-1" />
                 AI Powered
               </Badge>
             </div>
           </div>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32 backdrop-blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24 backdrop-blur-3xl"></div>
-          <div className="absolute top-1/2 left-1/2 w-32 h-32 bg-white/5 rounded-full -translate-x-16 -translate-y-16 backdrop-blur-3xl"></div>
+          <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-24 translate-x-24 backdrop-blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-16 -translate-x-16 backdrop-blur-3xl"></div>
         </div>
         
         <div className="animate-scale-in">
           <DashboardStats />
         </div>
 
-        {/* Modern Quick Actions */}
+        {/* Compact Quick Actions */}
         <Card className="modern-card animate-slide-in-right">
-          <CardContent className="p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-gradient-to-br from-primary to-primary/80 rounded-xl">
-                <Target className="h-5 w-5 text-white" />
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-1.5 bg-gradient-to-br from-primary to-primary/80 rounded-lg">
+                <Target className="h-4 w-4 text-white" />
               </div>
-              <h3 className="text-xl font-semibold">Quick Actions</h3>
+              <h3 className="text-lg font-semibold">Quick Actions</h3>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <button 
                 onClick={() => handleQuickAction('newTask')}
-                className="group flex flex-col items-center gap-4 p-6 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                className="group flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
               >
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl group-hover:scale-110 transition-transform duration-300">
-                  <Calendar className="h-6 w-6 text-white" />
+                <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                  <Calendar className="h-4 w-4 text-white" />
                 </div>
-                <span className="font-medium text-gray-700 group-hover:text-primary">New Task</span>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-primary">New Task</span>
               </button>
               <button 
                 onClick={() => handleQuickAction('startTimer')}
-                className="group flex flex-col items-center gap-4 p-6 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                className="group flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
               >
-                <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl group-hover:scale-110 transition-transform duration-300">
-                  <Clock className="h-6 w-6 text-white" />
+                <div className="p-2 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                  <Clock className="h-4 w-4 text-white" />
                 </div>
-                <span className="font-medium text-gray-700 group-hover:text-primary">Start Timer</span>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-primary">Start Timer</span>
               </button>
               <button 
                 onClick={() => handleQuickAction('newProject')}
-                className="group flex flex-col items-center gap-4 p-6 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                className="group flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
               >
-                <div className="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl group-hover:scale-110 transition-transform duration-300">
-                  <FileText className="h-6 w-6 text-white" />
+                <div className="p-2 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                  <FileText className="h-4 w-4 text-white" />
                 </div>
-                <span className="font-medium text-gray-700 group-hover:text-primary">New Project</span>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-primary">New Project</span>
               </button>
               <button 
                 onClick={() => handleQuickAction('teamChat')}
-                className="group flex flex-col items-center gap-4 p-6 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                className="group flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
               >
-                <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl group-hover:scale-110 transition-transform duration-300">
-                  <MessageSquare className="h-6 w-6 text-white" />
+                <div className="p-2 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                  <MessageSquare className="h-4 w-4 text-white" />
                 </div>
-                <span className="font-medium text-gray-700 group-hover:text-primary">Team Chat</span>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-primary">Team Chat</span>
               </button>
             </div>
           </CardContent>
@@ -317,17 +317,17 @@ const Index = () => {
 
         {/* Modern Apps Section */}
         <div className="animate-fade-in-up">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-3xl font-bold tracking-tight text-gradient mb-2">Your Applications</h2>
-              <p className="text-muted-foreground text-lg">Access all your productivity tools in one place</p>
+              <h2 className="text-2xl font-bold tracking-tight text-gradient mb-1">Your Applications</h2>
+              <p className="text-muted-foreground">Access all your productivity tools in one place</p>
             </div>
-            <Badge variant="outline" className="px-4 py-2 text-sm font-medium backdrop-blur-sm">
+            <Badge variant="outline" className="px-3 py-1 text-sm font-medium backdrop-blur-sm">
               {appList.length} Apps Available
             </Badge>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
             {appList.map((app, index) => (
               <div 
                 key={app.title}
@@ -347,12 +347,12 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Modern Footer Section */}
-        <div className="pt-12 border-t border-border/50">
+        {/* Compact Footer Section */}
+        <div className="pt-8 border-t border-border/50">
           <div className="text-center">
-            <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary/10 to-primary/5 rounded-2xl border border-primary/20 backdrop-blur-sm">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <p className="text-sm font-medium text-muted-foreground">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl border border-primary/20 backdrop-blur-sm">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <p className="text-sm text-muted-foreground">
                 ProSync Suite v2.0 - Built for teams that value efficiency and collaboration
               </p>
             </div>
