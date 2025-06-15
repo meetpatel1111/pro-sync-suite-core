@@ -47,6 +47,36 @@ export interface IntegrationMarketplaceItem {
   is_verified: boolean;
 }
 
+export interface ApiEndpoint {
+  id: string;
+  user_id: string;
+  name: string;
+  url: string;
+  method: string;
+  headers: Record<string, string>;
+  auth_config: any;
+  timeout_seconds: number;
+  rate_limit: number;
+  is_active: boolean;
+  test_status: string;
+  last_tested_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IntegrationHealthStatus {
+  id: string;
+  user_id: string;
+  service_name: string;
+  status: string;
+  response_time: number;
+  uptime_percentage: number;
+  error_details: any;
+  last_checked_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export const integrationDatabaseService = {
   // Automation Workflows
   async createAutomationWorkflow(workflow: Omit<AutomationWorkflow, 'id' | 'created_at' | 'updated_at'>): Promise<AutomationWorkflow> {
@@ -62,7 +92,14 @@ export const integrationDatabaseService = {
       .single();
 
     if (error) throw error;
-    return data;
+    
+    // Transform the database response to match our interface
+    return {
+      ...data,
+      trigger_config: typeof data.trigger_config === 'string' ? JSON.parse(data.trigger_config) : data.trigger_config,
+      actions_config: typeof data.actions_config === 'string' ? JSON.parse(data.actions_config) : data.actions_config,
+      conditions_config: typeof data.conditions_config === 'string' ? JSON.parse(data.conditions_config) : data.conditions_config,
+    };
   },
 
   async getAutomationWorkflows(userId: string): Promise<AutomationWorkflow[]> {
@@ -73,7 +110,14 @@ export const integrationDatabaseService = {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    
+    // Transform the database response to match our interface
+    return (data || []).map(item => ({
+      ...item,
+      trigger_config: typeof item.trigger_config === 'string' ? JSON.parse(item.trigger_config) : item.trigger_config,
+      actions_config: typeof item.actions_config === 'string' ? JSON.parse(item.actions_config) : item.actions_config,
+      conditions_config: typeof item.conditions_config === 'string' ? JSON.parse(item.conditions_config) : item.conditions_config,
+    }));
   },
 
   async updateAutomationWorkflow(id: string, updates: Partial<AutomationWorkflow>): Promise<void> {
@@ -106,7 +150,14 @@ export const integrationDatabaseService = {
       .order('downloads', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    
+    // Transform the database response to match our interface
+    return (data || []).map(item => ({
+      ...item,
+      apps: typeof item.apps === 'string' ? JSON.parse(item.apps) : item.apps,
+      tags: typeof item.tags === 'string' ? JSON.parse(item.tags) : item.tags,
+      template_config: typeof item.template_config === 'string' ? JSON.parse(item.template_config) : item.template_config,
+    }));
   },
 
   async createIntegrationTemplate(template: Omit<IntegrationTemplate, 'id'>): Promise<IntegrationTemplate> {
@@ -120,7 +171,14 @@ export const integrationDatabaseService = {
       .single();
 
     if (error) throw error;
-    return data;
+    
+    // Transform the database response to match our interface
+    return {
+      ...data,
+      apps: typeof data.apps === 'string' ? JSON.parse(data.apps) : data.apps,
+      tags: typeof data.tags === 'string' ? JSON.parse(data.tags) : data.tags,
+      template_config: typeof data.template_config === 'string' ? JSON.parse(data.template_config) : data.template_config,
+    };
   },
 
   async installTemplate(templateId: string, userId: string): Promise<void> {
@@ -135,50 +193,39 @@ export const integrationDatabaseService = {
 
     if (error) throw error;
 
-    // Increment download count
-    await supabase
-      .from('integration_templates')
-      .update({ downloads: supabase.sql`downloads + 1` })
-      .eq('id', templateId);
+    // Increment download count using raw SQL
+    await supabase.rpc('increment_template_downloads', { template_id: templateId });
   },
 
-  // Marketplace
+  // Marketplace - now gets from integration_templates (all free)
   async getMarketplaceItems(): Promise<IntegrationMarketplaceItem[]> {
-    // Mock data for marketplace items - in real app this would come from database
-    return [
-      {
-        id: '1',
-        name: 'Slack Integration Pro',
-        description: 'Advanced Slack integration with custom workflows and notifications',
-        provider: 'ProSync Team',
-        category: 'Communication',
-        price: 29.99,
-        rating: 4.8,
-        downloads: 1250,
-        features: ['Custom Notifications', 'Workflow Automation', 'File Sharing', 'Team Analytics'],
-        screenshots: [],
-        documentation_url: 'https://docs.prosync.com/slack-pro',
-        is_verified: true
-      },
-      {
-        id: '2',
-        name: 'Jira Sync Master',
-        description: 'Seamlessly sync tasks between ProSync and Jira with advanced mapping',
-        provider: 'Community',
-        category: 'Project Management',
-        price: 0,
-        rating: 4.5,
-        downloads: 890,
-        features: ['Bi-directional Sync', 'Custom Field Mapping', 'Real-time Updates'],
-        screenshots: [],
-        documentation_url: 'https://docs.prosync.com/jira-sync',
-        is_verified: false
-      }
-    ];
+    const { data, error } = await supabase
+      .from('integration_templates')
+      .select('*')
+      .eq('is_public', true)
+      .order('downloads', { ascending: false });
+
+    if (error) throw error;
+    
+    // Transform integration templates to marketplace items (all free)
+    return (data || []).map(template => ({
+      id: template.id,
+      name: template.name,
+      description: template.description,
+      provider: 'ProSync Community',
+      category: template.category,
+      price: 0, // All integrations are free
+      rating: template.rating,
+      downloads: template.downloads,
+      features: typeof template.tags === 'string' ? JSON.parse(template.tags) : template.tags,
+      screenshots: [],
+      documentation_url: `https://docs.prosync.com/templates/${template.id}`,
+      is_verified: template.is_verified
+    }));
   },
 
   // API Management
-  async getApiEndpoints(userId: string) {
+  async getApiEndpoints(userId: string): Promise<ApiEndpoint[]> {
     const { data, error } = await supabase
       .from('api_endpoints')
       .select('*')
@@ -186,21 +233,38 @@ export const integrationDatabaseService = {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    
+    // Transform the database response to match our interface
+    return (data || []).map(item => ({
+      ...item,
+      headers: typeof item.headers === 'string' ? JSON.parse(item.headers) : (item.headers as Record<string, string>) || {},
+      auth_config: typeof item.auth_config === 'string' ? JSON.parse(item.auth_config) : item.auth_config,
+    }));
   },
 
-  async createApiEndpoint(endpoint: any) {
+  async createApiEndpoint(endpoint: Omit<ApiEndpoint, 'id' | 'created_at' | 'updated_at'>): Promise<ApiEndpoint> {
     const { data, error } = await supabase
       .from('api_endpoints')
-      .insert(endpoint)
+      .insert({
+        ...endpoint,
+        id: uuidv4(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    
+    // Transform the database response to match our interface
+    return {
+      ...data,
+      headers: typeof data.headers === 'string' ? JSON.parse(data.headers) : (data.headers as Record<string, string>) || {},
+      auth_config: typeof data.auth_config === 'string' ? JSON.parse(data.auth_config) : data.auth_config,
+    };
   },
 
-  async testApiEndpoint(endpointId: string) {
+  async testApiEndpoint(endpointId: string): Promise<any> {
     const { data: endpoint, error } = await supabase
       .from('api_endpoints')
       .select('*')
@@ -210,9 +274,11 @@ export const integrationDatabaseService = {
     if (error) throw error;
 
     try {
+      const headers = typeof endpoint.headers === 'string' ? JSON.parse(endpoint.headers) : endpoint.headers || {};
+      
       const response = await fetch(endpoint.url, {
         method: endpoint.method,
-        headers: endpoint.headers || {},
+        headers: headers as HeadersInit,
         signal: AbortSignal.timeout(endpoint.timeout_seconds * 1000)
       });
 
@@ -246,7 +312,7 @@ export const integrationDatabaseService = {
   },
 
   // Integration Health Monitoring
-  async getIntegrationHealth(userId: string) {
+  async getIntegrationHealth(userId: string): Promise<IntegrationHealthStatus[]> {
     const { data, error } = await supabase
       .from('integration_health_status')
       .select('*')
@@ -254,10 +320,52 @@ export const integrationDatabaseService = {
       .order('last_checked_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    
+    // Transform the database response to match our interface
+    return (data || []).map(item => ({
+      ...item,
+      error_details: typeof item.error_details === 'string' ? JSON.parse(item.error_details) : item.error_details,
+    }));
   },
 
-  async updateIntegrationHealth(serviceName: string, status: any) {
+  async getIntegrationHealthStatus(userId: string): Promise<IntegrationHealthStatus[]> {
+    return this.getIntegrationHealth(userId);
+  },
+
+  async createIntegrationHealthStatus(status: Omit<IntegrationHealthStatus, 'id' | 'created_at' | 'updated_at'>): Promise<IntegrationHealthStatus> {
+    const { data, error } = await supabase
+      .from('integration_health_status')
+      .insert({
+        ...status,
+        id: uuidv4(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    
+    // Transform the database response to match our interface
+    return {
+      ...data,
+      error_details: typeof data.error_details === 'string' ? JSON.parse(data.error_details) : data.error_details,
+    };
+  },
+
+  async updateIntegrationHealthStatus(id: string, updates: Partial<IntegrationHealthStatus>): Promise<void> {
+    const { error } = await supabase
+      .from('integration_health_status')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async updateIntegrationHealth(serviceName: string, status: any): Promise<void> {
     const { error } = await supabase
       .from('integration_health_status')
       .upsert({
