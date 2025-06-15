@@ -300,7 +300,7 @@ class TaskmasterService {
       assignee_id: item.assignee_id,
       reporter_id: item.reporter_id,
       created_by: item.created_by,
-      assigned_to: item.assigned_to,
+      assigned_to: Array.isArray(item.assigned_to) ? item.assigned_to : (item.assigned_to ? [item.assigned_to] : undefined),
       reviewer_id: item.reviewer_id,
       parent_task_id: item.parent_task_id,
       linked_task_ids: item.linked_task_ids,
@@ -351,6 +351,9 @@ class TaskmasterService {
       const boardPrefix = this.generateBoardPrefix(boardData.name);
       const taskKey = `${boardPrefix}-${taskNumber}`;
 
+      // Prepare assigned_to as array if assignee_id is provided
+      const assignedToArray = taskData.assignee_id ? [taskData.assignee_id] : null;
+
       const { data, error } = await supabase
         .from('tasks')
         .insert([{
@@ -368,12 +371,12 @@ class TaskmasterService {
           actual_hours: taskData.actual_hours,
           created_by: taskData.created_by,
           assignee_id: taskData.assignee_id,
+          assigned_to: assignedToArray,
           estimate_hours: taskData.estimate_hours,
           due_date: taskData.due_date,
           start_date: taskData.start_date,
           sprint_id: taskData.sprint_id,
           reporter_id: taskData.reporter_id,
-          assigned_to: taskData.assigned_to,
           reviewer_id: taskData.reviewer_id,
           parent_task_id: taskData.parent_task_id,
           linked_task_ids: taskData.linked_task_ids,
