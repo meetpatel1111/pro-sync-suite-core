@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @tailwind base;
 @tailwind components;
@@ -93,7 +92,7 @@
   }
   
   .floating-action {
-    @apply fixed bottom-6 right-6 z-50 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110;
+    @apply fixed bottom-6 right-6 z-50 rounded-full shadow-2xl hover:shadow-2xl transition-all duration-300 hover:scale-110;
   }
 }
 
