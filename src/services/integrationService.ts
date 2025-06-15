@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Task, TimeEntry, Project } from '@/utils/dbtypes';
 import { v4 as uuidv4 } from 'uuid';
@@ -679,134 +680,134 @@ export const integrationService = {
       console.error('Error getting user integration actions:', error);
       return [];
     }
+  },
+
+  // Method to check project milestones and send notifications
+  async checkProjectMilestones(): Promise<{ project: Project, tasksDue: Task[] }[]> {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return [];
+      
+      const { data: projectsData, error: projectsError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', userData.user.id);
+        
+      if (projectsError) throw projectsError;
+      if (!projectsData || projectsData.length === 0) return [];
+      
+      const projects = projectsData as Project[];
+      const result: { project: Project, tasksDue: Task[] }[] = [];
+      
+      const sevenDaysFromNow = new Date();
+      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+      
+      for (const project of projects) {
+        const { data: tasksData, error: tasksError } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('project_id', project.id)
+          .lte('due_date', sevenDaysFromNow.toISOString())
+          .neq('status', 'done');
+          
+        if (tasksError) {
+          console.error(`Error fetching tasks for project ${project.id}:`, tasksError);
+          continue;
+        }
+        
+        if (tasksData && tasksData.length > 0) {
+          const mappedTasks: Task[] = tasksData.map((task): Task => ({
+            id: task.id,
+            title: task.title,
+            description: task.description || '',
+            status: task.status,
+            priority: task.priority,
+            start_date: task.start_date,
+            due_date: task.due_date,
+            assigned_to: task.assigned_to || [],
+            project_id: task.project_id,
+            created_by: task.created_by,
+            parent_task_id: task.parent_task_id,
+            reviewer_id: task.reviewer_id,
+            recurrence_rule: task.recurrence_rule,
+            visibility: task.visibility,
+            created_at: task.created_at,
+            updated_at: task.updated_at,
+          }));
+          
+          result.push({
+            project,
+            tasksDue: mappedTasks
+          });
+        }
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error checking project milestones:', error);
+      return [];
+    }
+  },
+
+  // Method to link documents to tasks
+  async linkDocumentToTask(
+    taskId: string, 
+    documentUrl: string, 
+    documentName: string
+  ): Promise<boolean> {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return false;
+
+      const { error } = await supabase
+        .from('files')
+        .insert({
+          name: documentName,
+          storage_path: documentUrl,
+          file_type: 'link',
+          size_bytes: 0,
+          is_public: false,
+          is_archived: false,
+          task_id: taskId,
+          user_id: userData.user.id
+        });
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error linking document to task:', error);
+      return false;
+    }
+  },
+
+  // Method to create integration actions
+  async createIntegrationAction(
+    sourceApp: string, 
+    targetApp: string, 
+    actionType: string, 
+    config: any = {}
+  ): Promise<boolean> {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return false;
+      
+      const { error } = await supabase
+        .from('integration_actions')
+        .insert({
+          source_app: sourceApp,
+          target_app: targetApp,
+          action_type: actionType,
+          config,
+          user_id: userData.user.id
+        });
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error creating integration action:', error);
+      return false;
+    }
   }
 };
-
-// Method to check project milestones and send notifications
-async checkProjectMilestones(): Promise<{ project: Project, tasksDue: Task[] }[]> {
-  try {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) return [];
-    
-    const { data: projectsData, error: projectsError } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('user_id', userData.user.id);
-      
-    if (projectsError) throw projectsError;
-    if (!projectsData || projectsData.length === 0) return [];
-    
-    const projects = projectsData as Project[];
-    const result: { project: Project, tasksDue: Task[] }[] = [];
-    
-    const sevenDaysFromNow = new Date();
-    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-    
-    for (const project of projects) {
-      const { data: tasksData, error: tasksError } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('project_id', project.id)
-        .lte('due_date', sevenDaysFromNow.toISOString())
-        .neq('status', 'done');
-        
-      if (tasksError) {
-        console.error(`Error fetching tasks for project ${project.id}:`, tasksError);
-        continue;
-      }
-      
-      if (tasksData && tasksData.length > 0) {
-        const mappedTasks: Task[] = tasksData.map((task): Task => ({
-          id: task.id,
-          title: task.title,
-          description: task.description || '',
-          status: task.status,
-          priority: task.priority,
-          start_date: task.start_date,
-          due_date: task.due_date,
-          assigned_to: task.assigned_to || [],
-          project_id: task.project_id,
-          created_by: task.created_by,
-          parent_task_id: task.parent_task_id,
-          reviewer_id: task.reviewer_id,
-          recurrence_rule: task.recurrence_rule,
-          visibility: task.visibility,
-          created_at: task.created_at,
-          updated_at: task.updated_at,
-        }));
-        
-        result.push({
-          project,
-          tasksDue: mappedTasks
-        });
-      }
-    }
-    
-    return result;
-  } catch (error) {
-    console.error('Error checking project milestones:', error);
-    return [];
-  }
-}
-
-// Method to link documents to tasks
-async linkDocumentToTask(
-  taskId: string, 
-  documentUrl: string, 
-  documentName: string
-): Promise<boolean> {
-  try {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) return false;
-
-    const { error } = await supabase
-      .from('files')
-      .insert({
-        name: documentName,
-        storage_path: documentUrl,
-        file_type: 'link',
-        size_bytes: 0,
-        is_public: false,
-        is_archived: false,
-        task_id: taskId,
-        user_id: userData.user.id
-      });
-      
-    if (error) throw error;
-    
-    return true;
-  } catch (error) {
-    console.error('Error linking document to task:', error);
-    return false;
-  }
-}
-
-// Method to create integration actions
-async createIntegrationAction(
-  sourceApp: string, 
-  targetApp: string, 
-  actionType: string, 
-  config: any = {}
-): Promise<boolean> {
-  try {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) return false;
-    
-    const { error } = await supabase
-      .from('integration_actions')
-      .insert({
-        source_app: sourceApp,
-        target_app: targetApp,
-        action_type: actionType,
-        config,
-        user_id: userData.user.id
-      });
-      
-    if (error) throw error;
-    
-    return true;
-  } catch (error) {
-    console.error('Error creating integration action:', error);
-    return false;
-  }
-}
