@@ -1,20 +1,24 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Plus, Search, MessageSquare, Users, Video, Calendar, Send, Paperclip, Smile, Bell, Filter, ChevronDown, FileIcon } from 'lucide-react';
+import { ArrowLeft, Plus, Search, MessageSquare, Users, Video, Calendar, Bell, Filter, ChevronDown, FileIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import ChatInterface from '@/components/ChatInterface';
+import EnhancedChatInterface from '@/components/collabspace/EnhancedChatInterface';
+import DirectMessages from '@/components/collabspace/DirectMessages';
+import MessageThread from '@/components/collabspace/MessageThread';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Channel, ChannelMember } from '@/utils/dbtypes';
+import { Channel, ChannelMember, Message } from '@/utils/dbtypes';
 import { useAuth } from '@/hooks/useAuth';
+import { collabService } from '@/services/collabService';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,8 +32,16 @@ const CollabSpace = () => {
   const { user } = useAuth();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<{
+    id: string;
+    type: 'channel' | 'dm' | 'group';
+    name: string;
+  } | null>(null);
   const [channelMembers, setChannelMembers] = useState<ChannelMember[]>([]);
+  const [activeTab, setActiveTab] = useState('channels');
+  const [pinnedMessages, setPinnedMessages] = useState<any[]>([]);
+  const [threadMessage, setThreadMessage] = useState<Message | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   
   useEffect(() => {
     const fetchChannels = async () => {
@@ -51,7 +63,11 @@ const CollabSpace = () => {
           setChannels(data as Channel[]);
           // Select the first channel by default
           if (data && data.length > 0) {
-            setSelectedChannel(data[0]);
+            setSelectedConversation({
+              id: data[0].id,
+              type: 'channel',
+              name: data[0].name
+            });
           }
         }
       } catch (error) {
@@ -93,14 +109,14 @@ const CollabSpace = () => {
   }, [toast]);
   
   useEffect(() => {
-    if (!selectedChannel) return;
+    if (!selectedConversation || selectedConversation.type !== 'channel') return;
     
     const fetchChannelMembers = async () => {
       try {
         const { data, error } = await supabase
           .from('channel_members')
           .select('*')
-          .eq('channel_id', selectedChannel.id);
+          .eq('channel_id', selectedConversation.id);
           
         if (error) {
           console.error("Error fetching channel members:", error);
@@ -112,8 +128,20 @@ const CollabSpace = () => {
       }
     };
     
+    const fetchPinnedMessages = async () => {
+      try {
+        const { data, error } = await collabService.getPinnedMessages(selectedConversation.id);
+        if (data) {
+          setPinnedMessages(data);
+        }
+      } catch (error) {
+        console.error("Error fetching pinned messages:", error);
+      }
+    };
+    
     fetchChannelMembers();
-  }, [selectedChannel]);
+    fetchPinnedMessages();
+  }, [selectedConversation]);
 
   const handleCreateChannel = async () => {
     if (!user) {
@@ -158,7 +186,11 @@ const CollabSpace = () => {
           console.error("Error joining channel:", joinError);
         }
         
-        setSelectedChannel(data[0]);
+        setSelectedConversation({
+          id: data[0].id,
+          type: 'channel',
+          name: data[0].name
+        });
         toast({
           title: "Success",
           description: `Channel "${channelName}" created`,
@@ -169,41 +201,31 @@ const CollabSpace = () => {
     }
   };
 
-  const handleJoinChannel = async (channelId: string) => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to join a channel",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      const { error } = await supabase
-        .from('channel_members')
-        .insert({
-          channel_id: channelId,
-          user_id: user.id,
-        });
-        
-      if (error) {
-        console.error("Error joining channel:", error);
-        toast({
-          title: "Error",
-          description: "Failed to join channel",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "Joined channel successfully",
-        });
-      }
-    } catch (error) {
-      console.error("Exception joining channel:", error);
-    }
+  const handleSelectConversation = (id: string, type: 'dm' | 'group', name?: string) => {
+    setSelectedConversation({
+      id,
+      type,
+      name: name || `${type === 'dm' ? 'Direct Message' : 'Group'} ${id.substring(0, 8)}`
+    });
+    setActiveTab('direct');
   };
+
+  const handleSelectChannel = (channel: Channel) => {
+    setSelectedConversation({
+      id: channel.id,
+      type: 'channel',
+      name: channel.name
+    });
+    setActiveTab('channels');
+  };
+
+  const handleOpenThread = (message: Message) => {
+    setThreadMessage(message);
+  };
+
+  const filteredChannels = channels.filter(channel =>
+    channel.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
   
   return (
     <AppLayout>
@@ -242,7 +264,7 @@ const CollabSpace = () => {
             <Card className="lg:col-span-1 bg-gradient-to-br from-card to-card/50 border-border/50">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="font-semibold text-lg">Spaces</h3>
+                  <h3 className="font-semibold text-lg">Conversations</h3>
                   <Button variant="ghost" size="sm" onClick={handleCreateChannel} className="h-8 w-8 rounded-full">
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -252,12 +274,14 @@ const CollabSpace = () => {
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input 
                     type="search" 
-                    placeholder="Search messages..." 
+                    placeholder="Search conversations..." 
                     className="pl-10 bg-background/50 border-border/50 focus:bg-background"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
                 
-                <Tabs defaultValue="channels" className="w-full">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                   <TabsList className="grid w-full grid-cols-3 mb-6 bg-muted/50">
                     <TabsTrigger value="channels" className="text-xs">Channels</TabsTrigger>
                     <TabsTrigger value="direct" className="text-xs">Direct</TabsTrigger>
@@ -274,7 +298,7 @@ const CollabSpace = () => {
                               <div className="h-4 bg-muted rounded w-1/2"></div>
                             </div>
                           </div>
-                        ) : channels.length === 0 ? (
+                        ) : filteredChannels.length === 0 ? (
                           <div className="p-6 text-center space-y-3">
                             <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto" />
                             <p className="text-muted-foreground">No channels yet</p>
@@ -289,21 +313,26 @@ const CollabSpace = () => {
                             </Button>
                           </div>
                         ) : (
-                          channels.map(channel => (
+                          filteredChannels.map(channel => (
                             <div 
                               key={channel.id}
                               className={`flex items-center justify-between p-3 rounded-lg transition-all cursor-pointer ${
-                                selectedChannel?.id === channel.id 
+                                selectedConversation?.id === channel.id && selectedConversation?.type === 'channel'
                                   ? 'bg-primary/10 border border-primary/20 shadow-sm' 
                                   : 'hover:bg-secondary/50 border border-transparent'
                               }`}
-                              onClick={() => setSelectedChannel(channel)}
+                              onClick={() => handleSelectChannel(channel)}
                             >
                               <div className="flex items-center gap-3">
                                 <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                                 <span className="font-medium"># {channel.name}</span>
+                                {channel.auto_created && (
+                                  <Badge variant="secondary" className="text-xs">Auto</Badge>
+                                )}
                               </div>
-                              <Badge variant="secondary" className="text-xs">3</Badge>
+                              <Badge variant="secondary" className="text-xs">
+                                {channelMembers.length}
+                              </Badge>
                             </div>
                           ))
                         )}
@@ -312,34 +341,10 @@ const CollabSpace = () => {
                   </TabsContent>
                   
                   <TabsContent value="direct" className="m-0">
-                    <ScrollArea className="h-[450px] pr-2">
-                      <div className="space-y-2">
-                        {[
-                          { name: "Sarah Chen", avatar: "SC", status: "online" },
-                          { name: "Alex Johnson", avatar: "AJ", status: "online", unread: 2 },
-                          { name: "Miguel Patel", avatar: "MP", status: "online" },
-                          { name: "Jamie Davis", avatar: "JD", status: "offline" }
-                        ].map((user, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-3 rounded-lg hover:bg-secondary/50 cursor-pointer transition-all">
-                            <div className="flex items-center gap-3">
-                              <div className="relative">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarImage src="https://github.com/shadcn.png" />
-                                  <AvatarFallback className="text-xs">{user.avatar}</AvatarFallback>
-                                </Avatar>
-                                <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-background ${
-                                  user.status === 'online' ? 'bg-emerald-500' : 'bg-gray-400'
-                                }`}></div>
-                              </div>
-                              <span className="font-medium">{user.name}</span>
-                            </div>
-                            {user.unread && (
-                              <Badge variant="destructive" className="text-xs">{user.unread}</Badge>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
+                    <DirectMessages 
+                      onSelectConversation={handleSelectConversation}
+                      selectedConversationId={selectedConversation?.type !== 'channel' ? selectedConversation?.id : undefined}
+                    />
                   </TabsContent>
                   
                   <TabsContent value="meetings" className="m-0">
@@ -396,10 +401,16 @@ const CollabSpace = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg">
-                      {selectedChannel ? `# ${selectedChannel.name}` : 'Select a channel'}
+                      {selectedConversation ? (
+                        selectedConversation.type === 'channel' ? `# ${selectedConversation.name}` : selectedConversation.name
+                      ) : 'Select a conversation'}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {selectedChannel ? `${channelMembers.length} members • 3 online` : 'No channel selected'}
+                      {selectedConversation ? (
+                        selectedConversation.type === 'channel' 
+                          ? `${channelMembers.length} members • 3 online` 
+                          : 'Direct conversation'
+                      ) : 'No conversation selected'}
                     </p>
                   </div>
                 </div>
@@ -414,7 +425,23 @@ const CollabSpace = () => {
               </div>
               
               <div className="h-[520px] bg-gradient-to-b from-background/50 to-background">
-                <ChatInterface channelId={selectedChannel?.id} />
+                {selectedConversation ? (
+                  <EnhancedChatInterface 
+                    conversationId={selectedConversation.id}
+                    conversationType={selectedConversation.type}
+                    onOpenThread={handleOpenThread}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center space-y-4">
+                      <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto" />
+                      <div>
+                        <h3 className="font-medium">Select a conversation</h3>
+                        <p className="text-sm text-muted-foreground">Choose a channel or start a direct message</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </Card>
             
@@ -428,36 +455,46 @@ const CollabSpace = () => {
                   </TabsList>
                   
                   <TabsContent value="about" className="m-0 space-y-6">
-                    {selectedChannel ? (
+                    {selectedConversation ? (
                       <>
                         <div className="space-y-3">
                           <h3 className="font-semibold text-base">Description</h3>
                           <p className="text-sm text-muted-foreground leading-relaxed bg-muted/20 p-4 rounded-lg">
-                            {selectedChannel.about || selectedChannel.description || 
-                             `${selectedChannel.name} - No description available.`}
+                            {selectedConversation.type === 'channel' 
+                              ? `${selectedConversation.name} - Channel for team communication.`
+                              : 'Private conversation space.'}
                           </p>
                         </div>
                         
                         <Separator className="bg-border/50" />
                         
-                        <div className="space-y-3">
-                          <h3 className="font-semibold text-base">Pinned Messages</h3>
-                          <Card className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
-                            <p className="font-medium text-sm">@everyone Important Update</p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              All team members should update their project status before EOD Friday...
-                            </p>
-                            <div className="flex justify-between items-center mt-3 pt-2 border-t border-amber-200">
-                              <span className="text-xs text-muted-foreground">Alex Johnson</span>
-                              <span className="text-xs text-muted-foreground">Yesterday</span>
+                        {pinnedMessages.length > 0 && (
+                          <div className="space-y-3">
+                            <h3 className="font-semibold text-base">Pinned Messages</h3>
+                            <div className="space-y-2">
+                              {pinnedMessages.map((pinned) => (
+                                <Card key={pinned.id} className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
+                                  <p className="text-sm">
+                                    {pinned.messages?.content || 'Pinned message'}
+                                  </p>
+                                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-amber-200">
+                                    <span className="text-xs text-muted-foreground">
+                                      Pinned by user
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(pinned.pinned_at).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                </Card>
+                              ))}
                             </div>
-                          </Card>
-                        </div>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div className="text-center py-8 space-y-3">
                         <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto" />
-                        <p className="text-muted-foreground">Select a channel to view details</p>
+                        <p className="text-muted-foreground">Select a conversation to view details</p>
                       </div>
                     )}
                     
@@ -650,6 +687,16 @@ const CollabSpace = () => {
           </div>
         </div>
       </div>
+
+      {/* Thread Panel */}
+      {threadMessage && (
+        <div className="fixed right-0 top-0 h-full w-96 bg-background border-l shadow-lg z-50">
+          <MessageThread 
+            parentMessage={threadMessage} 
+            onClose={() => setThreadMessage(null)} 
+          />
+        </div>
+      )}
     </AppLayout>
   );
 };

@@ -360,35 +360,49 @@ export type Database = {
       channels: {
         Row: {
           about: string | null
+          auto_created: boolean | null
           created_at: string | null
           created_by: string | null
           description: string | null
           id: string
           name: string
+          project_id: string | null
           type: string
           updated_at: string | null
         }
         Insert: {
           about?: string | null
+          auto_created?: boolean | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           id?: string
           name: string
+          project_id?: string | null
           type?: string
           updated_at?: string | null
         }
         Update: {
           about?: string | null
+          auto_created?: boolean | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           id?: string
           name?: string
+          project_id?: string | null
           type?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "channels_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       client_notes: {
         Row: {
@@ -497,6 +511,36 @@ export type Database = {
           id?: string
           title?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      direct_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_message: string | null
+          last_message_at: string | null
+          updated_at: string | null
+          user1_id: string
+          user2_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_message?: string | null
+          last_message_at?: string | null
+          updated_at?: string | null
+          user1_id: string
+          user2_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_message?: string | null
+          last_message_at?: string | null
+          updated_at?: string | null
+          user1_id?: string
+          user2_id?: string
         }
         Relationships: []
       }
@@ -816,6 +860,59 @@ export type Database = {
           },
         ]
       }
+      group_message_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string | null
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string | null
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_message_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "group_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_messages: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       in_app_notifications: {
         Row: {
           created_at: string | null
@@ -993,22 +1090,94 @@ export type Database = {
           },
         ]
       }
+      message_files: {
+        Row: {
+          file_name: string
+          file_size: number | null
+          file_type: string
+          file_url: string
+          id: string
+          message_id: string
+          uploaded_at: string | null
+        }
+        Insert: {
+          file_name: string
+          file_size?: number | null
+          file_type: string
+          file_url: string
+          id?: string
+          message_id: string
+          uploaded_at?: string | null
+        }
+        Update: {
+          file_name?: string
+          file_size?: number | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          message_id?: string
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_files_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_search: {
+        Row: {
+          created_at: string | null
+          id: string
+          message_id: string
+          search_content: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message_id: string
+          search_content: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message_id?: string
+          search_content?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_search_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           channel_id: string | null
           channel_name: string | null
           content: string | null
           created_at: string | null
+          direct_message_id: string | null
           edited_at: string | null
           file_url: string | null
+          group_message_id: string | null
           id: string
           is_pinned: boolean | null
+          is_system_message: boolean | null
           mentions: Json | null
           name: string | null
           parent_id: string | null
           reactions: Json | null
           read_by: Json | null
+          reply_to_id: string | null
           scheduled_for: string | null
+          thread_count: number | null
           type: string
           updated_at: string | null
           user_id: string | null
@@ -1019,16 +1188,21 @@ export type Database = {
           channel_name?: string | null
           content?: string | null
           created_at?: string | null
+          direct_message_id?: string | null
           edited_at?: string | null
           file_url?: string | null
+          group_message_id?: string | null
           id?: string
           is_pinned?: boolean | null
+          is_system_message?: boolean | null
           mentions?: Json | null
           name?: string | null
           parent_id?: string | null
           reactions?: Json | null
           read_by?: Json | null
+          reply_to_id?: string | null
           scheduled_for?: string | null
+          thread_count?: number | null
           type?: string
           updated_at?: string | null
           user_id?: string | null
@@ -1039,16 +1213,21 @@ export type Database = {
           channel_name?: string | null
           content?: string | null
           created_at?: string | null
+          direct_message_id?: string | null
           edited_at?: string | null
           file_url?: string | null
+          group_message_id?: string | null
           id?: string
           is_pinned?: boolean | null
+          is_system_message?: boolean | null
           mentions?: Json | null
           name?: string | null
           parent_id?: string | null
           reactions?: Json | null
           read_by?: Json | null
+          reply_to_id?: string | null
           scheduled_for?: string | null
+          thread_count?: number | null
           type?: string
           updated_at?: string | null
           user_id?: string | null
@@ -1063,8 +1242,29 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "messages_direct_message_id_fkey"
+            columns: ["direct_message_id"]
+            isOneToOne: false
+            referencedRelation: "direct_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_group_message_id_fkey"
+            columns: ["group_message_id"]
+            isOneToOne: false
+            referencedRelation: "group_messages"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "messages_parent_id_fkey"
             columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
             isOneToOne: false
             referencedRelation: "messages"
             referencedColumns: ["id"]
@@ -1106,6 +1306,45 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      pinned_messages: {
+        Row: {
+          channel_id: string | null
+          id: string
+          message_id: string
+          pinned_at: string | null
+          pinned_by: string
+        }
+        Insert: {
+          channel_id?: string | null
+          id?: string
+          message_id: string
+          pinned_at?: string | null
+          pinned_by: string
+        }
+        Update: {
+          channel_id?: string | null
+          id?: string
+          message_id?: string
+          pinned_at?: string | null
+          pinned_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pinned_messages_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pinned_messages_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       plans: {
         Row: {
@@ -1754,6 +1993,42 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "task_files_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_mentions: {
+        Row: {
+          id: string
+          mentioned_at: string | null
+          message_id: string
+          task_id: string
+        }
+        Insert: {
+          id?: string
+          mentioned_at?: string | null
+          message_id: string
+          task_id: string
+        }
+        Update: {
+          id?: string
+          mentioned_at?: string | null
+          message_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_mentions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_mentions_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"

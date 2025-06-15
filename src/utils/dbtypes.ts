@@ -273,3 +273,103 @@ export interface Timesheet {
 }
 
 export type GeneralSettingKey = 'language' | 'timezone';
+
+export interface DirectMessage {
+  id: string;
+  user1_id: string;
+  user2_id: string;
+  last_message?: string;
+  last_message_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GroupMessage {
+  id: string;
+  name: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GroupMessageMember {
+  id: string;
+  group_id: string;
+  user_id: string;
+  joined_at: string;
+}
+
+export interface MessageFile {
+  id: string;
+  message_id: string;
+  file_url: string;
+  file_name: string;
+  file_type: string;
+  file_size?: number;
+  uploaded_at: string;
+}
+
+export interface PinnedMessage {
+  id: string;
+  message_id: string;
+  channel_id?: string;
+  pinned_by: string;
+  pinned_at: string;
+}
+
+export interface TaskMention {
+  id: string;
+  message_id: string;
+  task_id: string;
+  mentioned_at: string;
+}
+
+export interface MessageSearch {
+  id: string;
+  message_id: string;
+  search_content: string;
+  created_at: string;
+}
+
+// Enhanced Message interface with new fields
+export interface Message {
+  id: string;
+  channel_id?: string;
+  user_id?: string;
+  parent_id?: string;
+  content?: string;
+  type: string;
+  file_url?: string;
+  username?: string;
+  name?: string;
+  channel_name?: string;
+  reactions?: Record<string, any>;
+  mentions?: Record<string, any>;
+  is_pinned?: boolean;
+  edited_at?: string;
+  read_by?: Record<string, any>;
+  scheduled_for?: string;
+  created_at: string;
+  updated_at: string;
+  // New fields
+  direct_message_id?: string;
+  group_message_id?: string;
+  reply_to_id?: string;
+  thread_count?: number;
+  is_system_message?: boolean;
+}
+
+// Enhanced Channel interface with new fields
+export interface Channel {
+  id: string;
+  name: string;
+  type: string;
+  about?: string;
+  description?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  // New fields
+  project_id?: string;
+  auto_created?: boolean;
+}
