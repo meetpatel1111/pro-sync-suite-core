@@ -38,17 +38,20 @@ interface SearchCommandProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// Finite icon type
+type IconComponent = (props: { className?: string }) => JSX.Element;
+
 interface AppItem {
   name: string;
   path: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: IconComponent;
   description: string;
 }
 
 interface ActionItem {
   name: string;
   action: () => void;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: IconComponent;
   description: string;
 }
 
