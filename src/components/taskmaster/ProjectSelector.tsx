@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Settings, Users, Archive } from 'lucide-react';
+import { Plus, Folder, Users } from 'lucide-react';
 import { useAuthContext } from '@/context/AuthContext';
 import { taskmasterService } from '@/services/taskmasterService';
 import { useToast } from '@/hooks/use-toast';
@@ -60,6 +60,7 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({ onProjectSelect, sele
       const { data, error } = await taskmasterService.createProject({
         name: projectName,
         key: projectKey.toUpperCase(),
+        description: '',
         status: 'active',
         created_by: user.id,
         user_id: user.id
@@ -100,10 +101,7 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({ onProjectSelect, sele
               <div className="h-4 bg-gray-200 rounded w-3/4"></div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div className="h-3 bg-gray-200 rounded w-full"></div>
-                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-              </div>
+              <div className="h-3 bg-gray-200 rounded w-full"></div>
             </CardContent>
           </Card>
         ))}
@@ -115,8 +113,8 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({ onProjectSelect, sele
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Projects</h2>
-          <p className="text-muted-foreground">Select a project to manage tasks and workflows</p>
+          <h3 className="text-xl font-semibold">Projects</h3>
+          <p className="text-muted-foreground">Select a project to manage boards and tasks</p>
         </div>
         <Button onClick={handleCreateProject} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
@@ -134,33 +132,24 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({ onProjectSelect, sele
             onClick={() => onProjectSelect(project)}
           >
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Folder className="h-4 w-4" />
                 <CardTitle className="text-lg">{project.name}</CardTitle>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">{project.key}</Badge>
                 <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
                   {project.status}
                 </Badge>
               </div>
-              <Badge variant="outline" className="w-fit">
-                {project.key}
-              </Badge>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-sm text-muted-foreground">
                 {project.description || 'No description provided'}
               </p>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Users className="h-3 w-3" />
-                  <span>Team</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                    <Settings className="h-3 w-3" />
-                  </Button>
-                  {project.status === 'archived' && (
-                    <Archive className="h-3 w-3" />
-                  )}
-                </div>
+              <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                <Users className="h-3 w-3" />
+                <span>Team project</span>
               </div>
             </CardContent>
           </Card>
@@ -172,7 +161,7 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({ onProjectSelect, sele
           <div className="mx-auto max-w-md">
             <h3 className="text-lg font-semibold mb-2">No projects yet</h3>
             <p className="text-muted-foreground mb-4">
-              Create your first project to start managing tasks and workflows
+              Create your first project to start organizing your work
             </p>
             <Button onClick={handleCreateProject}>
               <Plus className="h-4 w-4 mr-2" />

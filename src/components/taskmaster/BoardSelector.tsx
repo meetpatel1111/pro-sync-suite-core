@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Kanban, Calendar, Timeline, Bug } from 'lucide-react';
+import { Plus, Kanban, Calendar, Clock, Bug } from 'lucide-react';
 import { useAuthContext } from '@/context/AuthContext';
 import { taskmasterService } from '@/services/taskmasterService';
 import { useToast } from '@/hooks/use-toast';
@@ -103,7 +103,7 @@ const BoardSelector: React.FC<BoardSelectorProps> = ({ project, onBoardSelect, s
       case 'scrum':
         return <Calendar className="h-4 w-4" />;
       case 'timeline':
-        return <Timeline className="h-4 w-4" />;
+        return <Clock className="h-4 w-4" />;
       case 'issue_tracker':
         return <Bug className="h-4 w-4" />;
       default:

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { safeQueryTable } from '@/utils/db-helpers';
 import type { 
