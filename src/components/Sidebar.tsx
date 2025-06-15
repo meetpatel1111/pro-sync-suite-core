@@ -7,17 +7,18 @@ import {
   Settings, 
   Users2, 
   Timer, 
-  Kanban, 
+  Layers3, 
   FolderOpen, 
   PieChart, 
-  MessageCircle, 
-  ShieldCheck, 
+  MessageSquare, 
+  Shield, 
   Bell,
   User,
   Zap,
-  Link as LinkIcon,
-  Wallet,
-  UserCheck
+  Network,
+  CreditCard,
+  UserCog,
+  Box
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -33,38 +34,56 @@ const Sidebar = ({ className }: SidebarProps) => {
         <div className="px-4 py-2">
           <nav className="space-y-2">
             <Link to="/">
-              <Button variant="ghost" className="w-full justify-start">
-                <Home className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start group">
+                <div className="relative mr-2">
+                  <Home className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
                 Dashboard
               </Button>
             </Link>
             <Link to="/taskmaster">
-              <Button variant="ghost" className="w-full justify-start">
-                <Kanban className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start group">
+                <div className="relative mr-2">
+                  <Layers3 className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
                 TaskMaster
               </Button>
             </Link>
             <Link to="/timetrackpro">
-              <Button variant="ghost" className="w-full justify-start">
-                <Timer className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start group">
+                <div className="relative mr-2">
+                  <Timer className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
                 TimeTrackPro
               </Button>
             </Link>
             <Link to="/collabspace">
-              <Button variant="ghost" className="w-full justify-start">
-                <MessageCircle className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start group">
+                <div className="relative mr-2">
+                  <MessageSquare className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
                 CollabSpace
               </Button>
             </Link>
             <Link to="/planboard">
-              <Button variant="ghost" className="w-full justify-start">
-                <Zap className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start group">
+                <div className="relative mr-2">
+                  <Zap className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
                 PlanBoard
               </Button>
             </Link>
             <Link to="/insightiq">
-              <Button variant="ghost" className="w-full justify-start">
-                <TrendingUp className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start group">
+                <div className="relative mr-2">
+                  <TrendingUp className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
                 InsightIQ
               </Button>
             </Link>
@@ -76,38 +95,56 @@ const Sidebar = ({ className }: SidebarProps) => {
           </h3>
           <nav className="space-y-2">
             <Link to="/filevault">
-              <Button variant="ghost" className="w-full justify-start">
-                <FolderOpen className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start group">
+                <div className="relative mr-2">
+                  <Box className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
                 FileVault
               </Button>
             </Link>
             <Link to="/budgetbuddy">
-              <Button variant="ghost" className="w-full justify-start">
-                <Wallet className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start group">
+                <div className="relative mr-2">
+                  <CreditCard className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
                 BudgetBuddy
               </Button>
             </Link>
             <Link to="/clientconnect">
-              <Button variant="ghost" className="w-full justify-start">
-                <Users2 className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start group">
+                <div className="relative mr-2">
+                  <Users2 className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
                 ClientConnect
               </Button>
             </Link>
             <Link to="/riskradar">
-              <Button variant="ghost" className="w-full justify-start">
-                <ShieldCheck className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start group">
+                <div className="relative mr-2">
+                  <Shield className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
                 RiskRadar
               </Button>
             </Link>
             <Link to="/resourcehub">
-              <Button variant="ghost" className="w-full justify-start">
-                <UserCheck className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start group">
+                <div className="relative mr-2">
+                  <UserCog className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
                 ResourceHub
               </Button>
             </Link>
             <Link to="/integrations">
-              <Button variant="ghost" className="w-full justify-start">
-                <LinkIcon className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start group">
+                <div className="relative mr-2">
+                  <Network className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
                 Integrations
               </Button>
             </Link>
@@ -119,20 +156,29 @@ const Sidebar = ({ className }: SidebarProps) => {
           </h3>
           <nav className="space-y-2">
             <Link to="/profile">
-              <Button variant="ghost" className="w-full justify-start">
-                <User className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start group">
+                <div className="relative mr-2">
+                  <User className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
                 Profile
               </Button>
             </Link>
             <Link to="/settings">
-              <Button variant="ghost" className="w-full justify-start">
-                <Settings className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start group">
+                <div className="relative mr-2">
+                  <Settings className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
                 Settings
               </Button>
             </Link>
             <Link to="/notifications">
-              <Button variant="ghost" className="w-full justify-start">
-                <Bell className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start group">
+                <div className="relative mr-2">
+                  <Bell className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
                 Notifications
               </Button>
             </Link>
