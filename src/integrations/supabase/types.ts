@@ -138,6 +138,123 @@ export type Database = {
         }
         Relationships: []
       }
+      app_availability_checks: {
+        Row: {
+          app_name: string
+          check_type: string
+          checked_at: string
+          created_at: string
+          endpoint_url: string
+          error_message: string | null
+          id: string
+          is_available: boolean
+          response_time_ms: number | null
+          status_code: number | null
+          user_id: string
+        }
+        Insert: {
+          app_name: string
+          check_type?: string
+          checked_at?: string
+          created_at?: string
+          endpoint_url: string
+          error_message?: string | null
+          id?: string
+          is_available?: boolean
+          response_time_ms?: number | null
+          status_code?: number | null
+          user_id: string
+        }
+        Update: {
+          app_name?: string
+          check_type?: string
+          checked_at?: string
+          created_at?: string
+          endpoint_url?: string
+          error_message?: string | null
+          id?: string
+          is_available?: boolean
+          response_time_ms?: number | null
+          status_code?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      app_health_metrics: {
+        Row: {
+          app_name: string
+          created_at: string
+          error_rate: number
+          id: string
+          last_check_at: string
+          response_time_ms: number
+          status: string
+          updated_at: string
+          uptime_percentage: number
+          user_id: string
+        }
+        Insert: {
+          app_name: string
+          created_at?: string
+          error_rate?: number
+          id?: string
+          last_check_at?: string
+          response_time_ms?: number
+          status?: string
+          updated_at?: string
+          uptime_percentage?: number
+          user_id: string
+        }
+        Update: {
+          app_name?: string
+          created_at?: string
+          error_rate?: number
+          id?: string
+          last_check_at?: string
+          response_time_ms?: number
+          status?: string
+          updated_at?: string
+          uptime_percentage?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      app_performance_metrics: {
+        Row: {
+          app_name: string
+          avg_response_time_ms: number
+          created_at: string
+          error_count: number
+          id: string
+          recorded_at: string
+          requests_per_minute: number
+          success_rate: number
+          user_id: string
+        }
+        Insert: {
+          app_name: string
+          avg_response_time_ms?: number
+          created_at?: string
+          error_count?: number
+          id?: string
+          recorded_at?: string
+          requests_per_minute?: number
+          success_rate?: number
+          user_id: string
+        }
+        Update: {
+          app_name?: string
+          avg_response_time_ms?: number
+          created_at?: string
+          error_count?: number
+          id?: string
+          recorded_at?: string
+          requests_per_minute?: number
+          success_rate?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       approvals: {
         Row: {
           approval_type: string | null
@@ -3992,6 +4109,17 @@ export type Database = {
       }
       increment_template_downloads: {
         Args: { template_id: string }
+        Returns: undefined
+      }
+      update_app_health_metric: {
+        Args: {
+          p_user_id: string
+          p_app_name: string
+          p_status: string
+          p_response_time_ms: number
+          p_uptime_percentage: number
+          p_error_rate: number
+        }
         Returns: undefined
       }
     }

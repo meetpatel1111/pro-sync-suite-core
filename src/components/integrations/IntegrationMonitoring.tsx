@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,159 +13,50 @@ import {
   RefreshCw,
   BarChart3,
   PieChart,
-  LineChart,
-  Zap,
-  Database,
-  Wifi,
   Server,
   Eye
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { integrationDatabaseService } from '@/services/integrationDatabaseService';
 import { useAuth } from '@/hooks/useAuth';
-
-interface HealthMetric {
-  service: string;
-  status: 'healthy' | 'warning' | 'critical' | 'unknown';
-  uptime: number;
-  response_time: number;
-  error_rate: number;
-  last_check: string;
-}
-
-interface PerformanceMetric {
-  timestamp: string;
-  requests_per_minute: number;
-  success_rate: number;
-  avg_response_time: number;
-  error_count: number;
-}
+import { appMonitoringService, AppHealthMetric, AppPerformanceMetric } from '@/services/appMonitoringService';
 
 const IntegrationMonitoring: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [healthMetrics, setHealthMetrics] = useState<HealthMetric[]>([]);
-  const [performanceData, setPerformanceData] = useState<PerformanceMetric[]>([]);
+  const [healthMetrics, setHealthMetrics] = useState<AppHealthMetric[]>([]);
+  const [performanceData, setPerformanceData] = useState<AppPerformanceMetric[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Mock health metrics for all ProSync Suite apps
-  const mockHealthMetrics: HealthMetric[] = [
-    {
-      service: 'TaskMaster',
-      status: 'healthy',
-      uptime: 99.8,
-      response_time: 120,
-      error_rate: 0.2,
-      last_check: new Date(Date.now() - 2 * 60 * 1000).toISOString()
-    },
-    {
-      service: 'TimeTrackPro',
-      status: 'healthy',
-      uptime: 99.9,
-      response_time: 85,
-      error_rate: 0.1,
-      last_check: new Date(Date.now() - 1 * 60 * 1000).toISOString()
-    },
-    {
-      service: 'CollabSpace',
-      status: 'warning',
-      uptime: 98.5,
-      response_time: 250,
-      error_rate: 1.5,
-      last_check: new Date(Date.now() - 3 * 60 * 1000).toISOString()
-    },
-    {
-      service: 'PlanBoard',
-      status: 'healthy',
-      uptime: 99.7,
-      response_time: 95,
-      error_rate: 0.3,
-      last_check: new Date(Date.now() - 1 * 60 * 1000).toISOString()
-    },
-    {
-      service: 'FileVault',
-      status: 'critical',
-      uptime: 95.2,
-      response_time: 450,
-      error_rate: 4.8,
-      last_check: new Date(Date.now() - 5 * 60 * 1000).toISOString()
-    },
-    {
-      service: 'BudgetBuddy',
-      status: 'healthy',
-      uptime: 99.6,
-      response_time: 110,
-      error_rate: 0.4,
-      last_check: new Date(Date.now() - 2 * 60 * 1000).toISOString()
-    },
-    {
-      service: 'InsightIQ',
-      status: 'healthy',
-      uptime: 99.4,
-      response_time: 180,
-      error_rate: 0.6,
-      last_check: new Date(Date.now() - 4 * 60 * 1000).toISOString()
-    },
-    {
-      service: 'ResourceHub',
-      status: 'warning',
-      uptime: 98.8,
-      response_time: 200,
-      error_rate: 1.2,
-      last_check: new Date(Date.now() - 3 * 60 * 1000).toISOString()
-    },
-    {
-      service: 'ClientConnect',
-      status: 'healthy',
-      uptime: 99.5,
-      response_time: 130,
-      error_rate: 0.5,
-      last_check: new Date(Date.now() - 2 * 60 * 1000).toISOString()
-    },
-    {
-      service: 'RiskRadar',
-      status: 'healthy',
-      uptime: 99.1,
-      response_time: 160,
-      error_rate: 0.9,
-      last_check: new Date(Date.now() - 6 * 60 * 1000).toISOString()
-    }
-  ];
-
-  // Mock performance data for the last 24 hours
-  const generateMockPerformanceData = (): PerformanceMetric[] => {
-    const data: PerformanceMetric[] = [];
-    const now = new Date();
-    
-    for (let i = 23; i >= 0; i--) {
-      const timestamp = new Date(now.getTime() - i * 60 * 60 * 1000);
-      data.push({
-        timestamp: timestamp.toISOString(),
-        requests_per_minute: Math.floor(Math.random() * 1000) + 500,
-        success_rate: Math.random() * 5 + 95, // 95-100%
-        avg_response_time: Math.floor(Math.random() * 200) + 100,
-        error_count: Math.floor(Math.random() * 10)
-      });
-    }
-    
-    return data;
-  };
-
   useEffect(() => {
-    loadMonitoringData();
-    
-    // Refresh data every 30 seconds
-    const interval = setInterval(refreshData, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    if (user) {
+      loadMonitoringData();
+      // Initialize monitoring if this is the first time
+      appMonitoringService.initializeMonitoring(user.id);
+    }
+  }, [user]);
 
   const loadMonitoringData = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
-      // In a real app, this would fetch from the database
-      setHealthMetrics(mockHealthMetrics);
-      setPerformanceData(generateMockPerformanceData());
+      
+      // Load health metrics
+      const healthData = await appMonitoringService.getHealthMetrics(user.id);
+      setHealthMetrics(healthData);
+      
+      // Load performance data for the last 24 hours
+      const endDate = new Date();
+      const startDate = new Date(endDate.getTime() - 24 * 60 * 60 * 1000);
+      
+      const performanceMetrics = await appMonitoringService.getPerformanceMetrics(
+        user.id,
+        startDate.toISOString(),
+        endDate.toISOString()
+      );
+      setPerformanceData(performanceMetrics);
+      
     } catch (error) {
       console.error('Error loading monitoring data:', error);
       toast({
@@ -180,31 +70,28 @@ const IntegrationMonitoring: React.FC = () => {
   };
 
   const refreshData = async () => {
+    if (!user) return;
+    
     try {
       setRefreshing(true);
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Update with fresh data
-      setHealthMetrics(mockHealthMetrics.map(metric => ({
-        ...metric,
-        response_time: Math.floor(Math.random() * 50) + metric.response_time - 25,
-        last_check: new Date().toISOString()
-      })));
+      // Run health checks for all apps
+      await appMonitoringService.runHealthChecks(user.id);
       
-      // Add new performance data point
-      const now = new Date();
-      const newDataPoint: PerformanceMetric = {
-        timestamp: now.toISOString(),
-        requests_per_minute: Math.floor(Math.random() * 1000) + 500,
-        success_rate: Math.random() * 5 + 95,
-        avg_response_time: Math.floor(Math.random() * 200) + 100,
-        error_count: Math.floor(Math.random() * 10)
-      };
+      // Reload the data
+      await loadMonitoringData();
       
-      setPerformanceData(prev => [...prev.slice(1), newDataPoint]);
+      toast({
+        title: 'Health Check Complete',
+        description: 'All app health statuses have been updated'
+      });
     } catch (error) {
       console.error('Error refreshing data:', error);
+      toast({
+        title: 'Health Check Failed',
+        description: 'Failed to update health statuses',
+        variant: 'destructive'
+      });
     } finally {
       setRefreshing(false);
     }
@@ -219,7 +106,7 @@ const IntegrationMonitoring: React.FC = () => {
       case 'critical':
         return <AlertTriangle className="h-4 w-4 text-red-500" />;
       default:
-        return <Clock className="h-4 w-4 text-gray-500" />;
+        return <Activity className="h-4 w-4 text-gray-500" />;
     }
   };
 
@@ -245,9 +132,10 @@ const IntegrationMonitoring: React.FC = () => {
 
   const getOverallHealth = () => {
     const totalServices = healthMetrics.length;
-    const healthyServices = healthMetrics.filter(m => m.status === 'healthy').length;
-    const warningServices = healthMetrics.filter(m => m.status === 'warning').length;
+    if (totalServices === 0) return 'unknown';
+    
     const criticalServices = healthMetrics.filter(m => m.status === 'critical').length;
+    const warningServices = healthMetrics.filter(m => m.status === 'warning').length;
 
     if (criticalServices > 0) return 'critical';
     if (warningServices > 0) return 'warning';
@@ -255,16 +143,23 @@ const IntegrationMonitoring: React.FC = () => {
   };
 
   const getAverageUptime = () => {
-    return healthMetrics.reduce((sum, metric) => sum + metric.uptime, 0) / healthMetrics.length;
+    if (healthMetrics.length === 0) return 100;
+    return healthMetrics.reduce((sum, metric) => sum + metric.uptime_percentage, 0) / healthMetrics.length;
   };
 
   const getAverageResponseTime = () => {
-    return healthMetrics.reduce((sum, metric) => sum + metric.response_time, 0) / healthMetrics.length;
+    if (healthMetrics.length === 0) return 0;
+    return healthMetrics.reduce((sum, metric) => sum + metric.response_time_ms, 0) / healthMetrics.length;
   };
 
   const getTotalErrorRate = () => {
+    if (healthMetrics.length === 0) return 0;
     return healthMetrics.reduce((sum, metric) => sum + metric.error_rate, 0) / healthMetrics.length;
   };
+
+  const healthyCount = healthMetrics.filter(m => m.status === 'healthy').length;
+  const warningCount = healthMetrics.filter(m => m.status === 'warning').length;
+  const criticalCount = healthMetrics.filter(m => m.status === 'critical').length;
 
   if (loading) {
     return (
@@ -289,7 +184,7 @@ const IntegrationMonitoring: React.FC = () => {
           disabled={refreshing}
         >
           <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
+          {refreshing ? 'Checking...' : 'Check All'}
         </Button>
       </div>
 
@@ -303,7 +198,7 @@ const IntegrationMonitoring: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold capitalize">{getOverallHealth()}</div>
             <p className="text-xs text-muted-foreground">
-              {healthMetrics.filter(m => m.status === 'healthy').length} of {healthMetrics.length} services healthy
+              {healthyCount} of {healthMetrics.length} services healthy
             </p>
           </CardContent>
         </Card>
@@ -316,7 +211,7 @@ const IntegrationMonitoring: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold">{getAverageUptime().toFixed(1)}%</div>
             <p className="text-xs text-muted-foreground">
-              Last 30 days
+              Real-time monitoring
             </p>
           </CardContent>
         </Card>
@@ -369,159 +264,112 @@ const IntegrationMonitoring: React.FC = () => {
         </TabsList>
 
         <TabsContent value="services" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {healthMetrics.map((metric) => (
-              <Card key={metric.service}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(metric.status)}
-                      <CardTitle className="text-base">{metric.service}</CardTitle>
+          {healthMetrics.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <Activity className="h-12 w-12 text-muted-foreground mb-4" />
+                <h4 className="font-medium mb-2">No Health Data</h4>
+                <p className="text-sm text-muted-foreground text-center mb-4">
+                  Click "Check All" to start monitoring your integrations
+                </p>
+                <Button onClick={refreshData} disabled={refreshing}>
+                  <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                  Start Monitoring
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {healthMetrics.map((metric) => (
+                <Card key={metric.id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(metric.status)}
+                        <CardTitle className="text-base">{metric.app_name}</CardTitle>
+                      </div>
+                      <Badge variant={getStatusColor(metric.status)}>
+                        {metric.status}
+                      </Badge>
                     </div>
-                    <Badge variant={getStatusColor(metric.status)}>
-                      {metric.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <div className="text-muted-foreground">Uptime</div>
-                      <div className="font-medium">{metric.uptime}%</div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div className="text-muted-foreground">Uptime</div>
+                        <div className="font-medium">{metric.uptime_percentage.toFixed(1)}%</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Response Time</div>
+                        <div className="font-medium">{metric.response_time_ms}ms</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Error Rate</div>
+                        <div className="font-medium">{metric.error_rate.toFixed(1)}%</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Last Check</div>
+                        <div className="font-medium">{formatTimeAgo(metric.last_check_at)}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-muted-foreground">Response Time</div>
-                      <div className="font-medium">{metric.response_time}ms</div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Health Score</span>
+                        <span>{metric.uptime_percentage.toFixed(1)}%</span>
+                      </div>
+                      <Progress value={metric.uptime_percentage} className="h-2" />
                     </div>
-                    <div>
-                      <div className="text-muted-foreground">Error Rate</div>
-                      <div className="font-medium">{metric.error_rate}%</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground">Last Check</div>
-                      <div className="font-medium">{formatTimeAgo(metric.last_check)}</div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Health Score</span>
-                      <span>{metric.uptime.toFixed(1)}%</span>
-                    </div>
-                    <Progress value={metric.uptime} className="h-2" />
-                  </div>
 
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      <Eye className="mr-1 h-3 w-3" />
-                      View Details
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Activity className="mr-1 h-3 w-3" />
-                      View Logs
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm">
+                        <Eye className="mr-1 h-3 w-3" />
+                        View Details
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        <Activity className="mr-1 h-3 w-3" />
+                        View Logs
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Requests Per Minute</CardTitle>
-                <CardDescription>Last 24 hours</CardDescription>
+                <CardTitle className="text-base">Recent Performance</CardTitle>
+                <CardDescription>Last 24 hours of app performance</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-32 flex items-end justify-between gap-1">
-                  {performanceData.slice(-12).map((data, index) => (
-                    <div
-                      key={index}
-                      className="bg-primary/20 rounded-t-sm flex-1"
-                      style={{
-                        height: `${(data.requests_per_minute / 1500) * 100}%`,
-                        minHeight: '4px'
-                      }}
-                    />
-                  ))}
-                </div>
-                <div className="mt-2 text-sm text-muted-foreground">
-                  Current: {performanceData[performanceData.length - 1]?.requests_per_minute || 0} req/min
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Success Rate</CardTitle>
-                <CardDescription>Last 24 hours</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-32 flex items-end justify-between gap-1">
-                  {performanceData.slice(-12).map((data, index) => (
-                    <div
-                      key={index}
-                      className="bg-green-500/20 rounded-t-sm flex-1"
-                      style={{
-                        height: `${data.success_rate}%`,
-                        minHeight: '4px'
-                      }}
-                    />
-                  ))}
-                </div>
-                <div className="mt-2 text-sm text-muted-foreground">
-                  Current: {performanceData[performanceData.length - 1]?.success_rate.toFixed(1) || 0}%
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Response Time</CardTitle>
-                <CardDescription>Last 24 hours</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-32 flex items-end justify-between gap-1">
-                  {performanceData.slice(-12).map((data, index) => (
-                    <div
-                      key={index}
-                      className="bg-blue-500/20 rounded-t-sm flex-1"
-                      style={{
-                        height: `${(data.avg_response_time / 300) * 100}%`,
-                        minHeight: '4px'
-                      }}
-                    />
-                  ))}
-                </div>
-                <div className="mt-2 text-sm text-muted-foreground">
-                  Current: {performanceData[performanceData.length - 1]?.avg_response_time || 0}ms
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Error Count</CardTitle>
-                <CardDescription>Last 24 hours</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-32 flex items-end justify-between gap-1">
-                  {performanceData.slice(-12).map((data, index) => (
-                    <div
-                      key={index}
-                      className="bg-red-500/20 rounded-t-sm flex-1"
-                      style={{
-                        height: `${(data.error_count / 20) * 100}%`,
-                        minHeight: data.error_count > 0 ? '8px' : '2px'
-                      }}
-                    />
-                  ))}
-                </div>
-                <div className="mt-2 text-sm text-muted-foreground">
-                  Current: {performanceData[performanceData.length - 1]?.error_count || 0} errors
-                </div>
+                {performanceData.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No performance data available
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {performanceData.slice(0, 5).map((data) => (
+                      <div key={data.id} className="flex justify-between items-center">
+                        <div>
+                          <div className="font-medium">{data.app_name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {formatTimeAgo(data.recorded_at)}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-medium">{data.success_rate.toFixed(1)}%</div>
+                          <div className="text-sm text-muted-foreground">
+                            {data.avg_response_time_ms}ms
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -540,41 +388,22 @@ const IntegrationMonitoring: React.FC = () => {
                       <div className="w-3 h-3 bg-green-500 rounded-full" />
                       <span>Healthy</span>
                     </div>
-                    <span>{healthMetrics.filter(m => m.status === 'healthy').length}</span>
+                    <span>{healthyCount}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 bg-yellow-500 rounded-full" />
                       <span>Warning</span>
                     </div>
-                    <span>{healthMetrics.filter(m => m.status === 'warning').length}</span>
+                    <span>{warningCount}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 bg-red-500 rounded-full" />
                       <span>Critical</span>
                     </div>
-                    <span>{healthMetrics.filter(m => m.status === 'critical').length}</span>
+                    <span>{criticalCount}</span>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Integration Usage</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {healthMetrics.slice(0, 5).map((metric) => (
-                    <div key={metric.service}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>{metric.service}</span>
-                        <span>{(100 - metric.error_rate).toFixed(1)}%</span>
-                      </div>
-                      <Progress value={100 - metric.error_rate} className="h-2" />
-                    </div>
-                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -584,13 +413,13 @@ const IntegrationMonitoring: React.FC = () => {
         <TabsContent value="alerts" className="space-y-4">
           <div className="space-y-4">
             {healthMetrics.filter(m => m.status !== 'healthy').map((metric) => (
-              <Card key={metric.service} className="border-l-4 border-l-yellow-500">
+              <Card key={metric.id} className="border-l-4 border-l-yellow-500">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {getStatusIcon(metric.status)}
                       <CardTitle className="text-base">
-                        {metric.status === 'critical' ? 'Critical Issue' : 'Performance Warning'} - {metric.service}
+                        {metric.status === 'critical' ? 'Critical Issue' : 'Performance Warning'} - {metric.app_name}
                       </CardTitle>
                     </div>
                     <Badge variant={getStatusColor(metric.status)}>
@@ -602,8 +431,8 @@ const IntegrationMonitoring: React.FC = () => {
                   <div className="space-y-2">
                     <p className="text-sm">
                       {metric.status === 'critical' 
-                        ? `Service is experiencing critical issues with ${metric.error_rate}% error rate and ${metric.response_time}ms response time.`
-                        : `Service performance is degraded with ${metric.error_rate}% error rate.`
+                        ? `Service is experiencing critical issues with ${metric.error_rate.toFixed(1)}% error rate and ${metric.response_time_ms}ms response time.`
+                        : `Service performance is degraded with ${metric.error_rate.toFixed(1)}% error rate.`
                       }
                     </p>
                     <div className="flex gap-2">

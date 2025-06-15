@@ -824,4 +824,80 @@ export const dbService = {
       return filteredQuery.order('created_at', { ascending: false });
     });
   },
+
+  // App Monitoring Methods
+  async getAppHealthMetrics(userId: string) {
+    return await safeQueryTable('app_health_metrics', (query) => 
+      query
+        .select('*')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+    );
+  },
+
+  async getAppPerformanceMetrics(userId: string, startDate?: string, endDate?: string) {
+    return await safeQueryTable('app_performance_metrics', (query) => {
+      let filteredQuery = query
+        .select('*')
+        .eq('user_id', userId);
+        
+      if (startDate) {
+        filteredQuery = filteredQuery.gte('recorded_at', startDate);
+      }
+      
+      if (endDate) {
+        filteredQuery = filteredQuery.lte('recorded_at', endDate);
+      }
+      
+      return filteredQuery.order('recorded_at', { ascending: false });
+    });
+  },
+
+  async getAppAvailabilityChecks(userId: string, appName?: string) {
+    return await safeQueryTable('app_availability_checks', (query) => {
+      let filteredQuery = query
+        .select('*')
+        .eq('user_id', userId);
+        
+      if (appName) {
+        filteredQuery = filteredQuery.eq('app_name', appName);
+      }
+      
+      return filteredQuery.order('checked_at', { ascending: false });
+    });
+  },
+
+  async createAppAvailabilityCheck(checkData: {
+    user_id: string;
+    app_name: string;
+    endpoint_url: string;
+    check_type: string;
+    is_available: boolean;
+    response_time_ms?: number;
+    status_code?: number;
+    error_message?: string;
+  }) {
+    return await safeQueryTable('app_availability_checks', (query) => 
+      query.insert({
+        ...checkData,
+        checked_at: new Date().toISOString()
+      })
+    );
+  },
+
+  async createAppPerformanceMetric(metricData: {
+    user_id: string;
+    app_name: string;
+    requests_per_minute: number;
+    success_rate: number;
+    avg_response_time_ms: number;
+    error_count: number;
+  }) {
+    return await safeQueryTable('app_performance_metrics', (query) => 
+      query.insert({
+        ...metricData,
+        recorded_at: new Date().toISOString()
+      })
+    );
+  }
 };
