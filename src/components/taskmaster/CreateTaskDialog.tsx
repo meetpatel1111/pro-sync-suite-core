@@ -30,7 +30,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
   const [priority, setPriority] = useState<TaskMasterTask['priority']>('medium');
   const [type, setType] = useState<TaskMasterTask['type']>('task');
   const [status, setStatus] = useState('todo');
-  const [assigneeId, setAssigneeId] = useState<string>('');
+  const [assigneeId, setAssigneeId] = useState<string>('unassigned');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +43,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
       priority,
       type,
       status,
-      assignee_id: assigneeId || undefined
+      assignee_id: assigneeId === 'unassigned' ? undefined : assigneeId
     });
 
     // Reset form
@@ -52,7 +52,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
     setPriority('medium');
     setType('task');
     setStatus('todo');
-    setAssigneeId('');
+    setAssigneeId('unassigned');
     onOpenChange(false);
   };
 
@@ -203,7 +203,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
                   <SelectValue placeholder="Select assignee" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   <SelectItem value="user-1">Team Member 1</SelectItem>
                   <SelectItem value="user-2">Team Member 2</SelectItem>
                   <SelectItem value="user-3">Team Member 3</SelectItem>
