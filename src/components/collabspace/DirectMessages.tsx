@@ -69,12 +69,16 @@ const DirectMessages: React.FC<DirectMessagesProps> = ({
       if (error) throw error;
       
       if (data) {
-        setDirectMessages(prev => [data as DirectMessage, ...prev]);
-        onSelectConversation((data as DirectMessage).id, 'dm');
-        toast({
-          title: 'Success',
-          description: 'Direct message created',
-        });
+        // Handle both single object and array responses
+        const newDM = Array.isArray(data) ? data[0] as DirectMessage : data as DirectMessage;
+        if (newDM) {
+          setDirectMessages(prev => [newDM, ...prev]);
+          onSelectConversation(newDM.id, 'dm');
+          toast({
+            title: 'Success',
+            description: 'Direct message created',
+          });
+        }
       }
     } catch (error) {
       console.error('Error creating direct message:', error);

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { safeQueryTable } from '@/utils/db-helpers';
 import { 
@@ -67,8 +66,9 @@ export const collabService = {
     if (groupError || !groupData) return { data: null, error: groupError };
 
     // Add members to the group
+    const groupResult = Array.isArray(groupData) ? groupData[0] as GroupMessage : groupData as GroupMessage;
     const members = memberIds.map(userId => ({
-      group_id: (groupData as GroupMessage).id,
+      group_id: groupResult.id,
       user_id: userId
     }));
 
@@ -287,9 +287,10 @@ export const collabService = {
 
     if (data) {
       // Add creator as member
+      const channelResult = Array.isArray(data) ? data[0] as Channel : data as Channel;
       await safeQueryTable('channel_members', (query) => 
         query.insert({
-          channel_id: (data as Channel).id,
+          channel_id: channelResult.id,
           user_id: createdBy
         })
       );
@@ -334,7 +335,7 @@ export const collabService = {
 
     if (error) return { data: null, error };
 
-    const messageData = message as Message;
+    const messageData = Array.isArray(message) ? message[0] as Message : message as Message;
     const reactions = messageData?.reactions || {};
     if (!reactions[emoji]) {
       reactions[emoji] = [];
@@ -358,7 +359,7 @@ export const collabService = {
 
     if (error) return { data: null, error };
 
-    const messageData = message as Message;
+    const messageData = Array.isArray(message) ? message[0] as Message : message as Message;
     const reactions = messageData?.reactions || {};
     if (reactions[emoji]) {
       reactions[emoji] = reactions[emoji].filter((id: string) => id !== userId);

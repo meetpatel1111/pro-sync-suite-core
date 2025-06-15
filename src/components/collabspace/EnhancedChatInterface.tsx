@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -145,14 +144,23 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
       // Check for task mentions in the message
       const taskMentions = newMessage.match(/#TASK-(\d+)/g);
       if (taskMentions && data) {
-        for (const mention of taskMentions) {
-          const taskId = mention.replace('#TASK-', '');
-          await collabService.addTaskMention((data as Message).id, taskId);
+        // Handle both single object and array responses
+        const messageResult = Array.isArray(data) ? data[0] as Message : data as Message;
+        if (messageResult) {
+          for (const mention of taskMentions) {
+            const taskId = mention.replace('#TASK-', '');
+            await collabService.addTaskMention(messageResult.id, taskId);
+          }
         }
       }
       
       // Index message for search
-      await collabService.indexMessageForSearch((data as Message)?.id || '', newMessage);
+      if (data) {
+        const messageResult = Array.isArray(data) ? data[0] as Message : data as Message;
+        if (messageResult) {
+          await collabService.indexMessageForSearch(messageResult.id, newMessage);
+        }
+      }
       
       setNewMessage("");
     } catch (error) {
