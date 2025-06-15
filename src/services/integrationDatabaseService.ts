@@ -223,7 +223,10 @@ class IntegrationDatabaseService {
         throw error;
       }
 
-      return data || [];
+      return (data || []).map(item => ({
+        ...item,
+        status: item.status as 'healthy' | 'warning' | 'error' | 'checking'
+      }));
     } catch (error) {
       console.error('Error in getIntegrationHealthStatus:', error);
       throw error;
@@ -243,7 +246,10 @@ class IntegrationDatabaseService {
         throw error;
       }
 
-      return data;
+      return {
+        ...data,
+        status: data.status as 'healthy' | 'warning' | 'error' | 'checking'
+      };
     } catch (error) {
       console.error('Error in createIntegrationHealthStatus:', error);
       throw error;
@@ -264,7 +270,10 @@ class IntegrationDatabaseService {
         throw error;
       }
 
-      return data;
+      return {
+        ...data,
+        status: data.status as 'healthy' | 'warning' | 'error' | 'checking'
+      };
     } catch (error) {
       console.error('Error in updateIntegrationHealthStatus:', error);
       throw error;
