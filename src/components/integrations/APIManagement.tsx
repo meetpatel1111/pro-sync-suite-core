@@ -3,70 +3,44 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { 
-  Plus, 
-  Edit,
-  Trash2,
-  Play,
-  Key,
-  Clock,
+  Plus,
+  TestTube,
+  Globe,
+  Lock,
   CheckCircle,
   XCircle,
-  AlertTriangle,
-  Code,
-  Book,
-  Shield,
-  Globe,
+  Clock,
   Settings,
-  Copy,
-  ExternalLink
+  Trash2,
+  Edit
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { integrationDatabaseService } from '@/services/integrationDatabaseService';
+import { integrationDatabaseService, ApiEndpoint } from '@/services/integrationDatabaseService';
 import { useAuth } from '@/hooks/useAuth';
-
-interface ApiEndpoint {
-  id: string;
-  name: string;
-  url: string;
-  method: string;
-  headers: Record<string, string>;
-  auth_config: Record<string, any>;
-  rate_limit?: number;
-  timeout_seconds: number;
-  is_active: boolean;
-  last_tested_at?: string;
-  test_status?: string;
-  created_at: string;
-  updated_at: string;
-}
 
 const APIManagement: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [endpoints, setEndpoints] = useState<ApiEndpoint[]>([]);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [editingEndpoint, setEditingEndpoint] = useState<ApiEndpoint | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingEndpoint, setEditingEndpoint] = useState<ApiEndpoint | null>(null);
   const [testingEndpoint, setTestingEndpoint] = useState<string | null>(null);
 
-  const [newEndpoint, setNewEndpoint] = useState({
+  const [formData, setFormData] = useState({
     name: '',
     url: '',
     method: 'GET',
-    headers: '{\n  "Content-Type": "application/json"\n}',
+    headers: '{}',
     auth_config: '{}',
     rate_limit: 100,
-    timeout_seconds: 30
+    timeout_seconds: 30,
+    is_active: true
   });
-
-  const httpMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
   useEffect(() => {
     if (user) {
@@ -82,7 +56,7 @@ const APIManagement: React.FC = () => {
       const data = await integrationDatabaseService.getApiEndpoints(user.id);
       setEndpoints(data);
     } catch (error) {
-      console.error('Error loading endpoints:', error);
+      console.error('Error loading API endpoints:', error);
       toast({
         title: 'Error',
         description: 'Failed to load API endpoints',
@@ -93,58 +67,60 @@ const APIManagement: React.FC = () => {
     }
   };
 
-  const createEndpoint = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!user) return;
 
     try {
-      let headers, authConfig;
+      let headers, auth_config;
       
       try {
-        headers = JSON.parse(newEndpoint.headers);
-        authConfig = JSON.parse(newEndpoint.auth_config);
-      } catch (e) {
+        headers = JSON.parse(formData.headers);
+        auth_config = JSON.parse(formData.auth_config);
+      } catch (error) {
         toast({
           title: 'Invalid JSON',
-          description: 'Please check your headers and auth configuration JSON',
+          description: 'Please check your headers and auth config JSON syntax',
           variant: 'destructive'
         });
         return;
       }
 
-      const endpoint = {
+      const endpointData = {
         user_id: user.id,
-        name: newEndpoint.name,
-        url: newEndpoint.url,
-        method: newEndpoint.method,
+        name: formData.name,
+        url: formData.url,
+        method: formData.method,
         headers,
-        auth_config: authConfig,
-        rate_limit: newEndpoint.rate_limit,
-        timeout_seconds: newEndpoint.timeout_seconds,
-        is_active: true
+        auth_config,
+        rate_limit: formData.rate_limit,
+        timeout_seconds: formData.timeout_seconds,
+        is_active: formData.is_active,
+        test_status: 'pending' as const,
+        last_tested_at: new Date().toISOString()
       };
 
-      const created = await integrationDatabaseService.createApiEndpoint(endpoint);
-      setEndpoints(prev => [created, ...prev]);
-      setShowCreateDialog(false);
-      setNewEndpoint({
-        name: '',
-        url: '',
-        method: 'GET',
-        headers: '{\n  "Content-Type": "application/json"\n}',
-        auth_config: '{}',
-        rate_limit: 100,
-        timeout_seconds: 30
-      });
+      if (editingEndpoint) {
+        await integrationDatabaseService.updateApiEndpoint(editingEndpoint.id, endpointData);
+        toast({
+          title: 'Success',
+          description: 'API endpoint updated successfully'
+        });
+      } else {
+        await integrationDatabaseService.createApiEndpoint(endpointData);
+        toast({
+          title: 'Success',
+          description: 'API endpoint created successfully'
+        });
+      }
 
-      toast({
-        title: 'Endpoint Created',
-        description: 'API endpoint has been created successfully'
-      });
+      resetForm();
+      loadEndpoints();
     } catch (error) {
-      console.error('Error creating endpoint:', error);
+      console.error('Error saving endpoint:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create API endpoint',
+        description: 'Failed to save API endpoint',
         variant: 'destructive'
       });
     }
@@ -155,20 +131,15 @@ const APIManagement: React.FC = () => {
       setTestingEndpoint(endpoint.id);
       const result = await integrationDatabaseService.testApiEndpoint(endpoint.id);
       
-      setEndpoints(prev => prev.map(ep => 
-        ep.id === endpoint.id 
-          ? { ...ep, test_status: result.success ? 'success' : 'failed', last_tested_at: result.tested_at }
-          : ep
-      ));
-
       toast({
         title: result.success ? 'Test Successful' : 'Test Failed',
-        description: result.success 
-          ? `API responded with status ${result.status}` 
-          : 'API test failed - check endpoint configuration',
+        description: `Status: ${result.status}`,
         variant: result.success ? 'default' : 'destructive'
       });
+      
+      loadEndpoints();
     } catch (error) {
+      console.error('Error testing endpoint:', error);
       toast({
         title: 'Test Failed',
         description: 'Failed to test API endpoint',
@@ -179,47 +150,71 @@ const APIManagement: React.FC = () => {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: 'Copied',
-      description: 'Copied to clipboard'
-    });
+  const deleteEndpoint = async (id: string) => {
+    try {
+      await integrationDatabaseService.deleteApiEndpoint(id);
+      toast({
+        title: 'Success',
+        description: 'API endpoint deleted successfully'
+      });
+      loadEndpoints();
+    } catch (error) {
+      console.error('Error deleting endpoint:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete API endpoint',
+        variant: 'destructive'
+      });
+    }
   };
 
-  const getStatusIcon = (status?: string) => {
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      url: '',
+      method: 'GET',
+      headers: '{}',
+      auth_config: '{}',
+      rate_limit: 100,
+      timeout_seconds: 30,
+      is_active: true
+    });
+    setShowAddForm(false);
+    setEditingEndpoint(null);
+  };
+
+  const editEndpoint = (endpoint: ApiEndpoint) => {
+    setFormData({
+      name: endpoint.name,
+      url: endpoint.url,
+      method: endpoint.method,
+      headers: JSON.stringify(endpoint.headers, null, 2),
+      auth_config: JSON.stringify(endpoint.auth_config, null, 2),
+      rate_limit: endpoint.rate_limit || 100,
+      timeout_seconds: endpoint.timeout_seconds,
+      is_active: endpoint.is_active
+    });
+    setEditingEndpoint(endpoint);
+    setShowAddForm(true);
+  };
+
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case 'success':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'failed':
         return <XCircle className="h-4 w-4 text-red-500" />;
       default:
-        return <AlertTriangle className="h-4 w-4 text-gray-500" />;
+        return <Clock className="h-4 w-4 text-gray-500" />;
     }
   };
 
-  const getMethodColor = (method: string) => {
-    switch (method) {
-      case 'GET': return 'bg-green-100 text-green-800';
-      case 'POST': return 'bg-blue-100 text-blue-800';
-      case 'PUT': return 'bg-orange-100 text-orange-800';
-      case 'PATCH': return 'bg-yellow-100 text-yellow-800';
-      case 'DELETE': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'success': return 'default';
+      case 'failed': return 'destructive';
+      default: return 'secondary';
     }
-  };
-
-  const formatTimeAgo = (timestamp?: string) => {
-    if (!timestamp) return 'Never';
-    
-    const now = new Date();
-    const time = new Date(timestamp);
-    const diffInMinutes = Math.floor((now.getTime() - time.getTime()) / (1000 * 60));
-    
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-    return `${Math.floor(diffInMinutes / 1440)}d ago`;
   };
 
   if (loading) {
@@ -236,333 +231,221 @@ const APIManagement: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold">API Management</h2>
           <p className="text-muted-foreground">
-            Manage and test your external API integrations
+            Configure and test your API endpoints
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
+        <Button onClick={() => setShowAddForm(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Add API Endpoint
+          Add Endpoint
         </Button>
       </div>
 
-      <Tabs defaultValue="endpoints" className="w-full">
-        <TabsList>
-          <TabsTrigger value="endpoints" className="flex items-center gap-2">
-            <Globe className="h-4 w-4" />
-            Endpoints
-          </TabsTrigger>
-          <TabsTrigger value="authentication" className="flex items-center gap-2">
-            <Key className="h-4 w-4" />
-            Authentication
-          </TabsTrigger>
-          <TabsTrigger value="documentation" className="flex items-center gap-2">
-            <Book className="h-4 w-4" />
-            Documentation
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="endpoints" className="space-y-4">
-          {endpoints.length === 0 ? (
-            <div className="text-center py-16">
-              <Globe className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No API Endpoints</h3>
-              <p className="text-muted-foreground mb-4">
-                Start by adding your first API endpoint
-              </p>
-              <Button onClick={() => setShowCreateDialog(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Endpoint
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {endpoints.map((endpoint) => (
-                <Card key={endpoint.id}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Badge className={getMethodColor(endpoint.method)}>
-                          {endpoint.method}
-                        </Badge>
-                        <div>
-                          <CardTitle className="text-base">{endpoint.name}</CardTitle>
-                          <CardDescription className="font-mono text-xs">
-                            {endpoint.url}
-                          </CardDescription>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getStatusIcon(endpoint.test_status)}
-                        <Badge variant={endpoint.is_active ? 'default' : 'secondary'}>
-                          {endpoint.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <div className="flex items-center gap-4">
-                        <span>Last tested: {formatTimeAgo(endpoint.last_tested_at)}</span>
-                        <span>Timeout: {endpoint.timeout_seconds}s</span>
-                        {endpoint.rate_limit && (
-                          <span>Rate limit: {endpoint.rate_limit}/min</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => testEndpoint(endpoint)}
-                        disabled={testingEndpoint === endpoint.id}
-                      >
-                        <Play className="mr-2 h-3 w-3" />
-                        {testingEndpoint === endpoint.id ? 'Testing...' : 'Test'}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyToClipboard(endpoint.url)}
-                      >
-                        <Copy className="mr-2 h-3 w-3" />
-                        Copy URL
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditingEndpoint(endpoint)}
-                      >
-                        <Edit className="mr-2 h-3 w-3" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          // Delete endpoint logic
-                          toast({
-                            title: 'Feature Coming Soon',
-                            description: 'Endpoint deletion will be available in the next update'
-                          });
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-3 w-3" />
-                        Delete
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="authentication" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Authentication Methods
-              </CardTitle>
-              <CardDescription>
-                Configure authentication for your API endpoints
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+      {/* Add/Edit Form */}
+      {showAddForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {editingEndpoint ? 'Edit API Endpoint' : 'Add New API Endpoint'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="p-4">
-                  <h4 className="font-medium mb-2">API Key Authentication</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Simple API key in headers or query parameters
-                  </p>
-                  <Badge variant="outline">Supported</Badge>
-                </Card>
-                
-                <Card className="p-4">
-                  <h4 className="font-medium mb-2">Bearer Token</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    JWT or other bearer tokens in Authorization header
-                  </p>
-                  <Badge variant="outline">Supported</Badge>
-                </Card>
-                
-                <Card className="p-4">
-                  <h4 className="font-medium mb-2">OAuth 2.0</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Standard OAuth 2.0 flow with refresh tokens
-                  </p>
-                  <Badge variant="secondary">Coming Soon</Badge>
-                </Card>
-                
-                <Card className="p-4">
-                  <h4 className="font-medium mb-2">Basic Authentication</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Username and password authentication
-                  </p>
-                  <Badge variant="outline">Supported</Badge>
-                </Card>
+                <div>
+                  <label className="text-sm font-medium">Name</label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="My API Endpoint"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Method</label>
+                  <Select 
+                    value={formData.method} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, method: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="GET">GET</SelectItem>
+                      <SelectItem value="POST">POST</SelectItem>
+                      <SelectItem value="PUT">PUT</SelectItem>
+                      <SelectItem value="DELETE">DELETE</SelectItem>
+                      <SelectItem value="PATCH">PATCH</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="documentation" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Book className="h-5 w-5" />
-                API Integration Guide
-              </CardTitle>
-              <CardDescription>
-                Learn how to integrate external APIs with ProSync
-              </CardDescription>
+              <div>
+                <label className="text-sm font-medium">URL</label>
+                <Input
+                  value={formData.url}
+                  onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
+                  placeholder="https://api.example.com/endpoint"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Rate Limit (req/min)</label>
+                  <Input
+                    type="number"
+                    value={formData.rate_limit}
+                    onChange={(e) => setFormData(prev => ({ ...prev, rate_limit: parseInt(e.target.value) }))}
+                    min="1"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Timeout (seconds)</label>
+                  <Input
+                    type="number"
+                    value={formData.timeout_seconds}
+                    onChange={(e) => setFormData(prev => ({ ...prev, timeout_seconds: parseInt(e.target.value) }))}
+                    min="1"
+                    max="300"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Headers (JSON)</label>
+                <Textarea
+                  value={formData.headers}
+                  onChange={(e) => setFormData(prev => ({ ...prev, headers: e.target.value }))}
+                  placeholder='{"Authorization": "Bearer token", "Content-Type": "application/json"}'
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Auth Config (JSON)</label>
+                <Textarea
+                  value={formData.auth_config}
+                  onChange={(e) => setFormData(prev => ({ ...prev, auth_config: e.target.value }))}
+                  placeholder='{"type": "bearer", "token": "your-token"}'
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="is_active"
+                    checked={formData.is_active}
+                    onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+                  />
+                  <label htmlFor="is_active" className="text-sm font-medium">
+                    Active
+                  </label>
+                </div>
+                <div className="flex space-x-2">
+                  <Button type="button" variant="outline" onClick={resetForm}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">
+                    {editingEndpoint ? 'Update' : 'Create'} Endpoint
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Endpoints List */}
+      <div className="grid grid-cols-1 gap-4">
+        {endpoints.map((endpoint) => (
+          <Card key={endpoint.id}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div>
+                    <CardTitle className="text-base">{endpoint.name}</CardTitle>
+                    <CardDescription className="flex items-center gap-2">
+                      <Badge variant="outline">{endpoint.method}</Badge>
+                      <span className="font-mono text-xs">{endpoint.url}</span>
+                    </CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    {getStatusIcon(endpoint.test_status)}
+                    <Badge variant={getStatusColor(endpoint.test_status)}>
+                      {endpoint.test_status || 'pending'}
+                    </Badge>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => testEndpoint(endpoint)}
+                      disabled={testingEndpoint === endpoint.id || !endpoint.is_active}
+                    >
+                      <TestTube className="h-3 w-3" />
+                      {testingEndpoint === endpoint.id ? 'Testing...' : 'Test'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => editEndpoint(endpoint)}
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => deleteEndpoint(endpoint.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="prose max-w-none">
-                <h4>Quick Start</h4>
-                <ol className="list-decimal list-inside space-y-2 text-sm">
-                  <li>Add your API endpoint using the "Add API Endpoint" button</li>
-                  <li>Configure authentication in the endpoint settings</li>
-                  <li>Test the endpoint to ensure connectivity</li>
-                  <li>Use the endpoint in your automation workflows</li>
-                </ol>
-
-                <h4 className="mt-6">Supported Features</h4>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>Custom headers and authentication</li>
-                  <li>Rate limiting and timeout configuration</li>
-                  <li>Endpoint health monitoring</li>
-                  <li>Automatic retry on failures</li>
-                  <li>Request/response logging</li>
-                </ul>
-
-                <h4 className="mt-6">Best Practices</h4>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>Always test endpoints before using in production</li>
-                  <li>Set appropriate timeout values for your use case</li>
-                  <li>Use environment variables for sensitive data</li>
-                  <li>Monitor endpoint health regularly</li>
-                  <li>Implement proper error handling</li>
-                </ul>
-              </div>
-
-              <div className="pt-4 border-t">
-                <Button variant="outline" className="mr-2">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  View Full Documentation
-                </Button>
-                <Button variant="outline">
-                  <Code className="mr-2 h-4 w-4" />
-                  API Reference
-                </Button>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-1">
+                    {endpoint.is_active ? (
+                      <Globe className="h-3 w-3 text-green-500" />
+                    ) : (
+                      <Lock className="h-3 w-3 text-gray-500" />
+                    )}
+                    {endpoint.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                  <span>Rate limit: {endpoint.rate_limit || 100}/min</span>
+                  <span>Timeout: {endpoint.timeout_seconds}s</span>
+                </div>
+                {endpoint.last_tested_at && (
+                  <span className="text-muted-foreground">
+                    Last tested: {new Date(endpoint.last_tested_at).toLocaleDateString()}
+                  </span>
+                )}
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        ))}
+      </div>
 
-      {/* Create Endpoint Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add API Endpoint</DialogTitle>
-            <DialogDescription>
-              Configure a new external API endpoint for integration
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">Name</Label>
-              <Input
-                id="name"
-                value={newEndpoint.name}
-                onChange={(e) => setNewEndpoint({ ...newEndpoint, name: e.target.value })}
-                className="col-span-3"
-                placeholder="My API Endpoint"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="url" className="text-right">URL</Label>
-              <Input
-                id="url"
-                value={newEndpoint.url}
-                onChange={(e) => setNewEndpoint({ ...newEndpoint, url: e.target.value })}
-                className="col-span-3"
-                placeholder="https://api.example.com/v1/data"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="method" className="text-right">Method</Label>
-              <Select
-                value={newEndpoint.method}
-                onValueChange={(value) => setNewEndpoint({ ...newEndpoint, method: value })}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {httpMethods.map(method => (
-                    <SelectItem key={method} value={method}>{method}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="headers" className="text-right pt-2">Headers</Label>
-              <Textarea
-                id="headers"
-                value={newEndpoint.headers}
-                onChange={(e) => setNewEndpoint({ ...newEndpoint, headers: e.target.value })}
-                className="col-span-3 font-mono text-sm"
-                rows={4}
-                placeholder='{"Content-Type": "application/json"}'
-              />
-            </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="auth" className="text-right pt-2">Auth Config</Label>
-              <Textarea
-                id="auth"
-                value={newEndpoint.auth_config}
-                onChange={(e) => setNewEndpoint({ ...newEndpoint, auth_config: e.target.value })}
-                className="col-span-3 font-mono text-sm"
-                rows={3}
-                placeholder='{"type": "bearer", "token": "your-token"}'
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="timeout" className="text-right">Timeout (s)</Label>
-                <Input
-                  id="timeout"
-                  type="number"
-                  value={newEndpoint.timeout_seconds}
-                  onChange={(e) => setNewEndpoint({ ...newEndpoint, timeout_seconds: parseInt(e.target.value) || 30 })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="rate-limit" className="text-right">Rate Limit</Label>
-                <Input
-                  id="rate-limit"
-                  type="number"
-                  value={newEndpoint.rate_limit}
-                  onChange={(e) => setNewEndpoint({ ...newEndpoint, rate_limit: parseInt(e.target.value) || 100 })}
-                  className="col-span-3"
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={createEndpoint}>
-              Create Endpoint
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {endpoints.length === 0 && (
+        <div className="text-center py-16">
+          <Settings className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-2">No API Endpoints</h3>
+          <p className="text-muted-foreground mb-4">
+            Create your first API endpoint to start managing external integrations
+          </p>
+          <Button onClick={() => setShowAddForm(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Your First Endpoint
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

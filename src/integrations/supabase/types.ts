@@ -3936,6 +3936,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      increment_template_downloads: {
+        Args: { template_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       notification_type: "info" | "warning" | "success" | "error"

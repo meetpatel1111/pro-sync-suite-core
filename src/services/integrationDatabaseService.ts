@@ -193,8 +193,14 @@ export const integrationDatabaseService = {
 
     if (error) throw error;
 
-    // Increment download count using raw SQL
-    await supabase.rpc('increment_template_downloads', { template_id: templateId });
+    // Increment download count using the custom function
+    const { error: incrementError } = await supabase.rpc('increment_template_downloads', { 
+      template_id: templateId 
+    });
+    
+    if (incrementError) {
+      console.error('Error incrementing download count:', incrementError);
+    }
   },
 
   // Marketplace - now gets from integration_templates (all free)
@@ -262,6 +268,27 @@ export const integrationDatabaseService = {
       headers: typeof data.headers === 'string' ? JSON.parse(data.headers) : (data.headers as Record<string, string>) || {},
       auth_config: typeof data.auth_config === 'string' ? JSON.parse(data.auth_config) : data.auth_config,
     };
+  },
+
+  async updateApiEndpoint(id: string, updates: Partial<ApiEndpoint>): Promise<void> {
+    const { error } = await supabase
+      .from('api_endpoints')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async deleteApiEndpoint(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('api_endpoints')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
   },
 
   async testApiEndpoint(endpointId: string): Promise<any> {
@@ -377,6 +404,69 @@ export const integrationDatabaseService = {
         last_checked_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
+
+    if (error) throw error;
+  },
+
+  // Automation Workflows
+  async createAutomationWorkflow(workflow: Omit<AutomationWorkflow, 'id' | 'created_at' | 'updated_at'>): Promise<AutomationWorkflow> {
+    const { data, error } = await supabase
+      .from('automation_workflows')
+      .insert({
+        ...workflow,
+        id: uuidv4(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    
+    // Transform the database response to match our interface
+    return {
+      ...data,
+      trigger_config: typeof data.trigger_config === 'string' ? JSON.parse(data.trigger_config) : data.trigger_config,
+      actions_config: typeof data.actions_config === 'string' ? JSON.parse(data.actions_config) : data.actions_config,
+      conditions_config: typeof data.conditions_config === 'string' ? JSON.parse(data.conditions_config) : data.conditions_config,
+    };
+  },
+
+  async getAutomationWorkflows(userId: string): Promise<AutomationWorkflow[]> {
+    const { data, error } = await supabase
+      .from('automation_workflows')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    
+    // Transform the database response to match our interface
+    return (data || []).map(item => ({
+      ...item,
+      trigger_config: typeof item.trigger_config === 'string' ? JSON.parse(item.trigger_config) : item.trigger_config,
+      actions_config: typeof item.actions_config === 'string' ? JSON.parse(item.actions_config) : item.actions_config,
+      conditions_config: typeof item.conditions_config === 'string' ? JSON.parse(item.conditions_config) : item.conditions_config,
+    }));
+  },
+
+  async updateAutomationWorkflow(id: string, updates: Partial<AutomationWorkflow>): Promise<void> {
+    const { error } = await supabase
+      .from('automation_workflows')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async deleteAutomationWorkflow(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('automation_workflows')
+      .delete()
+      .eq('id', id);
 
     if (error) throw error;
   }
