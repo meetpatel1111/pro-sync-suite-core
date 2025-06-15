@@ -301,6 +301,51 @@ class TaskmasterService {
     }
   }
 
+  private validateAndTransformTask(item: any, boardId?: string): TaskMasterTask {
+    // Validate priority
+    const validPriorities = ['low', 'medium', 'high', 'critical'] as const;
+    const priority = validPriorities.includes(item.priority) ? item.priority : 'medium';
+    
+    // Validate type
+    const validTypes = ['task', 'bug', 'story', 'epic'] as const;
+    const type = validTypes.includes(item.type) ? item.type : 'task';
+    
+    // Validate visibility
+    const validVisibilities = ['team', 'private', 'public'] as const;
+    const visibility = validVisibilities.includes(item.visibility) ? item.visibility : 'team';
+
+    return {
+      id: item.id,
+      task_number: item.task_number || 1,
+      task_key: item.task_key || `TASK-${item.id?.substring(0, 4)}`,
+      board_id: item.board_id || boardId || '',
+      project_id: item.project_id,
+      sprint_id: item.sprint_id,
+      title: item.title,
+      description: item.description || '',
+      status: item.status,
+      priority: priority,
+      type: type,
+      start_date: item.start_date,
+      due_date: item.due_date,
+      estimate_hours: item.estimate_hours,
+      actual_hours: item.actual_hours || 0,
+      assignee_id: item.assignee_id,
+      reporter_id: item.reporter_id,
+      created_by: item.created_by,
+      assigned_to: item.assigned_to,
+      reviewer_id: item.reviewer_id,
+      parent_task_id: item.parent_task_id,
+      linked_task_ids: item.linked_task_ids,
+      recurrence_rule: item.recurrence_rule,
+      visibility: visibility,
+      position: item.position || 0,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      updated_by: item.updated_by
+    };
+  }
+
   async getTasks(boardId: string) {
     const { data, error } = await supabase
       .from('tasks')
@@ -310,51 +355,10 @@ class TaskmasterService {
 
     if (error) return { data: null, error };
 
-    // Transform the data to match TaskMasterTask interface
-    const tasks: TaskMasterTask[] = (data || []).map((item: any) => {
-      // Validate priority
-      const validPriorities = ['low', 'medium', 'high', 'critical'] as const;
-      const priority = validPriorities.includes(item.priority) ? item.priority as typeof validPriorities[number] : 'medium';
-      
-      // Validate type
-      const validTypes = ['task', 'bug', 'story', 'epic'] as const;
-      const type = validTypes.includes(item.type) ? item.type as typeof validTypes[number] : 'task';
-      
-      // Validate visibility
-      const validVisibilities = ['team', 'private', 'public'] as const;
-      const visibility = validVisibilities.includes(item.visibility) ? item.visibility as typeof validVisibilities[number] : 'team';
-
-      return {
-        id: item.id,
-        task_number: item.task_number || 1,
-        task_key: item.task_key || `TASK-${item.id?.substring(0, 4)}`,
-        board_id: item.board_id || boardId,
-        project_id: item.project_id,
-        sprint_id: item.sprint_id,
-        title: item.title,
-        description: item.description || '',
-        status: item.status,
-        priority: priority,
-        type: type,
-        start_date: item.start_date,
-        due_date: item.due_date,
-        estimate_hours: item.estimate_hours,
-        actual_hours: item.actual_hours || 0,
-        assignee_id: item.assignee_id,
-        reporter_id: item.reporter_id,
-        created_by: item.created_by,
-        assigned_to: item.assigned_to,
-        reviewer_id: item.reviewer_id,
-        parent_task_id: item.parent_task_id,
-        linked_task_ids: item.linked_task_ids,
-        recurrence_rule: item.recurrence_rule,
-        visibility: visibility,
-        position: item.position || 0,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        updated_by: item.updated_by
-      };
-    });
+    // Transform the data using the helper method
+    const tasks: TaskMasterTask[] = (data || []).map((item: any) => 
+      this.validateAndTransformTask(item, boardId)
+    );
 
     return { data: tasks, error };
   }
@@ -384,48 +388,8 @@ class TaskmasterService {
 
     if (error) return { data: null, error };
 
-    // Validate priority, type, and visibility
-    const validPriorities = ['low', 'medium', 'high', 'critical'] as const;
-    const priority = validPriorities.includes(data.priority) ? data.priority as typeof validPriorities[number] : 'medium';
-    
-    const validTypes = ['task', 'bug', 'story', 'epic'] as const;
-    const type = validTypes.includes(data.type) ? data.type as typeof validTypes[number] : 'task';
-    
-    const validVisibilities = ['team', 'private', 'public'] as const;
-    const visibility = validVisibilities.includes(data.visibility) ? data.visibility as typeof validVisibilities[number] : 'team';
-
-    // Transform the result to match TaskMasterTask interface
-    const task: TaskMasterTask = {
-      id: data.id,
-      task_number: data.task_number || 1,
-      task_key: data.task_key || `TASK-${data.id?.substring(0, 4)}`,
-      board_id: data.board_id,
-      project_id: data.project_id,
-      sprint_id: data.sprint_id,
-      title: data.title,
-      description: data.description || '',
-      status: data.status,
-      priority: priority,
-      type: type,
-      start_date: data.start_date,
-      due_date: data.due_date,
-      estimate_hours: data.estimate_hours,
-      actual_hours: data.actual_hours || 0,
-      assignee_id: data.assignee_id,
-      reporter_id: data.reporter_id,
-      created_by: data.created_by,
-      assigned_to: data.assigned_to,
-      reviewer_id: data.reviewer_id,
-      parent_task_id: data.parent_task_id,
-      linked_task_ids: data.linked_task_ids,
-      recurrence_rule: data.recurrence_rule,
-      visibility: visibility,
-      position: data.position || 0,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
-      updated_by: data.updated_by
-    };
-
+    // Transform the result using the helper method
+    const task = this.validateAndTransformTask(data);
     return { data: task, error };
   }
 
@@ -443,48 +407,8 @@ class TaskmasterService {
 
     if (error) return { data: null, error };
 
-    // Validate priority, type, and visibility
-    const validPriorities = ['low', 'medium', 'high', 'critical'] as const;
-    const priority = validPriorities.includes(data.priority) ? data.priority as typeof validPriorities[number] : 'medium';
-    
-    const validTypes = ['task', 'bug', 'story', 'epic'] as const;
-    const type = validTypes.includes(data.type) ? data.type as typeof validTypes[number] : 'task';
-    
-    const validVisibilities = ['team', 'private', 'public'] as const;
-    const visibility = validVisibilities.includes(data.visibility) ? data.visibility as typeof validVisibilities[number] : 'team';
-
-    // Transform the result to match TaskMasterTask interface
-    const task: TaskMasterTask = {
-      id: data.id,
-      task_number: data.task_number || 1,
-      task_key: data.task_key || `TASK-${data.id?.substring(0, 4)}`,
-      board_id: data.board_id,
-      project_id: data.project_id,
-      sprint_id: data.sprint_id,
-      title: data.title,
-      description: data.description || '',
-      status: data.status,
-      priority: priority,
-      type: type,
-      start_date: data.start_date,
-      due_date: data.due_date,
-      estimate_hours: data.estimate_hours,
-      actual_hours: data.actual_hours || 0,
-      assignee_id: data.assignee_id,
-      reporter_id: data.reporter_id,
-      created_by: data.created_by,
-      assigned_to: data.assigned_to,
-      reviewer_id: data.reviewer_id,
-      parent_task_id: data.parent_task_id,
-      linked_task_ids: data.linked_task_ids,
-      recurrence_rule: data.recurrence_rule,
-      visibility: visibility,
-      position: data.position || 0,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
-      updated_by: data.updated_by
-    };
-
+    // Transform the result using the helper method
+    const task = this.validateAndTransformTask(data);
     return { data: task, error };
   }
 
@@ -506,48 +430,10 @@ class TaskmasterService {
 
     if (error) return { data: null, error };
 
-    // Transform the data to match TaskMasterTask interface with type validation
-    const tasks: TaskMasterTask[] = (data || []).map((item: any) => {
-      const validPriorities = ['low', 'medium', 'high', 'critical'] as const;
-      const priority = validPriorities.includes(item.priority) ? item.priority as typeof validPriorities[number] : 'medium';
-      
-      const validTypes = ['task', 'bug', 'story', 'epic'] as const;
-      const type = validTypes.includes(item.type) ? item.type as typeof validTypes[number] : 'task';
-      
-      const validVisibilities = ['team', 'private', 'public'] as const;
-      const visibility = validVisibilities.includes(item.visibility) ? item.visibility as typeof validVisibilities[number] : 'team';
-
-      return {
-        id: item.id,
-        task_number: item.task_number || 1,
-        task_key: item.task_key || `TASK-${item.id?.substring(0, 4)}`,
-        board_id: item.board_id,
-        project_id: item.project_id,
-        sprint_id: item.sprint_id,
-        title: item.title,
-        description: item.description || '',
-        status: item.status,
-        priority: priority,
-        type: type,
-        start_date: item.start_date,
-        due_date: item.due_date,
-        estimate_hours: item.estimate_hours,
-        actual_hours: item.actual_hours || 0,
-        assignee_id: item.assignee_id,
-        reporter_id: item.reporter_id,
-        created_by: item.created_by,
-        assigned_to: item.assigned_to,
-        reviewer_id: item.reviewer_id,
-        parent_task_id: item.parent_task_id,
-        linked_task_ids: item.linked_task_ids,
-        recurrence_rule: item.recurrence_rule,
-        visibility: visibility,
-        position: item.position || 0,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        updated_by: item.updated_by
-      };
-    });
+    // Transform the data using the helper method
+    const tasks: TaskMasterTask[] = (data || []).map((item: any) => 
+      this.validateAndTransformTask(item)
+    );
 
     return { data: tasks, error };
   }
@@ -561,48 +447,10 @@ class TaskmasterService {
 
     if (error) return { data: null, error };
 
-    // Transform the data to match TaskMasterTask interface with type validation
-    const tasks: TaskMasterTask[] = (data || []).map((item: any) => {
-      const validPriorities = ['low', 'medium', 'high', 'critical'] as const;
-      const priority = validPriorities.includes(item.priority) ? item.priority as typeof validPriorities[number] : 'medium';
-      
-      const validTypes = ['task', 'bug', 'story', 'epic'] as const;
-      const type = validTypes.includes(item.type) ? item.type as typeof validTypes[number] : 'task';
-      
-      const validVisibilities = ['team', 'private', 'public'] as const;
-      const visibility = validVisibilities.includes(item.visibility) ? item.visibility as typeof validVisibilities[number] : 'team';
-
-      return {
-        id: item.id,
-        task_number: item.task_number || 1,
-        task_key: item.task_key || `TASK-${item.id?.substring(0, 4)}`,
-        board_id: item.board_id,
-        project_id: item.project_id,
-        sprint_id: item.sprint_id,
-        title: item.title,
-        description: item.description || '',
-        status: item.status,
-        priority: priority,
-        type: type,
-        start_date: item.start_date,
-        due_date: item.due_date,
-        estimate_hours: item.estimate_hours,
-        actual_hours: item.actual_hours || 0,
-        assignee_id: item.assignee_id,
-        reporter_id: item.reporter_id,
-        created_by: item.created_by,
-        assigned_to: item.assigned_to,
-        reviewer_id: item.reviewer_id,
-        parent_task_id: item.parent_task_id,
-        linked_task_ids: item.linked_task_ids,
-        recurrence_rule: item.recurrence_rule,
-        visibility: visibility,
-        position: item.position || 0,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        updated_by: item.updated_by
-      };
-    });
+    // Transform the data using the helper method
+    const tasks: TaskMasterTask[] = (data || []).map((item: any) => 
+      this.validateAndTransformTask(item)
+    );
 
     return { data: tasks, error };
   }
