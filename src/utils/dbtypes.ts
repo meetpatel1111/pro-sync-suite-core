@@ -1,4 +1,3 @@
-
 export interface Dashboard {
   id: string;
   title: string;
@@ -52,13 +51,17 @@ export interface Task {
   description?: string;
   status: string;
   priority: string;
+  start_date?: string;
   due_date?: string;
-  assignee?: string;
   assigned_to?: string[];
-  project?: string;
   project_id?: string;
-  user_id: string;
+  created_by?: string;
+  parent_task_id?: string;
+  reviewer_id?: string;
+  recurrence_rule?: string;
+  visibility?: string;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface GeneralSetting {

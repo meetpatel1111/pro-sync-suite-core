@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
 import AppLayout from '@/components/AppLayout';
@@ -105,10 +104,24 @@ const PlanBoard = () => {
         throw error;
       }
       
+      // Map the database response to match our Task interface
       const tasksWithDefaults: Task[] = (data || []).map(task => ({
-        ...task,
-        start_date: task.start_date || new Date().toISOString().split('T')[0],
-        // Remove the assignee property since it's not in the Task interface
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        status: task.status,
+        priority: task.priority,
+        start_date: task.start_date,
+        due_date: task.due_date,
+        assigned_to: task.assigned_to,
+        project_id: task.project_id,
+        created_by: task.created_by,
+        parent_task_id: task.parent_task_id,
+        reviewer_id: task.reviewer_id,
+        recurrence_rule: task.recurrence_rule,
+        visibility: task.visibility,
+        created_at: task.created_at,
+        updated_at: task.updated_at,
       }));
       
       console.log('Loaded tasks:', tasksWithDefaults);
