@@ -21,6 +21,7 @@ import PlanBoard from "./pages/PlanBoard";
 import RiskRadar from "./pages/RiskRadar";
 import InsightIQ from "./pages/InsightIQ";
 import ResourceHub from "./pages/ResourceHub";
+import Integrations from "./pages/Integrations";
 import AppPlaceholder from "./pages/AppPlaceholder";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
@@ -53,6 +54,7 @@ const App = () => (
                 <Route path="/riskradar" element={<RiskRadar />} />
                 <Route path="/insightiq" element={<InsightIQ />} />
                 <Route path="/resourcehub" element={<ResourceHub />} />
+                <Route path="/integrations" element={<Integrations />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
