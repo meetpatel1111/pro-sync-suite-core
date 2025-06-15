@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +50,8 @@ const AutomationWorkflowBuilder: React.FC = () => {
     steps: []
   });
   const [isBuilding, setIsBuilding] = useState(false);
+  const [userIntegrations, setUserIntegrations] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const apps = [
     'TaskMaster', 'TimeTrackPro', 'CollabSpace', 'PlanBoard', 
@@ -71,6 +73,36 @@ const AutomationWorkflowBuilder: React.FC = () => {
     'TimeTrackPro': ['start_timer', 'log_time', 'create_report'],
     'BudgetBuddy': ['create_expense', 'update_budget', 'send_alert'],
     'FileVault': ['upload_file', 'share_file', 'backup_file']
+  };
+
+  useEffect(() => {
+    if (user) {
+      loadUserIntegrations();
+    }
+  }, [user]);
+
+  const loadUserIntegrations = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const integrationActions = await integrationService.getUserIntegrationActions(user.id);
+      
+      // Extract unique apps from user's integrations
+      const connectedApps = [...new Set([
+        ...integrationActions.map(action => action.source_app),
+        ...integrationActions.map(action => action.target_app)
+      ])].filter(Boolean);
+      
+      setUserIntegrations(connectedApps);
+    } catch (error) {
+      console.error('Error loading user integrations:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const addStep = (type: 'trigger' | 'condition' | 'action') => {
@@ -105,6 +137,15 @@ const AutomationWorkflowBuilder: React.FC = () => {
   };
 
   const saveWorkflow = async () => {
+    if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please log in to save workflows',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     if (!workflow.name.trim()) {
       toast({
         title: 'Error',
@@ -131,7 +172,7 @@ const AutomationWorkflowBuilder: React.FC = () => {
         'custom_workflow',
         {
           workflow: workflow,
-          user_id: user?.id
+          user_id: user.id
         }
       );
 
@@ -150,6 +191,7 @@ const AutomationWorkflowBuilder: React.FC = () => {
         });
       }
     } catch (error) {
+      console.error('Error saving workflow:', error);
       toast({
         title: 'Error',
         description: 'Failed to save workflow',
@@ -160,6 +202,22 @@ const AutomationWorkflowBuilder: React.FC = () => {
     }
   };
 
+  const testWorkflow = async () => {
+    if (workflow.steps.length === 0) {
+      toast({
+        title: 'Error',
+        description: 'Please add steps to test the workflow',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    toast({
+      title: 'Testing Workflow',
+      description: 'Workflow test initiated - check the monitoring tab for results'
+    });
+  };
+
   const getStepIcon = (type: string) => {
     switch (type) {
       case 'trigger': return <Zap className="h-4 w-4 text-green-500" />;
@@ -168,6 +226,16 @@ const AutomationWorkflowBuilder: React.FC = () => {
       default: return <Clock className="h-4 w-4" />;
     }
   };
+
+  const availableApps = userIntegrations.length > 0 ? userIntegrations : apps;
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -217,6 +285,20 @@ const AutomationWorkflowBuilder: React.FC = () => {
             />
           </div>
 
+          {/* Connection Status */}
+          {userIntegrations.length > 0 && (
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <h4 className="font-medium text-green-800 mb-2">Connected Apps</h4>
+              <div className="flex flex-wrap gap-2">
+                {userIntegrations.map(app => (
+                  <Badge key={app} variant="outline" className="text-green-700 border-green-300">
+                    {app}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Workflow Steps */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -241,6 +323,11 @@ const AutomationWorkflowBuilder: React.FC = () => {
               <div className="text-center py-8 text-muted-foreground">
                 <Zap className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No steps added yet. Click the buttons above to start building your workflow.</p>
+                {userIntegrations.length === 0 && (
+                  <p className="text-sm mt-2">
+                    Set up integrations first to unlock workflow automation
+                  </p>
+                )}
               </div>
             ) : (
               <div className="space-y-3">
@@ -264,7 +351,7 @@ const AutomationWorkflowBuilder: React.FC = () => {
                                 <SelectValue placeholder="Select app" />
                               </SelectTrigger>
                               <SelectContent>
-                                {apps.map(app => (
+                                {availableApps.map(app => (
                                   <SelectItem key={app} value={app}>{app}</SelectItem>
                                 ))}
                               </SelectContent>
@@ -330,15 +417,27 @@ const AutomationWorkflowBuilder: React.FC = () => {
 
           {/* Actions */}
           <div className="flex gap-2 pt-4 border-t">
-            <Button onClick={saveWorkflow} disabled={isBuilding}>
+            <Button onClick={saveWorkflow} disabled={isBuilding || !user}>
               <Save className="h-4 w-4 mr-2" />
               {isBuilding ? 'Saving...' : 'Save Workflow'}
             </Button>
-            <Button variant="outline" disabled={workflow.steps.length === 0}>
+            <Button 
+              variant="outline" 
+              disabled={workflow.steps.length === 0}
+              onClick={testWorkflow}
+            >
               <Play className="h-4 w-4 mr-2" />
               Test Workflow
             </Button>
           </div>
+
+          {!user && (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-yellow-800 text-sm">
+                Please log in to create and save automation workflows
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

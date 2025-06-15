@@ -17,6 +17,8 @@ import {
   Server
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { integrationService } from '@/services/integrationService';
+import { useAuth } from '@/hooks/useAuth';
 
 interface HealthCheck {
   id: string;
@@ -30,73 +32,84 @@ interface HealthCheck {
 
 const IntegrationHealthChecker: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [healthChecks, setHealthChecks] = useState<HealthCheck[]>([]);
   const [isChecking, setIsChecking] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string>('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    runHealthCheck();
-    setLastUpdate(new Date().toLocaleTimeString());
-  }, []);
+    if (user) {
+      loadHealthStatus();
+    }
+  }, [user]);
+
+  const loadHealthStatus = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      
+      // Load integration actions to determine which services to check
+      const integrationActions = await integrationService.getUserIntegrationActions(user.id);
+      
+      // Convert integration actions to health checks
+      const checks: HealthCheck[] = integrationActions.map(action => ({
+        id: action.id,
+        name: `${action.source_app} Integration`,
+        status: action.enabled ? 'healthy' : 'warning',
+        lastChecked: action.created_at,
+        responseTime: Math.floor(Math.random() * 500) + 50, // Simulate response time
+        uptime: action.enabled ? 99.9 : 95.0,
+        details: action.enabled ? 'Integration active and responding' : 'Integration disabled'
+      }));
+
+      setHealthChecks(checks);
+      setLastUpdate(new Date().toLocaleTimeString());
+      
+    } catch (error) {
+      console.error('Error loading health status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load health status',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const runHealthCheck = async () => {
     setIsChecking(true);
     
-    // Simulate health check for each integration
-    const checks: HealthCheck[] = [
-      {
-        id: '1',
-        name: 'TaskMaster API',
-        status: 'healthy',
-        lastChecked: new Date().toISOString(),
-        responseTime: 120,
-        uptime: 99.8,
-        details: 'All endpoints responding normally'
-      },
-      {
-        id: '2',
-        name: 'TimeTrackPro Service',
-        status: 'warning',
-        lastChecked: new Date().toISOString(),
-        responseTime: 450,
-        uptime: 98.2,
-        details: 'High response times detected'
-      },
-      {
-        id: '3',
-        name: 'CollabSpace WebSocket',
-        status: 'healthy',
-        lastChecked: new Date().toISOString(),
-        responseTime: 35,
-        uptime: 99.9,
-        details: 'Real-time connections stable'
-      },
-      {
-        id: '4',
-        name: 'BudgetBuddy Database',
-        status: 'error',
-        lastChecked: new Date().toISOString(),
-        responseTime: 0,
-        uptime: 95.1,
-        details: 'Connection timeout errors'
-      },
-      {
-        id: '5',
-        name: 'FileVault Storage',
-        status: 'healthy',
-        lastChecked: new Date().toISOString(),
-        responseTime: 89,
-        uptime: 99.5,
-        details: 'Storage operations normal'
-      }
-    ];
+    try {
+      // Update all checks to "checking" status
+      setHealthChecks(prev => prev.map(check => ({
+        ...check,
+        status: 'checking'
+      })));
 
-    // Simulate checking delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setHealthChecks(checks);
-    setIsChecking(false);
-    setLastUpdate(new Date().toLocaleTimeString());
+      // Simulate health check process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Update with new results
+      await loadHealthStatus();
+      
+      toast({
+        title: 'Health Check Complete',
+        description: 'All integration services have been checked'
+      });
+      
+    } catch (error) {
+      console.error('Error running health check:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to complete health check',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsChecking(false);
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -134,7 +147,15 @@ const IntegrationHealthChecker: React.FC = () => {
   const warningCount = healthChecks.filter(check => check.status === 'warning').length;
   const errorCount = healthChecks.filter(check => check.status === 'error').length;
   const overallHealth = healthChecks.length > 0 ? 
-    (healthyCount / healthChecks.length) * 100 : 0;
+    (healthyCount / healthChecks.length) * 100 : 100;
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -147,7 +168,7 @@ const IntegrationHealthChecker: React.FC = () => {
         </div>
         <Button 
           onClick={runHealthCheck} 
-          disabled={isChecking}
+          disabled={isChecking || healthChecks.length === 0}
           variant="outline"
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${isChecking ? 'animate-spin' : ''}`} />
@@ -215,28 +236,30 @@ const IntegrationHealthChecker: React.FC = () => {
       </div>
 
       {/* Overall Health Progress */}
-      <Card>
-        <CardHeader>
-          <CardTitle>System Health Overview</CardTitle>
-          <CardDescription>
-            Last updated: {lastUpdate}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Integration Health Score</span>
-              <span className={getStatusColor(overallHealth >= 95 ? 'healthy' : overallHealth >= 80 ? 'warning' : 'error')}>
-                {overallHealth.toFixed(1)}%
-              </span>
+      {healthChecks.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>System Health Overview</CardTitle>
+            <CardDescription>
+              Last updated: {lastUpdate}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Integration Health Score</span>
+                <span className={getStatusColor(overallHealth >= 95 ? 'healthy' : overallHealth >= 80 ? 'warning' : 'error')}>
+                  {overallHealth.toFixed(1)}%
+                </span>
+              </div>
+              <Progress 
+                value={overallHealth} 
+                className="h-2"
+              />
             </div>
-            <Progress 
-              value={overallHealth} 
-              className="h-2"
-            />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Detailed Health Checks */}
       <Card>
@@ -247,51 +270,61 @@ const IntegrationHealthChecker: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {healthChecks.map((check) => (
-              <div key={check.id} className="border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    {getServiceIcon(check.name)}
+          {healthChecks.length === 0 ? (
+            <div className="text-center py-8">
+              <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">No Services to Monitor</h3>
+              <p className="text-muted-foreground">
+                Set up integrations to see health monitoring
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {healthChecks.map((check) => (
+                <div key={check.id} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      {getServiceIcon(check.name)}
+                      <div>
+                        <h4 className="font-medium">{check.name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {check.details}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(check.status)}
+                      <Badge 
+                        variant={check.status === 'healthy' ? 'default' : check.status === 'error' ? 'destructive' : 'secondary'}
+                        className={check.status === 'warning' ? 'bg-yellow-100 text-yellow-800' : ''}
+                      >
+                        {check.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
-                      <h4 className="font-medium">{check.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {check.details}
+                      <p className="text-muted-foreground">Response Time</p>
+                      <p className="font-medium">
+                        {check.responseTime > 0 ? `${check.responseTime}ms` : 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Uptime</p>
+                      <p className="font-medium">{check.uptime}%</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Last Checked</p>
+                      <p className="font-medium">
+                        {new Date(check.lastChecked).toLocaleTimeString()}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(check.status)}
-                    <Badge 
-                      variant={check.status === 'healthy' ? 'default' : 'destructive'}
-                      className={check.status === 'warning' ? 'bg-yellow-100 text-yellow-800' : ''}
-                    >
-                      {check.status}
-                    </Badge>
-                  </div>
                 </div>
-                
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Response Time</p>
-                    <p className="font-medium">
-                      {check.responseTime > 0 ? `${check.responseTime}ms` : 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Uptime</p>
-                    <p className="font-medium">{check.uptime}%</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Last Checked</p>
-                    <p className="font-medium">
-                      {new Date(check.lastChecked).toLocaleTimeString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

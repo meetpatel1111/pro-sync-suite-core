@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,8 @@ import {
   Shield
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { integrationService } from '@/services/integrationService';
+import { useAuth } from '@/hooks/useAuth';
 
 interface IntegrationTemplate {
   id: string;
@@ -37,96 +39,12 @@ interface IntegrationTemplate {
 
 const IntegrationMarketplace: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
-
-  const templates: IntegrationTemplate[] = [
-    {
-      id: '1',
-      name: 'Task Creation from Slack Messages',
-      description: 'Automatically create tasks in TaskMaster when specific keywords are mentioned in Slack messages.',
-      category: 'productivity',
-      rating: 4.8,
-      downloads: 1234,
-      difficulty: 'beginner',
-      apps: ['CollabSpace', 'TaskMaster'],
-      features: ['Auto-detection', 'Keyword filtering', 'Priority assignment'],
-      verified: true,
-      popular: true,
-      new: false
-    },
-    {
-      id: '2',
-      name: 'Time Tracking Automation',
-      description: 'Start time tracking automatically when tasks move to "In Progress" status.',
-      category: 'automation',
-      rating: 4.6,
-      downloads: 856,
-      difficulty: 'intermediate',
-      apps: ['TaskMaster', 'TimeTrackPro'],
-      features: ['Status-based triggers', 'Auto-start/stop', 'Project mapping'],
-      verified: true,
-      popular: false,
-      new: true
-    },
-    {
-      id: '3',
-      name: 'Budget Alert System',
-      description: 'Send notifications when project budgets exceed thresholds.',
-      category: 'finance',
-      rating: 4.5,
-      downloads: 432,
-      difficulty: 'beginner',
-      apps: ['BudgetBuddy', 'CollabSpace'],
-      features: ['Threshold monitoring', 'Multi-channel alerts', 'Custom thresholds'],
-      verified: false,
-      popular: false,
-      new: false
-    },
-    {
-      id: '4',
-      name: 'Resource Optimization Workflow',
-      description: 'Automatically balance resource allocation based on workload and skills.',
-      category: 'resource-management',
-      rating: 4.9,
-      downloads: 289,
-      difficulty: 'advanced',
-      apps: ['ResourceHub', 'TaskMaster', 'InsightIQ'],
-      features: ['ML-based optimization', 'Skills matching', 'Workload balancing'],
-      verified: true,
-      popular: true,
-      new: true
-    },
-    {
-      id: '5',
-      name: 'Client Feedback Loop',
-      description: 'Automatically collect and route client feedback to relevant project teams.',
-      category: 'client-management',
-      rating: 4.3,
-      downloads: 567,
-      difficulty: 'intermediate',
-      apps: ['ClientConnect', 'CollabSpace', 'TaskMaster'],
-      features: ['Feedback routing', 'Sentiment analysis', 'Response tracking'],
-      verified: true,
-      popular: false,
-      new: false
-    },
-    {
-      id: '6',
-      name: 'Risk Assessment Pipeline',
-      description: 'Automated risk detection and mitigation workflow across projects.',
-      category: 'risk-management',
-      rating: 4.7,
-      downloads: 193,
-      difficulty: 'advanced',
-      apps: ['RiskRadar', 'TaskMaster', 'InsightIQ'],
-      features: ['Predictive analysis', 'Auto-mitigation', 'Risk scoring'],
-      verified: true,
-      popular: false,
-      new: true
-    }
-  ];
+  const [templates, setTemplates] = useState<IntegrationTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const categories = [
     { value: 'all', label: 'All Categories' },
@@ -145,6 +63,28 @@ const IntegrationMarketplace: React.FC = () => {
     { value: 'advanced', label: 'Advanced' }
   ];
 
+  useEffect(() => {
+    loadMarketplaceTemplates();
+  }, []);
+
+  const loadMarketplaceTemplates = async () => {
+    try {
+      setLoading(true);
+      // In a real implementation, this would fetch from a marketplace API
+      // For now, we'll show an empty state
+      setTemplates([]);
+    } catch (error) {
+      console.error('Error loading marketplace templates:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load marketplace templates',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredTemplates = templates.filter(template => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          template.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -154,12 +94,36 @@ const IntegrationMarketplace: React.FC = () => {
     return matchesSearch && matchesCategory && matchesDifficulty;
   });
 
-  const installTemplate = (templateId: string) => {
-    const template = templates.find(t => t.id === templateId);
-    if (template) {
+  const installTemplate = async (templateId: string) => {
+    if (!user) {
       toast({
-        title: 'Integration Installed',
-        description: `"${template.name}" has been added to your integrations`,
+        title: 'Authentication Required',
+        description: 'Please log in to install templates',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      const success = await integrationService.createIntegrationAction(
+        'Marketplace',
+        'TemplateEngine',
+        'install_template',
+        { template_id: templateId, user_id: user.id }
+      );
+
+      if (success) {
+        toast({
+          title: 'Template Installed',
+          description: 'Integration template has been added to your account',
+        });
+      }
+    } catch (error) {
+      console.error('Error installing template:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to install template',
+        variant: 'destructive'
       });
     }
   };
@@ -173,9 +137,13 @@ const IntegrationMarketplace: React.FC = () => {
     }
   };
 
-  const popularTemplates = templates.filter(t => t.popular).slice(0, 3);
-  const newTemplates = templates.filter(t => t.new).slice(0, 3);
-  const topRatedTemplates = templates.sort((a, b) => b.rating - a.rating).slice(0, 3);
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -226,151 +194,156 @@ const IntegrationMarketplace: React.FC = () => {
         </TabsList>
 
         <TabsContent value="browse">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTemplates.map((template) => (
-              <Card key={template.id} className="flex flex-col">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-base">{template.name}</CardTitle>
-                      {template.verified && (
-                        <Verified className="h-4 w-4 text-blue-500" />
-                      )}
+          {filteredTemplates.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Filter className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Templates Available</h3>
+                <p className="text-muted-foreground mb-4">
+                  The integration marketplace is being prepared. Check back soon for templates!
+                </p>
+                <Button onClick={() => {
+                  toast({
+                    title: 'Coming Soon',
+                    description: 'Integration marketplace will be available soon'
+                  });
+                }}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Request Template
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredTemplates.map((template) => (
+                <Card key={template.id} className="flex flex-col">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-base">{template.name}</CardTitle>
+                        {template.verified && (
+                          <Verified className="h-4 w-4 text-blue-500" />
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        {template.popular && <Badge variant="secondary">Popular</Badge>}
+                        {template.new && <Badge variant="outline">New</Badge>}
+                      </div>
                     </div>
-                    <div className="flex gap-1">
-                      {template.popular && <Badge variant="secondary">Popular</Badge>}
-                      {template.new && <Badge variant="outline">New</Badge>}
+                    <CardDescription className="text-sm">
+                      {template.description}
+                    </CardDescription>
+                  </CardHeader>
+                  
+                  <CardContent className="flex-1 space-y-4">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                        <span>{template.rating}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Download className="h-3 w-3" />
+                        <span>{template.downloads}</span>
+                      </div>
                     </div>
-                  </div>
-                  <CardDescription className="text-sm">
-                    {template.description}
-                  </CardDescription>
-                </CardHeader>
-                
-                <CardContent className="flex-1 space-y-4">
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                      <span>{template.rating}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Download className="h-3 w-3" />
-                      <span>{template.downloads}</span>
-                    </div>
-                  </div>
 
-                  <div className="flex flex-wrap gap-1">
-                    {template.apps.map((app) => (
-                      <Badge key={app} variant="outline" className="text-xs">
-                        {app}
-                      </Badge>
-                    ))}
-                  </div>
-
-                  <div>
-                    <Badge className={getDifficultyColor(template.difficulty)}>
-                      {template.difficulty}
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">Features:</p>
-                    <ul className="text-xs text-muted-foreground space-y-1">
-                      {template.features.slice(0, 3).map((feature, index) => (
-                        <li key={index}>• {feature}</li>
+                    <div className="flex flex-wrap gap-1">
+                      {template.apps.map((app) => (
+                        <Badge key={app} variant="outline" className="text-xs">
+                          {app}
+                        </Badge>
                       ))}
-                    </ul>
-                  </div>
-                </CardContent>
+                    </div>
 
-                <div className="p-4 pt-0 mt-auto">
-                  <div className="flex gap-2">
-                    <Button 
-                      className="flex-1"
-                      onClick={() => installTemplate(template.id)}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Install
-                    </Button>
-                    <Button variant="outline" size="icon">
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
+                    <div>
+                      <Badge className={getDifficultyColor(template.difficulty)}>
+                        {template.difficulty}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Features:</p>
+                      <ul className="text-xs text-muted-foreground space-y-1">
+                        {template.features.slice(0, 3).map((feature, index) => (
+                          <li key={index}>• {feature}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </CardContent>
+
+                  <div className="p-4 pt-0 mt-auto">
+                    <div className="flex gap-2">
+                      <Button 
+                        className="flex-1"
+                        onClick={() => installTemplate(template.id)}
+                        disabled={!user}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Install
+                      </Button>
+                      <Button variant="outline" size="icon">
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="popular">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {popularTemplates.map((template) => (
-              <Card key={template.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-orange-500" />
-                    {template.name}
-                  </CardTitle>
-                  <CardDescription>{template.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button onClick={() => installTemplate(template.id)}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Install
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Card>
+            <CardContent className="p-8 text-center">
+              <TrendingUp className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">Popular Templates</h3>
+              <p className="text-muted-foreground">
+                Popular integration templates will appear here
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="new">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {newTemplates.map((template) => (
-              <Card key={template.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-blue-500" />
-                    {template.name}
-                  </CardTitle>
-                  <CardDescription>{template.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button onClick={() => installTemplate(template.id)}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Install
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Zap className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">New Templates</h3>
+              <p className="text-muted-foreground">
+                Latest integration templates will appear here
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="top-rated">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {topRatedTemplates.map((template) => (
-              <Card key={template.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Star className="h-4 w-4 text-yellow-500" />
-                    {template.name}
-                  </CardTitle>
-                  <CardDescription>{template.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-bold">{template.rating}/5</span>
-                    <Button onClick={() => installTemplate(template.id)}>
-                      <Download className="h-4 w-4 mr-2" />
-                      Install
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">Top Rated Templates</h3>
+              <p className="text-muted-foreground">
+                Highest rated integration templates will appear here
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
+
+      {!user && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Shield className="h-5 w-5 text-blue-500" />
+              <div>
+                <p className="font-medium">Authentication Required</p>
+                <p className="text-sm text-muted-foreground">
+                  Please log in to install and use integration templates
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
