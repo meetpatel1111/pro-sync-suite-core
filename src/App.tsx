@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,6 +22,7 @@ import RiskRadar from "./pages/RiskRadar";
 import InsightIQ from "./pages/InsightIQ";
 import ResourceHub from "./pages/ResourceHub";
 import Integrations from "./pages/Integrations";
+import AIFeatures from "./pages/AIFeatures";
 import AppPlaceholder from "./pages/AppPlaceholder";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
@@ -55,6 +57,7 @@ const App = () => (
                 <Route path="/insightiq" element={<InsightIQ />} />
                 <Route path="/resourcehub" element={<ResourceHub />} />
                 <Route path="/integrations" element={<Integrations />} />
+                <Route path="/ai-features" element={<AIFeatures />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
