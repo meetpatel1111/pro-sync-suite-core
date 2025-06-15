@@ -115,7 +115,10 @@ export const integrationDatabaseService = {
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      difficulty: item.difficulty as 'Beginner' | 'Intermediate' | 'Advanced'
+    }));
   },
 
   async getPublicTemplates(): Promise<IntegrationTemplate[]> {
@@ -130,7 +133,10 @@ export const integrationDatabaseService = {
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      difficulty: item.difficulty as 'Beginner' | 'Intermediate' | 'Advanced'
+    }));
   },
 
   async createIntegrationTemplate(template: Omit<IntegrationTemplate, 'id' | 'created_at' | 'updated_at'>): Promise<IntegrationTemplate> {
@@ -145,7 +151,10 @@ export const integrationDatabaseService = {
       throw error;
     }
 
-    return data;
+    return {
+      ...data,
+      difficulty: data.difficulty as 'Beginner' | 'Intermediate' | 'Advanced'
+    };
   },
 
   async updateIntegrationTemplate(id: string, updates: Partial<IntegrationTemplate>): Promise<IntegrationTemplate> {
@@ -161,7 +170,10 @@ export const integrationDatabaseService = {
       throw error;
     }
 
-    return data;
+    return {
+      ...data,
+      difficulty: data.difficulty as 'Beginner' | 'Intermediate' | 'Advanced'
+    };
   },
 
   async deleteIntegrationTemplate(id: string): Promise<void> {
@@ -248,7 +260,10 @@ export const integrationDatabaseService = {
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      status: item.status as 'healthy' | 'warning' | 'error' | 'checking'
+    }));
   },
 
   async createIntegrationHealthStatus(health: Omit<IntegrationHealthStatus, 'id' | 'created_at' | 'updated_at'>): Promise<IntegrationHealthStatus> {
@@ -263,7 +278,10 @@ export const integrationDatabaseService = {
       throw error;
     }
 
-    return data;
+    return {
+      ...data,
+      status: data.status as 'healthy' | 'warning' | 'error' | 'checking'
+    };
   },
 
   async updateIntegrationHealthStatus(id: string, updates: Partial<IntegrationHealthStatus>): Promise<IntegrationHealthStatus> {
@@ -279,7 +297,10 @@ export const integrationDatabaseService = {
       throw error;
     }
 
-    return data;
+    return {
+      ...data,
+      status: data.status as 'healthy' | 'warning' | 'error' | 'checking'
+    };
   },
 
   // Sync Status
@@ -295,7 +316,10 @@ export const integrationDatabaseService = {
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      status: item.status as 'synced' | 'syncing' | 'error' | 'paused'
+    }));
   },
 
   async createSyncStatus(sync: Omit<SyncStatus, 'id' | 'created_at' | 'updated_at'>): Promise<SyncStatus> {
@@ -310,7 +334,10 @@ export const integrationDatabaseService = {
       throw error;
     }
 
-    return data;
+    return {
+      ...data,
+      status: data.status as 'synced' | 'syncing' | 'error' | 'paused'
+    };
   },
 
   async updateSyncStatus(id: string, updates: Partial<SyncStatus>): Promise<SyncStatus> {
@@ -326,7 +353,10 @@ export const integrationDatabaseService = {
       throw error;
     }
 
-    return data;
+    return {
+      ...data,
+      status: data.status as 'synced' | 'syncing' | 'error' | 'paused'
+    };
   },
 
   // API Endpoints
@@ -342,7 +372,11 @@ export const integrationDatabaseService = {
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      method: item.method as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+      test_status: item.test_status as 'success' | 'failed' | 'pending' | undefined
+    }));
   },
 
   async createAPIEndpoint(endpoint: Omit<APIEndpoint, 'id' | 'created_at' | 'updated_at'>): Promise<APIEndpoint> {
@@ -357,7 +391,11 @@ export const integrationDatabaseService = {
       throw error;
     }
 
-    return data;
+    return {
+      ...data,
+      method: data.method as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+      test_status: data.test_status as 'success' | 'failed' | 'pending' | undefined
+    };
   },
 
   async updateAPIEndpoint(id: string, updates: Partial<APIEndpoint>): Promise<APIEndpoint> {
@@ -373,7 +411,11 @@ export const integrationDatabaseService = {
       throw error;
     }
 
-    return data;
+    return {
+      ...data,
+      method: data.method as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+      test_status: data.test_status as 'success' | 'failed' | 'pending' | undefined
+    };
   },
 
   async deleteAPIEndpoint(id: string): Promise<void> {
@@ -402,7 +444,10 @@ export const integrationDatabaseService = {
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      log_level: item.log_level as 'info' | 'warning' | 'error' | 'debug'
+    }));
   },
 
   async createIntegrationLog(log: Omit<IntegrationLog, 'id' | 'created_at'>): Promise<IntegrationLog> {
@@ -417,7 +462,10 @@ export const integrationDatabaseService = {
       throw error;
     }
 
-    return data;
+    return {
+      ...data,
+      log_level: data.log_level as 'info' | 'warning' | 'error' | 'debug'
+    };
   },
 
   // Marketplace Installations

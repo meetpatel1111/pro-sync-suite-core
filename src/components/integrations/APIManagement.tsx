@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,10 +28,18 @@ const APIManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingEndpoint, setEditingEndpoint] = useState<APIEndpoint | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    url: string;
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+    headers: string;
+    auth_config: string;
+    rate_limit: number;
+    timeout_seconds: number;
+  }>({
     name: '',
     url: '',
-    method: 'GET' as const,
+    method: 'GET',
     headers: '{}',
     auth_config: '{}',
     rate_limit: 100,
@@ -279,7 +286,7 @@ const APIManagement: React.FC = () => {
                   <label className="text-sm font-medium">Method</label>
                   <select
                     value={formData.method}
-                    onChange={(e) => setFormData(prev => ({ ...prev, method: e.target.value as any }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, method: e.target.value as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' }))}
                     className="w-full px-3 py-2 border rounded-md"
                   >
                     <option value="GET">GET</option>
