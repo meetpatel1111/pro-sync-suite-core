@@ -27,14 +27,6 @@ const Sidebar = ({ className }: SidebarProps) => {
     <div className={cn("pb-12 w-64 border-r bg-background hidden md:block", className)}>
       <div className="space-y-4 py-4">
         <div className="px-4 py-2">
-          <div className="flex h-12 items-center justify-start px-4">
-            <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-full bg-gradient-to-br from-prosync-400 to-prosync-700"></div>
-              <h2 className="text-xl font-bold">ProSync</h2>
-            </div>
-          </div>
-        </div>
-        <div className="px-4 py-2">
           <nav className="space-y-2">
             <Link to="/">
               <Button variant="ghost" className="w-full justify-start">
