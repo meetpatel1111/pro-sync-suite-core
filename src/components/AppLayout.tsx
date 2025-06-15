@@ -3,6 +3,7 @@ import { ReactNode } from 'react';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
+import FloatingActionButton from './FloatingActionButton';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -14,10 +15,11 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       <Header />
       <div className="flex flex-1">
         <Sidebar />
-        <main className="flex-1 p-6 lg:px-8 xl:px-12 2xl:px-16">
+        <main className="flex-1 p-6 lg:px-8 xl:px-12 2xl:px-16 relative">
           <div className="max-w-8xl mx-auto">
             {children}
           </div>
+          <FloatingActionButton />
         </main>
       </div>
       <MobileNav />
