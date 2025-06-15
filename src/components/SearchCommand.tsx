@@ -40,14 +40,14 @@ interface SearchCommandProps {
 interface AppItem {
   name: string;
   path: string;
-  icon: React.ComponentType<{ className?: string; size?: number; }>;
+  icon: React.ComponentType<any>;
   description: string;
 }
 
 interface ActionItem {
   name: string;
   action: () => void;
-  icon: React.ComponentType<{ className?: string; size?: number; }>;
+  icon: React.ComponentType<any>;
   description: string;
 }
 

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export const dbService = {
@@ -288,6 +287,32 @@ export const dbService = {
       .from('time_entries')
       .delete()
       .eq('id', id);
+  },
+
+  // Notification operations
+  async getNotifications(userId: string) {
+    return await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+  },
+
+  async updateNotification(id: string, userId: string, updates: any) {
+    return await supabase
+      .from('notifications')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select();
+  },
+
+  async deleteNotification(id: string, userId: string) {
+    return await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
   },
 
   // File operations
