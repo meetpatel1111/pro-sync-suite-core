@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, X, Home, Clock, MessageSquare, FileText, BarChart2, 
-         Calendar, PieChart, Users, Shield } from 'lucide-react';
+import { Menu, X, Home, Timer, MessageCircle, Zap, TrendingUp, 
+         Kanban, Wallet, Users2, ShieldCheck, UserCheck, FolderOpen, LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
@@ -44,62 +44,68 @@ const MobileNav = () => {
                 </Link>
                 <Link to="/taskmaster" onClick={() => setOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start">
-                    <Calendar className="mr-2 h-4 w-4" />
+                    <Kanban className="mr-2 h-4 w-4" />
                     TaskMaster
                   </Button>
                 </Link>
                 <Link to="/timetrackpro" onClick={() => setOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start">
-                    <Clock className="mr-2 h-4 w-4" />
+                    <Timer className="mr-2 h-4 w-4" />
                     TimeTrackPro
                   </Button>
                 </Link>
                 <Link to="/collabspace" onClick={() => setOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start">
-                    <MessageSquare className="mr-2 h-4 w-4" />
+                    <MessageCircle className="mr-2 h-4 w-4" />
                     CollabSpace
                   </Button>
                 </Link>
                 <Link to="/planboard" onClick={() => setOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start">
-                    <FileText className="mr-2 h-4 w-4" />
+                    <Zap className="mr-2 h-4 w-4" />
                     PlanBoard
                   </Button>
                 </Link>
                 <Link to="/insightiq" onClick={() => setOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start">
-                    <BarChart2 className="mr-2 h-4 w-4" />
+                    <TrendingUp className="mr-2 h-4 w-4" />
                     InsightIQ
                   </Button>
                 </Link>
                 <Link to="/filevault" onClick={() => setOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start">
-                    <FileText className="mr-2 h-4 w-4" />
+                    <FolderOpen className="mr-2 h-4 w-4" />
                     FileVault
                   </Button>
                 </Link>
                 <Link to="/budgetbuddy" onClick={() => setOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start">
-                    <PieChart className="mr-2 h-4 w-4" />
+                    <Wallet className="mr-2 h-4 w-4" />
                     BudgetBuddy
                   </Button>
                 </Link>
                 <Link to="/clientconnect" onClick={() => setOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start">
-                    <Users className="mr-2 h-4 w-4" />
+                    <Users2 className="mr-2 h-4 w-4" />
                     ClientConnect
                   </Button>
                 </Link>
                 <Link to="/riskradar" onClick={() => setOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start">
-                    <Shield className="mr-2 h-4 w-4" />
+                    <ShieldCheck className="mr-2 h-4 w-4" />
                     RiskRadar
                   </Button>
                 </Link>
                 <Link to="/resourcehub" onClick={() => setOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start">
-                    <Users className="mr-2 h-4 w-4" />
+                    <UserCheck className="mr-2 h-4 w-4" />
                     ResourceHub
+                  </Button>
+                </Link>
+                <Link to="/integrations" onClick={() => setOpen(false)}>
+                  <Button variant="ghost" className="w-full justify-start">
+                    <LinkIcon className="mr-2 h-4 w-4" />
+                    Integrations
                   </Button>
                 </Link>
               </nav>
