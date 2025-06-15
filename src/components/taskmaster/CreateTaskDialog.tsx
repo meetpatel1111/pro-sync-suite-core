@@ -204,9 +204,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="unassigned">Unassigned</SelectItem>
-                  <SelectItem value="user-1">Team Member 1</SelectItem>
-                  <SelectItem value="user-2">Team Member 2</SelectItem>
-                  <SelectItem value="user-3">Team Member 3</SelectItem>
+                  {/* Remove invalid UUID options for now until we have actual user management */}
                 </SelectContent>
               </Select>
             </div>
@@ -251,6 +249,25 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
       </DialogContent>
     </Dialog>
   );
+
+  function getPriorityColor(priority: string) {
+    switch (priority) {
+      case 'critical': return 'bg-red-100 text-red-700 border-red-200';
+      case 'high': return 'bg-orange-100 text-orange-700 border-orange-200';
+      case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case 'low': return 'bg-green-100 text-green-700 border-green-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  }
+
+  function getTypeIcon(type: string) {
+    switch (type) {
+      case 'bug': return '🐛';
+      case 'story': return '📖';
+      case 'epic': return '🚀';
+      default: return '✓';
+    }
+  }
 };
 
 export default CreateTaskDialog;
