@@ -179,7 +179,9 @@ const BoardConfigDialog: React.FC<BoardConfigDialogProps> = ({
                       <Label>Swimlane Type</Label>
                       <Select 
                         value={swimlaneConfig.type} 
-                        onValueChange={(type: any) => setSwimlaneConfig(prev => ({ ...prev, type }))}
+                        onValueChange={(type: 'none' | 'assignee' | 'priority' | 'label' | 'epic') => 
+                          setSwimlaneConfig(prev => ({ ...prev, type }))
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue />
