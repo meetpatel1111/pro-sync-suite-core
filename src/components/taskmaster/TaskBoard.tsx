@@ -16,7 +16,7 @@ import SprintManagement from './SprintManagement';
 import BoardConfigDialog from './BoardConfigDialog';
 import TaskDetailDialog from './TaskDetailDialog';
 import CreateTaskDialog from './CreateTaskDialog';
-import type { Project, Board, TaskMasterTask, Sprint } from '@/types/taskmaster';
+import type { Project, Board, TaskMasterTask } from '@/types/taskmaster';
 
 interface TaskBoardProps {
   project: Project;
@@ -27,7 +27,6 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
   const { user } = useAuthContext();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<TaskMasterTask[]>([]);
-  const [sprints, setSprints] = useState<Sprint[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskMasterTask | undefined>();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -35,9 +34,6 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
 
   useEffect(() => {
     fetchTasks();
-    if (board.type === 'scrum') {
-      fetchSprints();
-    }
   }, [board.id]);
 
   const fetchTasks = async () => {
@@ -57,16 +53,6 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
       console.error('Error fetching tasks:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchSprints = async () => {
-    try {
-      // TODO: Implement sprint fetching in taskmasterService
-      console.log('Fetching sprints for board:', board.id);
-      setSprints([]); // Placeholder
-    } catch (error) {
-      console.error('Error fetching sprints:', error);
     }
   };
 
@@ -165,50 +151,6 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
     }
   };
 
-  // Sprint management handlers
-  const handleSprintCreate = async (sprintData: Omit<Sprint, 'id' | 'created_at' | 'updated_at'>) => {
-    try {
-      console.log('Creating sprint:', sprintData);
-      // TODO: Implement sprint creation
-      toast({
-        title: 'Success',
-        description: 'Sprint created successfully',
-      });
-    } catch (error) {
-      console.error('Error creating sprint:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create sprint',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleSprintUpdate = async (sprintId: string, updates: Partial<Sprint>) => {
-    try {
-      console.log('Updating sprint:', sprintId, updates);
-      // TODO: Implement sprint update
-    } catch (error) {
-      console.error('Error updating sprint:', error);
-    }
-  };
-
-  const handleSprintStart = async (sprintId: string) => {
-    await handleSprintUpdate(sprintId, { status: 'active' });
-    toast({
-      title: 'Sprint Started',
-      description: 'Sprint is now active',
-    });
-  };
-
-  const handleSprintComplete = async (sprintId: string) => {
-    await handleSprintUpdate(sprintId, { status: 'completed' });
-    toast({
-      title: 'Sprint Completed',
-      description: 'Sprint has been completed',
-    });
-  };
-
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -304,12 +246,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
             <SprintManagement
               project={project}
               board={board}
-              sprints={sprints}
               tasks={tasks}
-              onSprintCreate={handleSprintCreate}
-              onSprintUpdate={handleSprintUpdate}
-              onSprintStart={handleSprintStart}
-              onSprintComplete={handleSprintComplete}
             />
           </TabsContent>
         )}

@@ -64,9 +64,48 @@ export interface Sprint {
   start_date?: string;
   end_date?: string;
   status: 'planned' | 'active' | 'completed';
+  capacity?: number;
+  velocity?: number;
   created_by: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface BoardBacklog {
+  id: string;
+  board_id: string;
+  task_id: string;
+  priority_order: number;
+  epic_id?: string;
+  story_points?: number;
+  business_value?: number;
+  effort_estimate?: number;
+  risk_level: 'low' | 'medium' | 'high';
+  acceptance_criteria?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SprintTask {
+  id: string;
+  sprint_id: string;
+  task_id: string;
+  committed_at: string;
+  initial_story_points?: number;
+  current_story_points?: number;
+  created_at: string;
+}
+
+export interface BoardReport {
+  id: string;
+  board_id: string;
+  sprint_id?: string;
+  report_type: 'burndown' | 'velocity' | 'cumulative_flow' | 'sprint_summary';
+  report_data: Record<string, any>;
+  generated_at: string;
+  generated_by: string;
+  parameters?: Record<string, any>;
+  created_at: string;
 }
 
 export interface TaskMasterTask {

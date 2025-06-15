@@ -362,6 +362,117 @@ export type Database = {
           },
         ]
       }
+      board_backlogs: {
+        Row: {
+          acceptance_criteria: string | null
+          board_id: string | null
+          business_value: number | null
+          created_at: string | null
+          effort_estimate: number | null
+          epic_id: string | null
+          id: string
+          priority_order: number
+          risk_level: string | null
+          story_points: number | null
+          task_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          acceptance_criteria?: string | null
+          board_id?: string | null
+          business_value?: number | null
+          created_at?: string | null
+          effort_estimate?: number | null
+          epic_id?: string | null
+          id?: string
+          priority_order?: number
+          risk_level?: string | null
+          story_points?: number | null
+          task_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          acceptance_criteria?: string | null
+          board_id?: string | null
+          business_value?: number | null
+          created_at?: string | null
+          effort_estimate?: number | null
+          epic_id?: string | null
+          id?: string
+          priority_order?: number
+          risk_level?: string | null
+          story_points?: number | null
+          task_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_backlogs_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_backlogs_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      board_reports: {
+        Row: {
+          board_id: string | null
+          created_at: string | null
+          generated_at: string | null
+          generated_by: string | null
+          id: string
+          parameters: Json | null
+          report_data: Json
+          report_type: string
+          sprint_id: string | null
+        }
+        Insert: {
+          board_id?: string | null
+          created_at?: string | null
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          parameters?: Json | null
+          report_data?: Json
+          report_type: string
+          sprint_id?: string | null
+        }
+        Update: {
+          board_id?: string | null
+          created_at?: string | null
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          parameters?: Json | null
+          report_data?: Json
+          report_type?: string
+          sprint_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_reports_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_reports_sprint_id_fkey"
+            columns: ["sprint_id"]
+            isOneToOne: false
+            referencedRelation: "sprints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boards: {
         Row: {
           config: Json | null
@@ -2193,6 +2304,51 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sprint_tasks: {
+        Row: {
+          committed_at: string | null
+          created_at: string | null
+          current_story_points: number | null
+          id: string
+          initial_story_points: number | null
+          sprint_id: string | null
+          task_id: string | null
+        }
+        Insert: {
+          committed_at?: string | null
+          created_at?: string | null
+          current_story_points?: number | null
+          id?: string
+          initial_story_points?: number | null
+          sprint_id?: string | null
+          task_id?: string | null
+        }
+        Update: {
+          committed_at?: string | null
+          created_at?: string | null
+          current_story_points?: number | null
+          id?: string
+          initial_story_points?: number | null
+          sprint_id?: string | null
+          task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sprint_tasks_sprint_id_fkey"
+            columns: ["sprint_id"]
+            isOneToOne: false
+            referencedRelation: "sprints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sprint_tasks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]

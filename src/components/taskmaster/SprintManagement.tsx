@@ -7,36 +7,31 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
   Play, Pause, RotateCcw, Plus, Calendar as CalendarIcon,
   Target, Clock, CheckCircle, AlertCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Sprint, Project, Board, TaskMasterTask } from '@/types/taskmaster';
+import { sprintService } from '@/services/sprintService';
+import { useToast } from '@/hooks/use-toast';
+import { useAuthContext } from '@/context/AuthContext';
 
 interface SprintManagementProps {
   project: Project;
   board: Board;
-  sprints: Sprint[];
   tasks: TaskMasterTask[];
-  onSprintCreate: (sprint: Omit<Sprint, 'id' | 'created_at' | 'updated_at'>) => void;
-  onSprintUpdate: (sprintId: string, updates: Partial<Sprint>) => void;
-  onSprintStart: (sprintId: string) => void;
-  onSprintComplete: (sprintId: string) => void;
 }
 
 const SprintManagement: React.FC<SprintManagementProps> = ({
   project,
   board,
-  sprints,
-  tasks,
-  onSprintCreate,
-  onSprintUpdate,
-  onSprintStart,
-  onSprintComplete
+  tasks
 }) => {
+  const { user } = useAuthContext();
+  const { toast } = useToast();
+  const [sprints, setSprints] = useState<Sprint[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [sprintForm, setSprintForm] = useState({
     name: '',
@@ -44,6 +39,124 @@ const SprintManagement: React.FC<SprintManagementProps> = ({
     start_date: '',
     end_date: ''
   });
+
+  useEffect(() => {
+    fetchSprints();
+  }, [board.id]);
+
+  const fetchSprints = async () => {
+    try {
+      const { data, error } = await sprintService.getSprints(board.id);
+      if (error) {
+        console.error('Error fetching sprints:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load sprints',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setSprints(data || []);
+    } catch (error) {
+      console.error('Error fetching sprints:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateSprint = async () => {
+    if (!sprintForm.name.trim() || !user) return;
+
+    try {
+      const { data, error } = await sprintService.createSprint({
+        project_id: project.id,
+        board_id: board.id,
+        name: sprintForm.name,
+        goal: sprintForm.goal,
+        start_date: sprintForm.start_date || undefined,
+        end_date: sprintForm.end_date || undefined,
+        status: 'planned',
+        created_by: user.id
+      });
+
+      if (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to create sprint',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (data) {
+        setSprints(prev => [data, ...prev]);
+        setSprintForm({ name: '', goal: '', start_date: '', end_date: '' });
+        setIsCreateDialogOpen(false);
+        toast({
+          title: 'Success',
+          description: 'Sprint created successfully',
+        });
+      }
+    } catch (error) {
+      console.error('Error creating sprint:', error);
+    }
+  };
+
+  const handleSprintStart = async (sprintId: string) => {
+    try {
+      const { data, error } = await sprintService.updateSprint(sprintId, { 
+        status: 'active',
+        start_date: new Date().toISOString().split('T')[0]
+      });
+
+      if (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to start sprint',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (data) {
+        setSprints(prev => prev.map(s => s.id === sprintId ? data : s));
+        toast({
+          title: 'Sprint Started',
+          description: 'Sprint is now active',
+        });
+      }
+    } catch (error) {
+      console.error('Error starting sprint:', error);
+    }
+  };
+
+  const handleSprintComplete = async (sprintId: string) => {
+    try {
+      const { data, error } = await sprintService.updateSprint(sprintId, { 
+        status: 'completed',
+        end_date: new Date().toISOString().split('T')[0]
+      });
+
+      if (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to complete sprint',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (data) {
+        setSprints(prev => prev.map(s => s.id === sprintId ? data : s));
+        toast({
+          title: 'Sprint Completed',
+          description: 'Sprint has been completed',
+        });
+      }
+    } catch (error) {
+      console.error('Error completing sprint:', error);
+    }
+  };
 
   const activeSprint = sprints.find(s => s.status === 'active');
   const plannedSprints = sprints.filter(s => s.status === 'planned');
@@ -57,24 +170,6 @@ const SprintManagement: React.FC<SprintManagementProps> = ({
     const sprintTasks = getSprintTasks(sprintId);
     const completedTasks = sprintTasks.filter(task => task.status === 'done');
     return sprintTasks.length > 0 ? (completedTasks.length / sprintTasks.length) * 100 : 0;
-  };
-
-  const handleCreateSprint = () => {
-    if (!sprintForm.name.trim()) return;
-
-    onSprintCreate({
-      project_id: project.id,
-      board_id: board.id,
-      name: sprintForm.name,
-      goal: sprintForm.goal,
-      start_date: sprintForm.start_date || undefined,
-      end_date: sprintForm.end_date || undefined,
-      status: 'planned',
-      created_by: 'current-user-id' // This should come from auth context
-    });
-
-    setSprintForm({ name: '', goal: '', start_date: '', end_date: '' });
-    setIsCreateDialogOpen(false);
   };
 
   const SprintCard: React.FC<{ sprint: Sprint }> = ({ sprint }) => {
@@ -109,7 +204,7 @@ const SprintManagement: React.FC<SprintManagementProps> = ({
               {sprint.status === 'planned' && (
                 <Button 
                   size="sm" 
-                  onClick={() => onSprintStart(sprint.id)}
+                  onClick={() => handleSprintStart(sprint.id)}
                   className="bg-green-600 hover:bg-green-700"
                 >
                   <Play className="h-4 w-4 mr-1" />
@@ -119,7 +214,7 @@ const SprintManagement: React.FC<SprintManagementProps> = ({
               {sprint.status === 'active' && (
                 <Button 
                   size="sm" 
-                  onClick={() => onSprintComplete(sprint.id)}
+                  onClick={() => handleSprintComplete(sprint.id)}
                   variant="outline"
                 >
                   <CheckCircle className="h-4 w-4 mr-1" />
@@ -198,6 +293,14 @@ const SprintManagement: React.FC<SprintManagementProps> = ({
       </Card>
     );
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
