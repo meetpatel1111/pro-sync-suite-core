@@ -21,126 +21,123 @@ import APIKeyManagement from '@/components/settings/APIKeyManagement';
 
 const AIFeaturesTab: React.FC = () => {
   return (
-    <div className="space-y-6 max-w-full overflow-hidden">
-      {/* Header */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-6 w-6" />
+    <div className="space-y-8 max-w-full">
+      {/* Header Overview */}
+      <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-3">
+            <Brain className="h-7 w-7 text-blue-600" />
             AI Features & Intelligence
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-base">
             Comprehensive AI-powered tools to enhance productivity, automate workflows, and provide intelligent insights across ProSync Suite
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="flex items-center gap-3 p-4 border rounded-lg">
+            <div className="flex items-center gap-3 p-4 bg-white/60 backdrop-blur-sm border border-blue-200 rounded-lg">
               <MessageSquare className="h-8 w-8 text-blue-500 flex-shrink-0" />
               <div className="min-w-0">
-                <h3 className="font-medium">AI Chat Assistant</h3>
-                <p className="text-sm text-muted-foreground">Get help with your projects</p>
+                <h3 className="font-semibold text-sm">AI Chat Assistant</h3>
+                <p className="text-xs text-muted-foreground">Get help with your projects</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-4 border rounded-lg">
+            <div className="flex items-center gap-3 p-4 bg-white/60 backdrop-blur-sm border border-purple-200 rounded-lg">
               <Search className="h-8 w-8 text-purple-500 flex-shrink-0" />
               <div className="min-w-0">
-                <h3 className="font-medium">Smart Search</h3>
-                <p className="text-sm text-muted-foreground">Natural language search</p>
+                <h3 className="font-semibold text-sm">Smart Search</h3>
+                <p className="text-xs text-muted-foreground">Natural language search</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-4 border rounded-lg">
+            <div className="flex items-center gap-3 p-4 bg-white/60 backdrop-blur-sm border border-green-200 rounded-lg">
               <Command className="h-8 w-8 text-green-500 flex-shrink-0" />
               <div className="min-w-0">
-                <h3 className="font-medium">Multi-App Copilot</h3>
-                <p className="text-sm text-muted-foreground">Natural language commands</p>
+                <h3 className="font-semibold text-sm">Multi-App Copilot</h3>
+                <p className="text-xs text-muted-foreground">Natural language commands</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-4 border rounded-lg">
+            <div className="flex items-center gap-3 p-4 bg-white/60 backdrop-blur-sm border border-orange-200 rounded-lg">
               <Shield className="h-8 w-8 text-orange-500 flex-shrink-0" />
               <div className="min-w-0">
-                <h3 className="font-medium">Risk Prediction</h3>
-                <p className="text-sm text-muted-foreground">AI-powered risk analysis</p>
+                <h3 className="font-semibold text-sm">Risk Prediction</h3>
+                <p className="text-xs text-muted-foreground">AI-powered risk analysis</p>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* API Key Management */}
-      <APIKeyManagement />
+      {/* API Key Management Section */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Setup & Configuration</h2>
+        <APIKeyManagement />
+      </div>
 
-      {/* AI Multi-App Command Bar - Featured */}
-      <div className="max-w-full">
+      {/* Featured AI Tool */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Featured AI Tool</h2>
         <AIMultiAppCommandBar />
       </div>
 
-      {/* AI Features Grid - Row 1: Core AI Tools */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-full">
-        <div className="min-w-0">
+      {/* Core AI Tools */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Core AI Tools</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <AIChatWidget />
-        </div>
-        <div className="min-w-0">
           <AISmartSearch />
         </div>
       </div>
 
-      {/* AI Features Grid - Row 2: Content & Analysis */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-full">
-        <div className="min-w-0">
+      {/* Content & Analysis Tools */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Content & Analysis</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <AIContentGenerator />
-        </div>
-        <div className="min-w-0">
           <AIDocumentSummarizer />
         </div>
       </div>
 
-      {/* AI Features Grid - Row 3: Advanced Analytics & Suggestions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-full">
-        <div className="min-w-0">
+      {/* Project Management AI */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Project Management AI</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <AIProjectAnalyzer />
-        </div>
-        <div className="min-w-0">
           <AITaskSuggestions />
         </div>
       </div>
 
-      {/* AI Features Grid - Row 4: Risk & Anomaly Detection */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-full">
-        <div className="min-w-0">
+      {/* Risk & Data Analysis */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Risk & Data Analysis</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <AIRiskPredictor />
-        </div>
-        <div className="min-w-0">
           <AIAnomalyDetector />
         </div>
       </div>
 
-      {/* AI Features Grid - Row 5: Meeting & Scheduling */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-full">
-        <div className="min-w-0">
+      {/* Meeting & Scheduling Tools */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Meeting & Scheduling</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <AIMeetingNotesGenerator />
-        </div>
-        <div className="min-w-0">
           <AISmartScheduling />
         </div>
       </div>
 
-      {/* AI Features Grid - Row 6: Documentation & Sync */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-full">
-        <div className="min-w-0">
+      {/* Documentation & Sync */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Documentation & Synchronization</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <AIAutoDocumentation />
-        </div>
-        <div className="min-w-0">
           <AIDataSyncAdvisor />
         </div>
       </div>
 
-      {/* AI Features Grid - Row 7: Context & Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-full">
-        <div className="min-w-0">
+      {/* Context & Insights */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Context & Insights</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <AIContextSuggestions />
-        </div>
-        <div className="min-w-0">
           <AIInsightsWidget />
         </div>
       </div>
