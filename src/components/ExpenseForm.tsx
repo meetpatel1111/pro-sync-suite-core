@@ -14,7 +14,6 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Project } from '@/utils/dbtypes';
-import { safeQueryTable } from '@/utils/db-helpers';
 
 interface ExpenseFormProps {
   onSuccess?: () => void;
@@ -55,12 +54,10 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
       if (!user) return;
       
       try {
-        // Use safeQueryTable to query projects table
-        const { data, error } = await safeQueryTable<Project>("projects", (query) => 
-          query
-            .select('*')
-            .eq('user_id', user.id)
-        );
+        const { data, error } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('user_id', user.id);
           
         if (error) {
           console.error('Error fetching projects:', error);
@@ -103,27 +100,22 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
       let receiptUrl = null;
       
       if (receipt) {
-        // Create the storage bucket if it doesn't exist
-        const { data: bucketData } = await supabase
-          .storage
-          .getBucket('receipts');
-          
-        if (!bucketData) {
-          // Create receipts bucket
-          await supabase
-            .storage
-            .createBucket('receipts', {
-              public: false
-            });
-        }
-        
         // Upload receipt to storage
         const fileExt = receipt.name.split('.').pop();
         const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
         const filePath = `expenses/${user.id}/${fileName}`;
         
-        const { error: uploadError } = await supabase
-          .storage
+        // Create receipts bucket if it doesn't exist
+        const { data: buckets } = await supabase.storage.listBuckets();
+        const receiptsBucketExists = buckets?.some(bucket => bucket.name === 'receipts');
+        
+        if (!receiptsBucketExists) {
+          await supabase.storage.createBucket('receipts', {
+            public: false
+          });
+        }
+        
+        const { error: uploadError } = await supabase.storage
           .from('receipts')
           .upload(filePath, receipt);
           
@@ -139,39 +131,44 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
         }
         
         // Get public URL
-        const { data: { publicUrl } } = supabase
-          .storage
+        const { data: { publicUrl } } = supabase.storage
           .from('receipts')
           .getPublicUrl(filePath);
           
         receiptUrl = publicUrl;
       }
       
-      // Create expense record using safeQueryTable
-      const { error } = await safeQueryTable("expenses", (query) =>
-        query.insert({
-          description,
-          amount: parseFloat(amount),
-          date: date.toISOString(),
-          category_id: category,
-          project_id: projectId || null,
-          user_id: user.id,
-          currency,
-          receipt_url: receiptUrl,
-          status: 'pending',
-          created_at: new Date().toISOString(),
-        })
-      );
+      // Create expense record
+      const expenseData = {
+        description,
+        amount: parseFloat(amount),
+        date: date.toISOString(),
+        category_id: category || null,
+        project_id: projectId || null,
+        user_id: user.id,
+        currency,
+        receipt_url: receiptUrl,
+        status: 'pending',
+      };
+
+      console.log('Creating expense with data:', expenseData);
+      
+      const { data, error } = await supabase
+        .from('expenses')
+        .insert(expenseData)
+        .select();
         
       if (error) {
         console.error('Error creating expense:', error);
         toast({
           title: 'Error',
-          description: 'Failed to create expense',
+          description: `Failed to create expense: ${error.message}`,
           variant: 'destructive',
         });
         return;
       }
+      
+      console.log('Expense created successfully:', data);
       
       toast({
         title: 'Success',
@@ -217,7 +214,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
       <h3 className="text-lg font-semibold mb-4">Create New Expense</h3>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
+          <Label htmlFor="description">Description *</Label>
           <Input
             id="description"
             value={description}
@@ -229,11 +226,12 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
         
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="amount">Amount</Label>
+            <Label htmlFor="amount">Amount *</Label>
             <Input
               id="amount"
               type="number"
               step="0.01"
+              min="0"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
@@ -355,7 +353,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
           className="w-full"
           disabled={isSubmitting}
         >
-          {isSubmitting ? 'Submitting...' : 'Create Expense'}
+          {isSubmitting ? 'Creating...' : 'Create Expense'}
         </Button>
       </form>
     </Card>

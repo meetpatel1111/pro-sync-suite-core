@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -49,107 +48,97 @@ const BudgetBuddy = () => {
   const [monthlyExpenses, setMonthlyExpenses] = useState(0);
   const [previousMonthExpenses, setPreviousMonthExpenses] = useState(0);
   
-  useEffect(() => {
-    const fetchBudgetData = async () => {
-      if (!user) return;
-      
-      setLoading(true);
-      try {
-        // Fetch expenses
-        const { data: expensesData, error: expensesError } = await safeQueryTable<Expense>("expenses", (query) =>
-          query
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(10)
-        );
-          
-        if (expensesError) {
-          console.error('Error fetching expenses:', expensesError);
-        } else {
-          setExpenses(expensesData || []);
-        }
-        
-        // Fetch all expenses for calculations
-        const { data: allExpensesData, error: allExpensesError } = await safeQueryTable<Expense>("expenses", (query) =>
-          query
-            .select('*')
-            .eq('user_id', user.id)
-        );
-        
-        if (!allExpensesError && allExpensesData) {
-          // Calculate total spent
-          const total = allExpensesData.reduce((sum, expense) => sum + Number(expense.amount), 0);
-          setTotalSpent(total);
-          
-          // Calculate current month expenses
-          const currentMonth = new Date().getMonth();
-          const currentYear = new Date().getFullYear();
-          const currentMonthExpenses = allExpensesData
-            .filter(expense => {
-              const expenseDate = new Date(expense.date);
-              return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
-            })
-            .reduce((sum, expense) => sum + Number(expense.amount), 0);
-          setMonthlyExpenses(currentMonthExpenses);
-          
-          // Calculate previous month expenses
-          const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-          const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-          const prevMonthExpenses = allExpensesData
-            .filter(expense => {
-              const expenseDate = new Date(expense.date);
-              return expenseDate.getMonth() === prevMonth && expenseDate.getFullYear() === prevYear;
-            })
-            .reduce((sum, expense) => sum + Number(expense.amount), 0);
-          setPreviousMonthExpenses(prevMonthExpenses);
-        }
-        
-        // Fetch budgets
-        const { data: budgetsData, error: budgetsError } = await safeQueryTable<Budget>("budgets", (query) =>
-          query
-            .select('*')
-            .limit(1)
-        );
-          
-        if (budgetsError) {
-          console.error('Error fetching budgets:', budgetsError);
-        } else if (budgetsData && budgetsData.length > 0) {
-          setBudgets(budgetsData);
-          setActiveBudgetId(budgetsData[0].id);
-          setTotalBudget(Number(budgetsData[0].total) || 0);
-        }
-      } catch (error) {
-        console.error('Exception fetching budget data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchBudgetData = async () => {
+    if (!user) return;
     
+    setLoading(true);
+    try {
+      console.log('Fetching budget data for user:', user.id);
+      
+      // Fetch expenses
+      const { data: expensesData, error: expensesError } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+          
+      if (expensesError) {
+        console.error('Error fetching expenses:', expensesError);
+      } else {
+        console.log('Fetched expenses:', expensesData);
+        setExpenses(expensesData || []);
+      }
+      
+      // Fetch all expenses for calculations
+      const { data: allExpensesData, error: allExpensesError } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('user_id', user.id);
+      
+      if (!allExpensesError && allExpensesData) {
+        console.log('All expenses for calculations:', allExpensesData);
+        
+        // Calculate total spent
+        const total = allExpensesData.reduce((sum, expense) => sum + Number(expense.amount), 0);
+        setTotalSpent(total);
+        
+        // Calculate current month expenses
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        const currentMonthExpenses = allExpensesData
+          .filter(expense => {
+            const expenseDate = new Date(expense.date);
+            return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
+          })
+          .reduce((sum, expense) => sum + Number(expense.amount), 0);
+        setMonthlyExpenses(currentMonthExpenses);
+        
+        // Calculate previous month expenses
+        const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+        const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+        const prevMonthExpenses = allExpensesData
+          .filter(expense => {
+            const expenseDate = new Date(expense.date);
+            return expenseDate.getMonth() === prevMonth && expenseDate.getFullYear() === prevYear;
+          })
+          .reduce((sum, expense) => sum + Number(expense.amount), 0);
+        setPreviousMonthExpenses(prevMonthExpenses);
+      }
+      
+      // Fetch budgets
+      const { data: budgetsData, error: budgetsError } = await supabase
+        .from('budgets')
+        .select('*')
+        .limit(1);
+          
+      if (budgetsError) {
+        console.error('Error fetching budgets:', budgetsError);
+      } else if (budgetsData && budgetsData.length > 0) {
+        console.log('Fetched budgets:', budgetsData);
+        setBudgets(budgetsData);
+        setActiveBudgetId(budgetsData[0].id);
+        setTotalBudget(Number(budgetsData[0].total) || 0);
+      }
+    } catch (error) {
+      console.error('Exception fetching budget data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
     fetchBudgetData();
   }, [user]);
 
   const handleExpenseCreated = () => {
-    // Refresh expenses after a new one is created
-    if (user) {
-      safeQueryTable<Expense>("expenses", (query) =>
-        query
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(10)
-      ).then(({ data, error }) => {
-        if (error) {
-          console.error('Error refreshing expenses:', error);
-        } else {
-          setExpenses(data || []);
-          toast({
-            title: 'Expense Added',
-            description: 'Your expense has been successfully added.',
-          });
-        }
-      });
-    }
+    console.log('Expense created, refreshing data...');
+    // Refresh all budget data after a new expense is created
+    fetchBudgetData();
+    toast({
+      title: 'Expense Added',
+      description: 'Your expense has been successfully added.',
+    });
   };
 
   // Calculate percentages and changes
