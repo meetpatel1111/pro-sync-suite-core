@@ -1,821 +1,268 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, MoreHorizontal, Clock, Calendar, Edit, Trash2, ListCheck } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Plus, User, Calendar, AlertCircle } from 'lucide-react';
+import { useAuthContext } from '@/context/AuthContext';
+import { taskmasterService } from '@/services/taskmasterService';
 import { useToast } from '@/hooks/use-toast';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { supabase } from "@/integrations/supabase/client";
+import TaskDetailDialog from './TaskDetailDialog';
+import CreateTaskDialog from './CreateTaskDialog';
+import type { Project, Board, TaskMasterTask } from '@/types/taskmaster';
 
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  status: 'todo' | 'inProgress' | 'review' | 'done';
-  priority: 'low' | 'medium' | 'high';
-  dueDate?: string;
-  assignee?: string;
-  project?: string;
-  createdAt: string;
-  user_id?: string;
+interface TaskBoardProps {
+  project: Project;
+  board: Board;
 }
 
-const initialData: Task[] = [
-  {
-    id: '1',
-    title: 'Create project plan',
-    description: 'Develop a comprehensive project plan for the new website redesign',
-    status: 'todo',
-    priority: 'high',
-    dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-    assignee: 'user1',
-    project: 'project1',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '2',
-    title: 'Design homepage mockup',
-    description: 'Create initial mockups for the homepage design',
-    status: 'inProgress',
-    priority: 'medium',
-    dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-    assignee: 'user2',
-    project: 'project1',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '3',
-    title: 'Setup analytics',
-    description: 'Implement Google Analytics tracking code',
-    status: 'review',
-    priority: 'low',
-    dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-    assignee: 'user3',
-    project: 'project1',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '4',
-    title: 'Launch website',
-    description: 'Deploy website to production server',
-    status: 'done',
-    priority: 'high',
-    dueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    assignee: 'user1',
-    project: 'project1',
-    createdAt: new Date().toISOString()
-  }
-];
-
-const TaskBoard = () => {
+const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
+  const { user } = useAuthContext();
   const { toast } = useToast();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false);
-  const [isEditTaskDialogOpen, setIsEditTaskDialogOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [newTask, setNewTask] = useState<Partial<Task>>({
-    title: '',
-    description: '',
-    status: 'todo',
-    priority: 'medium',
-    project: 'project1'
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [session, setSession] = useState<any>(null);
+  const [tasks, setTasks] = useState<TaskMasterTask[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTask, setSelectedTask] = useState<TaskMasterTask | undefined>();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
+    fetchTasks();
+  }, [board.id]);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    async function fetchTasks() {
-      if (!session) {
-        const storedTasks = localStorage.getItem('tasks');
-        if (storedTasks) {
-          setTasks(JSON.parse(storedTasks));
-        } else {
-          setTasks(initialData);
-          localStorage.setItem('tasks', JSON.stringify(initialData));
-        }
-        setIsLoading(false);
+  const fetchTasks = async () => {
+    try {
+      const { data, error } = await taskmasterService.getTasks(board.id);
+      if (error) {
+        console.error('Error fetching tasks:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load tasks',
+          variant: 'destructive',
+        });
         return;
       }
-      
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('tasks')
-          .select('*');
-        
-        if (error) {
-          throw error;
-        }
-        
-        if (data) {
-          const mappedTasks = data.map((task): Task => ({
-            id: task.id,
-            title: task.title,
-            description: task.description || '',
-            status: validateStatus(task.status),
-            priority: validatePriority(task.priority),
-            dueDate: task.due_date,
-            assignee: task.assigned_to?.[0] || undefined,
-            project: task.project_id,
-            createdAt: task.created_at,
-            user_id: task.created_by
-          }));
-          
-          setTasks(mappedTasks);
-        } else {
-          const storedTasks = localStorage.getItem('tasks');
-          if (storedTasks) {
-            setTasks(JSON.parse(storedTasks));
-          } else {
-            setTasks(initialData);
-            localStorage.setItem('tasks', JSON.stringify(initialData));
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching tasks:", error);
-        toast({
-          title: "Error fetching tasks",
-          description: "There was an error loading your tasks",
-          variant: "destructive"
-        });
-        
-        const storedTasks = localStorage.getItem('tasks');
-        if (storedTasks) {
-          setTasks(JSON.parse(storedTasks));
-        } else {
-          setTasks(initialData);
-          localStorage.setItem('tasks', JSON.stringify(initialData));
-        }
-      } finally {
-        setIsLoading(false);
-      }
+      setTasks(data || []);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    } finally {
+      setLoading(false);
     }
-    
-    fetchTasks();
-  }, [session, toast]);
-
-  const validateStatus = (status: string): 'todo' | 'inProgress' | 'review' | 'done' => {
-    const validStatuses: Array<'todo' | 'inProgress' | 'review' | 'done'> = ['todo', 'inProgress', 'review', 'done'];
-    return validStatuses.includes(status as any) ? (status as 'todo' | 'inProgress' | 'review' | 'done') : 'todo';
   };
 
-  const validatePriority = (priority: string): 'low' | 'medium' | 'high' => {
-    const validPriorities: Array<'low' | 'medium' | 'high'> = ['low', 'medium', 'high'];
-    return validPriorities.includes(priority as any) ? (priority as 'low' | 'medium' | 'high') : 'medium';
-  };
+  const handleTaskCreate = async (taskData: Partial<TaskMasterTask>) => {
+    if (!user) return;
 
-  const handleCreateTask = async () => {
-    if (!newTask.title) {
+    try {
+      const { data, error } = await taskmasterService.createTask({
+        ...taskData,
+        board_id: board.id,
+        project_id: project.id,
+        created_by: user.id,
+        status: taskData.status || 'todo',
+        priority: taskData.priority || 'medium',
+        type: taskData.type || 'task',
+        visibility: taskData.visibility || 'team',
+        position: tasks.length,
+        actual_hours: 0
+      } as Omit<TaskMasterTask, 'id' | 'task_number' | 'task_key' | 'created_at' | 'updated_at'>);
+
+      if (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to create task',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (data) {
+        setTasks(prev => [...prev, data]);
+        toast({
+          title: 'Success',
+          description: 'Task created successfully',
+        });
+      }
+    } catch (error) {
+      console.error('Error creating task:', error);
       toast({
-        title: "Title required",
-        description: "Please provide a title for the task",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to create task',
+        variant: 'destructive',
       });
-      return;
     }
-
-    const taskData = {
-      title: newTask.title,
-      description: newTask.description || '',
-      status: newTask.status as 'todo' | 'inProgress' | 'review' | 'done',
-      priority: newTask.priority as 'low' | 'medium' | 'high',
-      dueDate: newTask.dueDate,
-      assignee: newTask.assignee,
-      project: newTask.project,
-      createdAt: new Date().toISOString()
-    };
-
-    let newId = '';
-
-    if (session) {
-      try {
-        const { data, error } = await supabase
-          .from('tasks')
-          .insert({
-            title: taskData.title,
-            description: taskData.description,
-            status: taskData.status,
-            priority: taskData.priority,
-            due_date: taskData.dueDate,
-            assigned_to: taskData.assignee ? [taskData.assignee] : null,
-            project_id: taskData.project,
-            created_by: session.user.id
-          })
-          .select();
-        
-        if (error) throw error;
-        
-        if (data && data[0]) {
-          newId = data[0].id;
-        } else {
-          newId = Date.now().toString();
-        }
-      } catch (error) {
-        console.error("Error creating task:", error);
-        toast({
-          title: "Error creating task",
-          description: "There was an error creating your task",
-          variant: "destructive"
-        });
-        
-        newId = Date.now().toString();
-      }
-    } else {
-      newId = Date.now().toString();
-    }
-
-    const task: Task = {
-      id: newId,
-      ...taskData
-    };
-
-    const updatedTasks = [...tasks, task];
-    setTasks(updatedTasks);
-    localStorage.setItem('tasks', JSON.stringify(updatedTasks));
-    
-    setNewTask({
-      title: '',
-      description: '',
-      status: 'todo',
-      priority: 'medium',
-      project: 'project1'
-    });
-    
-    setIsNewTaskDialogOpen(false);
-    
-    toast({
-      title: "Task created",
-      description: "Your new task has been created"
-    });
   };
 
-  const handleUpdateTask = async () => {
-    if (!editingTask || !editingTask.title) return;
+  const handleTaskUpdate = async (taskId: string, updates: Partial<TaskMasterTask>) => {
+    if (!user) return;
 
-    if (session) {
-      try {
-        const { error } = await supabase
-          .from('tasks')
-          .update({
-            title: editingTask.title,
-            description: editingTask.description,
-            status: editingTask.status,
-            priority: editingTask.priority,
-            due_date: editingTask.dueDate,
-            assigned_to: editingTask.assignee ? [editingTask.assignee] : null,
-            project_id: editingTask.project
-          })
-          .eq('id', editingTask.id);
-        
-        if (error) throw error;
-      } catch (error) {
-        console.error("Error updating task:", error);
+    try {
+      const { data, error } = await taskmasterService.updateTask(taskId, updates, user.id);
+      if (error) {
         toast({
-          title: "Error updating task",
-          description: "There was an error updating the task",
-          variant: "destructive"
+          title: 'Error',
+          description: 'Failed to update task',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (data) {
+        setTasks(prev => prev.map(task => task.id === taskId ? data : task));
+        toast({
+          title: 'Success',
+          description: 'Task updated successfully',
         });
       }
+    } catch (error) {
+      console.error('Error updating task:', error);
     }
-    
-    const updatedTasks = tasks.map(task => 
-      task.id === editingTask.id ? editingTask : task
-    );
-    
-    setTasks(updatedTasks);
-    localStorage.setItem('tasks', JSON.stringify(updatedTasks));
-    setIsEditTaskDialogOpen(false);
-    
-    toast({
-      title: "Task updated",
-      description: "The task has been updated successfully"
-    });
   };
 
-  const handleDeleteTask = async (taskId: string) => {
-    if (session) {
-      try {
-        const { error } = await supabase
-          .from('tasks')
-          .delete()
-          .eq('id', taskId);
-        
-        if (error) throw error;
-      } catch (error) {
-        console.error("Error deleting task:", error);
-        toast({
-          title: "Error deleting task",
-          description: "There was an error deleting the task",
-          variant: "destructive"
-        });
-      }
-    }
-    
-    const updatedTasks = tasks.filter(task => task.id !== taskId);
-    setTasks(updatedTasks);
-    localStorage.setItem('tasks', JSON.stringify(updatedTasks));
-    
-    toast({
-      title: "Task deleted",
-      description: "The task has been removed"
-    });
-  };
-
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, taskId: string) => {
-    e.dataTransfer.setData('taskId', taskId);
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = async (e: React.DragEvent<HTMLDivElement>, status: 'todo' | 'inProgress' | 'review' | 'done') => {
-    e.preventDefault();
-    const taskId = e.dataTransfer.getData('taskId');
-    
-    if (session) {
-      try {
-        const { error } = await supabase
-          .from('tasks')
-          .update({ status })
-          .eq('id', taskId);
-        
-        if (error) throw error;
-      } catch (error) {
-        console.error("Error updating task status:", error);
-        toast({
-          title: "Error updating task",
-          description: "There was an error updating the task status",
-          variant: "destructive"
-        });
-      }
-    }
-    
-    const updatedTasks = tasks.map(task => {
-      if (task.id === taskId) {
-        return { ...task, status };
-      }
-      return task;
-    });
-    
-    setTasks(updatedTasks);
-    localStorage.setItem('tasks', JSON.stringify(updatedTasks));
+  const getTasksByStatus = (status: string) => {
+    return tasks.filter(task => task.status === status);
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high':
-        return 'bg-red-500';
-      case 'medium':
-        return 'bg-amber-500';
-      case 'low':
-        return 'bg-green-500';
-      default:
-        return 'bg-slate-500';
+      case 'critical': return 'bg-red-500';
+      case 'high': return 'bg-orange-500';
+      case 'medium': return 'bg-yellow-500';
+      case 'low': return 'bg-green-500';
+      default: return 'bg-gray-500';
     }
   };
 
-  const getStatusColumnTasks = (status: 'todo' | 'inProgress' | 'review' | 'done') => {
-    return tasks.filter(task => task.status === status);
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '';
-    try {
-      return format(new Date(dateString), 'MMM d, yyyy');
-    } catch (e) {
-      return dateString;
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'bug': return '🐛';
+      case 'story': return '📖';
+      case 'epic': return '🚀';
+      default: return '✓';
     }
   };
 
-  const assigneeMap: Record<string, string> = {
-    'user1': 'Alex Johnson',
-    'user2': 'Jamie Smith',
-    'user3': 'Taylor Lee',
-    'user4': 'Morgan Chen'
-  };
-
-  const projectMap: Record<string, string> = {
-    'project1': 'Website Redesign',
-    'project2': 'Mobile App',
-    'project3': 'Marketing Campaign',
-    'project4': 'Database Migration'
-  };
-
-  const TaskItem = ({ task }: { task: Task }) => (
-    <div
-      className="mb-3 rounded-md border bg-card p-3 shadow-sm hover:shadow-md transition-shadow"
-      draggable
-      onDragStart={(e) => handleDragStart(e, task.id)}
-    >
-      <div className="flex justify-between items-start">
-        <h3 className="font-medium mb-1">{task.title}</h3>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem 
-              onClick={() => {
-                setEditingTask(task);
-                setIsEditTaskDialogOpen(true);
-              }}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit task
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleDeleteTask(task.id)}
-              className="text-red-600"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete task
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-      
-      {task.description && (
-        <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{task.description}</p>
-      )}
-      
-      <div className="flex justify-between items-center text-xs">
-        <div className="flex items-center gap-1">
-          <span className={`inline-block h-2 w-2 rounded-full ${getPriorityColor(task.priority)}`}></span>
-          <span className="capitalize">{task.priority}</span>
-        </div>
-        
-        {task.dueDate && (
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Calendar className="h-3 w-3" />
-            <span>{formatDate(task.dueDate)}</span>
-          </div>
-        )}
-      </div>
-      
-      {task.assignee && (
-        <div className="mt-2 text-xs text-muted-foreground">
-          <span>Assigned to: {assigneeMap[task.assignee] || task.assignee}</span>
-        </div>
-      )}
-    </div>
-  );
-
-  const StatusColumn = ({ title, status, icon: Icon }: { title: string; status: 'todo' | 'inProgress' | 'review' | 'done'; icon: any }) => (
-    <div className="w-full min-w-[250px]">
-      <Card>
-        <CardHeader className="py-3 px-4">
-          <CardTitle className="text-sm font-medium flex items-center">
-            <Icon className="mr-2 h-4 w-4" />
-            {title} ({getStatusColumnTasks(status).length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent 
-          className="px-3 py-2 min-h-[300px]" 
-          onDragOver={handleDragOver}
-          onDrop={(e) => handleDrop(e, status)}
-        >
-          {getStatusColumnTasks(status).map(task => (
-            <TaskItem key={task.id} task={task} />
-          ))}
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  if (!session) {
+  if (loading) {
     return (
-      <div className="space-y-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-8 text-muted-foreground">
-              <p>Please log in to view and manage your tasks.</p>
-              <Button 
-                variant="default" 
-                className="mt-4"
-                onClick={() => window.location.href = '/auth'}
-              >
-                Log In / Sign Up
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-8 text-muted-foreground">
-              <p>Loading tasks...</p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardHeader>
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {Array.from({ length: 2 }).map((_, j) => (
+                  <div key={j} className="h-20 bg-gray-200 rounded"></div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Task Board</h2>
-        <Dialog open={isNewTaskDialogOpen} onOpenChange={setIsNewTaskDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Task
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Create New Task</DialogTitle>
-              <DialogDescription>
-                Add details for your new task below.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  placeholder="Task title"
-                  value={newTask.title}
-                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                />
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-xl font-semibold">{board.name}</h3>
+          <p className="text-muted-foreground">Manage your tasks using {board.type} workflow</p>
+        </div>
+        <Button onClick={() => setIsCreateDialogOpen(true)} className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          Create Task
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {board.config.columns.map((column) => (
+          <Card key={column.id} className="h-fit">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium">{column.name}</CardTitle>
+                <Badge variant="secondary">{getTasksByStatus(column.id).length}</Badge>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Task description"
-                  value={newTask.description}
-                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={newTask.status}
-                    onValueChange={(value) => setNewTask({ ...newTask, status: value as any })}
-                  >
-                    <SelectTrigger id="status">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todo">To Do</SelectItem>
-                      <SelectItem value="inProgress">In Progress</SelectItem>
-                      <SelectItem value="review">Review</SelectItem>
-                      <SelectItem value="done">Done</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="priority">Priority</Label>
-                  <Select
-                    value={newTask.priority}
-                    onValueChange={(value) => setNewTask({ ...newTask, priority: value as any })}
-                  >
-                    <SelectTrigger id="priority">
-                      <SelectValue placeholder="Select priority" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="dueDate">Due Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal h-10"
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {newTask.dueDate ? formatDate(newTask.dueDate) : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <input
-                        type="date"
-                        className="w-full p-2"
-                        onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="assignee">Assignee</Label>
-                  <Select
-                    value={newTask.assignee}
-                    onValueChange={(value) => setNewTask({ ...newTask, assignee: value })}
-                  >
-                    <SelectTrigger id="assignee">
-                      <SelectValue placeholder="Select assignee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user1">Alex Johnson</SelectItem>
-                      <SelectItem value="user2">Jamie Smith</SelectItem>
-                      <SelectItem value="user3">Taylor Lee</SelectItem>
-                      <SelectItem value="user4">Morgan Chen</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="project">Project</Label>
-                <Select
-                  value={newTask.project}
-                  onValueChange={(value) => setNewTask({ ...newTask, project: value })}
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {getTasksByStatus(column.id).map((task) => (
+                <Card 
+                  key={task.id} 
+                  className="cursor-pointer hover:shadow-sm transition-shadow p-3"
+                  onClick={() => setSelectedTask(task)}
                 >
-                  <SelectTrigger id="project">
-                    <SelectValue placeholder="Select project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="project1">Website Redesign</SelectItem>
-                    <SelectItem value="project2">Mobile App</SelectItem>
-                    <SelectItem value="project3">Marketing Campaign</SelectItem>
-                    <SelectItem value="project4">Database Migration</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsNewTaskDialogOpen(false)}>
-                Cancel
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs">{getTypeIcon(task.type)}</span>
+                      <span className="text-xs text-muted-foreground">{task.task_key}</span>
+                      <div className={`w-2 h-2 rounded-full ${getPriorityColor(task.priority)}`}></div>
+                    </div>
+                    <h4 className="text-sm font-medium line-clamp-2">{task.title}</h4>
+                    {task.assignee_id && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <User className="h-3 w-3" />
+                        <span>Assigned</span>
+                      </div>
+                    )}
+                    {task.due_date && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        <span>{new Date(task.due_date).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {task.estimate_hours && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <AlertCircle className="h-3 w-3" />
+                        <span>{task.estimate_hours}h</span>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              ))}
+              
+              <Button 
+                variant="ghost" 
+                className="w-full border-dashed border-2"
+                onClick={() => setIsCreateDialogOpen(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add task
               </Button>
-              <Button onClick={handleCreateTask}>Create Task</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
-        <StatusColumn title="To Do" status="todo" icon={ListCheck} />
-        <StatusColumn title="In Progress" status="inProgress" icon={Clock} />
-        <StatusColumn title="Review" status="review" icon={Edit} />
-        <StatusColumn title="Done" status="done" icon={Calendar} />
-      </div>
-
-      <Dialog open={isEditTaskDialogOpen} onOpenChange={setIsEditTaskDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Edit Task</DialogTitle>
-            <DialogDescription>
-              Update your task details below.
-            </DialogDescription>
-          </DialogHeader>
-          {editingTask && (
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="edit-title">Title</Label>
-                <Input
-                  id="edit-title"
-                  placeholder="Task title"
-                  value={editingTask.title}
-                  onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-description">Description</Label>
-                <Textarea
-                  id="edit-description"
-                  placeholder="Task description"
-                  value={editingTask.description}
-                  onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-status">Status</Label>
-                  <Select
-                    value={editingTask.status}
-                    onValueChange={(value) => setEditingTask({ ...editingTask, status: value as any })}
-                  >
-                    <SelectTrigger id="edit-status">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todo">To Do</SelectItem>
-                      <SelectItem value="inProgress">In Progress</SelectItem>
-                      <SelectItem value="review">Review</SelectItem>
-                      <SelectItem value="done">Done</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-priority">Priority</Label>
-                  <Select
-                    value={editingTask.priority}
-                    onValueChange={(value) => setEditingTask({ ...editingTask, priority: value as any })}
-                  >
-                    <SelectTrigger id="edit-priority">
-                      <SelectValue placeholder="Select priority" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-dueDate">Due Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal h-10"
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {editingTask.dueDate ? formatDate(editingTask.dueDate) : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <input
-                        type="date"
-                        className="w-full p-2"
-                        defaultValue={editingTask.dueDate ? format(new Date(editingTask.dueDate), 'yyyy-MM-dd') : ''}
-                        onChange={(e) => setEditingTask({ ...editingTask, dueDate: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-assignee">Assignee</Label>
-                  <Select
-                    value={editingTask.assignee}
-                    onValueChange={(value) => setEditingTask({ ...editingTask, assignee: value })}
-                  >
-                    <SelectTrigger id="edit-assignee">
-                      <SelectValue placeholder="Select assignee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user1">Alex Johnson</SelectItem>
-                      <SelectItem value="user2">Jamie Smith</SelectItem>
-                      <SelectItem value="user3">Taylor Lee</SelectItem>
-                      <SelectItem value="user4">Morgan Chen</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-project">Project</Label>
-                <Select
-                  value={editingTask.project}
-                  onValueChange={(value) => setEditingTask({ ...editingTask, project: value })}
-                >
-                  <SelectTrigger id="edit-project">
-                    <SelectValue placeholder="Select project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="project1">Website Redesign</SelectItem>
-                    <SelectItem value="project2">Mobile App</SelectItem>
-                    <SelectItem value="project3">Marketing Campaign</SelectItem>
-                    <SelectItem value="project4">Database Migration</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditTaskDialogOpen(false)}>
-              Cancel
+      {tasks.length === 0 && (
+        <div className="text-center py-12">
+          <div className="mx-auto max-w-md">
+            <h3 className="text-lg font-semibold mb-2">No tasks yet</h3>
+            <p className="text-muted-foreground mb-4">
+              Create your first task to start organizing your work
+            </p>
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create First Task
             </Button>
-            <Button onClick={handleUpdateTask}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      )}
+
+      <CreateTaskDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onTaskCreate={handleTaskCreate}
+        project={project}
+        board={board}
+      />
+
+      <TaskDetailDialog
+        task={selectedTask}
+        open={!!selectedTask}
+        onOpenChange={(open) => !open && setSelectedTask(undefined)}
+        onTaskUpdate={handleTaskUpdate}
+        project={project}
+        board={board}
+      />
     </div>
   );
 };
