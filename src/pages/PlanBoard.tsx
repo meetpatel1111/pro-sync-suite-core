@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
 import AppLayout from '@/components/AppLayout';
@@ -12,39 +11,21 @@ import { Button } from '@/components/ui/button';
 import { Plus, Calendar as CalendarIcon } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Project, Task } from '@/utils/dbtypes';
 
 type ViewType = 'gantt' | 'timeline' | 'calendar' | 'board';
 
-interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  color?: string;
-  status?: string;
-  start_date?: string;
-  end_date?: string;
-  user_id: string;
-  created_at: string;
-}
-
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
+// Extend the database Project type to include required UI properties
+interface UIProject extends Project {
+  color: string;
   status: string;
-  priority: string;
-  start_date?: string;
-  due_date?: string;
-  assignee?: string;
-  project_id?: string;
-  created_by?: string;
-  assigned_to?: string[];
+  member_count?: number;
 }
 
 const PlanBoard = () => {
   const { session } = useAuthContext();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [projects, setProjects] = useState<UIProject[]>([]);
+  const [selectedProject, setSelectedProject] = useState<UIProject | null>(null);
   const [currentView, setCurrentView] = useState<ViewType>('gantt');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,10 +63,10 @@ const PlanBoard = () => {
         throw error;
       }
       
-      const projectsWithDefaults = (data || []).map(project => ({
+      const projectsWithDefaults: UIProject[] = (data || []).map(project => ({
         ...project,
-        color: project.color || '#3b82f6',
-        status: project.status || 'active',
+        color: '#3b82f6',
+        status: 'active',
       }));
       
       console.log('Loaded projects:', projectsWithDefaults);
@@ -126,7 +107,7 @@ const PlanBoard = () => {
       const tasksWithDefaults = (data || []).map(task => ({
         ...task,
         start_date: task.start_date || new Date().toISOString().split('T')[0],
-        assignee: task.assigned_to?.[0] || null, // Use first assigned user as assignee
+        assignee: task.assigned_to?.[0] || null,
       }));
       
       console.log('Loaded tasks:', tasksWithDefaults);
@@ -142,33 +123,31 @@ const PlanBoard = () => {
   };
 
   const handleCreateProject = () => {
-    // This would open a project creation modal
     toast({
       title: 'Create Project',
       description: 'Project creation modal would open here',
     });
   };
 
-  const handleEditProject = (project: Project) => {
+  const handleEditProject = (project: UIProject) => {
     toast({
       title: 'Edit Project',
       description: `Edit modal for ${project.name} would open here`,
     });
   };
 
-  const handleArchiveProject = (project: Project) => {
+  const handleArchiveProject = (project: UIProject) => {
     toast({
       title: 'Archive Project',
       description: `${project.name} would be archived`,
     });
   };
 
-  const handleSelectProject = (project: Project) => {
+  const handleSelectProject = (project: UIProject) => {
     setSelectedProject(project);
   };
 
   const handleTaskMove = (taskId: string, newStatus: string, newIndex: number) => {
-    // Update task status in database
     toast({
       title: 'Task Moved',
       description: `Task moved to ${newStatus}`,

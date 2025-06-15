@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,25 +10,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Project } from '@/utils/dbtypes';
 
-interface Project {
-  id: string;
-  name: string;
-  description?: string;
+// Extend the database Project type to include required UI properties
+interface UIProject extends Project {
   color: string;
   status: string;
-  start_date?: string;
-  end_date?: string;
   member_count?: number;
 }
 
 interface ProjectSidebarProps {
-  projects: Project[];
-  selectedProject: Project | null;
-  onSelectProject: (project: Project) => void;
+  projects: UIProject[];
+  selectedProject: UIProject | null;
+  onSelectProject: (project: UIProject) => void;
   onCreateProject: () => void;
-  onEditProject: (project: Project) => void;
-  onArchiveProject: (project: Project) => void;
+  onEditProject: (project: UIProject) => void;
+  onArchiveProject: (project: UIProject) => void;
 }
 
 const ProjectSidebar = ({ 
