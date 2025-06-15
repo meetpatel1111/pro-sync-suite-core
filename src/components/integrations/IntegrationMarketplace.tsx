@@ -45,23 +45,27 @@ const IntegrationMarketplace: React.FC = () => {
   const difficulties = ['all', 'Beginner', 'Intermediate', 'Advanced'];
 
   useEffect(() => {
-    if (user) {
-      loadMarketplaceData();
-    }
-  }, [user]);
+    loadMarketplaceData();
+  }, []);
 
   const loadMarketplaceData = async () => {
-    if (!user) return;
-    
     try {
       setLoading(true);
-      const [publicTemplates, userInstallations] = await Promise.all([
-        integrationDatabaseService.getPublicTemplates(),
-        integrationDatabaseService.getMarketplaceInstallations(user.id)
-      ]);
+      console.log('Loading marketplace data...');
       
+      // Get public templates (these are the ones we want to show in marketplace)
+      const publicTemplates = await integrationDatabaseService.getPublicTemplates();
+      console.log('Loaded public templates:', publicTemplates);
       setTemplates(publicTemplates);
-      setInstallations(userInstallations);
+      
+      // Get user installations if user is logged in
+      if (user) {
+        const userInstallations = await integrationDatabaseService.getMarketplaceInstallations(user.id);
+        console.log('Loaded user installations:', userInstallations);
+        setInstallations(userInstallations);
+      } else {
+        setInstallations([]);
+      }
     } catch (error) {
       console.error('Error loading marketplace data:', error);
       toast({
@@ -358,6 +362,19 @@ const IntegrationMarketplace: React.FC = () => {
           <Badge variant="secondary">{installations.filter(i => i.is_active).length} Installed</Badge>
         </div>
       </div>
+
+      {/* Debug Information */}
+      {templates.length === 0 && !loading && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-yellow-600" />
+            <span className="font-medium text-yellow-800">Debug Info</span>
+          </div>
+          <p className="text-yellow-700 mt-1">
+            No templates loaded from database. Check console for errors.
+          </p>
+        </div>
+      )}
 
       {/* Installed Templates Section */}
       {installations.filter(i => i.is_active).length > 0 && (
