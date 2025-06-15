@@ -11,38 +11,17 @@ import {
   Legend
 } from 'recharts';
 
-// Sample data for the chart
-const data = [
-  {
-    name: 'Apr',
-    actual: 12845,
-    planned: 15000,
-  },
-  {
-    name: 'May',
-    actual: 14680,
-    planned: 15000,
-  },
-  {
-    name: 'Jun',
-    actual: 14655,
-    planned: 15000,
-  },
-  {
-    name: 'Jul',
-    planned: 15000,
-  },
-  {
-    name: 'Aug',
-    planned: 15000,
-  },
-  {
-    name: 'Sep',
-    planned: 15000,
-  },
-];
-
 const BudgetChart = () => {
+  // For now, showing a placeholder chart
+  // In a real implementation, this would receive expense data as props
+  const data = [
+    {
+      name: 'No Data',
+      actual: 0,
+      planned: 0,
+    }
+  ];
+
   // Custom tooltip to format currency
   const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
     if (active && payload && payload.length) {
@@ -51,7 +30,7 @@ const BudgetChart = () => {
           <p className="font-medium">{label}</p>
           {payload.map((entry, index) => (
             <p key={index} style={{ color: entry.color }}>
-              {entry.name}: ${entry.value.toLocaleString()}
+              {entry.name}: ${entry.value?.toLocaleString() || 0}
             </p>
           ))}
         </div>
@@ -74,8 +53,7 @@ const BudgetChart = () => {
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
         <XAxis dataKey="name" />
         <YAxis 
-          tickFormatter={(value) => `$${value / 1000}k`}
-          domain={[0, 20000]}
+          tickFormatter={(value) => `$${value.toLocaleString()}`}
         />
         <Tooltip content={<CustomTooltip />} />
         <Legend />

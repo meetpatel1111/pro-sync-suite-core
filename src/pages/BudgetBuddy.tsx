@@ -44,6 +44,10 @@ const BudgetBuddy = () => {
   const [loading, setLoading] = useState(true);
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [activeBudgetId, setActiveBudgetId] = useState<string | null>(null);
+  const [totalBudget, setTotalBudget] = useState(0);
+  const [totalSpent, setTotalSpent] = useState(0);
+  const [monthlyExpenses, setMonthlyExpenses] = useState(0);
+  const [previousMonthExpenses, setPreviousMonthExpenses] = useState(0);
   
   useEffect(() => {
     const fetchBudgetData = async () => {
@@ -51,7 +55,7 @@ const BudgetBuddy = () => {
       
       setLoading(true);
       try {
-        // Fetch expenses using safeQueryTable
+        // Fetch expenses
         const { data: expensesData, error: expensesError } = await safeQueryTable<Expense>("expenses", (query) =>
           query
             .select('*')
@@ -66,7 +70,42 @@ const BudgetBuddy = () => {
           setExpenses(expensesData || []);
         }
         
-        // Fetch budgets using safeQueryTable
+        // Fetch all expenses for calculations
+        const { data: allExpensesData, error: allExpensesError } = await safeQueryTable<Expense>("expenses", (query) =>
+          query
+            .select('*')
+            .eq('user_id', user.id)
+        );
+        
+        if (!allExpensesError && allExpensesData) {
+          // Calculate total spent
+          const total = allExpensesData.reduce((sum, expense) => sum + Number(expense.amount), 0);
+          setTotalSpent(total);
+          
+          // Calculate current month expenses
+          const currentMonth = new Date().getMonth();
+          const currentYear = new Date().getFullYear();
+          const currentMonthExpenses = allExpensesData
+            .filter(expense => {
+              const expenseDate = new Date(expense.date);
+              return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
+            })
+            .reduce((sum, expense) => sum + Number(expense.amount), 0);
+          setMonthlyExpenses(currentMonthExpenses);
+          
+          // Calculate previous month expenses
+          const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+          const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+          const prevMonthExpenses = allExpensesData
+            .filter(expense => {
+              const expenseDate = new Date(expense.date);
+              return expenseDate.getMonth() === prevMonth && expenseDate.getFullYear() === prevYear;
+            })
+            .reduce((sum, expense) => sum + Number(expense.amount), 0);
+          setPreviousMonthExpenses(prevMonthExpenses);
+        }
+        
+        // Fetch budgets
         const { data: budgetsData, error: budgetsError } = await safeQueryTable<Budget>("budgets", (query) =>
           query
             .select('*')
@@ -78,25 +117,7 @@ const BudgetBuddy = () => {
         } else if (budgetsData && budgetsData.length > 0) {
           setBudgets(budgetsData);
           setActiveBudgetId(budgetsData[0].id);
-        } else {
-          // If no budgets exist yet, create a sample budget
-          const { data: newBudget, error: createError } = await safeQueryTable<Budget>("budgets", (query) =>
-            query
-              .insert({
-                id: crypto.randomUUID(), // Generate a UUID for the budget
-                total: 58620,
-                spent: 42180,
-                updated_at: new Date().toISOString()
-              })
-              .select()
-          );
-            
-          if (createError) {
-            console.error('Error creating budget:', createError);
-          } else if (newBudget && newBudget.length > 0) {
-            setBudgets(newBudget);
-            setActiveBudgetId(newBudget[0].id);
-          }
+          setTotalBudget(Number(budgetsData[0].total) || 0);
         }
       } catch (error) {
         console.error('Exception fetching budget data:', error);
@@ -130,6 +151,12 @@ const BudgetBuddy = () => {
       });
     }
   };
+
+  // Calculate percentages and changes
+  const budgetUsedPercent = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+  const monthlyChange = previousMonthExpenses > 0 ? 
+    ((monthlyExpenses - previousMonthExpenses) / previousMonthExpenses) * 100 : 0;
+  const monthlyChangeFormatted = monthlyChange >= 0 ? `+${monthlyChange.toFixed(1)}%` : `${monthlyChange.toFixed(1)}%`;
   
   return (
     <AppLayout>
@@ -224,15 +251,15 @@ const BudgetBuddy = () => {
                 </Button>
               </div>
               <div className="flex items-baseline">
-                <span className="text-2xl font-bold mr-2">$58,620</span>
-                <span className="text-sm text-muted-foreground">for Q2 2025</span>
+                <span className="text-2xl font-bold mr-2">${totalBudget.toLocaleString()}</span>
+                <span className="text-sm text-muted-foreground">current period</span>
               </div>
               <div className="mt-4">
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm">$42,180 spent</span>
-                  <span className="text-sm">72%</span>
+                  <span className="text-sm">${totalSpent.toLocaleString()} spent</span>
+                  <span className="text-sm">{budgetUsedPercent}%</span>
                 </div>
-                <Progress value={72} className="h-2" />
+                <Progress value={budgetUsedPercent} className="h-2" />
               </div>
             </Card>
             
@@ -240,58 +267,44 @@ const BudgetBuddy = () => {
               <div className="flex justify-between items-center mb-2">
                 <h3 className="text-sm font-medium text-muted-foreground">Monthly Expenses</h3>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <TrendingDown className="h-4 w-4 text-destructive" />
+                  {monthlyChange >= 0 ? (
+                    <TrendingUp className="h-4 w-4 text-destructive" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4 text-green-600" />
+                  )}
                 </Button>
               </div>
               <div className="flex items-baseline">
-                <span className="text-2xl font-bold mr-2">$12,845</span>
-                <Badge variant="destructive" className="text-xs font-normal">+8.2%</Badge>
+                <span className="text-2xl font-bold mr-2">${monthlyExpenses.toLocaleString()}</span>
+                <Badge variant={monthlyChange >= 0 ? "destructive" : "default"} className="text-xs font-normal">
+                  {monthlyChangeFormatted}
+                </Badge>
               </div>
               <div className="mt-4">
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm">vs. previous month</span>
-                  <span className="text-sm text-destructive">$11,875</span>
-                </div>
-                <div className="mt-2 h-10">
-                  <div className="flex items-end h-full space-x-1">
-                    {[65, 59, 80, 81, 72, 75, 85, 92, 78, 80, 87, 95].map((value, index) => (
-                      <div
-                        key={index}
-                        className={`w-full bg-primary/15 rounded-t ${index === 11 ? 'bg-primary' : ''}`}
-                        style={{ height: `${value}%` }}
-                      ></div>
-                    ))}
-                  </div>
+                  <span className="text-sm">${previousMonthExpenses.toLocaleString()}</span>
                 </div>
               </div>
             </Card>
             
             <Card className="p-4">
               <div className="flex justify-between items-center mb-2">
-                <h3 className="text-sm font-medium text-muted-foreground">Revenue</h3>
+                <h3 className="text-sm font-medium text-muted-foreground">Budget Status</h3>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <TrendingUp className="h-4 w-4 text-emerald-600" />
+                  <Target className="h-4 w-4 text-primary" />
                 </Button>
               </div>
               <div className="flex items-baseline">
-                <span className="text-2xl font-bold mr-2">$95,240</span>
-                <Badge className="bg-emerald-600 text-xs font-normal">+12.5%</Badge>
+                <span className="text-2xl font-bold mr-2">
+                  ${(totalBudget - totalSpent).toLocaleString()}
+                </span>
+                <span className="text-sm text-muted-foreground">remaining</span>
               </div>
               <div className="mt-4">
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm">vs. previous quarter</span>
-                  <span className="text-sm text-emerald-600">$84,680</span>
-                </div>
-                <div className="mt-2 h-10">
-                  <div className="flex items-end h-full space-x-1">
-                    {[45, 52, 68, 71, 75, 78, 80, 82, 85, 88, 92, 95].map((value, index) => (
-                      <div
-                        key={index}
-                        className={`w-full bg-emerald-600/15 rounded-t ${index === 11 ? 'bg-emerald-600' : ''}`}
-                        style={{ height: `${value}%` }}
-                      ></div>
-                    ))}
-                  </div>
+                  <span className="text-sm">Budget utilization</span>
+                  <span className="text-sm">{budgetUsedPercent}%</span>
                 </div>
               </div>
             </Card>
@@ -305,7 +318,7 @@ const BudgetBuddy = () => {
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm">
                     <Calendar className="h-4 w-4 mr-2" />
-                    Q2 2025
+                    Current Period
                   </Button>
                   <Button variant="outline" size="sm">
                     <Download className="h-4 w-4" />
@@ -316,8 +329,8 @@ const BudgetBuddy = () => {
               <Tabs defaultValue="expenses">
                 <TabsList className="mb-4">
                   <TabsTrigger value="expenses">Expenses</TabsTrigger>
-                  <TabsTrigger value="revenue">Revenue</TabsTrigger>
-                  <TabsTrigger value="profit">Profit</TabsTrigger>
+                  <TabsTrigger value="trends">Trends</TabsTrigger>
+                  <TabsTrigger value="categories">Categories</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="expenses" className="space-y-4">
@@ -326,25 +339,25 @@ const BudgetBuddy = () => {
                   </div>
                 </TabsContent>
                 
-                <TabsContent value="revenue" className="space-y-4">
+                <TabsContent value="trends" className="space-y-4">
                   <div className="h-[300px] flex items-center justify-center">
                     <div className="text-center">
                       <BarChart3 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                      <h3 className="text-lg font-medium mb-2">Revenue Analysis</h3>
+                      <h3 className="text-lg font-medium mb-2">Expense Trends</h3>
                       <p className="text-muted-foreground max-w-md mb-4">
-                        Track revenue streams and monitor growth over time.
+                        Track spending patterns and identify trends over time.
                       </p>
                     </div>
                   </div>
                 </TabsContent>
                 
-                <TabsContent value="profit" className="space-y-4">
+                <TabsContent value="categories" className="space-y-4">
                   <div className="h-[300px] flex items-center justify-center">
                     <div className="text-center">
                       <PieChart className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                      <h3 className="text-lg font-medium mb-2">Profit Breakdown</h3>
+                      <h3 className="text-lg font-medium mb-2">Category Breakdown</h3>
                       <p className="text-muted-foreground max-w-md mb-4">
-                        Analyze profit margins and identify areas for improvement.
+                        Analyze expenses by category to understand spending patterns.
                       </p>
                     </div>
                   </div>
@@ -353,56 +366,54 @@ const BudgetBuddy = () => {
             </Card>
             
             <Card className="p-4">
-              <h3 className="font-medium mb-4">Expenses by Category</h3>
+              <h3 className="font-medium mb-4">Quick Stats</h3>
               
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm">Development</span>
-                    <span className="text-sm font-medium">$18,650</span>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium">Budget Progress</span>
+                    <span className="text-sm">{budgetUsedPercent}%</span>
                   </div>
-                  <Progress value={44} className="h-2" />
-                  <p className="text-xs text-muted-foreground mt-1">44% of total budget</p>
+                  <Progress value={budgetUsedPercent} className="h-2" />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {budgetUsedPercent < 75 ? 'On track' : budgetUsedPercent < 90 ? 'Monitor closely' : 'Over budget risk'}
+                  </p>
                 </div>
                 
                 <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm">Marketing</span>
-                    <span className="text-sm font-medium">$12,480</span>
+                  <h4 className="text-sm font-medium mb-3">This Month</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Expenses</span>
+                      <span className="font-medium">${monthlyExpenses.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>vs Last Month</span>
+                      <span className={`font-medium ${monthlyChange >= 0 ? 'text-destructive' : 'text-green-600'}`}>
+                        {monthlyChangeFormatted}
+                      </span>
+                    </div>
                   </div>
-                  <Progress value={30} className="h-2" />
-                  <p className="text-xs text-muted-foreground mt-1">30% of total budget</p>
                 </div>
                 
                 <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm">Operations</span>
-                    <span className="text-sm font-medium">$6,750</span>
-                  </div>
-                  <Progress value={16} className="h-2" />
-                  <p className="text-xs text-muted-foreground mt-1">16% of total budget</p>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm">Research</span>
-                    <span className="text-sm font-medium">$4,300</span>
-                  </div>
-                  <Progress value={10} className="h-2" />
-                  <p className="text-xs text-muted-foreground mt-1">10% of total budget</p>
-                </div>
-              </div>
-              
-              <div className="mt-6 pt-4 border-t">
-                <h4 className="text-sm font-medium mb-2">Budget Alerts</h4>
-                
-                <div className="space-y-3">
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
-                    <p className="text-sm text-amber-800">Marketing expenses approaching budget limit (92% used)</p>
-                  </div>
-                  
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-                    <p className="text-sm text-green-800">Development expenses under budget (70% used)</p>
+                  <h4 className="text-sm font-medium mb-3">Budget Health</h4>
+                  <div className="space-y-2">
+                    {budgetUsedPercent < 50 && (
+                      <div className="p-2 bg-green-50 border border-green-200 rounded-md">
+                        <p className="text-sm text-green-800">Spending is well within budget</p>
+                      </div>
+                    )}
+                    {budgetUsedPercent >= 50 && budgetUsedPercent < 75 && (
+                      <div className="p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                        <p className="text-sm text-yellow-800">Monitor spending closely</p>
+                      </div>
+                    )}
+                    {budgetUsedPercent >= 75 && (
+                      <div className="p-2 bg-red-50 border border-red-200 rounded-md">
+                        <p className="text-sm text-red-800">Approaching budget limit</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
