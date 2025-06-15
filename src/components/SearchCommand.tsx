@@ -41,14 +41,14 @@ interface SearchCommandProps {
 interface AppItem {
   name: string;
   path: string;
-  icon: any;
+  icon: typeof Home;
   description: string;
 }
 
 interface ActionItem {
   name: string;
   action: () => void;
-  icon: any;
+  icon: typeof Plus;
   description: string;
 }
 
@@ -196,37 +196,43 @@ const SearchCommand = ({ open, onOpenChange }: SearchCommandProps) => {
         
         {filteredApps.length > 0 && (
           <CommandGroup heading="Apps & Pages">
-            {filteredApps.map((app) => (
-              <CommandItem
-                key={app.path}
-                onSelect={() => handleSelect(() => navigate(app.path))}
-                className="flex items-center gap-2 px-4 py-2"
-              >
-                <app.icon className="h-4 w-4" />
-                <div className="flex flex-col">
-                  <span className="font-medium">{app.name}</span>
-                  <span className="text-sm text-muted-foreground">{app.description}</span>
-                </div>
-              </CommandItem>
-            ))}
+            {filteredApps.map((app) => {
+              const IconComponent = app.icon;
+              return (
+                <CommandItem
+                  key={app.path}
+                  onSelect={() => handleSelect(() => navigate(app.path))}
+                  className="flex items-center gap-2 px-4 py-2"
+                >
+                  <IconComponent className="h-4 w-4" />
+                  <div className="flex flex-col">
+                    <span className="font-medium">{app.name}</span>
+                    <span className="text-sm text-muted-foreground">{app.description}</span>
+                  </div>
+                </CommandItem>
+              );
+            })}
           </CommandGroup>
         )}
 
         {filteredActions.length > 0 && (
           <CommandGroup heading="Quick Actions">
-            {filteredActions.map((action) => (
-              <CommandItem
-                key={action.name}
-                onSelect={() => handleSelect(action.action)}
-                className="flex items-center gap-2 px-4 py-2"
-              >
-                <action.icon className="h-4 w-4" />
-                <div className="flex flex-col">
-                  <span className="font-medium">{action.name}</span>
-                  <span className="text-sm text-muted-foreground">{action.description}</span>
-                </div>
-              </CommandItem>
-            ))}
+            {filteredActions.map((action) => {
+              const IconComponent = action.icon;
+              return (
+                <CommandItem
+                  key={action.name}
+                  onSelect={() => handleSelect(action.action)}
+                  className="flex items-center gap-2 px-4 py-2"
+                >
+                  <IconComponent className="h-4 w-4" />
+                  <div className="flex flex-col">
+                    <span className="font-medium">{action.name}</span>
+                    <span className="text-sm text-muted-foreground">{action.description}</span>
+                  </div>
+                </CommandItem>
+              );
+            })}
           </CommandGroup>
         )}
 
