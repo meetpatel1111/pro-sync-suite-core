@@ -266,6 +266,7 @@ export const integrationService = {
       await supabase
         .from('insights')
         .upsert({
+          id: uuidv4(),
           project_id: projectId,
           type: 'timeline_update',
           data: {
@@ -438,7 +439,8 @@ export const integrationService = {
 
       // Store insights
       await supabase.from('insights').insert({
-        project_id: projectId,
+        id: uuidv4(),
+        project_id: projectId || null,
         type: 'task_performance',
         data: performance
       });
@@ -621,6 +623,7 @@ export const integrationService = {
 
       // Store report for InsightIQ
       await supabase.from('insights').insert({
+        id: uuidv4(),
         project_id: projectId,
         type: 'client_report',
         data: report
@@ -691,6 +694,7 @@ export const integrationService = {
       // Store risks for tracking
       for (const risk of risks) {
         await supabase.from('insights').insert({
+          id: uuidv4(),
           project_id: projectId,
           type: 'risk_detection',
           data: risk
@@ -709,6 +713,7 @@ export const integrationService = {
       const { error } = await supabase
         .from('insights')
         .insert({
+          id: uuidv4(),
           project_id: projectId,
           type: 'budget_risk',
           data: {
@@ -730,6 +735,7 @@ export const integrationService = {
       const { error } = await supabase
         .from('insights')
         .insert({
+          id: uuidv4(),
           type: 'resource_risk',
           data: {
             resource_id: resourceId,
