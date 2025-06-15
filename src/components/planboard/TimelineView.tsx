@@ -13,7 +13,7 @@ interface Task {
   start_date?: string;
   due_date?: string;
   assignee?: string;
-  progress?: number;
+  assigned_to?: string[];
 }
 
 interface TimelineViewProps {
@@ -127,11 +127,11 @@ const TimelineView = ({ tasks, onTaskClick, dateRange }: TimelineViewProps) => {
                       </div>
                     </div>
                     
-                    {task.assignee && (
+                    {(task.assignee || (task.assigned_to && task.assigned_to.length > 0)) && (
                       <Avatar className="h-6 w-6 ml-2">
-                        <AvatarImage src={`/avatar-${task.assignee}.png`} />
+                        <AvatarImage src={`/avatar-${task.assignee || task.assigned_to?.[0]}.png`} />
                         <AvatarFallback className="text-xs">
-                          {task.assignee.substring(0, 2).toUpperCase()}
+                          {(task.assignee || task.assigned_to?.[0] || '').substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                     )}
@@ -159,20 +159,7 @@ const TimelineView = ({ tasks, onTaskClick, dateRange }: TimelineViewProps) => {
                           <span className="text-white text-xs font-medium truncate">
                             {task.title}
                           </span>
-                          {task.progress !== undefined && (
-                            <div className="ml-auto text-white text-xs">
-                              {task.progress}%
-                            </div>
-                          )}
                         </div>
-                        
-                        {/* Progress overlay */}
-                        {task.progress !== undefined && (
-                          <div
-                            className="absolute top-0 left-0 h-full bg-white/30 rounded-md"
-                            style={{ width: `${task.progress}%` }}
-                          />
-                        )}
                       </Card>
                     )}
                   </div>

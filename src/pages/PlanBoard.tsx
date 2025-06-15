@@ -19,13 +19,12 @@ interface Project {
   id: string;
   name: string;
   description?: string;
-  color: string;
-  status: string;
+  color?: string;
+  status?: string;
   start_date?: string;
   end_date?: string;
   user_id: string;
   created_at: string;
-  member_count?: number;
 }
 
 interface Task {
@@ -38,9 +37,8 @@ interface Task {
   due_date?: string;
   assignee?: string;
   project_id?: string;
-  progress?: number;
-  comment_count?: number;
-  attachment_count?: number;
+  created_by?: string;
+  assigned_to?: string[];
 }
 
 const PlanBoard = () => {
@@ -73,7 +71,6 @@ const PlanBoard = () => {
     try {
       console.log('Loading projects for user:', session?.user?.id);
       
-      // Use direct query instead of dbService to avoid complex policy issues
       const { data, error } = await supabase
         .from('projects')
         .select('*')
@@ -89,7 +86,6 @@ const PlanBoard = () => {
         ...project,
         color: project.color || '#3b82f6',
         status: project.status || 'active',
-        member_count: Math.floor(Math.random() * 5) + 1, // Mock data
       }));
       
       console.log('Loaded projects:', projectsWithDefaults);
@@ -116,7 +112,6 @@ const PlanBoard = () => {
     try {
       console.log('Loading tasks for project:', selectedProject.id);
       
-      // Use direct query and use created_by instead of user_id
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
@@ -128,16 +123,14 @@ const PlanBoard = () => {
         throw error;
       }
       
-      const tasksWithMockData = (data || []).map(task => ({
+      const tasksWithDefaults = (data || []).map(task => ({
         ...task,
         start_date: task.start_date || new Date().toISOString().split('T')[0],
-        progress: Math.floor(Math.random() * 100),
-        comment_count: Math.floor(Math.random() * 5),
-        attachment_count: Math.floor(Math.random() * 3),
+        assignee: task.assigned_to?.[0] || null, // Use first assigned user as assignee
       }));
       
-      console.log('Loaded tasks:', tasksWithMockData);
-      setTasks(tasksWithMockData);
+      console.log('Loaded tasks:', tasksWithDefaults);
+      setTasks(tasksWithDefaults);
     } catch (error) {
       console.error('Error loading tasks:', error);
       toast({

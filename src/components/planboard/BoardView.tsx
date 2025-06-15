@@ -14,8 +14,7 @@ interface Task {
   priority: string;
   assignee?: string;
   due_date?: string;
-  comment_count?: number;
-  attachment_count?: number;
+  assigned_to?: string[];
 }
 
 interface Column {
@@ -116,29 +115,13 @@ const BoardView = ({ columns, onTaskMove, onTaskClick }: BoardViewProps) => {
                                     {new Date(task.due_date).toLocaleDateString()}
                                   </div>
                                 )}
-                                
-                                <div className="flex items-center gap-1">
-                                  {task.comment_count && task.comment_count > 0 && (
-                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                      <MessageSquare className="h-3 w-3" />
-                                      {task.comment_count}
-                                    </div>
-                                  )}
-                                  
-                                  {task.attachment_count && task.attachment_count > 0 && (
-                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                      <Paperclip className="h-3 w-3" />
-                                      {task.attachment_count}
-                                    </div>
-                                  )}
-                                </div>
                               </div>
                               
-                              {task.assignee && (
+                              {(task.assignee || (task.assigned_to && task.assigned_to.length > 0)) && (
                                 <Avatar className="h-6 w-6">
-                                  <AvatarImage src={`/avatar-${task.assignee}.png`} />
+                                  <AvatarImage src={`/avatar-${task.assignee || task.assigned_to?.[0]}.png`} />
                                   <AvatarFallback className="text-xs">
-                                    {task.assignee.substring(0, 2).toUpperCase()}
+                                    {(task.assignee || task.assigned_to?.[0] || '').substring(0, 2).toUpperCase()}
                                   </AvatarFallback>
                                 </Avatar>
                               )}
