@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Calendar, Clock, MessageSquare, FileText, BarChart2, 
          PieChart, Users, Shield, FileCog, FolderLock, Sparkles, TrendingUp } from 'lucide-react';
@@ -218,17 +219,17 @@ const Index = () => {
     <AppLayout>
       <div className="space-y-8">
         {/* Hero Section */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-prosync-500 via-prosync-600 to-prosync-700 p-8 text-white">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-prosync-500 via-prosync-600 to-prosync-700 p-6 text-white">
           <div className="absolute inset-0 bg-black/10"></div>
           <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-              <Sparkles className="h-8 w-8" />
-              <h1 className="text-4xl font-bold tracking-tight">Welcome to ProSync Suite</h1>
+            <div className="flex items-center gap-3 mb-3">
+              <Sparkles className="h-6 w-6" />
+              <h1 className="text-3xl font-bold tracking-tight">Welcome to ProSync Suite</h1>
             </div>
-            <p className="text-xl text-blue-100 max-w-2xl">
+            <p className="text-lg text-blue-100 max-w-2xl mb-4">
               Your comprehensive project management solution designed to streamline workflows and boost productivity
             </p>
-            <div className="flex items-center gap-4 mt-6">
+            <div className="flex items-center gap-4">
               <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30">
                 <TrendingUp className="h-4 w-4 mr-1" />
                 10 Integrated Apps
