@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Project, Board, TaskMasterTask } from '@/types/taskmaster';
 
@@ -18,7 +17,7 @@ class TaskmasterService {
       name: item.name,
       description: item.description || '',
       key: item.key || item.name?.substring(0, 3).toUpperCase() || 'PRJ',
-      status: (item.status === 'active' || item.status === 'archived') ? item.status : 'active',
+      status: (item.status === 'active' || item.status === 'archived') ? item.status as 'active' | 'archived' : 'active',
       created_by: item.created_by || item.owner_id || userId,
       user_id: item.user_id || userId,
       created_at: item.created_at,
@@ -50,7 +49,7 @@ class TaskmasterService {
       name: data.name,
       description: data.description || '',
       key: data.key || data.name?.substring(0, 3).toUpperCase() || 'PRJ',
-      status: (data.status === 'active' || data.status === 'archived') ? data.status : 'active',
+      status: (data.status === 'active' || data.status === 'archived') ? data.status as 'active' | 'archived' : 'active',
       created_by: data.created_by || data.owner_id || projectData.created_by,
       user_id: data.user_id || projectData.user_id,
       created_at: data.created_at,
@@ -76,7 +75,7 @@ class TaskmasterService {
       name: data.name,
       description: data.description || '',
       key: data.key || data.name?.substring(0, 3).toUpperCase() || 'PRJ',
-      status: (data.status === 'active' || data.status === 'archived') ? data.status : 'active',
+      status: (data.status === 'active' || data.status === 'archived') ? data.status as 'active' | 'archived' : 'active',
       created_by: data.created_by || data.owner_id || data.user_id,
       user_id: data.user_id,
       created_at: data.created_at,
@@ -107,23 +106,47 @@ class TaskmasterService {
         return { data: [], error: null };
       }
 
-      const boards: Board[] = (data || []).map((item: any) => ({
-        id: item.id,
-        project_id: item.project_id,
-        name: item.name,
-        type: item.type || 'kanban',
-        description: item.description || '',
-        config: item.config || {
-          columns: [
-            { id: 'todo', name: 'To Do' },
-            { id: 'in_progress', name: 'In Progress' },
-            { id: 'done', name: 'Done' }
-          ]
-        },
-        created_by: item.created_by,
-        created_at: item.created_at,
-        updated_at: item.updated_at || item.created_at
-      }));
+      const boards: Board[] = (data || []).map((item: any) => {
+        // Validate and cast board type
+        const validTypes = ['kanban', 'scrum', 'timeline', 'issue_tracker'] as const;
+        const boardType = validTypes.includes(item.type) ? item.type as typeof validTypes[number] : 'kanban';
+        
+        // Parse and validate config
+        let config;
+        try {
+          if (typeof item.config === 'string') {
+            config = JSON.parse(item.config);
+          } else {
+            config = item.config;
+          }
+        } catch {
+          config = {
+            columns: [
+              { id: 'todo', name: 'To Do' },
+              { id: 'in_progress', name: 'In Progress' },
+              { id: 'done', name: 'Done' }
+            ]
+          };
+        }
+
+        return {
+          id: item.id,
+          project_id: item.project_id,
+          name: item.name,
+          type: boardType,
+          description: item.description || '',
+          config: config || {
+            columns: [
+              { id: 'todo', name: 'To Do' },
+              { id: 'in_progress', name: 'In Progress' },
+              { id: 'done', name: 'Done' }
+            ]
+          },
+          created_by: item.created_by,
+          created_at: item.created_at,
+          updated_at: item.updated_at || item.created_at
+        };
+      });
 
       return { data: boards, error: null };
     } catch (e) {
@@ -155,13 +178,35 @@ class TaskmasterService {
 
       if (error) return { data: null, error };
 
+      // Validate and cast board type
+      const validTypes = ['kanban', 'scrum', 'timeline', 'issue_tracker'] as const;
+      const boardType = validTypes.includes(data.type) ? data.type as typeof validTypes[number] : 'kanban';
+      
+      // Parse config if it's a string
+      let config;
+      try {
+        if (typeof data.config === 'string') {
+          config = JSON.parse(data.config);
+        } else {
+          config = data.config;
+        }
+      } catch {
+        config = {
+          columns: [
+            { id: 'todo', name: 'To Do' },
+            { id: 'in_progress', name: 'In Progress' },
+            { id: 'done', name: 'Done' }
+          ]
+        };
+      }
+
       const board: Board = {
         id: data.id,
         project_id: data.project_id,
         name: data.name,
-        type: data.type,
+        type: boardType,
         description: data.description || '',
-        config: data.config,
+        config: config,
         created_by: data.created_by,
         created_at: data.created_at,
         updated_at: data.updated_at || data.created_at
@@ -203,13 +248,35 @@ class TaskmasterService {
 
       if (error) return { data: null, error };
 
+      // Validate and cast board type
+      const validTypes = ['kanban', 'scrum', 'timeline', 'issue_tracker'] as const;
+      const boardType = validTypes.includes(data.type) ? data.type as typeof validTypes[number] : 'kanban';
+      
+      // Parse config if it's a string
+      let config;
+      try {
+        if (typeof data.config === 'string') {
+          config = JSON.parse(data.config);
+        } else {
+          config = data.config;
+        }
+      } catch {
+        config = {
+          columns: [
+            { id: 'todo', name: 'To Do' },
+            { id: 'in_progress', name: 'In Progress' },
+            { id: 'done', name: 'Done' }
+          ]
+        };
+      }
+
       const board: Board = {
         id: data.id,
         project_id: data.project_id,
         name: data.name,
-        type: data.type,
+        type: boardType,
         description: data.description || '',
-        config: data.config,
+        config: config,
         created_by: data.created_by,
         created_at: data.created_at,
         updated_at: data.updated_at || data.created_at
@@ -244,36 +311,50 @@ class TaskmasterService {
     if (error) return { data: null, error };
 
     // Transform the data to match TaskMasterTask interface
-    const tasks: TaskMasterTask[] = (data || []).map((item: any) => ({
-      id: item.id,
-      task_number: item.task_number || 1,
-      task_key: item.task_key || `TASK-${item.id?.substring(0, 4)}`,
-      board_id: item.board_id || boardId,
-      project_id: item.project_id,
-      sprint_id: item.sprint_id,
-      title: item.title,
-      description: item.description || '',
-      status: item.status,
-      priority: (['low', 'medium', 'high', 'critical'].includes(item.priority)) ? item.priority : 'medium',
-      type: (['task', 'bug', 'story', 'epic'].includes(item.type)) ? item.type : 'task',
-      start_date: item.start_date,
-      due_date: item.due_date,
-      estimate_hours: item.estimate_hours,
-      actual_hours: item.actual_hours || 0,
-      assignee_id: item.assignee_id,
-      reporter_id: item.reporter_id,
-      created_by: item.created_by,
-      assigned_to: item.assigned_to,
-      reviewer_id: item.reviewer_id,
-      parent_task_id: item.parent_task_id,
-      linked_task_ids: item.linked_task_ids,
-      recurrence_rule: item.recurrence_rule,
-      visibility: (['team', 'private', 'public'].includes(item.visibility)) ? item.visibility : 'team',
-      position: item.position || 0,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-      updated_by: item.updated_by
-    }));
+    const tasks: TaskMasterTask[] = (data || []).map((item: any) => {
+      // Validate priority
+      const validPriorities = ['low', 'medium', 'high', 'critical'] as const;
+      const priority = validPriorities.includes(item.priority) ? item.priority as typeof validPriorities[number] : 'medium';
+      
+      // Validate type
+      const validTypes = ['task', 'bug', 'story', 'epic'] as const;
+      const type = validTypes.includes(item.type) ? item.type as typeof validTypes[number] : 'task';
+      
+      // Validate visibility
+      const validVisibilities = ['team', 'private', 'public'] as const;
+      const visibility = validVisibilities.includes(item.visibility) ? item.visibility as typeof validVisibilities[number] : 'team';
+
+      return {
+        id: item.id,
+        task_number: item.task_number || 1,
+        task_key: item.task_key || `TASK-${item.id?.substring(0, 4)}`,
+        board_id: item.board_id || boardId,
+        project_id: item.project_id,
+        sprint_id: item.sprint_id,
+        title: item.title,
+        description: item.description || '',
+        status: item.status,
+        priority: priority,
+        type: type,
+        start_date: item.start_date,
+        due_date: item.due_date,
+        estimate_hours: item.estimate_hours,
+        actual_hours: item.actual_hours || 0,
+        assignee_id: item.assignee_id,
+        reporter_id: item.reporter_id,
+        created_by: item.created_by,
+        assigned_to: item.assigned_to,
+        reviewer_id: item.reviewer_id,
+        parent_task_id: item.parent_task_id,
+        linked_task_ids: item.linked_task_ids,
+        recurrence_rule: item.recurrence_rule,
+        visibility: visibility,
+        position: item.position || 0,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        updated_by: item.updated_by
+      };
+    });
 
     return { data: tasks, error };
   }
@@ -303,6 +384,16 @@ class TaskmasterService {
 
     if (error) return { data: null, error };
 
+    // Validate priority, type, and visibility
+    const validPriorities = ['low', 'medium', 'high', 'critical'] as const;
+    const priority = validPriorities.includes(data.priority) ? data.priority as typeof validPriorities[number] : 'medium';
+    
+    const validTypes = ['task', 'bug', 'story', 'epic'] as const;
+    const type = validTypes.includes(data.type) ? data.type as typeof validTypes[number] : 'task';
+    
+    const validVisibilities = ['team', 'private', 'public'] as const;
+    const visibility = validVisibilities.includes(data.visibility) ? data.visibility as typeof validVisibilities[number] : 'team';
+
     // Transform the result to match TaskMasterTask interface
     const task: TaskMasterTask = {
       id: data.id,
@@ -314,8 +405,8 @@ class TaskmasterService {
       title: data.title,
       description: data.description || '',
       status: data.status,
-      priority: data.priority,
-      type: data.type || 'task',
+      priority: priority,
+      type: type,
       start_date: data.start_date,
       due_date: data.due_date,
       estimate_hours: data.estimate_hours,
@@ -328,7 +419,7 @@ class TaskmasterService {
       parent_task_id: data.parent_task_id,
       linked_task_ids: data.linked_task_ids,
       recurrence_rule: data.recurrence_rule,
-      visibility: data.visibility || 'team',
+      visibility: visibility,
       position: data.position || 0,
       created_at: data.created_at,
       updated_at: data.updated_at,
@@ -352,6 +443,16 @@ class TaskmasterService {
 
     if (error) return { data: null, error };
 
+    // Validate priority, type, and visibility
+    const validPriorities = ['low', 'medium', 'high', 'critical'] as const;
+    const priority = validPriorities.includes(data.priority) ? data.priority as typeof validPriorities[number] : 'medium';
+    
+    const validTypes = ['task', 'bug', 'story', 'epic'] as const;
+    const type = validTypes.includes(data.type) ? data.type as typeof validTypes[number] : 'task';
+    
+    const validVisibilities = ['team', 'private', 'public'] as const;
+    const visibility = validVisibilities.includes(data.visibility) ? data.visibility as typeof validVisibilities[number] : 'team';
+
     // Transform the result to match TaskMasterTask interface
     const task: TaskMasterTask = {
       id: data.id,
@@ -363,8 +464,8 @@ class TaskmasterService {
       title: data.title,
       description: data.description || '',
       status: data.status,
-      priority: data.priority,
-      type: data.type || 'task',
+      priority: priority,
+      type: type,
       start_date: data.start_date,
       due_date: data.due_date,
       estimate_hours: data.estimate_hours,
@@ -377,7 +478,7 @@ class TaskmasterService {
       parent_task_id: data.parent_task_id,
       linked_task_ids: data.linked_task_ids,
       recurrence_rule: data.recurrence_rule,
-      visibility: data.visibility || 'team',
+      visibility: visibility,
       position: data.position || 0,
       created_at: data.created_at,
       updated_at: data.updated_at,
@@ -405,37 +506,48 @@ class TaskmasterService {
 
     if (error) return { data: null, error };
 
-    // Transform the data to match TaskMasterTask interface
-    const tasks: TaskMasterTask[] = (data || []).map((item: any) => ({
-      id: item.id,
-      task_number: item.task_number || 1,
-      task_key: item.task_key || `TASK-${item.id?.substring(0, 4)}`,
-      board_id: item.board_id,
-      project_id: item.project_id,
-      sprint_id: item.sprint_id,
-      title: item.title,
-      description: item.description || '',
-      status: item.status,
-      priority: (['low', 'medium', 'high', 'critical'].includes(item.priority)) ? item.priority : 'medium',
-      type: (['task', 'bug', 'story', 'epic'].includes(item.type)) ? item.type : 'task',
-      start_date: item.start_date,
-      due_date: item.due_date,
-      estimate_hours: item.estimate_hours,
-      actual_hours: item.actual_hours || 0,
-      assignee_id: item.assignee_id,
-      reporter_id: item.reporter_id,
-      created_by: item.created_by,
-      assigned_to: item.assigned_to,
-      reviewer_id: item.reviewer_id,
-      parent_task_id: item.parent_task_id,
-      linked_task_ids: item.linked_task_ids,
-      recurrence_rule: item.recurrence_rule,
-      visibility: (['team', 'private', 'public'].includes(item.visibility)) ? item.visibility : 'team',
-      position: item.position || 0,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-      updated_by: item.updated_by
-    }));
+    // Transform the data to match TaskMasterTask interface with type validation
+    const tasks: TaskMasterTask[] = (data || []).map((item: any) => {
+      const validPriorities = ['low', 'medium', 'high', 'critical'] as const;
+      const priority = validPriorities.includes(item.priority) ? item.priority as typeof validPriorities[number] : 'medium';
+      
+      const validTypes = ['task', 'bug', 'story', 'epic'] as const;
+      const type = validTypes.includes(item.type) ? item.type as typeof validTypes[number] : 'task';
+      
+      const validVisibilities = ['team', 'private', 'public'] as const;
+      const visibility = validVisibilities.includes(item.visibility) ? item.visibility as typeof validVisibilities[number] : 'team';
+
+      return {
+        id: item.id,
+        task_number: item.task_number || 1,
+        task_key: item.task_key || `TASK-${item.id?.substring(0, 4)}`,
+        board_id: item.board_id,
+        project_id: item.project_id,
+        sprint_id: item.sprint_id,
+        title: item.title,
+        description: item.description || '',
+        status: item.status,
+        priority: priority,
+        type: type,
+        start_date: item.start_date,
+        due_date: item.due_date,
+        estimate_hours: item.estimate_hours,
+        actual_hours: item.actual_hours || 0,
+        assignee_id: item.assignee_id,
+        reporter_id: item.reporter_id,
+        created_by: item.created_by,
+        assigned_to: item.assigned_to,
+        reviewer_id: item.reviewer_id,
+        parent_task_id: item.parent_task_id,
+        linked_task_ids: item.linked_task_ids,
+        recurrence_rule: item.recurrence_rule,
+        visibility: visibility,
+        position: item.position || 0,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        updated_by: item.updated_by
+      };
+    });
 
     return { data: tasks, error };
   }
@@ -449,37 +561,48 @@ class TaskmasterService {
 
     if (error) return { data: null, error };
 
-    // Transform the data to match TaskMasterTask interface
-    const tasks: TaskMasterTask[] = (data || []).map((item: any) => ({
-      id: item.id,
-      task_number: item.task_number || 1,
-      task_key: item.task_key || `TASK-${item.id?.substring(0, 4)}`,
-      board_id: item.board_id,
-      project_id: item.project_id,
-      sprint_id: item.sprint_id,
-      title: item.title,
-      description: item.description || '',
-      status: item.status,
-      priority: (['low', 'medium', 'high', 'critical'].includes(item.priority)) ? item.priority : 'medium',
-      type: (['task', 'bug', 'story', 'epic'].includes(item.type)) ? item.type : 'task',
-      start_date: item.start_date,
-      due_date: item.due_date,
-      estimate_hours: item.estimate_hours,
-      actual_hours: item.actual_hours || 0,
-      assignee_id: item.assignee_id,
-      reporter_id: item.reporter_id,
-      created_by: item.created_by,
-      assigned_to: item.assigned_to,
-      reviewer_id: item.reviewer_id,
-      parent_task_id: item.parent_task_id,
-      linked_task_ids: item.linked_task_ids,
-      recurrence_rule: item.recurrence_rule,
-      visibility: (['team', 'private', 'public'].includes(item.visibility)) ? item.visibility : 'team',
-      position: item.position || 0,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-      updated_by: item.updated_by
-    }));
+    // Transform the data to match TaskMasterTask interface with type validation
+    const tasks: TaskMasterTask[] = (data || []).map((item: any) => {
+      const validPriorities = ['low', 'medium', 'high', 'critical'] as const;
+      const priority = validPriorities.includes(item.priority) ? item.priority as typeof validPriorities[number] : 'medium';
+      
+      const validTypes = ['task', 'bug', 'story', 'epic'] as const;
+      const type = validTypes.includes(item.type) ? item.type as typeof validTypes[number] : 'task';
+      
+      const validVisibilities = ['team', 'private', 'public'] as const;
+      const visibility = validVisibilities.includes(item.visibility) ? item.visibility as typeof validVisibilities[number] : 'team';
+
+      return {
+        id: item.id,
+        task_number: item.task_number || 1,
+        task_key: item.task_key || `TASK-${item.id?.substring(0, 4)}`,
+        board_id: item.board_id,
+        project_id: item.project_id,
+        sprint_id: item.sprint_id,
+        title: item.title,
+        description: item.description || '',
+        status: item.status,
+        priority: priority,
+        type: type,
+        start_date: item.start_date,
+        due_date: item.due_date,
+        estimate_hours: item.estimate_hours,
+        actual_hours: item.actual_hours || 0,
+        assignee_id: item.assignee_id,
+        reporter_id: item.reporter_id,
+        created_by: item.created_by,
+        assigned_to: item.assigned_to,
+        reviewer_id: item.reviewer_id,
+        parent_task_id: item.parent_task_id,
+        linked_task_ids: item.linked_task_ids,
+        recurrence_rule: item.recurrence_rule,
+        visibility: visibility,
+        position: item.position || 0,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        updated_by: item.updated_by
+      };
+    });
 
     return { data: tasks, error };
   }
