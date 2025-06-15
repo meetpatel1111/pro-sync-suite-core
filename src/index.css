@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -32,7 +33,7 @@
     --input: 214 32% 91%;
     --ring: 222 84% 48%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5% 26%;
@@ -43,7 +44,7 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217 91% 60%;
 
-    /* Enhanced spacing variables */
+    /* Modern spacing variables */
     --spacing-xs: 0.25rem;
     --spacing-sm: 0.5rem;
     --spacing-md: 1rem;
@@ -51,7 +52,7 @@
     --spacing-xl: 2rem;
     --spacing-2xl: 3rem;
     
-    /* Enhanced color palette */
+    /* Modern color palette */
     --success: 142 76% 36%;
     --success-foreground: 355 7% 97%;
     --warning: 32 95% 44%;
@@ -64,12 +65,13 @@
     --gradient-secondary: linear-gradient(135deg, hsl(210 40% 96%) 0%, hsl(215 100% 97%) 100%);
     --gradient-accent: linear-gradient(135deg, hsl(215 100% 97%) 0%, hsl(210 40% 96%) 100%);
     
-    /* Enhanced shadows */
+    /* Modern shadows */
     --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
   }
 
   .dark {
@@ -115,11 +117,12 @@
     --info: 221 83% 53%;
   }
 
-  /* Enhanced utility classes */
+  /* Modern glass effect */
   .glass-effect {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
   }
   
   .dark .glass-effect {
@@ -127,22 +130,26 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
   
+  /* Modern gradient borders */
   .gradient-border {
     position: relative;
     background: linear-gradient(white, white) padding-box,
                 var(--gradient-primary) border-box;
     border: 2px solid transparent;
+    border-radius: var(--radius);
   }
   
+  /* Enhanced hover effects */
   .hover-lift {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   .hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-2xl);
   }
   
+  /* Modern text gradient */
   .text-gradient {
     background: var(--gradient-primary);
     -webkit-background-clip: text;
@@ -150,257 +157,58 @@
     background-clip: text;
   }
 
-  /* Status indicators */
-  .status-available { @apply bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200; }
-  .status-busy { @apply bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200; }
-  .status-offline { @apply bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200; }
-  
-  /* Enhanced spacing classes */
-  .space-y-xs > * + * { margin-top: var(--spacing-xs); }
-  .space-y-sm > * + * { margin-top: var(--spacing-sm); }
-  .space-y-md > * + * { margin-top: var(--spacing-md); }
-  .space-y-lg > * + * { margin-top: var(--spacing-lg); }
-  .space-y-xl > * + * { margin-top: var(--spacing-xl); }
-  .space-y-2xl > * + * { margin-top: var(--spacing-2xl); }
-
-  /* System Font Family classes */
-  .font-arial { font-family: 'Arial', sans-serif; }
-  .font-helvetica { font-family: 'Helvetica', sans-serif; }
-  .font-times-new-roman { font-family: 'Times New Roman', serif; }
-  .font-times { font-family: 'Times', serif; }
-  .font-calibri { font-family: 'Calibri', sans-serif; }
-  .font-georgia { font-family: 'Georgia', serif; }
-  .font-verdana { font-family: 'Verdana', sans-serif; }
-  .font-tahoma { font-family: 'Tahoma', sans-serif; }
-  .font-trebuchet-ms { font-family: 'Trebuchet MS', sans-serif; }
-  .font-courier-new { font-family: 'Courier New', monospace; }
-  .font-impact { font-family: 'Impact', sans-serif; }
-  .font-comic-sans-ms { font-family: 'Comic Sans MS', cursive; }
-  .font-palatino { font-family: 'Palatino', serif; }
-  .font-garamond { font-family: 'Garamond', serif; }
-  .font-book-antiqua { font-family: 'Book Antiqua', serif; }
-  .font-century-gothic { font-family: 'Century Gothic', sans-serif; }
-  .font-lucida-console { font-family: 'Lucida Console', monospace; }
-  .font-monaco { font-family: 'Monaco', monospace; }
-  .font-consolas { font-family: 'Consolas', monospace; }
-  .font-segoe-ui { font-family: 'Segoe UI', sans-serif; }
-  .font--apple-system { font-family: '-apple-system', sans-serif; }
-  .font-system-ui { font-family: 'system-ui', sans-serif; }
-
-  /* Google Font family classes */
-  .font-inter { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-  .font-roboto { font-family: 'Roboto', system-ui, -apple-system, sans-serif; }
-  .font-open-sans { font-family: 'Open Sans', system-ui, -apple-system, sans-serif; }
-  .font-lato { font-family: 'Lato', system-ui, -apple-system, sans-serif; }
-  .font-poppins { font-family: 'Poppins', system-ui, -apple-system, sans-serif; }
-  .font-montserrat { font-family: 'Montserrat', system-ui, -apple-system, sans-serif; }
-  .font-source-sans-pro { font-family: 'Source Sans Pro', system-ui, -apple-system, sans-serif; }
-  .font-nunito { font-family: 'Nunito', system-ui, -apple-system, sans-serif; }
-  .font-pt-sans { font-family: 'PT Sans', system-ui, -apple-system, sans-serif; }
-  .font-ubuntu { font-family: 'Ubuntu', system-ui, -apple-system, sans-serif; }
-  .font-raleway { font-family: 'Raleway', system-ui, -apple-system, sans-serif; }
-  .font-work-sans { font-family: 'Work Sans', system-ui, -apple-system, sans-serif; }
-  .font-nunito-sans { font-family: 'Nunito Sans', system-ui, -apple-system, sans-serif; }
-  .font-barlow { font-family: 'Barlow', system-ui, -apple-system, sans-serif; }
-  .font-dm-sans { font-family: 'DM Sans', system-ui, -apple-system, sans-serif; }
-  .font-ibm-plex-sans { font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif; }
-  .font-rubik { font-family: 'Rubik', system-ui, -apple-system, sans-serif; }
-  .font-oxygen { font-family: 'Oxygen', system-ui, -apple-system, sans-serif; }
-  .font-karla { font-family: 'Karla', system-ui, -apple-system, sans-serif; }
-  .font-hind { font-family: 'Hind', system-ui, -apple-system, sans-serif; }
-  .font-titillium-web { font-family: 'Titillium Web', system-ui, -apple-system, sans-serif; }
-  .font-fira-sans { font-family: 'Fira Sans', system-ui, -apple-system, sans-serif; }
-  .font-assistant { font-family: 'Assistant', system-ui, -apple-system, sans-serif; }
-  .font-merriweather-sans { font-family: 'Merriweather Sans', system-ui, -apple-system, sans-serif; }
-  .font-muli { font-family: 'Muli', system-ui, -apple-system, sans-serif; }
-  .font-arimo { font-family: 'Arimo', system-ui, -apple-system, sans-serif; }
-  .font-cabin { font-family: 'Cabin', system-ui, -apple-system, sans-serif; }
-  .font-dosis { font-family: 'Dosis', system-ui, -apple-system, sans-serif; }
-  .font-exo-2 { font-family: 'Exo 2', system-ui, -apple-system, sans-serif; }
-  .font-heebo { font-family: 'Heebo', system-ui, -apple-system, sans-serif; }
-  .font-quicksand { font-family: 'Quicksand', system-ui, -apple-system, sans-serif; }
-  .font-source-sans-3 { font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif; }
-  .font-overpass { font-family: 'Overpass', system-ui, -apple-system, sans-serif; }
-  .font-encode-sans { font-family: 'Encode Sans', system-ui, -apple-system, sans-serif; }
-  .font-manrope { font-family: 'Manrope', system-ui, -apple-system, sans-serif; }
-  .font-red-hat-display { font-family: 'Red Hat Display', system-ui, -apple-system, sans-serif; }
-  .font-red-hat-text { font-family: 'Red Hat Text', system-ui, -apple-system, sans-serif; }
-  .font-public-sans { font-family: 'Public Sans', system-ui, -apple-system, sans-serif; }
-  .font-figtree { font-family: 'Figtree', system-ui, -apple-system, sans-serif; }
-  .font-plus-jakarta-sans { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; }
-  .font-kanit { font-family: 'Kanit', system-ui, -apple-system, sans-serif; }
-  .font-lexend { font-family: 'Lexend', system-ui, -apple-system, sans-serif; }
-  .font-be-vietnam-pro { font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif; }
-  .font-albert-sans { font-family: 'Albert Sans', system-ui, -apple-system, sans-serif; }
-  .font-outfit { font-family: 'Outfit', system-ui, -apple-system, sans-serif; }
-  .font-space-grotesk { font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif; }
-  .font-sora { font-family: 'Sora', system-ui, -apple-system, sans-serif; }
-  .font-urbanist { font-family: 'Urbanist', system-ui, -apple-system, sans-serif; }
-  .font-commissioner { font-family: 'Commissioner', system-ui, -apple-system, sans-serif; }
-  .font-epilogue { font-family: 'Epilogue', system-ui, -apple-system, sans-serif; }
-  .font-readex-pro { font-family: 'Readex Pro', system-ui, -apple-system, sans-serif; }
-  .font-onest { font-family: 'Onest', system-ui, -apple-system, sans-serif; }
-  .font-schibsted-grotesk { font-family: 'Schibsted Grotesk', system-ui, -apple-system, sans-serif; }
-
-  /* Serif fonts */
-  .font-playfair-display { font-family: 'Playfair Display', serif; }
-  .font-merriweather { font-family: 'Merriweather', serif; }
-  .font-lora { font-family: 'Lora', serif; }
-  .font-pt-serif { font-family: 'PT Serif', serif; }
-  .font-crimson-text { font-family: 'Crimson Text', serif; }
-  .font-eb-garamond { font-family: 'EB Garamond', serif; }
-  .font-libre-baskerville { font-family: 'Libre Baskerville', serif; }
-  .font-cormorant-garamond { font-family: 'Cormorant Garamond', serif; }
-  .font-source-serif-pro { font-family: 'Source Serif Pro', serif; }
-  .font-noto-serif { font-family: 'Noto Serif', serif; }
-  .font-vollkorn { font-family: 'Vollkorn', serif; }
-  .font-alegreya { font-family: 'Alegreya', serif; }
-  .font-spectral { font-family: 'Spectral', serif; }
-  .font-bitter { font-family: 'Bitter', serif; }
-  .font-arvo { font-family: 'Arvo', serif; }
-  .font-rokkitt { font-family: 'Rokkitt', serif; }
-  .font-zilla-slab { font-family: 'Zilla Slab', serif; }
-  .font-ibm-plex-serif { font-family: 'IBM Plex Serif', serif; }
-  .font-cardo { font-family: 'Cardo', serif; }
-  .font-domine { font-family: 'Domine', serif; }
-  .font-neuton { font-family: 'Neuton', serif; }
-  .font-gelasio { font-family: 'Gelasio', serif; }
-  .font-literata { font-family: 'Literata', serif; }
-  .font-source-serif-4 { font-family: 'Source Serif 4', serif; }
-  .font-fraunces { font-family: 'Fraunces', serif; }
-  .font-newsreader { font-family: 'Newsreader', serif; }
-  .font-young-serif { font-family: 'Young Serif', serif; }
-  .font-cormorant { font-family: 'Cormorant', serif; }
-  .font-petrona { font-family: 'Petrona', serif; }
-  .font-unna { font-family: 'Unna', serif; }
-
-  /* Monospace fonts */
-  .font-fira-code { font-family: 'Fira Code', monospace; }
-  .font-jetbrains-mono { font-family: 'JetBrains Mono', monospace; }
-  .font-source-code-pro { font-family: 'Source Code Pro', monospace; }
-  .font-roboto-mono { font-family: 'Roboto Mono', monospace; }
-  .font-space-mono { font-family: 'Space Mono', monospace; }
-  .font-inconsolata { font-family: 'Inconsolata', monospace; }
-  .font-ubuntu-mono { font-family: 'Ubuntu Mono', monospace; }
-  .font-ibm-plex-mono { font-family: 'IBM Plex Mono', monospace; }
-  .font-courier-prime { font-family: 'Courier Prime', monospace; }
-  .font-fira-mono { font-family: 'Fira Mono', monospace; }
-  .font-pt-mono { font-family: 'PT Mono', monospace; }
-  .font-anonymous-pro { font-family: 'Anonymous Pro', monospace; }
-  .font-cousine { font-family: 'Cousine', monospace; }
-  .font-cutive-mono { font-family: 'Cutive Mono', monospace; }
-  .font-overpass-mono { font-family: 'Overpass Mono', monospace; }
-  .font-red-hat-mono { font-family: 'Red Hat Mono', monospace; }
-  .font-azeret-mono { font-family: 'Azeret Mono', monospace; }
-  .font-dm-mono { font-family: 'DM Mono', monospace; }
-  .font-martian-mono { font-family: 'Martian Mono', monospace; }
-
-  /* Display fonts */
-  .font-oswald { font-family: 'Oswald', sans-serif; }
-  .font-bebas-neue { font-family: 'Bebas Neue', cursive; }
-  .font-anton { font-family: 'Anton', sans-serif; }
-  .font-abril-fatface { font-family: 'Abril Fatface', cursive; }
-  .font-righteous { font-family: 'Righteous', cursive; }
-  .font-kalam { font-family: 'Kalam', cursive; }
-  .font-fredoka-one { font-family: 'Fredoka One', cursive; }
-  .font-comfortaa { font-family: 'Comfortaa', cursive; }
-  .font-fjalla-one { font-family: 'Fjalla One', sans-serif; }
-  .font-archivo-black { font-family: 'Archivo Black', sans-serif; }
-  .font-bangers { font-family: 'Bangers', cursive; }
-  .font-bungee { font-family: 'Bungee', cursive; }
-  .font-lobster { font-family: 'Lobster', cursive; }
-  .font-pacifico { font-family: 'Pacifico', cursive; }
-  .font-staatliches { font-family: 'Staatliches', cursive; }
-  .font-alfa-slab-one { font-family: 'Alfa Slab One', cursive; }
-  .font-changa { font-family: 'Changa', sans-serif; }
-  .font-calistoga { font-family: 'Calistoga', cursive; }
-  .font-fredoka { font-family: 'Fredoka', sans-serif; }
-  .font-squada-one { font-family: 'Squada One', cursive; }
-  .font-black-ops-one { font-family: 'Black Ops One', cursive; }
-  .font-orbitron { font-family: 'Orbitron', sans-serif; }
-  .font-bai-jamjuree { font-family: 'Bai Jamjuree', sans-serif; }
-  .font-chakra-petch { font-family: 'Chakra Petch', sans-serif; }
-
-  /* Handwriting fonts */
-  .font-dancing-script { font-family: 'Dancing Script', cursive; }
-  .font-kaushan-script { font-family: 'Kaushan Script', cursive; }
-  .font-great-vibes { font-family: 'Great Vibes', cursive; }
-  .font-satisfy { font-family: 'Satisfy', cursive; }
-  .font-caveat { font-family: 'Caveat', cursive; }
-  .font-shadows-into-light { font-family: 'Shadows Into Light', cursive; }
-  .font-amatic-sc { font-family: 'Amatic SC', cursive; }
-  .font-indie-flower { font-family: 'Indie Flower', cursive; }
-  .font-handlee { font-family: 'Handlee', cursive; }
-  .font-permanent-marker { font-family: 'Permanent Marker', cursive; }
-  .font-cookie { font-family: 'Cookie', cursive; }
-  .font-allura { font-family: 'Allura', cursive; }
-  .font-alex-brush { font-family: 'Alex Brush', cursive; }
-  .font-courgette { font-family: 'Courgette', cursive; }
-  .font-patrick-hand { font-family: 'Patrick Hand', cursive; }
-  .font-architects-daughter { font-family: 'Architects Daughter', cursive; }
-  .font-cedarville-cursive { font-family: 'Cedarville Cursive', cursive; }
-  .font-yellowtail { font-family: 'Yellowtail', cursive; }
-  .font-tangerine { font-family: 'Tangerine', cursive; }
-  .font-rock-salt { font-family: 'Rock Salt', cursive; }
-
-  /* International fonts */
-  .font-noto-sans { font-family: 'Noto Sans', sans-serif; }
-  .font-noto-sans-jp { font-family: 'Noto Sans JP', sans-serif; }
-  .font-noto-sans-kr { font-family: 'Noto Sans KR', sans-serif; }
-  .font-noto-sans-sc { font-family: 'Noto Sans SC', sans-serif; }
-  .font-noto-sans-tc { font-family: 'Noto Sans TC', sans-serif; }
-  .font-m-plus-1p { font-family: 'M PLUS 1p', sans-serif; }
-  .font-m-plus-rounded-1c { font-family: 'M PLUS Rounded 1c', sans-serif; }
-  .font-sarabun { font-family: 'Sarabun', sans-serif; }
-  .font-prompt { font-family: 'Prompt', sans-serif; }
-  .font-mitr { font-family: 'Mitr', sans-serif; }
-  .font-tajawal { font-family: 'Tajawal', sans-serif; }
-  .font-cairo { font-family: 'Cairo', sans-serif; }
-  .font-amiri { font-family: 'Amiri', serif; }
-  .font-scheherazade-new { font-family: 'Scheherazade New', serif; }
-  .font-markazi-text { font-family: 'Markazi Text', serif; }
-  .font-recursive { font-family: 'Recursive', sans-serif; }
-
-  /* Interface Density Classes */
-  .density-compact {
-    --spacing-unit: 0.75rem;
-    --component-padding: 0.5rem;
-    --component-gap: 0.25rem;
+  /* Modern card styles */
+  .modern-card {
+    @apply bg-white/60 backdrop-blur-xl border border-white/20 shadow-xl shadow-gray-900/5;
+    @apply dark:bg-gray-900/60 dark:border-gray-800/20 dark:shadow-gray-900/20;
   }
 
-  .density-compact .space-y-6 > * + * { margin-top: 1rem; }
-  .density-compact .space-y-4 > * + * { margin-top: 0.75rem; }
-  .density-compact .space-y-3 > * + * { margin-top: 0.5rem; }
-  .density-compact .p-6 { padding: 1rem; }
-  .density-compact .p-4 { padding: 0.75rem; }
-  .density-compact .p-3 { padding: 0.5rem; }
-  .density-compact .py-4 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
-  .density-compact .px-4 { padding-left: 0.75rem; padding-right: 0.75rem; }
-  .density-compact .gap-3 { gap: 0.5rem; }
-  .density-compact .gap-2 { gap: 0.25rem; }
-
-  .density-standard {
-    --spacing-unit: 1rem;
-    --component-padding: 0.75rem;
-    --component-gap: 0.5rem;
+  /* Smooth animations */
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out forwards;
   }
 
-  .density-comfortable {
-    --spacing-unit: 1.5rem;
-    --component-padding: 1rem;
-    --component-gap: 0.75rem;
+  .animate-scale-in {
+    animation: scaleIn 0.4s ease-out forwards;
   }
 
-  .density-comfortable .space-y-6 > * + * { margin-top: 2rem; }
-  .density-comfortable .space-y-4 > * + * { margin-top: 1.5rem; }
-  .density-comfortable .space-y-3 > * + * { margin-top: 1rem; }
-  .density-comfortable .p-6 { padding: 2rem; }
-  .density-comfortable .p-4 { padding: 1.5rem; }
-  .density-comfortable .p-3 { padding: 1rem; }
-  .density-comfortable .py-4 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
-  .density-comfortable .px-4 { padding-left: 1.5rem; padding-right: 1.5rem; }
-  .density-comfortable .gap-3 { gap: 1rem; }
-  .density-comfortable .gap-2 { gap: 0.75rem; }
+  .animate-slide-in-right {
+    animation: slideInRight 0.5s ease-out forwards;
+  }
+
+  /* Status indicators with modern styling */
+  .status-available { 
+    @apply bg-emerald-100/80 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 
+           border border-emerald-200/50 dark:border-emerald-800/50 backdrop-blur-sm; 
+  }
+  .status-busy { 
+    @apply bg-amber-100/80 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 
+           border border-amber-200/50 dark:border-amber-800/50 backdrop-blur-sm; 
+  }
+  .status-offline { 
+    @apply bg-gray-100/80 text-gray-800 dark:bg-gray-900/40 dark:text-gray-200 
+           border border-gray-200/50 dark:border-gray-800/50 backdrop-blur-sm; 
+  }
+
+  /* Modern form sections */
+  .form-section {
+    @apply space-y-6 p-8 modern-card rounded-2xl shadow-lg;
+  }
+
+  .form-section h3 {
+    @apply text-xl font-semibold text-foreground mb-6 pb-3 border-b border-border/50;
+  }
+
+  /* Enhanced button styles */
+  .btn-primary {
+    background: var(--gradient-primary);
+    @apply text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200;
+  }
+
+  .btn-secondary {
+    @apply bg-white/80 hover:bg-white border border-gray-200/50 shadow-md hover:shadow-lg 
+           backdrop-blur-sm transition-all duration-200;
+  }
 }
 
 @layer base {
@@ -409,70 +217,43 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-gradient-to-br from-gray-50 via-white to-gray-100;
+    @apply dark:from-gray-950 dark:via-gray-900 dark:to-gray-800;
+    @apply text-foreground;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-size: 16px;
     line-height: 1.6;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
   
-  /* Enhanced scroll bars */
+  /* Modern scrollbars */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
   }
   
   ::-webkit-scrollbar-track {
-    background: hsl(var(--muted));
-    border-radius: 6px;
+    background: transparent;
   }
   
   ::-webkit-scrollbar-thumb {
     background: hsl(var(--muted-foreground) / 0.3);
-    border-radius: 6px;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
   }
   
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.5);
+    background-clip: content-box;
   }
 }
 
-/* Enhanced app-specific styles */
-.app-card-gradient {
-  background: linear-gradient(135deg, 
-    rgba(255,255,255,0.1) 0%, 
-    rgba(255,255,255,0.05) 50%,
-    rgba(255,255,255,0) 100%);
-}
-
-.app-card {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid hsl(var(--border));
-  box-shadow: var(--shadow-sm);
-}
-
-.app-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-xl);
-  border-color: hsl(var(--primary) / 0.2);
-}
-
-.app-card:hover .app-card-icon {
-  transform: translateY(-2px) scale(1.1);
-}
-
-.app-card-icon {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Chat interface enhancements */
-.chat-message {
-  animation: fadeInUp 0.3s ease-out;
-}
-
+/* Modern keyframe animations */
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(30px);
   }
   to {
     opacity: 1;
@@ -480,21 +261,66 @@
   }
 }
 
-/* Enhanced form styling */
-.form-section {
-  @apply space-y-6 p-6 bg-card rounded-xl border shadow-sm;
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-.form-section h3 {
-  @apply text-lg font-semibold text-foreground mb-4 pb-2 border-b border-border;
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
-/* Button enhancements */
-.btn-primary {
-  background: var(--gradient-primary);
-  @apply text-white shadow-md hover:shadow-lg;
+/* Modern app-specific styles */
+.app-card {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  @apply border border-white/20 shadow-lg hover:shadow-2xl backdrop-blur-sm;
 }
 
-.btn-secondary {
-  @apply bg-secondary/80 hover:bg-secondary border border-border/50;
+.app-card:hover {
+  transform: translateY(-12px) scale(1.02);
+  @apply shadow-2xl border-primary/20;
+}
+
+.app-card:hover .app-card-icon {
+  transform: translateY(-4px) scale(1.15) rotate(5deg);
+}
+
+.app-card-icon {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Modern chat interface */
+.chat-message {
+  animation: fadeInUp 0.5s ease-out;
+  @apply backdrop-blur-sm;
+}
+
+/* Modern pane styling */
+.modern-pane {
+  @apply modern-card p-6 space-y-6;
+}
+
+.modern-pane-header {
+  @apply flex items-center justify-between pb-4 border-b border-border/50;
+}
+
+.modern-pane-title {
+  @apply text-xl font-semibold text-gradient;
+}
+
+.modern-pane-content {
+  @apply space-y-4;
 }

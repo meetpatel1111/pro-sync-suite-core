@@ -1,8 +1,8 @@
 
-
 import React, { useEffect, useState } from 'react';
 import { Calendar, Clock, MessageSquare, FileText, BarChart2, 
-         PieChart, Users, Shield, FileCog, FolderLock, Sparkles, TrendingUp } from 'lucide-react';
+         PieChart, Users, Shield, FileCog, FolderLock, Sparkles, TrendingUp, 
+         Zap, Target, Rocket } from 'lucide-react';
 import AppCard from '@/components/AppCard';
 import AppLayout from '@/components/AppLayout';
 import DashboardStats from '@/components/DashboardStats';
@@ -122,7 +122,7 @@ const Index = () => {
       title: 'TaskMaster',
       description: 'Task & Workflow Management',
       icon: Calendar,
-      bgColor: 'bg-gradient-to-br from-blue-600 to-blue-700',
+      bgColor: 'bg-gradient-to-br from-blue-500 to-blue-600',
       route: '/taskmaster',
       featureCount: 0,
       category: 'Productivity'
@@ -131,7 +131,7 @@ const Index = () => {
       title: 'TimeTrackPro',
       description: 'Time Tracking & Productivity',
       icon: Clock,
-      bgColor: 'bg-gradient-to-br from-indigo-600 to-indigo-700',
+      bgColor: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
       route: '/timetrackpro',
       featureCount: 0,
       category: 'Productivity'
@@ -140,7 +140,7 @@ const Index = () => {
       title: 'CollabSpace',
       description: 'Team Communication & Collaboration',
       icon: MessageSquare,
-      bgColor: 'bg-gradient-to-br from-emerald-600 to-emerald-700',
+      bgColor: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
       route: '/collabspace',
       featureCount: 0,
       category: 'Communication'
@@ -149,7 +149,7 @@ const Index = () => {
       title: 'PlanBoard',
       description: 'Project Planning & Gantt Charts',
       icon: FileText,
-      bgColor: 'bg-gradient-to-br from-amber-600 to-amber-700',
+      bgColor: 'bg-gradient-to-br from-amber-500 to-amber-600',
       route: '/planboard',
       featureCount: 0,
       category: 'Planning'
@@ -158,7 +158,7 @@ const Index = () => {
       title: 'FileVault',
       description: 'Document & File Management',
       icon: FolderLock,
-      bgColor: 'bg-gradient-to-br from-purple-600 to-purple-700',
+      bgColor: 'bg-gradient-to-br from-purple-500 to-purple-600',
       route: '/filevault',
       featureCount: 0,
       category: 'Storage'
@@ -167,7 +167,7 @@ const Index = () => {
       title: 'BudgetBuddy',
       description: 'Budgeting & Expense Tracking',
       icon: PieChart,
-      bgColor: 'bg-gradient-to-br from-green-600 to-green-700',
+      bgColor: 'bg-gradient-to-br from-green-500 to-green-600',
       route: '/budgetbuddy',
       featureCount: 0,
       category: 'Finance'
@@ -176,7 +176,7 @@ const Index = () => {
       title: 'InsightIQ',
       description: 'Analytics & Reporting',
       icon: BarChart2,
-      bgColor: 'bg-gradient-to-br from-red-600 to-red-700',
+      bgColor: 'bg-gradient-to-br from-red-500 to-red-600',
       route: '/insightiq',
       featureCount: 0,
       category: 'Analytics'
@@ -185,7 +185,7 @@ const Index = () => {
       title: 'ClientConnect',
       description: 'Client & Stakeholder Engagement',
       icon: Users,
-      bgColor: 'bg-gradient-to-br from-sky-600 to-sky-700',
+      bgColor: 'bg-gradient-to-br from-sky-500 to-sky-600',
       route: '/clientconnect',
       featureCount: 0,
       category: 'Communication'
@@ -194,7 +194,7 @@ const Index = () => {
       title: 'RiskRadar',
       description: 'Risk & Issue Tracking',
       icon: Shield,
-      bgColor: 'bg-gradient-to-br from-rose-600 to-rose-700',
+      bgColor: 'bg-gradient-to-br from-rose-500 to-rose-600',
       route: '/riskradar',
       featureCount: 0,
       category: 'Management'
@@ -203,7 +203,7 @@ const Index = () => {
       title: 'ResourceHub',
       description: 'Resource Allocation & Management',
       icon: Users,
-      bgColor: 'bg-gradient-to-br from-orange-600 to-orange-700',
+      bgColor: 'bg-gradient-to-br from-orange-500 to-orange-600',
       route: '/resourcehub',
       featureCount: 0,
       category: 'Management'
@@ -218,102 +218,136 @@ const Index = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-8">
-        {/* Hero Section */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-prosync-500 via-prosync-600 to-prosync-700 p-4 text-white">
+      <div className="space-y-8 animate-fade-in-up">
+        {/* Modern Hero Section */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-prosync-500 via-prosync-600 to-prosync-700 p-6 text-white shadow-2xl">
           <div className="absolute inset-0 bg-black/10"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
           <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="h-5 w-5" />
-              <h1 className="text-2xl font-bold tracking-tight">Welcome to ProSync Suite</h1>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight">Welcome to ProSync Suite</h1>
             </div>
-            <p className="text-base text-blue-100 max-w-2xl mb-3">
+            <p className="text-lg text-blue-100 max-w-2xl mb-6 leading-relaxed">
               Your comprehensive project management solution designed to streamline workflows and boost productivity
             </p>
-            <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 text-xs">
-                <TrendingUp className="h-3 w-3 mr-1" />
+            <div className="flex items-center gap-4">
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
+                <TrendingUp className="h-4 w-4 mr-2" />
                 10 Integrated Apps
               </Badge>
-              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 text-xs">
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
+                <Rocket className="h-4 w-4 mr-2" />
                 Enterprise Ready
+              </Badge>
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
+                <Zap className="h-4 w-4 mr-2" />
+                AI Powered
               </Badge>
             </div>
           </div>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32 backdrop-blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24 backdrop-blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/2 w-32 h-32 bg-white/5 rounded-full -translate-x-16 -translate-y-16 backdrop-blur-3xl"></div>
         </div>
         
-        <DashboardStats />
+        <div className="animate-scale-in">
+          <DashboardStats />
+        </div>
 
-        {/* Quick Actions */}
-        <Card className="p-6">
-          <CardContent className="p-0">
-            <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Modern Quick Actions */}
+        <Card className="modern-card animate-slide-in-right">
+          <CardContent className="p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-gradient-to-br from-primary to-primary/80 rounded-xl">
+                <Target className="h-5 w-5 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold">Quick Actions</h3>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <button 
                 onClick={() => handleQuickAction('newTask')}
-                className="flex items-center gap-3 p-4 rounded-lg border border-dashed border-gray-300 hover:border-primary hover:bg-primary/5 transition-colors group"
+                className="group flex flex-col items-center gap-4 p-6 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
               >
-                <Calendar className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-medium">New Task</span>
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                  <Calendar className="h-6 w-6 text-white" />
+                </div>
+                <span className="font-medium text-gray-700 group-hover:text-primary">New Task</span>
               </button>
               <button 
                 onClick={() => handleQuickAction('startTimer')}
-                className="flex items-center gap-3 p-4 rounded-lg border border-dashed border-gray-300 hover:border-primary hover:bg-primary/5 transition-colors group"
+                className="group flex flex-col items-center gap-4 p-6 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
               >
-                <Clock className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-medium">Start Timer</span>
+                <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                  <Clock className="h-6 w-6 text-white" />
+                </div>
+                <span className="font-medium text-gray-700 group-hover:text-primary">Start Timer</span>
               </button>
               <button 
                 onClick={() => handleQuickAction('newProject')}
-                className="flex items-center gap-3 p-4 rounded-lg border border-dashed border-gray-300 hover:border-primary hover:bg-primary/5 transition-colors group"
+                className="group flex flex-col items-center gap-4 p-6 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
               >
-                <FileText className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-medium">New Project</span>
+                <div className="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                  <FileText className="h-6 w-6 text-white" />
+                </div>
+                <span className="font-medium text-gray-700 group-hover:text-primary">New Project</span>
               </button>
               <button 
                 onClick={() => handleQuickAction('teamChat')}
-                className="flex items-center gap-3 p-4 rounded-lg border border-dashed border-gray-300 hover:border-primary hover:bg-primary/5 transition-colors group"
+                className="group flex flex-col items-center gap-4 p-6 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
               >
-                <MessageSquare className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-medium">Team Chat</span>
+                <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                  <MessageSquare className="h-6 w-6 text-white" />
+                </div>
+                <span className="font-medium text-gray-700 group-hover:text-primary">Team Chat</span>
               </button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Apps Section */}
-        <div>
-          <div className="flex items-center justify-between mb-6">
+        {/* Modern Apps Section */}
+        <div className="animate-fade-in-up">
+          <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">Your Applications</h2>
-              <p className="text-muted-foreground">Access all your productivity tools in one place</p>
+              <h2 className="text-3xl font-bold tracking-tight text-gradient mb-2">Your Applications</h2>
+              <p className="text-muted-foreground text-lg">Access all your productivity tools in one place</p>
             </div>
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="px-4 py-2 text-sm font-medium backdrop-blur-sm">
               {appList.length} Apps Available
             </Badge>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-            {appList.map((app) => (
-              <AppCard 
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
+            {appList.map((app, index) => (
+              <div 
                 key={app.title}
-                title={app.title}
-                description={app.description}
-                icon={app.icon}
-                bgColor={app.bgColor}
-                route={app.route}
-                featureCount={app.featureCount}
-              />
+                className="animate-scale-in"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <AppCard 
+                  title={app.title}
+                  description={app.description}
+                  icon={app.icon}
+                  bgColor={app.bgColor}
+                  route={app.route}
+                  featureCount={app.featureCount}
+                />
+              </div>
             ))}
           </div>
         </div>
 
-        {/* Footer Section */}
-        <div className="pt-8 border-t">
-          <div className="text-center text-sm text-muted-foreground">
-            <p>ProSync Suite v2.0 - Built for teams that value efficiency and collaboration</p>
+        {/* Modern Footer Section */}
+        <div className="pt-12 border-t border-border/50">
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary/10 to-primary/5 rounded-2xl border border-primary/20 backdrop-blur-sm">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <p className="text-sm font-medium text-muted-foreground">
+                ProSync Suite v2.0 - Built for teams that value efficiency and collaboration
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -322,4 +356,3 @@ const Index = () => {
 };
 
 export default Index;
-
