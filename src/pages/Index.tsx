@@ -17,7 +17,7 @@ import EnhancedNotificationSystem from '@/components/EnhancedNotificationSystem'
 import ProductivityInsights from '@/components/ProductivityInsights';
 
 const Index = () => {
-  const { user, loading } = useAuthContext();
+  const { user, profile, loading } = useAuthContext();
   const { createTaskFromNote } = useIntegration();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -45,6 +45,16 @@ const Index = () => {
       setIsLoading(false);
     }
   }, [loading]);
+
+  const getDisplayName = () => {
+    if (profile?.full_name) {
+      return profile.full_name;
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return 'User';
+  };
 
   // Show loading while checking auth or if not authenticated
   if (loading || isLoading || !user) {
@@ -242,7 +252,7 @@ const Index = () => {
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Welcome back to ProSync Suite</h1>
                 <p className="text-blue-100 opacity-90">
-                  {user?.email ? `Hello ${user.email.split('@')[0]}` : 'Ready to boost your productivity?'}
+                  Hello {getDisplayName()}
                 </p>
               </div>
             </div>

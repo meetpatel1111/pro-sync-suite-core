@@ -38,6 +38,16 @@ const Header = () => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
 
+  const getDisplayName = () => {
+    if (profile?.full_name) {
+      return profile.full_name;
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return 'User';
+  };
+
   const handleSearchClick = () => {
     setSearchOpen(true);
   };
@@ -141,7 +151,7 @@ const Header = () => {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{profile?.full_name || 'User'}</p>
+                    <p className="text-sm font-medium leading-none">{getDisplayName()}</p>
                     <p className="text-xs leading-none text-muted-foreground">
                       {user?.email}
                     </p>
