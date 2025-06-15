@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Kanban, Calendar, Clock, Bug } from 'lucide-react';
+import { Plus, Kanban, Calendar, Clock, Bug, Layers, BarChart3 } from 'lucide-react';
 import { useAuthContext } from '@/context/AuthContext';
 import { taskmasterService } from '@/services/taskmasterService';
 import { useToast } from '@/hooks/use-toast';
@@ -98,28 +98,43 @@ const BoardSelector: React.FC<BoardSelectorProps> = ({ project, onBoardSelect, s
   const getBoardIcon = (type: string) => {
     switch (type) {
       case 'kanban':
-        return <Kanban className="h-4 w-4" />;
+        return <Kanban className="h-5 w-5 text-white" />;
       case 'scrum':
-        return <Calendar className="h-4 w-4" />;
+        return <Calendar className="h-5 w-5 text-white" />;
       case 'timeline':
-        return <Clock className="h-4 w-4" />;
+        return <Clock className="h-5 w-5 text-white" />;
       case 'issue_tracker':
-        return <Bug className="h-4 w-4" />;
+        return <Bug className="h-5 w-5 text-white" />;
       default:
-        return <Kanban className="h-4 w-4" />;
+        return <Layers className="h-5 w-5 text-white" />;
+    }
+  };
+
+  const getBoardGradient = (type: string) => {
+    switch (type) {
+      case 'kanban':
+        return 'from-blue-500 to-indigo-600';
+      case 'scrum':
+        return 'from-purple-500 to-pink-600';
+      case 'timeline':
+        return 'from-emerald-500 to-teal-600';
+      case 'issue_tracker':
+        return 'from-red-500 to-orange-600';
+      default:
+        return 'from-gray-500 to-slate-600';
     }
   };
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i} className="animate-pulse">
+          <Card key={i} className="animate-pulse modern-card">
             <CardHeader>
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded-lg w-3/4"></div>
             </CardHeader>
             <CardContent>
-              <div className="h-3 bg-gray-200 rounded w-full"></div>
+              <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-full"></div>
             </CardContent>
           </Card>
         ))}
@@ -128,53 +143,79 @@ const BoardSelector: React.FC<BoardSelectorProps> = ({ project, onBoardSelect, s
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-xl font-semibold">{project.name} - Boards</h3>
-          <p className="text-muted-foreground">Select a board to manage tasks</p>
+    <div className="space-y-8">
+      {/* Modern Header */}
+      <div className="flex items-center justify-between p-6 modern-card rounded-2xl">
+        <div className="space-y-2">
+          <h3 className="text-2xl font-bold text-gradient">{project.name} - Boards</h3>
+          <p className="text-muted-foreground text-lg">Select a board to manage tasks and workflows</p>
         </div>
-        <Button onClick={handleCreateBoard} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
+        <Button 
+          onClick={handleCreateBoard} 
+          className="btn-primary px-6 py-3 text-base font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+        >
+          <Plus className="h-5 w-5 mr-2" />
           New Board
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Boards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {boards.map((board) => (
           <Card 
             key={board.id} 
-            className={`cursor-pointer transition-all hover:shadow-md ${
-              selectedBoard?.id === board.id ? 'ring-2 ring-primary' : ''
+            className={`cursor-pointer hover-lift modern-card border-0 shadow-lg hover:shadow-2xl transition-all duration-300 group ${
+              selectedBoard?.id === board.id ? 'ring-2 ring-primary shadow-primary/20' : ''
             }`}
             onClick={() => onBoardSelect(board)}
           >
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                {getBoardIcon(board.type)}
-                <CardTitle className="text-lg">{board.name}</CardTitle>
+            <CardHeader className="pb-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 bg-gradient-to-br ${getBoardGradient(board.type)} rounded-xl shadow-lg group-hover:shadow-xl transition-shadow`}>
+                    {getBoardIcon(board.type)}
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-semibold group-hover:text-primary transition-colors">
+                      {board.name}
+                    </CardTitle>
+                    <Badge 
+                      variant="outline" 
+                      className="text-xs px-2 py-1 bg-blue-50 border-blue-200 text-blue-700 mt-1"
+                    >
+                      {board.type.replace('_', ' ')}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                </div>
               </div>
-              <Badge variant="outline" className="w-fit">
-                {board.type.replace('_', ' ')}
-              </Badge>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                {board.description || `${board.type} board for task management`}
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {board.description || `${board.type.replace('_', ' ')} board for comprehensive task management and workflow optimization`}
               </p>
             </CardContent>
           </Card>
         ))}
       </div>
 
+      {/* Empty State */}
       {boards.length === 0 && (
-        <div className="text-center py-12">
-          <div className="mx-auto max-w-md">
-            <h3 className="text-lg font-semibold mb-2">No boards yet</h3>
-            <p className="text-muted-foreground mb-4">
-              Create your first board to start organizing tasks
+        <div className="text-center py-16 modern-card rounded-2xl">
+          <div className="mx-auto max-w-md space-y-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto">
+              <Layers className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="text-xl font-semibold text-gradient">No boards yet</h3>
+            <p className="text-muted-foreground text-lg">
+              Create your first board to start organizing tasks and workflows
             </p>
-            <Button onClick={handleCreateBoard}>
+            <Button 
+              onClick={handleCreateBoard}
+              className="btn-primary px-6 py-3 text-base font-medium rounded-xl"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Create First Board
             </Button>

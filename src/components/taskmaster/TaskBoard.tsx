@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, User, Calendar, AlertCircle } from 'lucide-react';
+import { Plus, User, Calendar, AlertCircle, Clock, Flag } from 'lucide-react';
 import { useAuthContext } from '@/context/AuthContext';
 import { taskmasterService } from '@/services/taskmasterService';
 import { useToast } from '@/hooks/use-toast';
@@ -133,11 +133,11 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'critical': return 'bg-red-500';
-      case 'high': return 'bg-orange-500';
-      case 'medium': return 'bg-yellow-500';
-      case 'low': return 'bg-green-500';
-      default: return 'bg-gray-500';
+      case 'critical': return 'bg-red-500 shadow-red-500/30';
+      case 'high': return 'bg-orange-500 shadow-orange-500/30';
+      case 'medium': return 'bg-yellow-500 shadow-yellow-500/30';
+      case 'low': return 'bg-green-500 shadow-green-500/30';
+      default: return 'bg-gray-500 shadow-gray-500/30';
     }
   };
 
@@ -154,14 +154,14 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i} className="animate-pulse">
+          <Card key={i} className="animate-pulse modern-card">
             <CardHeader>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded-lg w-2/3"></div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {Array.from({ length: 2 }).map((_, j) => (
-                  <div key={j} className="h-20 bg-gray-200 rounded"></div>
+                  <div key={j} className="h-24 bg-gradient-to-r from-gray-200 to-gray-300 rounded-xl"></div>
                 ))}
               </div>
             </CardContent>
@@ -172,66 +172,94 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-xl font-semibold">{board.name}</h3>
-          <p className="text-muted-foreground">Manage your tasks using {board.type} workflow</p>
+    <div className="space-y-8">
+      {/* Modern Header */}
+      <div className="flex items-center justify-between p-6 modern-card rounded-2xl">
+        <div className="space-y-2">
+          <h3 className="text-2xl font-bold text-gradient">{board.name}</h3>
+          <p className="text-muted-foreground text-lg">
+            Manage your tasks using {board.type.replace('_', ' ')} workflow
+          </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
+        <Button 
+          onClick={() => setIsCreateDialogOpen(true)} 
+          className="btn-primary px-6 py-3 text-base font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+        >
+          <Plus className="h-5 w-5 mr-2" />
           Create Task
         </Button>
       </div>
 
+      {/* Kanban Board */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {board.config.columns.map((column) => (
-          <Card key={column.id} className="h-fit">
-            <CardHeader>
+          <Card key={column.id} className="modern-card h-fit border-0 shadow-xl">
+            <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium">{column.name}</CardTitle>
-                <Badge variant="secondary">{getTasksByStatus(column.id).length}</Badge>
+                <CardTitle className="text-lg font-semibold text-gradient">
+                  {column.name}
+                </CardTitle>
+                <Badge 
+                  variant="secondary" 
+                  className="bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border border-blue-200/50 px-3 py-1 font-medium"
+                >
+                  {getTasksByStatus(column.id).length}
+                </Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               {getTasksByStatus(column.id).map((task) => (
                 <Card 
                   key={task.id} 
-                  className="cursor-pointer hover:shadow-sm transition-shadow p-3"
+                  className="cursor-pointer hover-lift modern-card border-0 shadow-md hover:shadow-2xl transition-all duration-300 p-4 group"
                   onClick={() => setSelectedTask(task)}
                 >
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs">{getTypeIcon(task.type)}</span>
-                      <span className="text-xs text-muted-foreground font-mono">{task.task_key}</span>
-                      <div className={`w-2 h-2 rounded-full ${getPriorityColor(task.priority)}`}></div>
+                  <div className="space-y-3">
+                    {/* Task Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{getTypeIcon(task.type)}</span>
+                        <span className="text-xs font-mono text-muted-foreground bg-gray-100 px-2 py-1 rounded-md">
+                          {task.task_key}
+                        </span>
+                      </div>
+                      <div className={`w-3 h-3 rounded-full shadow-lg ${getPriorityColor(task.priority)}`}></div>
                     </div>
-                    <h4 className="text-sm font-medium line-clamp-2">{task.title}</h4>
-                    {task.assignee_id && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <User className="h-3 w-3" />
-                        <span>Assigned</span>
-                      </div>
-                    )}
-                    {task.due_date && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        <span>{new Date(task.due_date).toLocaleDateString()}</span>
-                      </div>
-                    )}
-                    {task.estimate_hours && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <AlertCircle className="h-3 w-3" />
-                        <span>{task.estimate_hours}h</span>
-                      </div>
-                    )}
+                    
+                    {/* Task Title */}
+                    <h4 className="text-sm font-semibold line-clamp-2 text-gray-800 group-hover:text-gray-900 transition-colors">
+                      {task.title}
+                    </h4>
+                    
+                    {/* Task Metadata */}
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {task.assignee_id && (
+                        <div className="flex items-center gap-1 text-muted-foreground bg-blue-50 px-2 py-1 rounded-md">
+                          <User className="h-3 w-3" />
+                          <span>Assigned</span>
+                        </div>
+                      )}
+                      {task.due_date && (
+                        <div className="flex items-center gap-1 text-muted-foreground bg-amber-50 px-2 py-1 rounded-md">
+                          <Calendar className="h-3 w-3" />
+                          <span>{new Date(task.due_date).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                      {task.estimate_hours && (
+                        <div className="flex items-center gap-1 text-muted-foreground bg-emerald-50 px-2 py-1 rounded-md">
+                          <Clock className="h-3 w-3" />
+                          <span>{task.estimate_hours}h</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </Card>
               ))}
               
+              {/* Add Task Button */}
               <Button 
                 variant="ghost" 
-                className="w-full border-dashed border-2"
+                className="w-full border-2 border-dashed border-gray-300 hover:border-primary/50 hover:bg-primary/5 rounded-xl py-6 transition-all duration-200"
                 onClick={() => setIsCreateDialogOpen(true)}
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -242,14 +270,21 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
         ))}
       </div>
 
+      {/* Empty State */}
       {tasks.length === 0 && (
-        <div className="text-center py-12">
-          <div className="mx-auto max-w-md">
-            <h3 className="text-lg font-semibold mb-2">No tasks yet</h3>
-            <p className="text-muted-foreground mb-4">
+        <div className="text-center py-16 modern-card rounded-2xl">
+          <div className="mx-auto max-w-md space-y-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto">
+              <CheckSquare className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="text-xl font-semibold text-gradient">No tasks yet</h3>
+            <p className="text-muted-foreground text-lg">
               Create your first task to start organizing your work
             </p>
-            <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Button 
+              onClick={() => setIsCreateDialogOpen(true)}
+              className="btn-primary px-6 py-3 text-base font-medium rounded-xl"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Create First Task
             </Button>
@@ -257,6 +292,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
         </div>
       )}
 
+      {/* Dialogs */}
       <CreateTaskDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
