@@ -38,8 +38,8 @@ interface SearchCommandProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Simplified type to avoid TypeScript deep instantiation issues
-type IconComponent = React.ComponentType<any>;
+// More specific type that avoids deep instantiation issues
+type IconComponent = (props: { className?: string }) => JSX.Element;
 
 interface AppItem {
   name: string;
