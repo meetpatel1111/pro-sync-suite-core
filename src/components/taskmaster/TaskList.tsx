@@ -28,8 +28,8 @@ const TaskList = ({ tasks: initialTasks = [], onTaskUpdate, onTaskDelete }: Task
     status: 'todo',
     priority: 'medium' as 'low' | 'medium' | 'high',
     due_date: '',
-    assignee: '',
-    project: ''
+    assigned_to: [] as string[],
+    project_id: ''
   });
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
@@ -65,11 +65,17 @@ const TaskList = ({ tasks: initialTasks = [], onTaskUpdate, onTaskDelete }: Task
           description: task.description || '',
           status: task.status as 'todo' | 'inProgress' | 'review' | 'done',
           priority: task.priority as 'low' | 'medium' | 'high',
+          start_date: task.start_date,
           due_date: task.due_date,
-          assignee: task.assigned_to?.[0] || undefined,
-          project: task.project_id,
+          assigned_to: task.assigned_to || [],
+          project_id: task.project_id,
+          created_by: task.created_by,
+          parent_task_id: task.parent_task_id,
+          reviewer_id: task.reviewer_id,
+          recurrence_rule: task.recurrence_rule,
+          visibility: task.visibility,
           created_at: task.created_at,
-          user_id: task.created_by
+          updated_at: task.updated_at,
         }));
         setTasks(mappedTasks);
       } else {
@@ -116,8 +122,8 @@ const TaskList = ({ tasks: initialTasks = [], onTaskUpdate, onTaskDelete }: Task
         status: newTask.status || "todo",
         priority: newTask.priority || "medium", 
         due_date: newTask.due_date || null,
-        assigned_to: newTask.assignee ? [newTask.assignee] : null,
-        project_id: newTask.project || null,
+        assigned_to: newTask.assigned_to.length > 0 ? newTask.assigned_to : null,
+        project_id: newTask.project_id || null,
         created_by: userData.user.id
       };
 
@@ -133,8 +139,8 @@ const TaskList = ({ tasks: initialTasks = [], onTaskUpdate, onTaskDelete }: Task
         status: 'todo',
         priority: 'medium' as 'low' | 'medium' | 'high',
         due_date: '',
-        assignee: '',
-        project: ''
+        assigned_to: [],
+        project_id: ''
       });
       fetchTasks();
 
@@ -175,8 +181,8 @@ const TaskList = ({ tasks: initialTasks = [], onTaskUpdate, onTaskDelete }: Task
           status: updatedTask.status,
           priority: updatedTask.priority,
           due_date: updatedTask.due_date,
-          assigned_to: updatedTask.assignee ? [updatedTask.assignee] : null,
-          project_id: updatedTask.project
+          assigned_to: updatedTask.assigned_to && updatedTask.assigned_to.length > 0 ? updatedTask.assigned_to : null,
+          project_id: updatedTask.project_id
         })
         .eq('id', updatedTask.id);
 

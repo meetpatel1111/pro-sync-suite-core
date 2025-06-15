@@ -36,10 +36,10 @@ const TaskDetailWithIntegrations: React.FC<TaskDetailWithIntegrationsProps> = ({
     return project ? project.name : projectId;
   };
   
-  const getAssigneeName = (assigneeId?: string) => {
-    if (!assigneeId) return '-';
-    const member = teamMembers.find(m => m.id === assigneeId);
-    return member ? member.name : assigneeId;
+  const getAssigneeName = (assignedTo?: string[]) => {
+    if (!assignedTo || assignedTo.length === 0) return '-';
+    const member = teamMembers.find(m => m.id === assignedTo[0]);
+    return member ? member.name : assignedTo[0];
   };
   
   const getPriorityColor = (priority: string) => {
@@ -59,7 +59,7 @@ const TaskDetailWithIntegrations: React.FC<TaskDetailWithIntegrationsProps> = ({
             <div>
               <CardTitle>{task.title}</CardTitle>
               <CardDescription>
-                {getProjectName(task.project)}
+                {getProjectName(task.project_id)}
               </CardDescription>
             </div>
             <Badge variant={task.status === 'done' ? 'success' : 'secondary'}>
@@ -106,7 +106,7 @@ const TaskDetailWithIntegrations: React.FC<TaskDetailWithIntegrationsProps> = ({
             <div className="flex items-center space-x-2">
               <User className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">
-                {`Assigned to: ${getAssigneeName(task.assignee)}`}
+                {`Assigned to: ${getAssigneeName(task.assigned_to)}`}
               </span>
             </div>
           </div>

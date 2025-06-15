@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -94,11 +95,17 @@ const InsightIQ = () => {
             description: task.description || '',
             status: validateStatus(task.status),
             priority: validatePriority(task.priority),
+            start_date: task.start_date,
             due_date: task.due_date,
             assigned_to: task.assigned_to,
             project_id: task.project_id,
+            created_by: task.created_by,
+            parent_task_id: task.parent_task_id,
+            reviewer_id: task.reviewer_id,
+            recurrence_rule: task.recurrence_rule,
+            visibility: task.visibility,
             created_at: task.created_at,
-            user_id: task.created_by
+            updated_at: task.updated_at,
           }));
 
           setTasks(mappedTasks);
@@ -437,8 +444,8 @@ const InsightIQ = () => {
                           </div>
                           <div className="flex-col items-end">
                             <Avatar className="h-8 w-8">
-                              <AvatarImage src={getUserAvatar(task.user_id)} />
-                              <AvatarFallback>{getUserName(task.user_id)}</AvatarFallback>
+                              <AvatarImage src={getUserAvatar(task.created_by)} />
+                              <AvatarFallback>{getUserName(task.created_by)}</AvatarFallback>
                             </Avatar>
                           </div>
                         </div>

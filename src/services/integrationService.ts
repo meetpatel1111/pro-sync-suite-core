@@ -40,11 +40,17 @@ export const integrationService = {
           description: data.description || '',
           status: data.status as 'todo' | 'inProgress' | 'review' | 'done',
           priority: data.priority as 'low' | 'medium' | 'high',
+          start_date: data.start_date,
           due_date: data.due_date,
-          assignee: data.assigned_to?.[0] || undefined,
-          project: data.project_id,
+          assigned_to: data.assigned_to || [],
+          project_id: data.project_id,
+          created_by: data.created_by,
+          parent_task_id: data.parent_task_id,
+          reviewer_id: data.reviewer_id,
+          recurrence_rule: data.recurrence_rule,
+          visibility: data.visibility,
           created_at: data.created_at,
-          user_id: data.created_by
+          updated_at: data.updated_at,
         };
       }
       
@@ -166,11 +172,17 @@ export const integrationService = {
             description: task.description || '',
             status: task.status,
             priority: task.priority,
+            start_date: task.start_date,
             due_date: task.due_date,
-            assignee: task.assigned_to?.[0] || undefined,
-            project: task.project_id,
+            assigned_to: task.assigned_to || [],
+            project_id: task.project_id,
+            created_by: task.created_by,
+            parent_task_id: task.parent_task_id,
+            reviewer_id: task.reviewer_id,
+            recurrence_rule: task.recurrence_rule,
+            visibility: task.visibility,
             created_at: task.created_at,
-            user_id: task.created_by
+            updated_at: task.updated_at,
           }));
           
           result.push({
