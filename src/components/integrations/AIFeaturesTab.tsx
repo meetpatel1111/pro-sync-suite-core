@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Brain, MessageSquare, Lightbulb, Search, PenTool, FileText, BarChart, Calendar, Clock, BookOpen } from 'lucide-react';
+import { Brain, MessageSquare, Lightbulb, Search, PenTool, FileText, BarChart, Calendar, Clock, BookOpen, Command, RefreshCw, Shield, Radar } from 'lucide-react';
 import AIChatWidget from '@/components/ai/AIChatWidget';
 import AITaskSuggestions from '@/components/ai/AITaskSuggestions';
 import AIInsightsWidget from '@/components/ai/AIInsightsWidget';
@@ -13,6 +13,10 @@ import AIMeetingNotesGenerator from '@/components/ai/AIMeetingNotesGenerator';
 import AISmartScheduling from '@/components/ai/AISmartScheduling';
 import AIAutoDocumentation from '@/components/ai/AIAutoDocumentation';
 import AIContextSuggestions from '@/components/ai/AIContextSuggestions';
+import AIMultiAppCommandBar from '@/components/ai/AIMultiAppCommandBar';
+import AIDataSyncAdvisor from '@/components/ai/AIDataSyncAdvisor';
+import AIRiskPredictor from '@/components/ai/AIRiskPredictor';
+import AIAnomalyDetector from '@/components/ai/AIAnomalyDetector';
 import APIKeyManagement from '@/components/settings/APIKeyManagement';
 
 const AIFeaturesTab: React.FC = () => {
@@ -46,17 +50,17 @@ const AIFeaturesTab: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-3 p-4 border rounded-lg">
-              <PenTool className="h-8 w-8 text-green-500 flex-shrink-0" />
+              <Command className="h-8 w-8 text-green-500 flex-shrink-0" />
               <div className="min-w-0">
-                <h3 className="font-medium">Content Generator</h3>
-                <p className="text-sm text-muted-foreground">AI-powered content creation</p>
+                <h3 className="font-medium">Multi-App Copilot</h3>
+                <p className="text-sm text-muted-foreground">Natural language commands</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-4 border rounded-lg">
-              <BarChart className="h-8 w-8 text-orange-500 flex-shrink-0" />
+              <Shield className="h-8 w-8 text-orange-500 flex-shrink-0" />
               <div className="min-w-0">
-                <h3 className="font-medium">Project Analytics</h3>
-                <p className="text-sm text-muted-foreground">AI-driven insights</p>
+                <h3 className="font-medium">Risk Prediction</h3>
+                <p className="text-sm text-muted-foreground">AI-powered risk analysis</p>
               </div>
             </div>
           </div>
@@ -65,6 +69,11 @@ const AIFeaturesTab: React.FC = () => {
 
       {/* API Key Management */}
       <APIKeyManagement />
+
+      {/* AI Multi-App Command Bar - Featured */}
+      <div className="max-w-full">
+        <AIMultiAppCommandBar />
+      </div>
 
       {/* AI Features Grid - Row 1: Core AI Tools */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-full">
@@ -96,7 +105,17 @@ const AIFeaturesTab: React.FC = () => {
         </div>
       </div>
 
-      {/* AI Features Grid - Row 4: Meeting & Scheduling */}
+      {/* AI Features Grid - Row 4: Risk & Anomaly Detection */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-full">
+        <div className="min-w-0">
+          <AIRiskPredictor />
+        </div>
+        <div className="min-w-0">
+          <AIAnomalyDetector />
+        </div>
+      </div>
+
+      {/* AI Features Grid - Row 5: Meeting & Scheduling */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-full">
         <div className="min-w-0">
           <AIMeetingNotesGenerator />
@@ -106,19 +125,24 @@ const AIFeaturesTab: React.FC = () => {
         </div>
       </div>
 
-      {/* AI Features Grid - Row 5: Documentation & Context */}
+      {/* AI Features Grid - Row 6: Documentation & Sync */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-full">
         <div className="min-w-0">
           <AIAutoDocumentation />
         </div>
         <div className="min-w-0">
-          <AIContextSuggestions />
+          <AIDataSyncAdvisor />
         </div>
       </div>
 
-      {/* AI Insights Widget - Full Width */}
-      <div className="max-w-full">
-        <AIInsightsWidget />
+      {/* AI Features Grid - Row 7: Context & Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-full">
+        <div className="min-w-0">
+          <AIContextSuggestions />
+        </div>
+        <div className="min-w-0">
+          <AIInsightsWidget />
+        </div>
       </div>
     </div>
   );
