@@ -17,6 +17,8 @@ import {
   X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuthContext } from '@/context/AuthContext';
 
 interface Notification {
   id: string;
@@ -28,18 +30,99 @@ interface Notification {
   category: 'task' | 'project' | 'team' | 'system' | 'deadline';
   priority: 'low' | 'medium' | 'high';
   actionable?: boolean;
+  related_to?: string;
+  related_id?: string;
 }
 
 const EnhancedNotificationSystem: React.FC = () => {
+  const { user } = useAuthContext();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread' | 'high'>('all');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Replace with actual API calls to fetch notifications
-    // This is where you would fetch real notifications from your backend
-    console.log('NotificationSystem component ready for real data integration');
-  }, []);
+    if (user) {
+      fetchNotifications();
+      // Set up real-time subscription
+      const channel = supabase
+        .channel('notifications')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+          () => fetchNotifications()
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user]);
+
+  const fetchNotifications = async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      const formattedNotifications: Notification[] = (data || []).map(notif => ({
+        id: notif.id,
+        type: mapNotificationType(notif.type),
+        title: notif.title,
+        message: notif.message,
+        timestamp: new Date(notif.created_at),
+        read: notif.read,
+        category: mapNotificationCategory(notif.related_to || 'system'),
+        priority: determinePriority(notif.type, notif.title),
+        actionable: isActionable(notif.related_to),
+        related_to: notif.related_to,
+        related_id: notif.related_id
+      }));
+
+      setNotifications(formattedNotifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const mapNotificationType = (type: string): 'info' | 'warning' | 'success' | 'error' => {
+    switch (type) {
+      case 'warning': return 'warning';
+      case 'success': return 'success';
+      case 'error': return 'error';
+      default: return 'info';
+    }
+  };
+
+  const mapNotificationCategory = (relatedTo: string): 'task' | 'project' | 'team' | 'system' | 'deadline' => {
+    switch (relatedTo) {
+      case 'task': return 'task';
+      case 'project': return 'project';
+      case 'team': return 'team';
+      case 'deadline': return 'deadline';
+      default: return 'system';
+    }
+  };
+
+  const determinePriority = (type: string, title: string): 'low' | 'medium' | 'high' => {
+    if (type === 'error' || title.toLowerCase().includes('urgent')) return 'high';
+    if (type === 'warning' || title.toLowerCase().includes('deadline')) return 'medium';
+    return 'low';
+  };
+
+  const isActionable = (relatedTo?: string): boolean => {
+    return relatedTo === 'task' || relatedTo === 'project';
+  };
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -61,30 +144,66 @@ const EnhancedNotificationSystem: React.FC = () => {
     }
   };
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id 
-          ? { ...notification, read: true }
-          : notification
-      )
-    );
+  const markAsRead = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', id)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === id 
+            ? { ...notification, read: true }
+            : notification
+        )
+      );
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
-  const dismissNotification = (id: string) => {
-    setNotifications(prev => prev.filter(notification => notification.id !== id));
-    toast({
-      title: 'Notification dismissed',
-      description: 'The notification has been removed.'
-    });
+  const dismissNotification = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      setNotifications(prev => prev.filter(notification => notification.id !== id));
+      toast({
+        title: 'Notification dismissed',
+        description: 'The notification has been removed.'
+      });
+    } catch (error) {
+      console.error('Error dismissing notification:', error);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(notification => ({ ...notification, read: true })));
-    toast({
-      title: 'All notifications marked as read',
-      description: 'Your notification list has been updated.'
-    });
+  const markAllAsRead = async () => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', user?.id)
+        .eq('read', false);
+
+      if (error) throw error;
+
+      setNotifications(prev => prev.map(notification => ({ ...notification, read: true })));
+      toast({
+        title: 'All notifications marked as read',
+        description: 'Your notification list has been updated.'
+      });
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
   };
 
   const filteredNotifications = notifications.filter(notification => {
@@ -107,6 +226,24 @@ const EnhancedNotificationSystem: React.FC = () => {
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
     return `${Math.floor(diffInMinutes / 1440)}d ago`;
   };
+
+  if (isLoading) {
+    return (
+      <Card className="w-full max-w-2xl animate-pulse">
+        <CardHeader>
+          <div className="h-6 bg-gray-200 rounded w-32"></div>
+          <div className="h-4 bg-gray-200 rounded w-48"></div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full max-w-2xl">

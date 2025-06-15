@@ -81,18 +81,22 @@ const DashboardStats = () => {
       // Fetch active projects count
       const { data: projects, error: projectsError } = await supabase
         .from('projects')
-        .select('id')
-        .eq('user_id', user.id);
+        .select('id, status')
+        .eq('created_by', user.id);
 
       if (projectsError) {
         console.log('Projects error:', projectsError);
       }
 
+      const activeProjects = (projects || []).filter(project => 
+        project.status === 'active' || project.status === 'in_progress'
+      ).length;
+
       // Fetch completed tasks count
       const { data: completedTasks, error: tasksError } = await supabase
         .from('tasks')
         .select('id')
-        .eq('created_by', user.id)
+        .or(`created_by.eq.${user.id},assigned_to.cs.{${user.id}}`)
         .eq('status', 'done');
 
       if (tasksError) {
@@ -103,33 +107,41 @@ const DashboardStats = () => {
       const { data: allTasks, error: allTasksError } = await supabase
         .from('tasks')
         .select('id, status, assigned_to')
-        .eq('created_by', user.id);
+        .or(`created_by.eq.${user.id},assigned_to.cs.{${user.id}}`);
 
       if (allTasksError) {
         console.log('All tasks error:', allTasksError);
       }
 
       // Calculate unique team members from task assignments
-      const uniqueTeamMembers = allTasks ? 
-        new Set(allTasks.flatMap(t => t.assigned_to || [])).size : 0;
+      const uniqueTeamMembers = new Set();
+      (allTasks || []).forEach(task => {
+        if (task.assigned_to) {
+          task.assigned_to.forEach((userId: string) => uniqueTeamMembers.add(userId));
+        }
+      });
 
-      // Fetch total hours tracked
+      // Fetch total hours tracked this week
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+
       const { data: timeEntries, error: timeError } = await supabase
         .from('time_entries')
         .select('time_spent')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .gte('date', weekStart.toISOString());
 
       if (timeError) {
         console.log('Time entries error:', timeError);
       }
 
       // Calculate total hours (convert seconds to hours)
-      const totalHours = timeEntries ? 
-        Math.round(timeEntries.reduce((sum, entry) => sum + (entry.time_spent || 0), 0) / 3600) : 0;
+      const totalHours = (timeEntries || []).reduce((sum, entry) => sum + (entry.time_spent || 0), 0) / 3600;
 
       // Calculate productivity (completed tasks / total tasks * 100)
-      const totalTasks = allTasks?.length || 0;
-      const completedCount = completedTasks?.length || 0;
+      const totalTasks = (allTasks || []).length;
+      const completedCount = (completedTasks || []).length;
       const productivity = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
 
       // Fetch risks/issues count
@@ -146,32 +158,32 @@ const DashboardStats = () => {
       setStats(prevStats => [
         {
           ...prevStats[0],
-          value: projects?.length.toString() || '0',
-          change: projects?.length > 0 ? '+' + projects.length.toString() : '0',
+          value: activeProjects.toString(),
+          change: activeProjects > 0 ? `+${activeProjects}` : '0',
         },
         {
           ...prevStats[1],
           value: completedCount.toString(),
-          change: completedCount > 0 ? '+' + completedCount.toString() : '0',
+          change: completedCount > 0 ? `+${completedCount}` : '0',
         },
         {
           ...prevStats[2],
-          value: uniqueTeamMembers.toString(),
-          change: uniqueTeamMembers > 0 ? '+' + uniqueTeamMembers.toString() : '0',
+          value: uniqueTeamMembers.size.toString(),
+          change: uniqueTeamMembers.size > 0 ? `+${uniqueTeamMembers.size}` : '0',
         },
         {
           ...prevStats[3],
-          value: totalHours.toString(),
-          change: totalHours > 0 ? '+' + totalHours.toString() + 'h' : '0h',
+          value: Math.round(totalHours).toString(),
+          change: totalHours > 0 ? `+${Math.round(totalHours)}h` : '0h',
         },
         {
           ...prevStats[4],
           value: `${productivity}%`,
-          change: productivity > 0 ? '+' + productivity.toString() + '%' : '0%',
+          change: productivity > 0 ? `+${productivity}%` : '0%',
         },
         {
           ...prevStats[5],
-          value: risks?.length.toString() || '0',
+          value: (risks?.length || 0).toString(),
           change: (risks?.length || 0).toString(),
           trend: (risks?.length || 0) > 0 ? 'up' : 'down',
         }
