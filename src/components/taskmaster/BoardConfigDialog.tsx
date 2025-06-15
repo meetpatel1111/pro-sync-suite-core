@@ -21,6 +21,8 @@ interface BoardConfigDialogProps {
   children: React.ReactNode;
 }
 
+type SwimlaneType = 'none' | 'assignee' | 'priority' | 'label' | 'epic';
+
 const BoardConfigDialog: React.FC<BoardConfigDialogProps> = ({
   board,
   onBoardUpdate,
@@ -28,7 +30,15 @@ const BoardConfigDialog: React.FC<BoardConfigDialogProps> = ({
 }) => {
   const [columns, setColumns] = useState(board.config.columns);
   const [wipLimits, setWipLimits] = useState(board.wip_limits || {});
-  const [swimlaneConfig, setSwimlaneConfig] = useState(board.swimlane_config || { type: 'none', enabled: false });
+  
+  // Properly type the swimlane config with explicit typing
+  const [swimlaneConfig, setSwimlaneConfig] = useState<{
+    type: SwimlaneType;
+    enabled: boolean;
+  }>({
+    type: (board.swimlane_config?.type as SwimlaneType) || 'none',
+    enabled: board.swimlane_config?.enabled || false
+  });
 
   const addColumn = () => {
     const newColumn = {
@@ -179,7 +189,7 @@ const BoardConfigDialog: React.FC<BoardConfigDialogProps> = ({
                       <Label>Swimlane Type</Label>
                       <Select 
                         value={swimlaneConfig.type} 
-                        onValueChange={(type: 'none' | 'assignee' | 'priority' | 'label' | 'epic') => 
+                        onValueChange={(type: SwimlaneType) => 
                           setSwimlaneConfig(prev => ({ ...prev, type }))
                         }
                       >
