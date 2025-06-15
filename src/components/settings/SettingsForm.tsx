@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSettings } from '@/context/SettingsContext';
@@ -6,7 +7,7 @@ import { AppearanceSettingsSection } from './AppearanceSettingsSection';
 import { NotificationSettingsSection } from './NotificationSettingsSection';
 import { SecuritySettingsSection } from './SecuritySettingsSection';
 import { DataManagementSection } from './DataManagementSection';
-import { APIKeyManagement } from './APIKeyManagement';
+import APIKeyManagement from './APIKeyManagement';
 
 interface SettingsFormProps {
   defaultTab?: string;

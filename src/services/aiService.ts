@@ -2,8 +2,10 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ChatMessage {
+  id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  timestamp: Date;
 }
 
 export interface AITaskSuggestion {
@@ -68,12 +70,16 @@ class AIService {
   async chatWithAI(userMessage: string, context?: string): Promise<string> {
     const messages: ChatMessage[] = [
       {
+        id: 'system',
         role: 'system',
-        content: `You are an AI assistant for ProSync Suite, a comprehensive project management platform. Help users with project management, productivity, time tracking, and work optimization. ${context ? `Context: ${context}` : ''}`
+        content: `You are an AI assistant for ProSync Suite, a comprehensive project management platform. Help users with project management, productivity, time tracking, and work optimization. ${context ? `Context: ${context}` : ''}`,
+        timestamp: new Date()
       },
       {
+        id: 'user',
         role: 'user',
-        content: userMessage
+        content: userMessage,
+        timestamp: new Date()
       }
     ];
 
@@ -83,12 +89,16 @@ class AIService {
   async generateTaskSuggestions(projectContext: string): Promise<AITaskSuggestion[]> {
     const messages: ChatMessage[] = [
       {
+        id: 'system',
         role: 'system',
-        content: 'You are a project management expert. Generate 3-5 relevant task suggestions based on the project context. Return ONLY a JSON array of tasks with title, description, priority (low/medium/high), and estimatedHours (number).'
+        content: 'You are a project management expert. Generate 3-5 relevant task suggestions based on the project context. Return ONLY a JSON array of tasks with title, description, priority (low/medium/high), and estimatedHours (number).',
+        timestamp: new Date()
       },
       {
+        id: 'user',
         role: 'user',
-        content: `Project context: ${projectContext}. Generate task suggestions.`
+        content: `Project context: ${projectContext}. Generate task suggestions.`,
+        timestamp: new Date()
       }
     ];
 
@@ -111,12 +121,16 @@ class AIService {
   async generateProductivityInsights(userStats: any): Promise<AIInsight[]> {
     const messages: ChatMessage[] = [
       {
+        id: 'system',
         role: 'system',
-        content: 'You are a productivity analyst. Based on user work statistics, provide 2-3 insights with recommendations. Return ONLY a JSON array with type, title, description, recommendation, and priority fields.'
+        content: 'You are a productivity analyst. Based on user work statistics, provide 2-3 insights with recommendations. Return ONLY a JSON array with type, title, description, recommendation, and priority fields.',
+        timestamp: new Date()
       },
       {
+        id: 'user',
         role: 'user',
-        content: `User stats: ${JSON.stringify(userStats)}. Provide productivity insights.`
+        content: `User stats: ${JSON.stringify(userStats)}. Provide productivity insights.`,
+        timestamp: new Date()
       }
     ];
 
@@ -140,12 +154,16 @@ class AIService {
   async optimizeTaskDescription(originalDescription: string): Promise<string> {
     const messages: ChatMessage[] = [
       {
+        id: 'system',
         role: 'system',
-        content: 'You are a task optimization expert. Improve the given task description to be clearer, more actionable, and better structured. Keep it concise but comprehensive.'
+        content: 'You are a task optimization expert. Improve the given task description to be clearer, more actionable, and better structured. Keep it concise but comprehensive.',
+        timestamp: new Date()
       },
       {
+        id: 'user',
         role: 'user',
-        content: `Optimize this task description: "${originalDescription}"`
+        content: `Optimize this task description: "${originalDescription}"`,
+        timestamp: new Date()
       }
     ];
 
@@ -155,12 +173,16 @@ class AIService {
   async generateProjectSummary(projectData: any): Promise<string> {
     const messages: ChatMessage[] = [
       {
+        id: 'system',
         role: 'system',
-        content: 'You are a project analyst. Create a concise project summary highlighting key metrics, progress, and potential concerns.'
+        content: 'You are a project analyst. Create a concise project summary highlighting key metrics, progress, and potential concerns.',
+        timestamp: new Date()
       },
       {
+        id: 'user',
         role: 'user',
-        content: `Project data: ${JSON.stringify(projectData)}. Generate a summary.`
+        content: `Project data: ${JSON.stringify(projectData)}. Generate a summary.`,
+        timestamp: new Date()
       }
     ];
 

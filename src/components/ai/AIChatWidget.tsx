@@ -9,13 +9,6 @@ import { Bot, Send, User, Loader2, MessageCircle, X } from 'lucide-react';
 import { aiService, ChatMessage } from '@/services/aiService';
 import { useToast } from '@/hooks/use-toast';
 
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
-
 const AIChatWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
