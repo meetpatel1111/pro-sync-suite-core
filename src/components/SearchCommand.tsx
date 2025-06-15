@@ -38,8 +38,8 @@ interface SearchCommandProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Updated type for Lucide icons
-type LucideIcon = React.ComponentType<{ className?: string; size?: number }>;
+// Updated type for Lucide icons to be more flexible
+type LucideIcon = React.ComponentType<any>;
 
 interface AppItem {
   name: string;
@@ -78,8 +78,8 @@ const SearchCommand = ({ open, onOpenChange }: SearchCommandProps) => {
       // Fetch tasks
       const { data: tasksData } = await supabase
         .from('tasks')
-        .select('id, title, description, status, priority, project')
-        .eq('user_id', session.user.id)
+        .select('id, title, description, status, priority, project_id')
+        .eq('created_by', session.user.id)
         .limit(10);
       
       // Fetch projects
@@ -92,7 +92,7 @@ const SearchCommand = ({ open, onOpenChange }: SearchCommandProps) => {
       // Fetch files
       const { data: filesData } = await supabase
         .from('files')
-        .select('id, name, size, type')
+        .select('id, name, size_bytes, file_type')
         .eq('user_id', session.user.id)
         .limit(10);
 
@@ -291,7 +291,7 @@ const SearchCommand = ({ open, onOpenChange }: SearchCommandProps) => {
                 <div className="flex flex-col">
                   <span className="font-medium">{file.name}</span>
                   <span className="text-sm text-muted-foreground">
-                    {file.type} • {formatFileSize(file.size)}
+                    {file.file_type} • {formatFileSize(file.size_bytes)}
                   </span>
                 </div>
               </CommandItem>

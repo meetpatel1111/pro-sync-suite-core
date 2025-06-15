@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
-import { dbService } from '@/services/dbService';
 import AppLayout from '@/components/AppLayout';
 import ProjectSidebar from '@/components/planboard/ProjectSidebar';
 import ViewSelector from '@/components/planboard/ViewSelector';
@@ -12,6 +11,7 @@ import GanttChart from '@/components/GanttChart';
 import { Button } from '@/components/ui/button';
 import { Plus, Calendar as CalendarIcon } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 type ViewType = 'gantt' | 'timeline' | 'calendar' | 'board';
 
@@ -71,8 +71,19 @@ const PlanBoard = () => {
 
   const loadProjects = async () => {
     try {
-      const { data, error } = await dbService.getProjects(session!.user.id);
-      if (error) throw error;
+      console.log('Loading projects for user:', session?.user?.id);
+      
+      // Use direct query instead of dbService to avoid complex policy issues
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', session!.user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
       
       const projectsWithDefaults = (data || []).map(project => ({
         ...project,
@@ -81,6 +92,7 @@ const PlanBoard = () => {
         member_count: Math.floor(Math.random() * 5) + 1, // Mock data
       }));
       
+      console.log('Loaded projects:', projectsWithDefaults);
       setProjects(projectsWithDefaults);
       
       if (projectsWithDefaults.length > 0 && !selectedProject) {
@@ -102,11 +114,19 @@ const PlanBoard = () => {
     if (!selectedProject) return;
     
     try {
-      const { data, error } = await dbService.getTasks(session!.user.id, {
-        project: selectedProject.id,
-      });
+      console.log('Loading tasks for project:', selectedProject.id);
       
-      if (error) throw error;
+      // Use direct query and use created_by instead of user_id
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('project_id', selectedProject.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
       
       const tasksWithMockData = (data || []).map(task => ({
         ...task,
@@ -116,6 +136,7 @@ const PlanBoard = () => {
         attachment_count: Math.floor(Math.random() * 3),
       }));
       
+      console.log('Loaded tasks:', tasksWithMockData);
       setTasks(tasksWithMockData);
     } catch (error) {
       console.error('Error loading tasks:', error);
