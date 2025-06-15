@@ -18,7 +18,12 @@ import {
   Settings,
   Zap,
   Clock,
-  Target
+  Target,
+  GitBranch,
+  AlertCircle,
+  CheckCircle,
+  Copy,
+  Edit
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { integrationDatabaseService, AutomationWorkflow } from '@/services/integrationDatabaseService';
@@ -52,6 +57,7 @@ const AutomationWorkflowBuilder: React.FC = () => {
   const [savedWorkflows, setSavedWorkflows] = useState<AutomationWorkflow[]>([]);
   const [isBuilding, setIsBuilding] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
 
   // All ProSync Suite apps
   const apps = [
@@ -85,6 +91,12 @@ const AutomationWorkflowBuilder: React.FC = () => {
     'ClientConnect': ['create_contact', 'schedule_meeting', 'send_email', 'update_deal', 'log_interaction', 'set_reminder'],
     'RiskRadar': ['create_risk', 'update_assessment', 'assign_mitigation', 'send_alert', 'generate_report', 'update_status']
   };
+
+  const conditionTypes = [
+    'equals', 'not_equals', 'contains', 'not_contains', 
+    'greater_than', 'less_than', 'is_empty', 'is_not_empty',
+    'starts_with', 'ends_with', 'matches_regex'
+  ];
 
   useEffect(() => {
     if (user) {
@@ -215,6 +227,60 @@ const AutomationWorkflowBuilder: React.FC = () => {
     }
   };
 
+  const loadWorkflowForEditing = (savedWorkflow: AutomationWorkflow) => {
+    const steps: WorkflowStep[] = [];
+    
+    // Add trigger
+    if (savedWorkflow.trigger_config && Object.keys(savedWorkflow.trigger_config).length > 0) {
+      steps.push({
+        id: `trigger_${Date.now()}`,
+        type: 'trigger',
+        ...savedWorkflow.trigger_config
+      });
+    }
+    
+    // Add conditions
+    if (savedWorkflow.conditions_config) {
+      savedWorkflow.conditions_config.forEach((condition, index) => {
+        steps.push({
+          id: `condition_${Date.now()}_${index}`,
+          type: 'condition',
+          ...condition
+        });
+      });
+    }
+    
+    // Add actions
+    if (savedWorkflow.actions_config) {
+      savedWorkflow.actions_config.forEach((action, index) => {
+        steps.push({
+          id: `action_${Date.now()}_${index}`,
+          type: 'action',
+          ...action
+        });
+      });
+    }
+
+    setWorkflow({
+      id: savedWorkflow.id,
+      name: savedWorkflow.name,
+      description: savedWorkflow.description,
+      enabled: savedWorkflow.is_active,
+      steps
+    });
+    setSelectedWorkflow(savedWorkflow.id);
+  };
+
+  const duplicateWorkflow = (savedWorkflow: AutomationWorkflow) => {
+    loadWorkflowForEditing(savedWorkflow);
+    setWorkflow(prev => ({
+      ...prev,
+      id: undefined,
+      name: `${prev.name} (Copy)`,
+    }));
+    setSelectedWorkflow(null);
+  };
+
   const deleteWorkflow = async (workflowId: string) => {
     try {
       await integrationDatabaseService.deleteAutomationWorkflow(workflowId);
@@ -240,11 +306,11 @@ const AutomationWorkflowBuilder: React.FC = () => {
       });
       toast({
         title: 'Workflow Updated',
-        description: `Workflow ${!isActive ? 'enabled' : 'disabled'} successfully`
+        description: `Workflow has been ${!isActive ? 'enabled' : 'disabled'}`
       });
       loadWorkflows();
     } catch (error) {
-      console.error('Error updating workflow:', error);
+      console.error('Error toggling workflow:', error);
       toast({
         title: 'Error',
         description: 'Failed to update workflow',
@@ -253,30 +319,110 @@ const AutomationWorkflowBuilder: React.FC = () => {
     }
   };
 
-  const testWorkflow = async () => {
-    if (workflow.steps.length === 0) {
-      toast({
-        title: 'Error',
-        description: 'Please add steps to test the workflow',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    toast({
-      title: 'Testing Workflow',
-      description: 'Workflow test initiated - check the monitoring tab for results'
-    });
-  };
-
   const getStepIcon = (type: string) => {
     switch (type) {
-      case 'trigger': return <Zap className="h-4 w-4 text-green-500" />;
-      case 'condition': return <Target className="h-4 w-4 text-yellow-500" />;
-      case 'action': return <Settings className="h-4 w-4 text-blue-500" />;
-      default: return <Clock className="h-4 w-4" />;
+      case 'trigger': return <Zap className="h-4 w-4 text-blue-500" />;
+      case 'condition': return <GitBranch className="h-4 w-4 text-yellow-500" />;
+      case 'action': return <Target className="h-4 w-4 text-green-500" />;
+      default: return <Settings className="h-4 w-4" />;
     }
   };
+
+  const renderStepCard = (step: WorkflowStep, index: number) => (
+    <Card key={step.id} className="relative">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {getStepIcon(step.type)}
+            <Badge variant="outline" className="capitalize">
+              {step.type}
+            </Badge>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => removeStep(step.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div>
+          <Label>App</Label>
+          <Select
+            value={step.app}
+            onValueChange={(value) => updateStep(step.id, { app: value, action: '' })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select app" />
+            </SelectTrigger>
+            <SelectContent>
+              {apps.map(app => (
+                <SelectItem key={app} value={app}>{app}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {step.app && (
+          <div>
+            <Label>{step.type === 'trigger' ? 'Event' : step.type === 'condition' ? 'Condition' : 'Action'}</Label>
+            <Select
+              value={step.action}
+              onValueChange={(value) => updateStep(step.id, { action: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={`Select ${step.type}`} />
+              </SelectTrigger>
+              <SelectContent>
+                {step.type === 'trigger' 
+                  ? triggerTypes[step.app as keyof typeof triggerTypes]?.map(trigger => (
+                      <SelectItem key={trigger} value={trigger}>{trigger.replace('_', ' ')}</SelectItem>
+                    ))
+                  : step.type === 'condition'
+                  ? conditionTypes.map(condition => (
+                      <SelectItem key={condition} value={condition}>{condition.replace('_', ' ')}</SelectItem>
+                    ))
+                  : actionTypes[step.app as keyof typeof actionTypes]?.map(action => (
+                      <SelectItem key={action} value={action}>{action.replace('_', ' ')}</SelectItem>
+                    ))
+                }
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {step.action && (
+          <div>
+            <Label>Configuration</Label>
+            <Textarea
+              placeholder="Enter configuration JSON"
+              value={JSON.stringify(step.config, null, 2)}
+              onChange={(e) => {
+                try {
+                  const config = JSON.parse(e.target.value || '{}');
+                  updateStep(step.id, { config });
+                } catch {
+                  // Invalid JSON, ignore
+                }
+              }}
+              className="font-mono text-sm"
+              rows={3}
+            />
+          </div>
+        )}
+      </CardContent>
+      
+      {index < workflow.steps.length - 1 && (
+        <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 z-10">
+          <div className="bg-background border rounded-full p-1">
+            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+          </div>
+        </div>
+      )}
+    </Card>
+  );
 
   if (loading) {
     return (
@@ -287,251 +433,223 @@ const AutomationWorkflowBuilder: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Saved Workflows */}
-      {savedWorkflows.length > 0 && (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Workflow Builder */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-bold">Workflow Builder</h3>
+            <p className="text-muted-foreground">Design custom automation workflows</p>
+          </div>
+          <Button onClick={() => {
+            setWorkflow({
+              name: '',
+              description: '',
+              enabled: true,
+              steps: []
+            });
+            setSelectedWorkflow(null);
+          }}>
+            New Workflow
+          </Button>
+        </div>
+
         <Card>
           <CardHeader>
-            <CardTitle>Saved Workflows</CardTitle>
-            <CardDescription>Your automation workflows</CardDescription>
+            <CardTitle>Workflow Details</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {savedWorkflows.map((savedWorkflow) => (
-                <div key={savedWorkflow.id} className="flex items-center justify-between p-3 border rounded">
-                  <div className="flex-1">
-                    <h4 className="font-medium">{savedWorkflow.name}</h4>
-                    <p className="text-sm text-muted-foreground">{savedWorkflow.description}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge variant={savedWorkflow.is_active ? 'default' : 'secondary'}>
-                        {savedWorkflow.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        Executed {savedWorkflow.execution_count} times
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => toggleWorkflow(savedWorkflow.id, savedWorkflow.is_active)}
-                    >
-                      {savedWorkflow.is_active ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => deleteWorkflow(savedWorkflow.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Workflow Builder */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5" />
-            Create New Automation Workflow
-          </CardTitle>
-          <CardDescription>
-            Create custom automation workflows between all ProSync Suite apps
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Workflow Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="workflow-name">Workflow Name</Label>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="workflow-name">Name</Label>
               <Input
                 id="workflow-name"
                 value={workflow.name}
                 onChange={(e) => setWorkflow(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter workflow name..."
+                placeholder="Enter workflow name"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="workflow-enabled">Status</Label>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="workflow-enabled"
-                  checked={workflow.enabled}
-                  onCheckedChange={(enabled) => setWorkflow(prev => ({ ...prev, enabled }))}
-                />
-                <span className="text-sm">{workflow.enabled ? 'Enabled' : 'Disabled'}</span>
-              </div>
+            <div>
+              <Label htmlFor="workflow-description">Description</Label>
+              <Textarea
+                id="workflow-description"
+                value={workflow.description}
+                onChange={(e) => setWorkflow(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Describe what this workflow does"
+                rows={2}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="workflow-enabled"
+                checked={workflow.enabled}
+                onCheckedChange={(checked) => setWorkflow(prev => ({ ...prev, enabled: checked }))}
+              />
+              <Label htmlFor="workflow-enabled">Enable workflow</Label>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Workflow Steps */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium">Workflow Steps</h4>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => addStep('trigger')}
+                disabled={workflow.steps.some(s => s.type === 'trigger')}
+              >
+                <Zap className="mr-1 h-3 w-3" />
+                Trigger
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => addStep('condition')}
+              >
+                <GitBranch className="mr-1 h-3 w-3" />
+                Condition
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => addStep('action')}
+              >
+                <Target className="mr-1 h-3 w-3" />
+                Action
+              </Button>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="workflow-description">Description</Label>
-            <Textarea
-              id="workflow-description"
-              value={workflow.description}
-              onChange={(e) => setWorkflow(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Describe what this workflow does..."
-              rows={2}
-            />
-          </div>
-
-          {/* Available Apps */}
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="font-medium text-blue-800 mb-2">Available ProSync Apps</h4>
-            <div className="flex flex-wrap gap-2">
-              {apps.map(app => (
-                <Badge key={app} variant="outline" className="text-blue-700 border-blue-300">
-                  {app}
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          {/* Workflow Steps */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="font-medium">Workflow Steps</h4>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => addStep('trigger')}>
-                  <Plus className="h-3 w-3 mr-1" />
-                  Trigger
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => addStep('condition')}>
-                  <Plus className="h-3 w-3 mr-1" />
-                  Condition
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => addStep('action')}>
-                  <Plus className="h-3 w-3 mr-1" />
-                  Action
-                </Button>
-              </div>
-            </div>
-
-            {workflow.steps.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Zap className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No steps added yet. Click the buttons above to start building your workflow.</p>
-                <p className="text-sm mt-2">
-                  Start with a trigger, add conditions if needed, then define actions
+          {workflow.steps.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <Settings className="h-12 w-12 text-muted-foreground mb-4" />
+                <h4 className="font-medium mb-2">No Steps Added</h4>
+                <p className="text-sm text-muted-foreground text-center mb-4">
+                  Start building your workflow by adding a trigger
                 </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {workflow.steps.map((step, index) => (
-                  <div key={step.id}>
-                    <Card className="p-4">
-                      <div className="flex items-start gap-4">
-                        <div className="flex items-center gap-2">
-                          {getStepIcon(step.type)}
-                          <Badge variant="outline">{step.type}</Badge>
-                        </div>
-                        
-                        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
-                            <Label>App</Label>
-                            <Select
-                              value={step.app}
-                              onValueChange={(app) => updateStep(step.id, { app, action: '' })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select app" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {apps.map(app => (
-                                  <SelectItem key={app} value={app}>{app}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div>
-                            <Label>Action/Event</Label>
-                            <Select
-                              value={step.action}
-                              onValueChange={(action) => updateStep(step.id, { action })}
-                              disabled={!step.app}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select action" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {step.app && (step.type === 'trigger' ? triggerTypes[step.app as keyof typeof triggerTypes] : actionTypes[step.app as keyof typeof actionTypes])?.map(action => (
-                                  <SelectItem key={action} value={action}>
-                                    {action.replace(/_/g, ' ').toUpperCase()}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div>
-                            <Label>Configuration</Label>
-                            <Input
-                              placeholder="JSON config..."
-                              onChange={(e) => {
-                                try {
-                                  const config = e.target.value ? JSON.parse(e.target.value) : {};
-                                  updateStep(step.id, { config });
-                                } catch {
-                                  // Invalid JSON, ignore
-                                }
-                              }}
-                            />
-                          </div>
-                        </div>
-
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => removeStep(step.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </Card>
-                    
-                    {index < workflow.steps.length - 1 && (
-                      <div className="flex justify-center py-2">
-                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-2 pt-4 border-t">
-            <Button onClick={saveWorkflow} disabled={isBuilding || !user}>
-              <Save className="h-4 w-4 mr-2" />
-              {isBuilding ? 'Saving...' : 'Save Workflow'}
-            </Button>
-            <Button 
-              variant="outline" 
-              disabled={workflow.steps.length === 0}
-              onClick={testWorkflow}
-            >
-              <Play className="h-4 w-4 mr-2" />
-              Test Workflow
-            </Button>
-          </div>
-
-          {!user && (
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-yellow-800 text-sm">
-                Please log in to create and save automation workflows
-              </p>
+                <Button onClick={() => addStep('trigger')}>
+                  <Zap className="mr-2 h-4 w-4" />
+                  Add Trigger
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              {workflow.steps.map((step, index) => renderStepCard(step, index))}
             </div>
           )}
-        </CardContent>
-      </Card>
+
+          {workflow.steps.length > 0 && (
+            <div className="flex gap-2">
+              <Button onClick={saveWorkflow} disabled={isBuilding}>
+                <Save className="mr-2 h-4 w-4" />
+                {isBuilding ? 'Saving...' : 'Save Workflow'}
+              </Button>
+              <Button variant="outline">
+                <Play className="mr-2 h-4 w-4" />
+                Test Workflow
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Saved Workflows */}
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-xl font-bold">Saved Workflows</h3>
+          <p className="text-muted-foreground">Manage your automation workflows</p>
+        </div>
+
+        {savedWorkflows.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <Clock className="h-12 w-12 text-muted-foreground mb-4" />
+              <h4 className="font-medium mb-2">No Workflows Yet</h4>
+              <p className="text-sm text-muted-foreground text-center">
+                Create your first automation workflow to get started
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {savedWorkflows.map((savedWorkflow) => (
+              <Card 
+                key={savedWorkflow.id} 
+                className={selectedWorkflow === savedWorkflow.id ? 'ring-2 ring-primary' : ''}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">{savedWorkflow.name}</CardTitle>
+                      <CardDescription className="line-clamp-2">
+                        {savedWorkflow.description}
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={savedWorkflow.is_active ? 'default' : 'secondary'}>
+                        {savedWorkflow.is_active ? (
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                        ) : (
+                          <Pause className="h-3 w-3 mr-1" />
+                        )}
+                        {savedWorkflow.is_active ? 'Active' : 'Paused'}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="text-sm text-muted-foreground">
+                    Executed {savedWorkflow.execution_count} times
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => loadWorkflowForEditing(savedWorkflow)}
+                    >
+                      <Edit className="mr-1 h-3 w-3" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => duplicateWorkflow(savedWorkflow)}
+                    >
+                      <Copy className="mr-1 h-3 w-3" />
+                      Duplicate
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toggleWorkflow(savedWorkflow.id, savedWorkflow.is_active)}
+                    >
+                      {savedWorkflow.is_active ? (
+                        <Pause className="mr-1 h-3 w-3" />
+                      ) : (
+                        <Play className="mr-1 h-3 w-3" />
+                      )}
+                      {savedWorkflow.is_active ? 'Pause' : 'Resume'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => deleteWorkflow(savedWorkflow.id)}
+                    >
+                      <Trash2 className="mr-1 h-3 w-3" />
+                      Delete
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

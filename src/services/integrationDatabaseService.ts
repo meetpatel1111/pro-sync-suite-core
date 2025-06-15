@@ -1,284 +1,275 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface AutomationWorkflow {
   id: string;
   user_id: string;
   name: string;
-  description?: string;
-  trigger_config: Record<string, any>;
-  actions_config: Record<string, any>[];
-  conditions_config: Record<string, any>[];
+  description: string;
+  trigger_config: any;
+  actions_config: any[];
+  conditions_config: any[];
   is_active: boolean;
   execution_count: number;
-  last_executed_at?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface IntegrationHealthStatus {
-  id: string;
-  user_id: string;
-  integration_id?: string;
-  service_name: string;
-  status: 'healthy' | 'warning' | 'error' | 'checking';
-  response_time: number;
-  uptime_percentage: number;
-  last_checked_at: string;
-  error_details?: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface IntegrationTemplate {
   id: string;
-  user_id: string;
   name: string;
-  description?: string;
+  description: string;
   category: string;
   difficulty: string;
   apps: string[];
   tags: string[];
-  template_config: Record<string, any>;
-  is_public: boolean;
-  is_verified: boolean;
+  template_config: any;
   rating: number;
   downloads: number;
-  execution_count: number;
-  last_used_at?: string;
-  success_rate: number;
-  created_at: string;
-  updated_at: string;
+  is_public: boolean;
+  is_verified: boolean;
+  user_id?: string;
 }
 
-class IntegrationDatabaseService {
+export interface IntegrationMarketplaceItem {
+  id: string;
+  name: string;
+  description: string;
+  provider: string;
+  category: string;
+  price: number;
+  rating: number;
+  downloads: number;
+  features: string[];
+  screenshots: string[];
+  documentation_url: string;
+  is_verified: boolean;
+}
+
+export const integrationDatabaseService = {
+  // Automation Workflows
+  async createAutomationWorkflow(workflow: Omit<AutomationWorkflow, 'id' | 'created_at' | 'updated_at'>): Promise<AutomationWorkflow> {
+    const { data, error } = await supabase
+      .from('automation_workflows')
+      .insert({
+        ...workflow,
+        id: uuidv4(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
   async getAutomationWorkflows(userId: string): Promise<AutomationWorkflow[]> {
-    try {
-      const { data, error } = await supabase
-        .from('automation_workflows')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('automation_workflows')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching automation workflows:', error);
-        throw error;
+    if (error) throw error;
+    return data || [];
+  },
+
+  async updateAutomationWorkflow(id: string, updates: Partial<AutomationWorkflow>): Promise<void> {
+    const { error } = await supabase
+      .from('automation_workflows')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async deleteAutomationWorkflow(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('automation_workflows')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  // Integration Templates
+  async getIntegrationTemplates(): Promise<IntegrationTemplate[]> {
+    const { data, error } = await supabase
+      .from('integration_templates')
+      .select('*')
+      .eq('is_public', true)
+      .order('downloads', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async createIntegrationTemplate(template: Omit<IntegrationTemplate, 'id'>): Promise<IntegrationTemplate> {
+    const { data, error } = await supabase
+      .from('integration_templates')
+      .insert({
+        ...template,
+        id: uuidv4()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async installTemplate(templateId: string, userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('marketplace_installations')
+      .insert({
+        template_id: templateId,
+        user_id: userId,
+        installed_at: new Date().toISOString(),
+        is_active: true
+      });
+
+    if (error) throw error;
+
+    // Increment download count
+    await supabase
+      .from('integration_templates')
+      .update({ downloads: supabase.sql`downloads + 1` })
+      .eq('id', templateId);
+  },
+
+  // Marketplace
+  async getMarketplaceItems(): Promise<IntegrationMarketplaceItem[]> {
+    // Mock data for marketplace items - in real app this would come from database
+    return [
+      {
+        id: '1',
+        name: 'Slack Integration Pro',
+        description: 'Advanced Slack integration with custom workflows and notifications',
+        provider: 'ProSync Team',
+        category: 'Communication',
+        price: 29.99,
+        rating: 4.8,
+        downloads: 1250,
+        features: ['Custom Notifications', 'Workflow Automation', 'File Sharing', 'Team Analytics'],
+        screenshots: [],
+        documentation_url: 'https://docs.prosync.com/slack-pro',
+        is_verified: true
+      },
+      {
+        id: '2',
+        name: 'Jira Sync Master',
+        description: 'Seamlessly sync tasks between ProSync and Jira with advanced mapping',
+        provider: 'Community',
+        category: 'Project Management',
+        price: 0,
+        rating: 4.5,
+        downloads: 890,
+        features: ['Bi-directional Sync', 'Custom Field Mapping', 'Real-time Updates'],
+        screenshots: [],
+        documentation_url: 'https://docs.prosync.com/jira-sync',
+        is_verified: false
       }
+    ];
+  },
 
-      return (data || []).map(item => ({
-        ...item,
-        trigger_config: typeof item.trigger_config === 'string' 
-          ? JSON.parse(item.trigger_config) 
-          : (item.trigger_config as Record<string, any>),
-        actions_config: typeof item.actions_config === 'string'
-          ? JSON.parse(item.actions_config)
-          : (item.actions_config as Record<string, any>[]),
-        conditions_config: typeof item.conditions_config === 'string'
-          ? JSON.parse(item.conditions_config)
-          : (item.conditions_config as Record<string, any>[])
-      }));
-    } catch (error) {
-      console.error('Error in getAutomationWorkflows:', error);
-      throw error;
-    }
-  }
+  // API Management
+  async getApiEndpoints(userId: string) {
+    const { data, error } = await supabase
+      .from('api_endpoints')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
-  async createAutomationWorkflow(workflowData: Omit<AutomationWorkflow, 'id' | 'created_at' | 'updated_at'>): Promise<AutomationWorkflow> {
+    if (error) throw error;
+    return data || [];
+  },
+
+  async createApiEndpoint(endpoint: any) {
+    const { data, error } = await supabase
+      .from('api_endpoints')
+      .insert(endpoint)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async testApiEndpoint(endpointId: string) {
+    const { data: endpoint, error } = await supabase
+      .from('api_endpoints')
+      .select('*')
+      .eq('id', endpointId)
+      .single();
+
+    if (error) throw error;
+
     try {
-      const { data, error } = await supabase
-        .from('automation_workflows')
-        .insert([workflowData])
-        .select()
-        .single();
+      const response = await fetch(endpoint.url, {
+        method: endpoint.method,
+        headers: endpoint.headers || {},
+        signal: AbortSignal.timeout(endpoint.timeout_seconds * 1000)
+      });
 
-      if (error) {
-        console.error('Error creating automation workflow:', error);
-        throw error;
-      }
-
-      return {
-        ...data,
-        trigger_config: typeof data.trigger_config === 'string' 
-          ? JSON.parse(data.trigger_config) 
-          : (data.trigger_config as Record<string, any>),
-        actions_config: typeof data.actions_config === 'string'
-          ? JSON.parse(data.actions_config)
-          : (data.actions_config as Record<string, any>[]),
-        conditions_config: typeof data.conditions_config === 'string'
-          ? JSON.parse(data.conditions_config)
-          : (data.conditions_config as Record<string, any>[])
+      const testResult = {
+        status: response.status,
+        success: response.ok,
+        response_time: Date.now(), // Simplified
+        tested_at: new Date().toISOString()
       };
+
+      await supabase
+        .from('api_endpoints')
+        .update({
+          test_status: testResult.success ? 'success' : 'failed',
+          last_tested_at: testResult.tested_at
+        })
+        .eq('id', endpointId);
+
+      return testResult;
     } catch (error) {
-      console.error('Error in createAutomationWorkflow:', error);
+      await supabase
+        .from('api_endpoints')
+        .update({
+          test_status: 'failed',
+          last_tested_at: new Date().toISOString()
+        })
+        .eq('id', endpointId);
+
       throw error;
     }
+  },
+
+  // Integration Health Monitoring
+  async getIntegrationHealth(userId: string) {
+    const { data, error } = await supabase
+      .from('integration_health_status')
+      .select('*')
+      .eq('user_id', userId)
+      .order('last_checked_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async updateIntegrationHealth(serviceName: string, status: any) {
+    const { error } = await supabase
+      .from('integration_health_status')
+      .upsert({
+        service_name: serviceName,
+        status: status.status,
+        response_time: status.response_time,
+        uptime_percentage: status.uptime_percentage,
+        error_details: status.error_details,
+        last_checked_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) throw error;
   }
-
-  async updateAutomationWorkflow(workflowId: string, updates: Partial<AutomationWorkflow>): Promise<AutomationWorkflow> {
-    try {
-      const { data, error } = await supabase
-        .from('automation_workflows')
-        .update(updates)
-        .eq('id', workflowId)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error updating automation workflow:', error);
-        throw error;
-      }
-
-      return {
-        ...data,
-        trigger_config: typeof data.trigger_config === 'string' 
-          ? JSON.parse(data.trigger_config) 
-          : (data.trigger_config as Record<string, any>),
-        actions_config: typeof data.actions_config === 'string'
-          ? JSON.parse(data.actions_config)
-          : (data.actions_config as Record<string, any>[]),
-        conditions_config: typeof data.conditions_config === 'string'
-          ? JSON.parse(data.conditions_config)
-          : (data.conditions_config as Record<string, any>[])
-      };
-    } catch (error) {
-      console.error('Error in updateAutomationWorkflow:', error);
-      throw error;
-    }
-  }
-
-  async deleteAutomationWorkflow(workflowId: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('automation_workflows')
-        .delete()
-        .eq('id', workflowId);
-
-      if (error) {
-        console.error('Error deleting automation workflow:', error);
-        throw error;
-      }
-    } catch (error) {
-      console.error('Error in deleteAutomationWorkflow:', error);
-      throw error;
-    }
-  }
-
-  async getWorkflowExecutionHistory(workflowId: string) {
-    try {
-      const { data, error } = await supabase
-        .from('automation_events')
-        .select('*')
-        .eq('workflow_id', workflowId)
-        .order('triggered_at', { ascending: false })
-        .limit(50);
-
-      if (error) {
-        console.error('Error fetching workflow execution history:', error);
-        throw error;
-      }
-
-      return data || [];
-    } catch (error) {
-      console.error('Error in getWorkflowExecutionHistory:', error);
-      throw error;
-    }
-  }
-
-  async triggerWorkflow(workflowId: string, payload: Record<string, any> = {}) {
-    try {
-      const { data, error } = await supabase
-        .from('automation_events')
-        .insert([{
-          workflow_id: workflowId,
-          event_type: 'manual_trigger',
-          payload,
-          status: 'triggered',
-          user_id: (await supabase.auth.getUser()).data.user?.id
-        }])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error triggering workflow:', error);
-        throw error;
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Error in triggerWorkflow:', error);
-      throw error;
-    }
-  }
-
-  async getIntegrationHealthStatus(userId: string): Promise<IntegrationHealthStatus[]> {
-    try {
-      const { data, error } = await supabase
-        .from('integration_health_status')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching integration health status:', error);
-        throw error;
-      }
-
-      return (data || []).map(item => ({
-        ...item,
-        status: item.status as 'healthy' | 'warning' | 'error' | 'checking'
-      }));
-    } catch (error) {
-      console.error('Error in getIntegrationHealthStatus:', error);
-      throw error;
-    }
-  }
-
-  async createIntegrationHealthStatus(statusData: Omit<IntegrationHealthStatus, 'id' | 'created_at' | 'updated_at'>): Promise<IntegrationHealthStatus> {
-    try {
-      const { data, error } = await supabase
-        .from('integration_health_status')
-        .insert([statusData])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating integration health status:', error);
-        throw error;
-      }
-
-      return {
-        ...data,
-        status: data.status as 'healthy' | 'warning' | 'error' | 'checking'
-      };
-    } catch (error) {
-      console.error('Error in createIntegrationHealthStatus:', error);
-      throw error;
-    }
-  }
-
-  async updateIntegrationHealthStatus(statusId: string, updates: Partial<IntegrationHealthStatus>): Promise<IntegrationHealthStatus> {
-    try {
-      const { data, error } = await supabase
-        .from('integration_health_status')
-        .update(updates)
-        .eq('id', statusId)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error updating integration health status:', error);
-        throw error;
-      }
-
-      return {
-        ...data,
-        status: data.status as 'healthy' | 'warning' | 'error' | 'checking'
-      };
-    } catch (error) {
-      console.error('Error in updateIntegrationHealthStatus:', error);
-      throw error;
-    }
-  }
-}
-
-export const integrationDatabaseService = new IntegrationDatabaseService();
+};
