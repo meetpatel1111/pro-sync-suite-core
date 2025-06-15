@@ -1296,33 +1296,109 @@ export type Database = {
           },
         ]
       }
+      project_members: {
+        Row: {
+          created_at: string | null
+          id: string
+          project_id: string | null
+          role: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          project_id?: string | null
+          role?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          project_id?: string | null
+          role?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_views: {
+        Row: {
+          created_at: string | null
+          default_view: string | null
+          id: string
+          project_id: string | null
+          updated_at: string | null
+          user_id: string | null
+          zoom_level: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_view?: string | null
+          id?: string
+          project_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          zoom_level?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_view?: string | null
+          id?: string
+          project_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          zoom_level?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_views_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
+          color: string | null
           created_at: string
           description: string | null
           end_date: string | null
           id: string
           name: string
+          owner_id: string | null
           start_date: string | null
           status: string | null
           user_id: string
         }
         Insert: {
+          color?: string | null
           created_at?: string
           description?: string | null
           end_date?: string | null
           id?: string
           name: string
+          owner_id?: string | null
           start_date?: string | null
           status?: string | null
           user_id: string
         }
         Update: {
+          color?: string | null
           created_at?: string
           description?: string | null
           end_date?: string | null
           id?: string
           name?: string
+          owner_id?: string | null
           start_date?: string | null
           status?: string | null
           user_id?: string

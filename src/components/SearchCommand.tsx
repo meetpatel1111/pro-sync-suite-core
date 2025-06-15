@@ -38,20 +38,20 @@ interface SearchCommandProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Use React.ComponentType to properly type Lucide icons
-type IconComponent = React.ComponentType<any>;
+// Simplified type for Lucide icons
+type IconType = typeof Calendar;
 
 interface AppItem {
   name: string;
   path: string;
-  icon: IconComponent;
+  icon: IconType;
   description: string;
 }
 
 interface ActionItem {
   name: string;
   action: () => void;
-  icon: IconComponent;
+  icon: IconType;
   description: string;
 }
 
@@ -117,7 +117,7 @@ const SearchCommand = ({ open, onOpenChange }: SearchCommandProps) => {
     { name: 'TaskMaster', path: '/taskmaster', icon: Calendar, description: 'Manage tasks and projects' },
     { name: 'TimeTrackPro', path: '/timetrackpro', icon: Clock, description: 'Track time and productivity' },
     { name: 'CollabSpace', path: '/collabspace', icon: MessageSquare, description: 'Team collaboration' },
-    { name: 'PlanBoard', path: '/planboard', icon: FileText, description: 'Project planning' },
+    { name: 'PlanBoard', path: '/planboard', icon: FileText, description: 'Visual project planning' },
     { name: 'InsightIQ', path: '/insightiq', icon: BarChart2, description: 'Analytics and insights' },
     { name: 'FileVault', path: '/filevault', icon: File, description: 'File management' },
     { name: 'BudgetBuddy', path: '/budgetbuddy', icon: PieChart, description: 'Budget tracking' },
@@ -134,7 +134,7 @@ const SearchCommand = ({ open, onOpenChange }: SearchCommandProps) => {
     { name: 'Start Time Tracking', action: () => navigate('/timetrackpro'), icon: Clock, description: 'Begin tracking time' },
     { name: 'Upload File', action: () => navigate('/filevault'), icon: FolderOpen, description: 'Upload a new file' },
     { name: 'View Reports', action: () => navigate('/insightiq'), icon: BarChart2, description: 'Check analytics' },
-    { name: 'Create Project', action: () => navigate('/taskmaster'), icon: Target, description: 'Start a new project' },
+    { name: 'Create Project', action: () => navigate('/planboard'), icon: Target, description: 'Start a new project' },
     { name: 'Track Expense', action: () => navigate('/budgetbuddy'), icon: DollarSign, description: 'Add budget entry' },
   ];
 

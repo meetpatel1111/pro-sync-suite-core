@@ -1,430 +1,307 @@
+
 import React, { useState, useEffect } from 'react';
+import { useAuthContext } from '@/context/AuthContext';
+import { dbService } from '@/services/dbService';
 import AppLayout from '@/components/AppLayout';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Calendar, Clock, ArrowLeft, Plus, Filter, ChevronDown, Calendar as CalendarIcon } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { useNavigate } from 'react-router-dom';
+import ProjectSidebar from '@/components/planboard/ProjectSidebar';
+import ViewSelector from '@/components/planboard/ViewSelector';
+import FilterPanel from '@/components/planboard/FilterPanel';
+import BoardView from '@/components/planboard/BoardView';
+import TimelineView from '@/components/planboard/TimelineView';
 import GanttChart from '@/components/GanttChart';
-import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Plus, Calendar as CalendarIcon } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+
+type ViewType = 'gantt' | 'timeline' | 'calendar' | 'board';
 
 interface Project {
   id: string;
   name: string;
   description?: string;
+  color: string;
+  status: string;
   start_date?: string;
   end_date?: string;
-  status?: string;
+  user_id: string;
   created_at: string;
+  member_count?: number;
 }
 
-interface Milestone {
+interface Task {
   id: string;
   title: string;
-  project_id: string;
-  due_date: string;
-  priority: 'low' | 'medium' | 'high';
-  completed: boolean;
-}
-
-interface ResourceAllocation {
-  team: string;
-  allocation: number;
+  description?: string;
+  status: string;
+  priority: string;
+  start_date?: string;
+  due_date?: string;
+  assignee?: string;
+  project_id?: string;
+  progress?: number;
+  comment_count?: number;
+  attachment_count?: number;
 }
 
 const PlanBoard = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [view, setView] = useState('gantt');
+  const { session } = useAuthContext();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [milestones, setMilestones] = useState<Milestone[]>([]);
-  const [resources, setResources] = useState<ResourceAllocation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
-  const [newProject, setNewProject] = useState<Partial<Project>>({
-    name: '',
-    description: '',
-    status: 'active'
-  });
-  
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [currentView, setCurrentView] = useState<ViewType>('gantt');
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({});
+  const [teamMembers] = useState([
+    { id: '1', name: 'John Doe' },
+    { id: '2', name: 'Jane Smith' },
+    { id: '3', name: 'Mike Johnson' },
+  ]);
+
   useEffect(() => {
-    fetchProjects();
-    fetchMilestones();
-    fetchResourceAllocations();
-  }, []);
-
-  const fetchProjects = async () => {
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) return;
-
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('user_id', userData.user.id);
-
-      if (error) throw error;
-      setProjects(data || []);
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-      toast({
-        title: "Failed to load projects",
-        description: "An error occurred while loading your projects",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+    if (session?.user?.id) {
+      loadProjects();
     }
-  };
+  }, [session?.user?.id]);
 
-  const fetchMilestones = async () => {
+  useEffect(() => {
+    if (selectedProject) {
+      loadTasks();
+    }
+  }, [selectedProject]);
+
+  const loadProjects = async () => {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) return;
-
-      // This is a placeholder - in a real app, milestones would be in their own table
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('id, title, project_id, due_date, priority, status')
-        .eq('created_by', userData.user.id)
-        .eq('priority', 'high')
-        .order('due_date', { ascending: true })
-        .limit(5);
-
+      const { data, error } = await dbService.getProjects(session!.user.id);
       if (error) throw error;
       
-      // Map tasks to milestones format
-      const milestoneData: Milestone[] = (data || []).map(task => ({
-        id: task.id,
-        title: task.title,
-        project_id: task.project_id || '',
-        due_date: task.due_date || new Date().toISOString(),
-        priority: task.priority as 'low' | 'medium' | 'high',
-        completed: task.status === 'done'
+      const projectsWithDefaults = (data || []).map(project => ({
+        ...project,
+        color: project.color || '#3b82f6',
+        status: project.status || 'active',
+        member_count: Math.floor(Math.random() * 5) + 1, // Mock data
       }));
       
-      setMilestones(milestoneData);
-    } catch (error) {
-      console.error('Error fetching milestones:', error);
-    }
-  };
-
-  const fetchResourceAllocations = async () => {
-    // In a real app, this would fetch from a resource_allocations table
-    // For now, using placeholder data
-    setResources([
-      { team: 'Design Team', allocation: 80 },
-      { team: 'Development', allocation: 95 },
-      { team: 'QA Team', allocation: 50 }
-    ]);
-  };
-
-  const handleCreateProject = async () => {
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) {
-        toast({
-          title: "Authentication required",
-          description: "Please log in to create a project",
-          variant: "destructive",
-        });
-        return;
+      setProjects(projectsWithDefaults);
+      
+      if (projectsWithDefaults.length > 0 && !selectedProject) {
+        setSelectedProject(projectsWithDefaults[0]);
       }
-
-      const { data, error } = await supabase
-        .from('projects')
-        .insert({
-          name: newProject.name,
-          description: newProject.description,
-          user_id: userData.user.id,
-          status: newProject.status
-        })
-        .select();
-
-      if (error) throw error;
-
-      toast({
-        title: "Project created",
-        description: "Your project has been created successfully",
-      });
-
-      setProjects([...(data || []), ...projects]);
-      setNewProjectDialogOpen(false);
-      setNewProject({ name: '', description: '', status: 'active' });
     } catch (error) {
-      console.error('Error creating project:', error);
+      console.error('Error loading projects:', error);
       toast({
-        title: "Failed to create project",
-        description: "An error occurred while creating your project",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to load projects',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadTasks = async () => {
+    if (!selectedProject) return;
+    
+    try {
+      const { data, error } = await dbService.getTasks(session!.user.id, {
+        project: selectedProject.id,
+      });
+      
+      if (error) throw error;
+      
+      const tasksWithMockData = (data || []).map(task => ({
+        ...task,
+        start_date: task.start_date || new Date().toISOString().split('T')[0],
+        progress: Math.floor(Math.random() * 100),
+        comment_count: Math.floor(Math.random() * 5),
+        attachment_count: Math.floor(Math.random() * 3),
+      }));
+      
+      setTasks(tasksWithMockData);
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load tasks',
+        variant: 'destructive',
       });
     }
   };
 
-  // Helper to format date
-  const formatDateRange = (startDate?: string, endDate?: string) => {
-    if (!startDate && !endDate) return 'No dates set';
-    
-    const formatDate = (dateStr?: string) => {
-      if (!dateStr) return '';
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    };
-    
-    return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+  const handleCreateProject = () => {
+    // This would open a project creation modal
+    toast({
+      title: 'Create Project',
+      description: 'Project creation modal would open here',
+    });
   };
 
-  // Helper to determine badge status
-  const getBadgeForStatus = (status?: string) => {
-    switch (status?.toLowerCase()) {
-      case 'delayed':
-        return <Badge variant="destructive">Delayed</Badge>;
-      case 'completed':
-        return <Badge className="bg-emerald-600">Completed</Badge>;
+  const handleEditProject = (project: Project) => {
+    toast({
+      title: 'Edit Project',
+      description: `Edit modal for ${project.name} would open here`,
+    });
+  };
+
+  const handleArchiveProject = (project: Project) => {
+    toast({
+      title: 'Archive Project',
+      description: `${project.name} would be archived`,
+    });
+  };
+
+  const handleTaskMove = (taskId: string, newStatus: string, newIndex: number) => {
+    // Update task status in database
+    toast({
+      title: 'Task Moved',
+      description: `Task moved to ${newStatus}`,
+    });
+  };
+
+  const handleTaskClick = (task: Task) => {
+    toast({
+      title: 'Task Details',
+      description: `Task details modal for "${task.title}" would open here`,
+    });
+  };
+
+  // Prepare board columns
+  const boardColumns = [
+    {
+      id: 'todo',
+      title: 'To Do',
+      tasks: tasks.filter(task => task.status === 'todo'),
+    },
+    {
+      id: 'in-progress',
+      title: 'In Progress',
+      tasks: tasks.filter(task => task.status === 'in-progress'),
+    },
+    {
+      id: 'review',
+      title: 'Review',
+      tasks: tasks.filter(task => task.status === 'review'),
+    },
+    {
+      id: 'done',
+      title: 'Done',
+      tasks: tasks.filter(task => task.status === 'done'),
+    },
+  ];
+
+  const renderCurrentView = () => {
+    switch (currentView) {
+      case 'board':
+        return (
+          <BoardView
+            columns={boardColumns}
+            onTaskMove={handleTaskMove}
+            onTaskClick={handleTaskClick}
+          />
+        );
+      case 'timeline':
+        return (
+          <TimelineView
+            tasks={tasks}
+            onTaskClick={handleTaskClick}
+            dateRange={{
+              start: new Date(),
+              end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            }}
+          />
+        );
+      case 'calendar':
+        return (
+          <div className="p-8 text-center">
+            <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-medium mb-2">Calendar View</h3>
+            <p className="text-muted-foreground">Calendar view will be implemented here</p>
+          </div>
+        );
+      case 'gantt':
       default:
-        return <Badge variant="secondary">On Track</Badge>;
+        return <GanttChart />;
     }
   };
+
+  if (loading) {
+    return (
+      <AppLayout title="PlanBoard" description="Visual project planning">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading projects...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
-    <AppLayout>
-      <div className="mb-4">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="gap-1 mb-4" 
-          onClick={() => navigate('/')}
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Button>
-      </div>
-      
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold mb-1">PlanBoard</h1>
-          <p className="text-muted-foreground">Visual project planning with interactive Gantt charts</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-          
-          <Dialog open={newProjectDialogOpen} onOpenChange={setNewProjectDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                New Project
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Project</DialogTitle>
-                <DialogDescription>
-                  Add a new project to your PlanBoard.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-2">
-                <div className="space-y-2">
-                  <Label htmlFor="projectName">Project Name</Label>
-                  <Input 
-                    id="projectName" 
-                    placeholder="Enter project name" 
-                    value={newProject.name}
-                    onChange={(e) => setNewProject({...newProject, name: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="projectDescription">Description</Label>
-                  <Textarea 
-                    id="projectDescription" 
-                    placeholder="Enter project description" 
-                    value={newProject.description}
-                    onChange={(e) => setNewProject({...newProject, description: e.target.value})}
-                  />
-                </div>
+    <AppLayout title="PlanBoard" description="Visual project planning">
+      <div className="flex h-full">
+        <ProjectSidebar
+          projects={projects}
+          selectedProject={selectedProject}
+          onSelectProject={setSelectedProject}
+          onCreateProject={handleCreateProject}
+          onEditProject={handleEditProject}
+          onArchiveProject={handleArchiveProject}
+        />
+        
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <div className="border-b bg-background p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-2xl font-bold">
+                  {selectedProject?.name || 'Select a Project'}
+                </h1>
+                {selectedProject?.description && (
+                  <p className="text-muted-foreground mt-1">
+                    {selectedProject.description}
+                  </p>
+                )}
               </div>
-              <DialogFooter>
-                <Button onClick={handleCreateProject}>Create Project</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-      
-      <div className="mb-6">
-        <Tabs defaultValue="gantt" onValueChange={setView}>
-          <div className="flex items-center justify-between mb-4">
-            <TabsList>
-              <TabsTrigger value="gantt">Gantt Chart</TabsTrigger>
-              <TabsTrigger value="timeline">Timeline</TabsTrigger>
-              <TabsTrigger value="calendar">Calendar</TabsTrigger>
-              <TabsTrigger value="board">Board</TabsTrigger>
-            </TabsList>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <CalendarIcon className="h-4 w-4 mr-2" />
-                  Q2 2025
-                  <ChevronDown className="h-4 w-4 ml-2" />
+              
+              <div className="flex items-center gap-2">
+                <ViewSelector currentView={currentView} onViewChange={setCurrentView} />
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Task
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem>Q1 2025</DropdownMenuItem>
-                <DropdownMenuItem>Q2 2025</DropdownMenuItem>
-                <DropdownMenuItem>Q3 2025</DropdownMenuItem>
-                <DropdownMenuItem>Q4 2025</DropdownMenuItem>
-                <DropdownMenuItem>Custom Range...</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </div>
+            </div>
           </div>
-          
-          <TabsContent value="gantt" className="mt-0">
-            <Card className="p-4">
-              <GanttChart />
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="timeline" className="mt-0">
-            <Card className="p-6 flex items-center justify-center h-[500px]">
-              <div className="text-center">
-                <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium mb-2">Timeline View</h3>
-                <p className="text-muted-foreground max-w-md mb-4">
-                  Visualize project timelines with a focus on milestones and key dates.
-                </p>
-                <Button>Create Timeline</Button>
-              </div>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="calendar" className="mt-0">
-            <Card className="p-6 flex items-center justify-center h-[500px]">
-              <div className="text-center">
-                <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium mb-2">Calendar View</h3>
-                <p className="text-muted-foreground max-w-md mb-4">
-                  View projects in a calendar format to better understand daily and weekly commitments.
-                </p>
-                <Button>Open Calendar</Button>
-              </div>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="board" className="mt-0">
-            <Card className="p-6 flex items-center justify-center h-[500px]">
-              <div className="text-center">
-                <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium mb-2">Board View</h3>
-                <p className="text-muted-foreground max-w-md mb-4">
-                  Organize project tasks in a Kanban-style board for better workflow visualization.
-                </p>
-                <Button>Setup Board</Button>
-              </div>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4">
-          <h3 className="font-medium mb-2">Active Projects</h3>
-          {isLoading ? (
-            <div className="text-center py-4">Loading projects...</div>
-          ) : projects.length === 0 ? (
-            <div className="text-center py-4">
-              <p className="text-muted-foreground mb-2">No projects yet</p>
-              <Button variant="outline" size="sm" onClick={() => setNewProjectDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Project
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {projects.slice(0, 3).map(project => (
-                <div key={project.id} className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{project.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDateRange(project.start_date, project.end_date)}
-                    </p>
-                  </div>
-                  {getBadgeForStatus(project.status)}
-                </div>
-              ))}
-            </div>
+
+          {/* Filters */}
+          {selectedProject && (
+            <FilterPanel
+              filters={filters}
+              onFiltersChange={setFilters}
+              teamMembers={teamMembers}
+            />
           )}
-        </Card>
-        
-        <Card className="p-4">
-          <h3 className="font-medium mb-2">Upcoming Milestones</h3>
-          {isLoading ? (
-            <div className="text-center py-4">Loading milestones...</div>
-          ) : milestones.length === 0 ? (
-            <div className="text-center py-4">
-              <p className="text-muted-foreground">No milestones yet</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {milestones.map(milestone => (
-                <div key={milestone.id} className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{milestone.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(milestone.due_date).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric' 
-                      })}
-                    </p>
-                  </div>
-                  <Badge className={
-                    milestone.priority === 'high' ? "bg-amber-600" : 
-                    milestone.priority === 'medium' ? "bg-emerald-600" : "bg-blue-600"
-                  }>
-                    {milestone.priority.charAt(0).toUpperCase() + milestone.priority.slice(1)} Priority
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-        
-        <Card className="p-4">
-          <h3 className="font-medium mb-2">Resource Allocation</h3>
-          <div className="space-y-3">
-            {resources.map((resource, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">{resource.team}</p>
-                  <p className="text-sm text-muted-foreground">{resource.allocation}% allocated</p>
-                </div>
-                <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full ${
-                      resource.allocation > 90 ? "bg-amber-600" : 
-                      resource.allocation > 70 ? "bg-emerald-600" : "bg-blue-600"
-                    }`} 
-                    style={{ width: `${resource.allocation}%` }}
-                  ></div>
+
+          {/* Main content */}
+          <div className="flex-1 overflow-hidden">
+            {selectedProject ? (
+              renderCurrentView()
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <h3 className="text-lg font-medium mb-2">No Project Selected</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Choose a project from the sidebar to start planning
+                  </p>
+                  <Button onClick={handleCreateProject}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create New Project
+                  </Button>
                 </div>
               </div>
-            ))}
+            )}
           </div>
-        </Card>
+        </div>
       </div>
     </AppLayout>
   );

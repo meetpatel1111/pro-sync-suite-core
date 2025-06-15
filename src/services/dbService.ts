@@ -691,4 +691,137 @@ export const dbService = {
       query.insert({ ...log, timestamp: new Date().toISOString() })
     );
   },
+
+  // Enhanced project management methods
+  async getProjectsWithMembers(userId: string) {
+    return await safeQueryTable('projects', (query) => 
+      query
+        .select(`
+          *,
+          project_members!inner(user_id, role),
+          project_views(default_view, zoom_level)
+        `)
+        .or(`user_id.eq.${userId},project_members.user_id.eq.${userId}`)
+        .order('created_at', { ascending: false })
+    );
+  },
+
+  async getProjectMembers(projectId: string) {
+    return await safeQueryTable('project_members', (query) => 
+      query
+        .select('*')
+        .eq('project_id', projectId)
+    );
+  },
+
+  async addProjectMember(projectId: string, userId: string, role: string = 'editor') {
+    return await safeQueryTable('project_members', (query) => 
+      query.insert({ project_id: projectId, user_id: userId, role })
+    );
+  },
+
+  async updateProjectMember(projectId: string, userId: string, role: string) {
+    return await safeQueryTable('project_members', (query) => 
+      query
+        .update({ role })
+        .eq('project_id', projectId)
+        .eq('user_id', userId)
+    );
+  },
+
+  async removeProjectMember(projectId: string, userId: string) {
+    return await safeQueryTable('project_members', (query) => 
+      query
+        .delete()
+        .eq('project_id', projectId)
+        .eq('user_id', userId)
+    );
+  },
+
+  async getUserProjectView(projectId: string, userId: string) {
+    return await safeQueryTable('project_views', (query) => 
+      query
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('user_id', userId)
+        .single()
+    );
+  },
+
+  async updateUserProjectView(projectId: string, userId: string, viewSettings: {
+    default_view?: string;
+    zoom_level?: string;
+  }) {
+    return await safeQueryTable('project_views', (query) => 
+      query
+        .upsert({
+          project_id: projectId,
+          user_id: userId,
+          ...viewSettings,
+          updated_at: new Date().toISOString()
+        })
+    );
+  },
+
+  async getTaskDependencies(taskId: string) {
+    return await safeQueryTable('task_dependencies', (query) => 
+      query
+        .select(`
+          *,
+          depends_on_task:tasks!task_dependencies_depends_on_id_fkey(id, title, status)
+        `)
+        .eq('task_id', taskId)
+    );
+  },
+
+  async addTaskDependency(taskId: string, dependsOnId: string, dependencyType: string = 'finish-to-start') {
+    return await safeQueryTable('task_dependencies', (query) => 
+      query.insert({
+        task_id: taskId,
+        depends_on_id: dependsOnId,
+        dependency_type: dependencyType
+      })
+    );
+  },
+
+  async removeTaskDependency(taskId: string, dependsOnId: string) {
+    return await safeQueryTable('task_dependencies', (query) => 
+      query
+        .delete()
+        .eq('task_id', taskId)
+        .eq('depends_on_id', dependsOnId)
+    );
+  },
+
+  async getProjectTasks(projectId: string, filters?: {
+    status?: string;
+    priority?: string;
+    assignee?: string;
+  }) {
+    return await safeQueryTable('tasks', (query) => {
+      let filteredQuery = query
+        .select(`
+          *,
+          task_dependencies!task_dependencies_task_id_fkey(
+            depends_on_id,
+            dependency_type
+          )
+        `)
+        .eq('project_id', projectId);
+        
+      if (filters?.status) {
+        filteredQuery = filteredQuery.eq('status', filters.status);
+      }
+      
+      if (filters?.priority) {
+        filteredQuery = filteredQuery.eq('priority', filters.priority);
+      }
+      
+      if (filters?.assignee) {
+        filteredQuery = filteredQuery.contains('assigned_to', [filters.assignee]);
+      }
+      
+      return filteredQuery.order('created_at', { ascending: false });
+    });
+  },
 };
