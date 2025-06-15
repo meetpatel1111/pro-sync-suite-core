@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,11 +11,18 @@ import {
   AlertTriangle,
   Zap,
   Settings,
-  Activity
+  Activity,
+  TrendingUp,
+  ShoppingCart,
+  BarChart3,
+  Workflow
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { integrationService } from '@/services/integrationService';
 import { useAuth } from '@/hooks/useAuth';
+import AutomationWorkflowBuilder from './AutomationWorkflowBuilder';
+import IntegrationMonitoring from './IntegrationMonitoring';
+import IntegrationMarketplace from './IntegrationMarketplace';
 
 const IntegrationDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -160,11 +166,31 @@ const IntegrationDashboard: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="flows">Integration Flows</TabsTrigger>
-          <TabsTrigger value="events">Automation Events</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="workflows" className="flex items-center gap-2">
+            <Workflow className="h-4 w-4" />
+            Workflows
+          </TabsTrigger>
+          <TabsTrigger value="monitoring" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Monitoring
+          </TabsTrigger>
+          <TabsTrigger value="marketplace" className="flex items-center gap-2">
+            <ShoppingCart className="h-4 w-4" />
+            Marketplace
+          </TabsTrigger>
+          <TabsTrigger value="flows" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Flows
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Settings
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -237,6 +263,18 @@ const IntegrationDashboard: React.FC = () => {
           </Card>
         </TabsContent>
 
+        <TabsContent value="workflows">
+          <AutomationWorkflowBuilder />
+        </TabsContent>
+
+        <TabsContent value="monitoring">
+          <IntegrationMonitoring />
+        </TabsContent>
+
+        <TabsContent value="marketplace">
+          <IntegrationMarketplace />
+        </TabsContent>
+
         <TabsContent value="flows" className="space-y-4">
           <Card>
             <CardHeader>
@@ -260,35 +298,6 @@ const IntegrationDashboard: React.FC = () => {
                           </Badge>
                         </div>
                       ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="events" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Automation Events</CardTitle>
-              <CardDescription>Detailed log of all integration events</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {automationEvents.map((event) => (
-                  <div key={event.id} className="border rounded p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium">{event.event_type}</h4>
-                      <div className="flex items-center space-x-2">
-                        {getStatusIcon(event.status)}
-                        <span className="text-sm">{event.status}</span>
-                      </div>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      <p>Source: {event.source_module}</p>
-                      <p>Target: {event.target_module}</p>
-                      <p>Triggered: {new Date(event.triggered_at).toLocaleString()}</p>
                     </div>
                   </div>
                 ))}

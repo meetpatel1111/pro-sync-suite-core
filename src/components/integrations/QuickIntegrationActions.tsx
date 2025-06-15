@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { 
   Clock, 
   MessageSquare, 
@@ -13,11 +13,16 @@ import {
   DollarSign, 
   Users, 
   AlertTriangle,
-  CheckCircle 
+  CheckCircle,
+  Zap,
+  Workflow,
+  Database,
+  Bell
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { integrationService } from '@/services/integrationService';
 import { useAuth } from '@/hooks/useAuth';
+import IntegrationHealthChecker from './IntegrationHealthChecker';
 
 const QuickIntegrationActions: React.FC = () => {
   const { user } = useAuth();
@@ -41,6 +46,29 @@ const QuickIntegrationActions: React.FC = () => {
   const [fileLinkForm, setFileLinkForm] = useState({
     fileId: '',
     taskId: ''
+  });
+
+  // New form states
+  const [bulkSyncForm, setBulkSyncForm] = useState({
+    sourceApp: '',
+    targetApp: '',
+    dataType: '',
+    filters: ''
+  });
+
+  const [notificationForm, setNotificationForm] = useState({
+    triggerApp: '',
+    event: '',
+    recipients: '',
+    template: ''
+  });
+
+  const [automationForm, setAutomationForm] = useState({
+    name: '',
+    trigger: '',
+    condition: '',
+    action: '',
+    enabled: true
   });
 
   const handleCreateTaskFromChat = async () => {
@@ -159,6 +187,128 @@ const QuickIntegrationActions: React.FC = () => {
     }
   };
 
+  // New handlers
+  const handleBulkSync = async () => {
+    if (!bulkSyncForm.sourceApp || !bulkSyncForm.targetApp) {
+      toast({
+        title: 'Error',
+        description: 'Please select both source and target apps',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const success = await integrationService.createIntegrationAction(
+        bulkSyncForm.sourceApp,
+        bulkSyncForm.targetApp,
+        'bulk_sync',
+        {
+          dataType: bulkSyncForm.dataType,
+          filters: bulkSyncForm.filters
+        }
+      );
+
+      if (success) {
+        toast({
+          title: 'Bulk Sync Started',
+          description: `Syncing ${bulkSyncForm.dataType} from ${bulkSyncForm.sourceApp} to ${bulkSyncForm.targetApp}`
+        });
+        setBulkSyncForm({ sourceApp: '', targetApp: '', dataType: '', filters: '' });
+        setActiveAction(null);
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to start bulk sync',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateNotification = async () => {
+    if (!notificationForm.triggerApp || !notificationForm.event) {
+      toast({
+        title: 'Error',
+        description: 'Please select trigger app and event',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const success = await integrationService.createIntegrationAction(
+        notificationForm.triggerApp,
+        'NotificationService',
+        'send_notification',
+        {
+          event: notificationForm.event,
+          recipients: notificationForm.recipients.split(','),
+          template: notificationForm.template
+        }
+      );
+
+      if (success) {
+        toast({
+          title: 'Notification Rule Created',
+          description: 'Notification automation has been set up'
+        });
+        setNotificationForm({ triggerApp: '', event: '', recipients: '', template: '' });
+        setActiveAction(null);
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create notification rule',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateAutomation = async () => {
+    if (!automationForm.name || !automationForm.trigger) {
+      toast({
+        title: 'Error',
+        description: 'Please enter automation name and trigger',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const success = await integrationService.createIntegrationAction(
+        'AutomationEngine',
+        'WorkflowManager',
+        'create_automation',
+        automationForm
+      );
+
+      if (success) {
+        toast({
+          title: 'Automation Created',
+          description: `Automation "${automationForm.name}" has been created`
+        });
+        setAutomationForm({ name: '', trigger: '', condition: '', action: '', enabled: true });
+        setActiveAction(null);
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create automation',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const quickActions = [
     {
       id: 'task-from-chat',
@@ -185,6 +335,30 @@ const QuickIntegrationActions: React.FC = () => {
       action: handleLinkFile
     },
     {
+      id: 'bulk-sync',
+      title: 'Bulk Data Sync',
+      description: 'Synchronize data between applications',
+      icon: <Database className="h-5 w-5" />,
+      color: 'text-cyan-500',
+      action: handleBulkSync
+    },
+    {
+      id: 'notification-setup',
+      title: 'Setup Notifications',
+      description: 'Create notification rules for events',
+      icon: <Bell className="h-5 w-5" />,
+      color: 'text-orange-500',
+      action: handleCreateNotification
+    },
+    {
+      id: 'create-automation',
+      title: 'Create Automation',
+      description: 'Build custom automation workflows',
+      icon: <Workflow className="h-5 w-5" />,
+      color: 'text-indigo-500',
+      action: handleCreateAutomation
+    },
+    {
       id: 'budget-check',
       title: 'Check Budget Status',
       description: 'View current budget utilization',
@@ -207,11 +381,221 @@ const QuickIntegrationActions: React.FC = () => {
       icon: <AlertTriangle className="h-5 w-5" />,
       color: 'text-red-500',
       action: () => toast({ title: 'Feature Coming Soon', description: 'Risk scanning will be available soon' })
+    },
+    {
+      id: 'health-check',
+      title: 'Health Monitor',
+      description: 'Monitor integration health status',
+      icon: <CheckCircle className="h-5 w-5" />,
+      color: 'text-green-600',
+      action: () => setActiveAction('health-check')
     }
   ];
 
   const renderActionForm = () => {
     switch (activeAction) {
+      case 'health-check':
+        return <IntegrationHealthChecker />;
+
+      case 'bulk-sync':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Bulk Data Synchronization</CardTitle>
+              <CardDescription>Synchronize data between different applications</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="sourceApp">Source App</Label>
+                  <Select value={bulkSyncForm.sourceApp} onValueChange={(value) => setBulkSyncForm(prev => ({ ...prev, sourceApp: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select source app" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="TaskMaster">TaskMaster</SelectItem>
+                      <SelectItem value="TimeTrackPro">TimeTrackPro</SelectItem>
+                      <SelectItem value="BudgetBuddy">BudgetBuddy</SelectItem>
+                      <SelectItem value="FileVault">FileVault</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="targetApp">Target App</Label>
+                  <Select value={bulkSyncForm.targetApp} onValueChange={(value) => setBulkSyncForm(prev => ({ ...prev, targetApp: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select target app" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="TaskMaster">TaskMaster</SelectItem>
+                      <SelectItem value="TimeTrackPro">TimeTrackPro</SelectItem>
+                      <SelectItem value="BudgetBuddy">BudgetBuddy</SelectItem>
+                      <SelectItem value="InsightIQ">InsightIQ</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="dataType">Data Type</Label>
+                <Input
+                  id="dataType"
+                  value={bulkSyncForm.dataType}
+                  onChange={(e) => setBulkSyncForm(prev => ({ ...prev, dataType: e.target.value }))}
+                  placeholder="e.g., tasks, time_entries, expenses"
+                />
+              </div>
+              <div>
+                <Label htmlFor="filters">Filters (optional)</Label>
+                <Input
+                  id="filters"
+                  value={bulkSyncForm.filters}
+                  onChange={(e) => setBulkSyncForm(prev => ({ ...prev, filters: e.target.value }))}
+                  placeholder="e.g., status=completed, date>2024-01-01"
+                />
+              </div>
+              <div className="flex space-x-2">
+                <Button onClick={handleBulkSync} disabled={loading}>
+                  {loading ? 'Starting Sync...' : 'Start Sync'}
+                </Button>
+                <Button variant="outline" onClick={() => setActiveAction(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 'notification-setup':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Setup Notification Rules</CardTitle>
+              <CardDescription>Create automated notification rules for specific events</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="triggerApp">Trigger App</Label>
+                <Select value={notificationForm.triggerApp} onValueChange={(value) => setNotificationForm(prev => ({ ...prev, triggerApp: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select app" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TaskMaster">TaskMaster</SelectItem>
+                    <SelectItem value="BudgetBuddy">BudgetBuddy</SelectItem>
+                    <SelectItem value="RiskRadar">RiskRadar</SelectItem>
+                    <SelectItem value="ClientConnect">ClientConnect</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="event">Event Type</Label>
+                <Select value={notificationForm.event} onValueChange={(value) => setNotificationForm(prev => ({ ...prev, event: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select event" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="task_overdue">Task Overdue</SelectItem>
+                    <SelectItem value="budget_exceeded">Budget Exceeded</SelectItem>
+                    <SelectItem value="risk_detected">Risk Detected</SelectItem>
+                    <SelectItem value="client_message">Client Message</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="recipients">Recipients (comma-separated emails)</Label>
+                <Input
+                  id="recipients"
+                  value={notificationForm.recipients}
+                  onChange={(e) => setNotificationForm(prev => ({ ...prev, recipients: e.target.value }))}
+                  placeholder="user1@example.com, user2@example.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="template">Message Template</Label>
+                <Textarea
+                  id="template"
+                  value={notificationForm.template}
+                  onChange={(e) => setNotificationForm(prev => ({ ...prev, template: e.target.value }))}
+                  placeholder="Alert: {{event}} occurred in {{app}} - {{details}}"
+                  rows={3}
+                />
+              </div>
+              <div className="flex space-x-2">
+                <Button onClick={handleCreateNotification} disabled={loading}>
+                  {loading ? 'Creating...' : 'Create Rule'}
+                </Button>
+                <Button variant="outline" onClick={() => setActiveAction(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 'create-automation':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Create Custom Automation</CardTitle>
+              <CardDescription>Build a custom automation workflow</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="automationName">Automation Name</Label>
+                <Input
+                  id="automationName"
+                  value={automationForm.name}
+                  onChange={(e) => setAutomationForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter automation name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="trigger">Trigger Event</Label>
+                <Input
+                  id="trigger"
+                  value={automationForm.trigger}
+                  onChange={(e) => setAutomationForm(prev => ({ ...prev, trigger: e.target.value }))}
+                  placeholder="e.g., task_created, expense_added"
+                />
+              </div>
+              <div>
+                <Label htmlFor="condition">Condition (optional)</Label>
+                <Input
+                  id="condition"
+                  value={automationForm.condition}
+                  onChange={(e) => setAutomationForm(prev => ({ ...prev, condition: e.target.value }))}
+                  placeholder="e.g., amount > 1000, priority = high"
+                />
+              </div>
+              <div>
+                <Label htmlFor="action">Action</Label>
+                <Input
+                  id="action"
+                  value={automationForm.action}
+                  onChange={(e) => setAutomationForm(prev => ({ ...prev, action: e.target.value }))}
+                  placeholder="e.g., send_notification, create_task"
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="enabled"
+                  checked={automationForm.enabled}
+                  onCheckedChange={(enabled) => setAutomationForm(prev => ({ ...prev, enabled }))}
+                />
+                <Label htmlFor="enabled">Enable automation</Label>
+              </div>
+              <div className="flex space-x-2">
+                <Button onClick={handleCreateAutomation} disabled={loading}>
+                  {loading ? 'Creating...' : 'Create Automation'}
+                </Button>
+                <Button variant="outline" onClick={() => setActiveAction(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
       case 'task-from-chat':
         return (
           <Card>
