@@ -3,27 +3,44 @@ import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { 
-  ArrowLeft, Plus, Search, Filter, Star, Mail, Phone, MapPin, 
-  Calendar, Users, DollarSign, TrendingUp, Activity, Eye, 
-  Edit, MoreVertical, UserPlus, Building, Target, Zap, Globe
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { 
+  ArrowLeft, Plus, Search, Filter, Star, Mail, Phone, MapPin, 
+  Calendar, Users, DollarSign, TrendingUp, Activity, Eye, 
+  Edit, MoreVertical, UserPlus, Building, Target, Zap, Globe,
+  FileText, MessageSquare, Trash2, Clock, Bell, FileCheck, CreditCard
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
+import { Client, ClientNote } from '@/utils/dbtypes';
+import ContactBook from '@/components/clientconnect/ContactBook';
 
 const ClientConnect = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { session, user } = useAuth();
   const [activeTab, setActiveTab] = useState('clients');
   const [clients, setClients] = useState<Client[]>([]);
   const [clientNotes, setClientNotes] = useState<ClientNote[]>([]);
@@ -33,7 +50,6 @@ const ClientConnect = () => {
   const [showAddNoteDialog, setShowAddNoteDialog] = useState(false);
   const [isEditingClient, setIsEditingClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const { session, user } = useAuthContext();
   
   // Form states
   const [newClient, setNewClient] = useState({
