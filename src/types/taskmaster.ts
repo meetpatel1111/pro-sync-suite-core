@@ -39,6 +39,17 @@ export interface Board {
       type: 'assignee' | 'priority' | 'label' | 'epic';
     }>;
   };
+  wip_limits?: Record<string, number>;
+  swimlane_config?: {
+    type: 'none' | 'assignee' | 'priority' | 'label' | 'epic';
+    enabled: boolean;
+  };
+  filters?: Record<string, any>;
+  permissions?: {
+    viewers: string[];
+    contributors: string[];
+    admins: string[];
+  };
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -74,6 +85,7 @@ export interface TaskMasterTask {
   due_date?: string;
   estimate_hours?: number;
   actual_hours: number;
+  story_points?: number;
   assignee_id?: string;
   reporter_id?: string;
   created_by: string;
@@ -81,6 +93,11 @@ export interface TaskMasterTask {
   reviewer_id?: string;
   parent_task_id?: string;
   linked_task_ids?: string[];
+  epic_id?: string;
+  labels?: string[];
+  blocked_by?: string[];
+  blocks?: string[];
+  watchers?: string[];
   recurrence_rule?: string;
   visibility: 'team' | 'private' | 'public';
   position: number;
@@ -120,6 +137,17 @@ export interface TaskHistory {
   created_at: string;
 }
 
+export interface TaskActivityLog {
+  id: string;
+  task_id: string;
+  user_id: string;
+  action: string;
+  old_value?: string;
+  new_value?: string;
+  description?: string;
+  timestamp: string;
+}
+
 export interface ProjectMember {
   id: string;
   project_id: string;
@@ -128,4 +156,27 @@ export interface ProjectMember {
   created_at: string;
 }
 
-export type BoardViewType = 'board' | 'list' | 'calendar' | 'timeline' | 'reports';
+export type BoardViewType = 'board' | 'list' | 'calendar' | 'timeline' | 'reports' | 'backlog';
+
+export interface BoardFilter {
+  id: string;
+  name: string;
+  query: Record<string, any>;
+  is_default?: boolean;
+}
+
+export interface WorkflowTransition {
+  from: string;
+  to: string;
+  conditions?: Record<string, any>;
+  actions?: Record<string, any>;
+}
+
+export interface BoardTemplate {
+  id: string;
+  name: string;
+  description: string;
+  type: Board['type'];
+  config: Board['config'];
+  category: string;
+}

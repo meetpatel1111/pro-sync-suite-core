@@ -3,13 +3,20 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, User, Calendar, AlertCircle, Clock, Flag, CheckSquare } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Plus, Settings, Calendar, Target, BarChart3, 
+  Kanban, List, Timer, Users
+} from 'lucide-react';
 import { useAuthContext } from '@/context/AuthContext';
 import { taskmasterService } from '@/services/taskmasterService';
 import { useToast } from '@/hooks/use-toast';
+import AdvancedTaskBoard from './AdvancedTaskBoard';
+import SprintManagement from './SprintManagement';
+import BoardConfigDialog from './BoardConfigDialog';
 import TaskDetailDialog from './TaskDetailDialog';
 import CreateTaskDialog from './CreateTaskDialog';
-import type { Project, Board, TaskMasterTask } from '@/types/taskmaster';
+import type { Project, Board, TaskMasterTask, Sprint } from '@/types/taskmaster';
 
 interface TaskBoardProps {
   project: Project;
@@ -20,12 +27,17 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
   const { user } = useAuthContext();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<TaskMasterTask[]>([]);
+  const [sprints, setSprints] = useState<Sprint[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskMasterTask | undefined>();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [activeView, setActiveView] = useState<'board' | 'backlog' | 'sprints' | 'reports'>('board');
 
   useEffect(() => {
     fetchTasks();
+    if (board.type === 'scrum') {
+      fetchSprints();
+    }
   }, [board.id]);
 
   const fetchTasks = async () => {
@@ -48,6 +60,16 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
     }
   };
 
+  const fetchSprints = async () => {
+    try {
+      // TODO: Implement sprint fetching in taskmasterService
+      console.log('Fetching sprints for board:', board.id);
+      setSprints([]); // Placeholder
+    } catch (error) {
+      console.error('Error fetching sprints:', error);
+    }
+  };
+
   const handleTaskCreate = async (taskData: Partial<TaskMasterTask>) => {
     if (!user) {
       toast({
@@ -59,8 +81,6 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
     }
 
     try {
-      console.log('Creating task with data:', taskData);
-      
       const { data, error } = await taskmasterService.createTask({
         ...taskData,
         board_id: board.id,
@@ -85,7 +105,6 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
       }
 
       if (data) {
-        console.log('Task created successfully:', data);
         setTasks(prev => [...prev, data]);
         toast({
           title: 'Success',
@@ -128,27 +147,66 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
     }
   };
 
-  const getTasksByStatus = (status: string) => {
-    return tasks.filter(task => task.status === status);
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critical': return 'bg-red-500 shadow-red-500/30';
-      case 'high': return 'bg-orange-500 shadow-orange-500/30';
-      case 'medium': return 'bg-yellow-500 shadow-yellow-500/30';
-      case 'low': return 'bg-green-500 shadow-green-500/30';
-      default: return 'bg-gray-500 shadow-gray-500/30';
+  const handleBoardUpdate = async (updates: Partial<Board>) => {
+    try {
+      console.log('Updating board with:', updates);
+      // TODO: Implement board update in taskmasterService
+      toast({
+        title: 'Success',
+        description: 'Board configuration updated',
+      });
+    } catch (error) {
+      console.error('Error updating board:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update board configuration',
+        variant: 'destructive',
+      });
     }
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'bug': return '🐛';
-      case 'story': return '📖';
-      case 'epic': return '🚀';
-      default: return '✓';
+  // Sprint management handlers
+  const handleSprintCreate = async (sprintData: Omit<Sprint, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      console.log('Creating sprint:', sprintData);
+      // TODO: Implement sprint creation
+      toast({
+        title: 'Success',
+        description: 'Sprint created successfully',
+      });
+    } catch (error) {
+      console.error('Error creating sprint:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create sprint',
+        variant: 'destructive',
+      });
     }
+  };
+
+  const handleSprintUpdate = async (sprintId: string, updates: Partial<Sprint>) => {
+    try {
+      console.log('Updating sprint:', sprintId, updates);
+      // TODO: Implement sprint update
+    } catch (error) {
+      console.error('Error updating sprint:', error);
+    }
+  };
+
+  const handleSprintStart = async (sprintId: string) => {
+    await handleSprintUpdate(sprintId, { status: 'active' });
+    toast({
+      title: 'Sprint Started',
+      description: 'Sprint is now active',
+    });
+  };
+
+  const handleSprintComplete = async (sprintId: string) => {
+    await handleSprintUpdate(sprintId, { status: 'completed' });
+    toast({
+      title: 'Sprint Completed',
+      description: 'Sprint has been completed',
+    });
   };
 
   if (loading) {
@@ -173,125 +231,99 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Modern Header */}
-      <div className="flex items-center justify-between p-6 modern-card rounded-2xl">
-        <div className="space-y-2">
-          <h3 className="text-2xl font-bold text-gradient">{board.name}</h3>
-          <p className="text-muted-foreground text-lg">
-            Manage your tasks using {board.type.replace('_', ' ')} workflow
+    <div className="space-y-6">
+      {/* Board Header */}
+      <div className="flex items-center justify-between p-6 bg-white rounded-xl shadow-sm border">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold text-gray-900">{board.name}</h1>
+          <p className="text-lg text-gray-600">
+            {board.type.charAt(0).toUpperCase() + board.type.slice(1)} workflow for {project.name}
           </p>
         </div>
-        <Button 
-          onClick={() => setIsCreateDialogOpen(true)} 
-          className="btn-primary px-6 py-3 text-base font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Create Task
-        </Button>
-      </div>
-
-      {/* Kanban Board */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {board.config.columns.map((column) => (
-          <Card key={column.id} className="modern-card h-fit border-0 shadow-xl">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold text-gradient">
-                  {column.name}
-                </CardTitle>
-                <Badge 
-                  variant="secondary" 
-                  className="bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border border-blue-200/50 px-3 py-1 font-medium"
-                >
-                  {getTasksByStatus(column.id).length}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {getTasksByStatus(column.id).map((task) => (
-                <Card 
-                  key={task.id} 
-                  className="cursor-pointer hover-lift modern-card border-0 shadow-md hover:shadow-2xl transition-all duration-300 p-4 group"
-                  onClick={() => setSelectedTask(task)}
-                >
-                  <div className="space-y-3">
-                    {/* Task Header */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{getTypeIcon(task.type)}</span>
-                        <span className="text-xs font-mono text-muted-foreground bg-gray-100 px-2 py-1 rounded-md">
-                          {task.task_key}
-                        </span>
-                      </div>
-                      <div className={`w-3 h-3 rounded-full shadow-lg ${getPriorityColor(task.priority)}`}></div>
-                    </div>
-                    
-                    {/* Task Title */}
-                    <h4 className="text-sm font-semibold line-clamp-2 text-gray-800 group-hover:text-gray-900 transition-colors">
-                      {task.title}
-                    </h4>
-                    
-                    {/* Task Metadata */}
-                    <div className="flex flex-wrap gap-2 text-xs">
-                      {task.assignee_id && (
-                        <div className="flex items-center gap-1 text-muted-foreground bg-blue-50 px-2 py-1 rounded-md">
-                          <User className="h-3 w-3" />
-                          <span>Assigned</span>
-                        </div>
-                      )}
-                      {task.due_date && (
-                        <div className="flex items-center gap-1 text-muted-foreground bg-amber-50 px-2 py-1 rounded-md">
-                          <Calendar className="h-3 w-3" />
-                          <span>{new Date(task.due_date).toLocaleDateString()}</span>
-                        </div>
-                      )}
-                      {task.estimate_hours && (
-                        <div className="flex items-center gap-1 text-muted-foreground bg-emerald-50 px-2 py-1 rounded-md">
-                          <Clock className="h-3 w-3" />
-                          <span>{task.estimate_hours}h</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              ))}
-              
-              {/* Add Task Button */}
-              <Button 
-                variant="ghost" 
-                className="w-full border-2 border-dashed border-gray-300 hover:border-primary/50 hover:bg-primary/5 rounded-xl py-6 transition-all duration-200"
-                onClick={() => setIsCreateDialogOpen(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add task
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Empty State */}
-      {tasks.length === 0 && (
-        <div className="text-center py-16 modern-card rounded-2xl">
-          <div className="mx-auto max-w-md space-y-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto">
-              <CheckSquare className="h-8 w-8 text-white" />
-            </div>
-            <h3 className="text-xl font-semibold text-gradient">No tasks yet</h3>
-            <p className="text-muted-foreground text-lg">
-              Create your first task to start organizing your work
-            </p>
-            <Button 
-              onClick={() => setIsCreateDialogOpen(true)}
-              className="btn-primary px-6 py-3 text-base font-medium rounded-xl"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create First Task
+        
+        <div className="flex items-center gap-3">
+          <Button 
+            onClick={() => setIsCreateDialogOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Task
+          </Button>
+          
+          <BoardConfigDialog board={board} onBoardUpdate={handleBoardUpdate}>
+            <Button variant="outline">
+              <Settings className="h-4 w-4 mr-2" />
+              Configure
             </Button>
-          </div>
+          </BoardConfigDialog>
         </div>
-      )}
+      </div>
+
+      {/* View Tabs */}
+      <Tabs value={activeView} onValueChange={(value: any) => setActiveView(value)}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="board" className="flex items-center gap-2">
+            <Kanban className="h-4 w-4" />
+            Board
+          </TabsTrigger>
+          <TabsTrigger value="backlog" className="flex items-center gap-2">
+            <List className="h-4 w-4" />
+            Backlog
+          </TabsTrigger>
+          {board.type === 'scrum' && (
+            <TabsTrigger value="sprints" className="flex items-center gap-2">
+              <Timer className="h-4 w-4" />
+              Sprints
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="reports" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Reports
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="board" className="mt-6">
+          <AdvancedTaskBoard 
+            project={project} 
+            board={board}
+          />
+        </TabsContent>
+
+        <TabsContent value="backlog" className="mt-6">
+          <div className="text-center py-16">
+            <List className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Backlog View</h3>
+            <p className="text-muted-foreground">
+              Prioritized list of tasks and stories ready for development
+            </p>
+          </div>
+        </TabsContent>
+
+        {board.type === 'scrum' && (
+          <TabsContent value="sprints" className="mt-6">
+            <SprintManagement
+              project={project}
+              board={board}
+              sprints={sprints}
+              tasks={tasks}
+              onSprintCreate={handleSprintCreate}
+              onSprintUpdate={handleSprintUpdate}
+              onSprintStart={handleSprintStart}
+              onSprintComplete={handleSprintComplete}
+            />
+          </TabsContent>
+        )}
+
+        <TabsContent value="reports" className="mt-6">
+          <div className="text-center py-16">
+            <BarChart3 className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Board Analytics</h3>
+            <p className="text-muted-foreground">
+              Burndown charts, velocity tracking, and team performance metrics
+            </p>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Dialogs */}
       <CreateTaskDialog

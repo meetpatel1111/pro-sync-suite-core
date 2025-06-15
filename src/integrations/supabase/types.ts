@@ -260,33 +260,45 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           description: string | null
+          filters: Json | null
           id: string
           name: string
+          permissions: Json | null
           project_id: string | null
+          swimlane_config: Json | null
           type: string
           updated_at: string | null
+          wip_limits: Json | null
         }
         Insert: {
           config?: Json | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          filters?: Json | null
           id?: string
           name: string
+          permissions?: Json | null
           project_id?: string | null
+          swimlane_config?: Json | null
           type?: string
           updated_at?: string | null
+          wip_limits?: Json | null
         }
         Update: {
           config?: Json | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          filters?: Json | null
           id?: string
           name?: string
+          permissions?: Json | null
           project_id?: string | null
+          swimlane_config?: Json | null
           type?: string
           updated_at?: string | null
+          wip_limits?: Json | null
         }
         Relationships: [
           {
@@ -1876,6 +1888,63 @@ export type Database = {
           },
         ]
       }
+      sprints: {
+        Row: {
+          board_id: string | null
+          created_at: string | null
+          created_by: string | null
+          end_date: string | null
+          goal: string | null
+          id: string
+          name: string
+          project_id: string | null
+          start_date: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          board_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string | null
+          goal?: string | null
+          id?: string
+          name: string
+          project_id?: string | null
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          board_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string | null
+          goal?: string | null
+          id?: string
+          name?: string
+          project_id?: string | null
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sprints_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sprints_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_activity_log: {
         Row: {
           action: string
@@ -2212,13 +2281,17 @@ export type Database = {
           actual_hours: number | null
           assigned_to: string[] | null
           assignee_id: string | null
+          blocked_by: string[] | null
+          blocks: string[] | null
           board_id: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
           due_date: string | null
+          epic_id: string | null
           estimate_hours: number | null
           id: string
+          labels: string[] | null
           linked_task_ids: string[] | null
           parent_task_id: string | null
           position: number | null
@@ -2230,6 +2303,7 @@ export type Database = {
           sprint_id: string | null
           start_date: string | null
           status: string
+          story_points: number | null
           task_key: string | null
           task_number: number | null
           title: string
@@ -2237,18 +2311,23 @@ export type Database = {
           updated_at: string | null
           updated_by: string | null
           visibility: string | null
+          watchers: string[] | null
         }
         Insert: {
           actual_hours?: number | null
           assigned_to?: string[] | null
           assignee_id?: string | null
+          blocked_by?: string[] | null
+          blocks?: string[] | null
           board_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           due_date?: string | null
+          epic_id?: string | null
           estimate_hours?: number | null
           id?: string
+          labels?: string[] | null
           linked_task_ids?: string[] | null
           parent_task_id?: string | null
           position?: number | null
@@ -2260,6 +2339,7 @@ export type Database = {
           sprint_id?: string | null
           start_date?: string | null
           status: string
+          story_points?: number | null
           task_key?: string | null
           task_number?: number | null
           title: string
@@ -2267,18 +2347,23 @@ export type Database = {
           updated_at?: string | null
           updated_by?: string | null
           visibility?: string | null
+          watchers?: string[] | null
         }
         Update: {
           actual_hours?: number | null
           assigned_to?: string[] | null
           assignee_id?: string | null
+          blocked_by?: string[] | null
+          blocks?: string[] | null
           board_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           due_date?: string | null
+          epic_id?: string | null
           estimate_hours?: number | null
           id?: string
+          labels?: string[] | null
           linked_task_ids?: string[] | null
           parent_task_id?: string | null
           position?: number | null
@@ -2290,6 +2375,7 @@ export type Database = {
           sprint_id?: string | null
           start_date?: string | null
           status?: string
+          story_points?: number | null
           task_key?: string | null
           task_number?: number | null
           title?: string
@@ -2297,6 +2383,7 @@ export type Database = {
           updated_at?: string | null
           updated_by?: string | null
           visibility?: string | null
+          watchers?: string[] | null
         }
         Relationships: [
           {
