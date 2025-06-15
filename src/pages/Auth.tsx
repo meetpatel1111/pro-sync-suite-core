@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -58,6 +57,16 @@ export default function Auth() {
       navigate("/");
     }
   }, [user, navigate]);
+
+  const handleTermsClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate('/terms');
+  };
+
+  const handlePrivacyClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate('/privacy');
+  };
 
   const validateEmail = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -415,19 +424,21 @@ export default function Auth() {
             
             <div className="text-center text-xs text-muted-foreground">
               By logging in, you agree to our{" "}
-              <a href="/terms" className="text-blue-600 hover:text-blue-700 hover:underline transition-colors" onClick={(e) => {
-                e.preventDefault();
-                alert("Terms of Service would open here");
-              }}>
+              <button
+                type="button"
+                onClick={handleTermsClick}
+                className="text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+              >
                 Terms of Service
-              </a>{" "}
+              </button>{" "}
               and{" "}
-              <a href="/privacy" className="text-blue-600 hover:text-blue-700 hover:underline transition-colors" onClick={(e) => {
-                e.preventDefault();
-                alert("Privacy Policy would open here");
-              }}>
+              <button
+                type="button"
+                onClick={handlePrivacyClick}
+                className="text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+              >
                 Privacy Policy
-              </a>
+              </button>
             </div>
           </form>
         </TabsContent>
@@ -527,19 +538,21 @@ export default function Auth() {
               />
               <Label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed">
                 I accept the{" "}
-                <a href="/terms" className="text-blue-600 hover:text-blue-700 hover:underline transition-colors" onClick={(e) => {
-                  e.preventDefault();
-                  alert("Terms of Service would open here");
-                }}>
+                <button
+                  type="button"
+                  onClick={handleTermsClick}
+                  className="text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                >
                   Terms of Service
-                </a>{" "}
+                </button>{" "}
                 and{" "}
-                <a href="/privacy" className="text-blue-600 hover:text-blue-700 hover:underline transition-colors" onClick={(e) => {
-                  e.preventDefault();
-                  alert("Privacy Policy would open here");
-                }}>
+                <button
+                  type="button"
+                  onClick={handlePrivacyClick}
+                  className="text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                >
                   Privacy Policy
-                </a>
+                </button>
               </Label>
             </div>
             <Button

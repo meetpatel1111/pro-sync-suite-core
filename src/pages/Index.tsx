@@ -1,5 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, MessageSquare, FileText, BarChart2, 
          PieChart, Users, Shield, FileCog, FolderLock, Sparkles, TrendingUp, 
          Zap, Target, Rocket } from 'lucide-react';
@@ -12,7 +12,6 @@ import { useIntegration } from '@/context/IntegrationContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
   const { user, loading } = useAuthContext();
@@ -21,6 +20,14 @@ const Index = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+      return;
+    }
+  }, [user, loading, navigate]);
+
   useEffect(() => {
     // Set a timeout to ensure we don't get stuck in loading state
     const timer = setTimeout(() => {
@@ -35,6 +42,13 @@ const Index = () => {
       setIsLoading(false);
     }
   }, [loading]);
+
+  // Show loading while checking auth or if not authenticated
+  if (loading || isLoading || !user) {
+    return <div className="min-h-screen flex items-center justify-center">
+      <LoadingFallback message="Loading dashboard..." />
+    </div>;
+  }
 
   const handleQuickAction = async (actionType: string) => {
     if (!user) {
@@ -209,12 +223,6 @@ const Index = () => {
       category: 'Management'
     }
   ];
-
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">
-      <LoadingFallback message="Loading dashboard..." />
-    </div>;
-  }
 
   return (
     <AppLayout>
