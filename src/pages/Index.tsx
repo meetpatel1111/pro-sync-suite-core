@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState } from 'react';
 import { Calendar, Clock, MessageSquare, FileText, BarChart2, 
          PieChart, Users, Shield, FileCog, FolderLock, Sparkles, TrendingUp } from 'lucide-react';
@@ -219,28 +220,28 @@ const Index = () => {
     <AppLayout>
       <div className="space-y-8">
         {/* Hero Section */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-prosync-500 via-prosync-600 to-prosync-700 p-6 text-white">
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-prosync-500 via-prosync-600 to-prosync-700 p-4 text-white">
           <div className="absolute inset-0 bg-black/10"></div>
           <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-3">
-              <Sparkles className="h-6 w-6" />
-              <h1 className="text-3xl font-bold tracking-tight">Welcome to ProSync Suite</h1>
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="h-5 w-5" />
+              <h1 className="text-2xl font-bold tracking-tight">Welcome to ProSync Suite</h1>
             </div>
-            <p className="text-lg text-blue-100 max-w-2xl mb-4">
+            <p className="text-base text-blue-100 max-w-2xl mb-3">
               Your comprehensive project management solution designed to streamline workflows and boost productivity
             </p>
-            <div className="flex items-center gap-4">
-              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30">
-                <TrendingUp className="h-4 w-4 mr-1" />
+            <div className="flex items-center gap-3">
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 text-xs">
+                <TrendingUp className="h-3 w-3 mr-1" />
                 10 Integrated Apps
               </Badge>
-              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30">
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 text-xs">
                 Enterprise Ready
               </Badge>
             </div>
           </div>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
         </div>
         
         <DashboardStats />
@@ -321,3 +322,4 @@ const Index = () => {
 };
 
 export default Index;
+
