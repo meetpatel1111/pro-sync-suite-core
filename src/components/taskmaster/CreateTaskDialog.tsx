@@ -30,6 +30,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
   const [priority, setPriority] = useState<TaskMasterTask['priority']>('medium');
   const [type, setType] = useState<TaskMasterTask['type']>('task');
   const [status, setStatus] = useState('todo');
+  const [assigneeId, setAssigneeId] = useState<string>('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +42,8 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
       description: description.trim(),
       priority,
       type,
-      status
+      status,
+      assignee_id: assigneeId || undefined
     });
 
     // Reset form
@@ -50,6 +52,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
     setPriority('medium');
     setType('task');
     setStatus('todo');
+    setAssigneeId('');
     onOpenChange(false);
   };
 
@@ -188,23 +191,43 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
             </div>
           </div>
 
-          {/* Initial Status */}
-          <div className="space-y-2">
-            <Label htmlFor="status" className="text-sm font-semibold text-gray-700">
-              Initial Status
-            </Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="h-12 border-gray-200 focus:border-primary">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {board.config.columns.map((column) => (
-                  <SelectItem key={column.id} value={column.id}>
-                    {column.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Assignee and Status Row */}
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="assignee" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Assignee
+              </Label>
+              <Select value={assigneeId} onValueChange={setAssigneeId}>
+                <SelectTrigger className="h-12 border-gray-200 focus:border-primary">
+                  <SelectValue placeholder="Select assignee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="user-1">Team Member 1</SelectItem>
+                  <SelectItem value="user-2">Team Member 2</SelectItem>
+                  <SelectItem value="user-3">Team Member 3</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status" className="text-sm font-semibold text-gray-700">
+                Initial Status
+              </Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger className="h-12 border-gray-200 focus:border-primary">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {board.config.columns.map((column) => (
+                    <SelectItem key={column.id} value={column.id}>
+                      {column.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Action Buttons */}

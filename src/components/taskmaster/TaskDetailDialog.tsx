@@ -32,6 +32,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
   const [priority, setPriority] = useState<TaskMasterTask['priority']>('medium');
   const [type, setType] = useState<TaskMasterTask['type']>('task');
   const [status, setStatus] = useState('todo');
+  const [assigneeId, setAssigneeId] = useState<string>('');
 
   useEffect(() => {
     if (task) {
@@ -40,6 +41,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
       setPriority(task.priority);
       setType(task.type);
       setStatus(task.status);
+      setAssigneeId(task.assignee_id || '');
     }
   }, [task]);
 
@@ -51,7 +53,8 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
       description: description.trim(),
       priority,
       type,
-      status
+      status,
+      assignee_id: assigneeId || undefined
     });
     
     onOpenChange(false);
@@ -76,6 +79,11 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
     }
   };
 
+  const getAssigneeDisplay = () => {
+    if (!task?.assignee_id) return 'Unassigned';
+    return task.assignee_id.substring(0, 8) + '...'; // Show first 8 chars of ID
+  };
+
   if (!task) return null;
 
   return (
@@ -94,12 +102,10 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
         <div className="space-y-6">
           {/* Task metadata */}
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-            {task.assignee_id && (
-              <div className="flex items-center gap-1">
-                <User className="h-4 w-4" />
-                <span>Assigned</span>
-              </div>
-            )}
+            <div className="flex items-center gap-1">
+              <User className="h-4 w-4" />
+              <span>{getAssigneeDisplay()}</span>
+            </div>
             {task.due_date && (
               <div className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
@@ -137,7 +143,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit-status">Status</Label>
                 <Select value={status} onValueChange={setStatus}>
@@ -154,6 +160,23 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                 </Select>
               </div>
 
+              <div>
+                <Label htmlFor="edit-assignee">Assignee</Label>
+                <Select value={assigneeId} onValueChange={setAssigneeId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="user-1">Team Member 1</SelectItem>
+                    <SelectItem value="user-2">Team Member 2</SelectItem>
+                    <SelectItem value="user-3">Team Member 3</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit-priority">Priority</Label>
                 <Select value={priority} onValueChange={(value) => setPriority(value as TaskMasterTask['priority'])}>
