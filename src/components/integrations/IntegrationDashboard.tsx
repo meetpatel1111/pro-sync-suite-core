@@ -23,6 +23,9 @@ import { useAuth } from '@/hooks/useAuth';
 import AutomationWorkflowBuilder from './AutomationWorkflowBuilder';
 import IntegrationMonitoring from './IntegrationMonitoring';
 import IntegrationMarketplace from './IntegrationMarketplace';
+import IntegrationTemplates from './IntegrationTemplates';
+import RealTimeSyncStatus from './RealTimeSyncStatus';
+import APIManagement from './APIManagement';
 
 const IntegrationDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -166,7 +169,7 @@ const IntegrationDashboard: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
             Overview
@@ -183,9 +186,17 @@ const IntegrationDashboard: React.FC = () => {
             <ShoppingCart className="h-4 w-4" />
             Marketplace
           </TabsTrigger>
-          <TabsTrigger value="flows" className="flex items-center gap-2">
+          <TabsTrigger value="templates" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
-            Flows
+            Templates
+          </TabsTrigger>
+          <TabsTrigger value="sync" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Sync Status
+          </TabsTrigger>
+          <TabsTrigger value="api" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            API Management
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -273,6 +284,18 @@ const IntegrationDashboard: React.FC = () => {
 
         <TabsContent value="marketplace">
           <IntegrationMarketplace />
+        </TabsContent>
+
+        <TabsContent value="templates">
+          <IntegrationTemplates />
+        </TabsContent>
+
+        <TabsContent value="sync">
+          <RealTimeSyncStatus />
+        </TabsContent>
+
+        <TabsContent value="api">
+          <APIManagement />
         </TabsContent>
 
         <TabsContent value="flows" className="space-y-4">
