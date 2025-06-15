@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -286,40 +285,38 @@ const InsightIQ = () => {
 
   return (
     <AppLayout>
-      {/* Modern Hero Card */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-rose-700 p-8 text-white shadow-2xl mb-8">
+      {/* Compact Header Card */}
+      <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-red-500 via-red-600 to-rose-700 p-6 text-white shadow-lg mb-6">
         <div className="absolute inset-0 bg-black/10"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
         <div className="relative z-10">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-              <BarChart3 className="h-8 w-8" />
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+              <BarChart3 className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold tracking-tight mb-2">InsightIQ</h1>
-              <p className="text-xl text-red-100 leading-relaxed">
+              <h1 className="text-2xl font-bold tracking-tight mb-1">InsightIQ</h1>
+              <p className="text-sm text-red-100 leading-relaxed">
                 Analytics and reporting for data-driven project decisions
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-4 mt-6">
-            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
-              <Target className="h-4 w-4 mr-2" />
+          <div className="flex items-center gap-2 mt-4">
+            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 text-xs">
+              <Target className="h-3 w-3 mr-1" />
               Task Analytics
             </Badge>
-            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
-              <BarChart3 className="h-4 w-4 mr-2" />
+            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 text-xs">
+              <BarChart3 className="h-3 w-3 mr-1" />
               Performance Metrics
             </Badge>
-            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
-              <Zap className="h-4 w-4 mr-2" />
+            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 text-xs">
+              <Zap className="h-3 w-3 mr-1" />
               Smart Reports
             </Badge>
           </div>
         </div>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32 backdrop-blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24 backdrop-blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 w-32 h-32 bg-white/5 rounded-full -translate-x-16 -translate-y-16 backdrop-blur-3xl"></div>
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16 backdrop-blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12 backdrop-blur-3xl"></div>
       </div>
 
       <div className="space-y-4">
