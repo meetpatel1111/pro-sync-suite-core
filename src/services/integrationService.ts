@@ -543,7 +543,7 @@ export const integrationService = {
   },
 
   // Enhanced automation system
-  async triggerAutomation(eventType: string, sourceData: any): Promise<boolean> {
+  triggerAutomation: async (eventType: string, sourceData: any): Promise<boolean> => {
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return false;
@@ -572,7 +572,7 @@ export const integrationService = {
         // Execute the automation based on action type
         switch (rule.action_type) {
           case 'create_task':
-            await this.createTaskFromNote(
+            await integrationService.createTaskFromNote(
               sourceData.title || 'Automated Task',
               sourceData.description || 'Task created automatically',
               sourceData.project_id
@@ -580,7 +580,7 @@ export const integrationService = {
             break;
           case 'log_time':
             if (sourceData.task_id && sourceData.duration) {
-              await this.logTimeForTask(
+              await integrationService.logTimeForTask(
                 sourceData.task_id,
                 sourceData.duration,
                 'Time logged automatically'
@@ -589,10 +589,12 @@ export const integrationService = {
             break;
           case 'send_notification':
             if (sourceData.user_id) {
-              await this.createClientNotification(
+              // Safe access to action_payload properties
+              const actionPayload = rule.action_payload as any;
+              await integrationService.createClientNotification(
                 sourceData.user_id,
-                rule.action_payload?.title || 'Notification',
-                rule.action_payload?.message || 'Automated notification'
+                actionPayload?.title || 'Notification',
+                actionPayload?.message || 'Automated notification'
               );
             }
             break;
