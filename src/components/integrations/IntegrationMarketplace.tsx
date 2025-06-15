@@ -16,7 +16,15 @@ import {
   CheckCircle,
   Play,
   Plus,
-  ShoppingCart
+  ShoppingCart,
+  Eye,
+  AlertCircle,
+  Shield,
+  BarChart3,
+  FileText,
+  MessageSquare,
+  Calendar,
+  DollarSign
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { integrationDatabaseService, IntegrationTemplate, MarketplaceInstallation } from '@/services/integrationDatabaseService';
@@ -31,8 +39,9 @@ const IntegrationMarketplace: React.FC = () => {
   const [templates, setTemplates] = useState<IntegrationTemplate[]>([]);
   const [installations, setInstallations] = useState<MarketplaceInstallation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [previewingTemplate, setPreviewingTemplate] = useState<IntegrationTemplate | null>(null);
 
-  const categories = ['all', 'Productivity', 'Finance', 'Communication', 'Resource Management', 'Data Management'];
+  const categories = ['all', 'Productivity', 'Finance', 'Communication', 'Resource Management', 'Data Management', 'Project Management', 'Risk Management'];
   const difficulties = ['all', 'Beginner', 'Intermediate', 'Advanced'];
 
   useEffect(() => {
@@ -112,8 +121,8 @@ const IntegrationMarketplace: React.FC = () => {
       // Create a new workflow based on the template
       await integrationDatabaseService.createAutomationWorkflow({
         user_id: user.id,
-        name: `${template.name} (Installed)`,
-        description: `Auto-generated from marketplace template: ${template.name}`,
+        name: `${template.name}`,
+        description: template.description || `Auto-generated from marketplace template: ${template.name}`,
         trigger_config: template.template_config.trigger || {},
         actions_config: template.template_config.actions || {},
         conditions_config: template.template_config.conditions || {},
@@ -127,8 +136,8 @@ const IntegrationMarketplace: React.FC = () => {
       });
 
       toast({
-        title: 'Template Installed',
-        description: `"${template.name}" has been installed and activated`,
+        title: 'Template Installed Successfully',
+        description: `"${template.name}" has been installed and activated in your workflows`,
       });
       
       loadMarketplaceData(); // Refresh data
@@ -136,7 +145,7 @@ const IntegrationMarketplace: React.FC = () => {
       console.error('Error installing template:', error);
       toast({
         title: 'Installation Failed',
-        description: 'Failed to install template',
+        description: 'Failed to install template. Please try again.',
         variant: 'destructive'
       });
     }
@@ -172,13 +181,156 @@ const IntegrationMarketplace: React.FC = () => {
     }
   };
 
+  const handlePreviewTemplate = (template: IntegrationTemplate) => {
+    setPreviewingTemplate(template);
+  };
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'Beginner': return 'bg-green-100 text-green-800';
-      case 'Intermediate': return 'bg-yellow-100 text-yellow-800';
-      case 'Advanced': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'Beginner': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'Intermediate': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'Advanced': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
     }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Productivity': return <Zap className="h-4 w-4" />;
+      case 'Finance': return <DollarSign className="h-4 w-4" />;
+      case 'Communication': return <MessageSquare className="h-4 w-4" />;
+      case 'Resource Management': return <Users className="h-4 w-4" />;
+      case 'Data Management': return <FileText className="h-4 w-4" />;
+      case 'Project Management': return <Calendar className="h-4 w-4" />;
+      case 'Risk Management': return <Shield className="h-4 w-4" />;
+      default: return <BarChart3 className="h-4 w-4" />;
+    }
+  };
+
+  const renderTemplatePreview = () => {
+    if (!previewingTemplate) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+          <div className="p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-xl font-semibold flex items-center gap-2">
+                  {getCategoryIcon(previewingTemplate.category)}
+                  {previewingTemplate.name}
+                </h3>
+                <p className="text-muted-foreground mt-2">{previewingTemplate.description}</p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setPreviewingTemplate(null)}
+              >
+                ×
+              </Button>
+            </div>
+
+            {/* Template Configuration */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium mb-2">Configuration Overview</h4>
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                  <div className="space-y-3">
+                    {/* Trigger */}
+                    {previewingTemplate.template_config.trigger && (
+                      <div>
+                        <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Trigger:</span>
+                        <p className="text-sm">
+                          When {previewingTemplate.template_config.trigger.app} fires "{previewingTemplate.template_config.trigger.event}" event
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    {previewingTemplate.template_config.actions && (
+                      <div>
+                        <span className="text-sm font-medium text-green-600 dark:text-green-400">Actions:</span>
+                        <ul className="text-sm space-y-1 ml-4">
+                          {previewingTemplate.template_config.actions.map((action: any, index: number) => (
+                            <li key={index} className="flex items-center gap-2">
+                              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                              {action.app}: {action.action}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Conditions */}
+                    {previewingTemplate.template_config.conditions && previewingTemplate.template_config.conditions.length > 0 && (
+                      <div>
+                        <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Conditions:</span>
+                        <p className="text-sm ml-4">
+                          {previewingTemplate.template_config.conditions.length} condition(s) configured
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Apps Involved */}
+              <div>
+                <h4 className="font-medium mb-2">Connected Apps</h4>
+                <div className="flex flex-wrap gap-2">
+                  {previewingTemplate.apps.map(app => (
+                    <Badge key={app} variant="outline" className="text-xs">
+                      {app}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tags */}
+              {previewingTemplate.tags.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2">Tags</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {previewingTemplate.tags.map(tag => (
+                      <Badge key={tag} variant="secondary" className="text-xs">
+                        #{tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              {!isInstalled(previewingTemplate.id) ? (
+                <Button 
+                  onClick={() => {
+                    handleInstallTemplate(previewingTemplate);
+                    setPreviewingTemplate(null);
+                  }}
+                  className="flex-1"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Install Template
+                </Button>
+              ) : (
+                <Button variant="outline" className="flex-1" disabled>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Already Installed
+                </Button>
+              )}
+              <Button 
+                variant="outline" 
+                onClick={() => setPreviewingTemplate(null)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -202,17 +354,20 @@ const IntegrationMarketplace: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline">{templates.length} Templates</Badge>
+          <Badge variant="outline">{templates.length} Templates Available</Badge>
           <Badge variant="secondary">{installations.filter(i => i.is_active).length} Installed</Badge>
         </div>
       </div>
 
-      {/* Installed Templates */}
+      {/* Installed Templates Section */}
       {installations.filter(i => i.is_active).length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Your Installed Templates</CardTitle>
-            <CardDescription>Templates you've installed from the marketplace</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              Your Installed Templates
+            </CardTitle>
+            <CardDescription>Templates you've installed and activated</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
@@ -223,7 +378,7 @@ const IntegrationMarketplace: React.FC = () => {
                   if (!template) return null;
                   
                   return (
-                    <div key={installation.id} className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                    <div key={installation.id} className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg px-3 py-2">
                       <CheckCircle className="h-4 w-4 text-green-500" />
                       <span className="text-sm font-medium">{template.name}</span>
                       <Button
@@ -249,7 +404,7 @@ const IntegrationMarketplace: React.FC = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search templates..."
+              placeholder="Search templates by name, description, or tags..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -260,7 +415,7 @@ const IntegrationMarketplace: React.FC = () => {
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 border rounded-md"
+            className="px-3 py-2 border rounded-md bg-background"
           >
             {categories.map(category => (
               <option key={category} value={category}>
@@ -271,7 +426,7 @@ const IntegrationMarketplace: React.FC = () => {
           <select
             value={selectedDifficulty}
             onChange={(e) => setSelectedDifficulty(e.target.value)}
-            className="px-3 py-2 border rounded-md"
+            className="px-3 py-2 border rounded-md bg-background"
           >
             {difficulties.map(difficulty => (
               <option key={difficulty} value={difficulty}>
@@ -288,7 +443,10 @@ const IntegrationMarketplace: React.FC = () => {
           <ShoppingCart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">No templates found</h3>
           <p className="text-muted-foreground mb-4">
-            Try adjusting your search filters to find more templates
+            {templates.length === 0 
+              ? 'No templates are currently available in the marketplace'
+              : 'Try adjusting your search filters to find more templates'
+            }
           </p>
         </div>
       ) : (
@@ -297,20 +455,23 @@ const IntegrationMarketplace: React.FC = () => {
             const installed = isInstalled(template.id);
             
             return (
-              <Card key={template.id} className={`hover:shadow-lg transition-shadow ${installed ? 'border-green-200 bg-green-50' : ''}`}>
+              <Card key={template.id} className={`hover:shadow-lg transition-all duration-200 ${installed ? 'border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-900/10' : ''}`}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="text-lg flex items-center gap-2">
+                        {getCategoryIcon(template.category)}
                         {template.name}
                         {template.is_verified && (
                           <CheckCircle className="h-4 w-4 text-blue-500" />
                         )}
                         {installed && (
-                          <Badge className="bg-green-100 text-green-800">Installed</Badge>
+                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Installed
+                          </Badge>
                         )}
                       </CardTitle>
-                      <CardDescription className="mt-2">
+                      <CardDescription className="mt-2 line-clamp-2">
                         {template.description}
                       </CardDescription>
                     </div>
@@ -321,16 +482,28 @@ const IntegrationMarketplace: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
+                    {/* Category Badge */}
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {template.category}
+                      </Badge>
+                    </div>
+
                     {/* Apps */}
                     {template.apps.length > 0 && (
                       <div>
                         <p className="text-sm font-medium mb-2">Connected Apps:</p>
                         <div className="flex flex-wrap gap-1">
-                          {template.apps.map(app => (
+                          {template.apps.slice(0, 3).map(app => (
                             <Badge key={app} variant="outline" className="text-xs">
                               {app}
                             </Badge>
                           ))}
+                          {template.apps.length > 3 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{template.apps.length - 3} more
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     )}
@@ -340,11 +513,16 @@ const IntegrationMarketplace: React.FC = () => {
                       <div>
                         <p className="text-sm font-medium mb-2">Tags:</p>
                         <div className="flex flex-wrap gap-1">
-                          {template.tags.map(tag => (
+                          {template.tags.slice(0, 3).map(tag => (
                             <Badge key={tag} variant="secondary" className="text-xs">
                               #{tag}
                             </Badge>
                           ))}
+                          {template.tags.length > 3 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{template.tags.length - 3} more
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     )}
@@ -382,7 +560,12 @@ const IntegrationMarketplace: React.FC = () => {
                           Install
                         </Button>
                       )}
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handlePreviewTemplate(template)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
                         Preview
                       </Button>
                     </div>
@@ -393,6 +576,9 @@ const IntegrationMarketplace: React.FC = () => {
           })}
         </div>
       )}
+
+      {/* Template Preview Modal */}
+      {renderTemplatePreview()}
     </div>
   );
 };

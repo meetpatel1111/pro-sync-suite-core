@@ -169,7 +169,7 @@ const IntegrationDashboard: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
             Overview
@@ -193,10 +193,6 @@ const IntegrationDashboard: React.FC = () => {
           <TabsTrigger value="api" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             API Management
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Settings
           </TabsTrigger>
         </TabsList>
 
@@ -318,57 +314,6 @@ const IntegrationDashboard: React.FC = () => {
 
         <TabsContent value="api">
           <APIManagement />
-        </TabsContent>
-
-        <TabsContent value="settings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Integration Settings</CardTitle>
-              <CardDescription>Configure your integration preferences</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Auto-sync enabled</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Automatically sync data between connected apps
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Configure
-                  </Button>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Real-time notifications</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Get notified when integrations trigger
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Configure
-                  </Button>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Error handling</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Configure retry policies and error notifications
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Configure
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>
