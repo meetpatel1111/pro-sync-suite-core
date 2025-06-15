@@ -38,8 +38,8 @@ interface SearchCommandProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// More specific type that avoids deep instantiation issues
-type IconComponent = (props: { className?: string }) => JSX.Element;
+// Use React.ComponentType to properly type Lucide icons
+type IconComponent = React.ComponentType<any>;
 
 interface AppItem {
   name: string;
