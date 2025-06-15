@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Project, Board, TaskMasterTask } from '@/types/taskmaster';
 
@@ -240,6 +239,35 @@ class TaskmasterService {
     }
   }
 
+  private async getNextTaskNumber(boardId: string): Promise<number> {
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('task_number')
+      .eq('board_id', boardId)
+      .order('task_number', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('Error getting next task number:', error);
+      return 1;
+    }
+
+    const lastTaskNumber = data && data.length > 0 ? data[0].task_number : 0;
+    return (lastTaskNumber || 0) + 1;
+  }
+
+  private generateBoardPrefix(boardName: string): string {
+    // Generate a 3-letter prefix from board name
+    const cleanName = boardName.replace(/[^A-Za-z]/g, '').toUpperCase();
+    if (cleanName.length >= 3) {
+      return cleanName.substring(0, 3);
+    } else if (cleanName.length > 0) {
+      return cleanName.padEnd(3, 'X');
+    } else {
+      return 'TSK';
+    }
+  }
+
   private validateAndTransformTask(item: any, boardId?: string): TaskMasterTask {
     // Validate priority
     const validPriorities = ['low', 'medium', 'high', 'critical'] as const;
@@ -303,33 +331,69 @@ class TaskmasterService {
   }
 
   async createTask(taskData: Omit<TaskMasterTask, 'id' | 'task_number' | 'task_key' | 'created_at' | 'updated_at'>) {
-    const { data, error } = await supabase
-      .from('tasks')
-      .insert([{
-        board_id: taskData.board_id,
-        project_id: taskData.project_id,
-        title: taskData.title,
-        description: taskData.description || '',
-        status: taskData.status,
-        priority: taskData.priority,
-        type: taskData.type,
-        visibility: taskData.visibility,
-        position: taskData.position,
-        actual_hours: taskData.actual_hours,
-        created_by: taskData.created_by,
-        assignee_id: taskData.assignee_id,
-        estimate_hours: taskData.estimate_hours,
-        due_date: taskData.due_date,
-        start_date: taskData.start_date
-      }])
-      .select()
-      .single();
+    try {
+      // Get the board to generate prefix
+      const { data: boardData, error: boardError } = await supabase
+        .from('boards')
+        .select('name')
+        .eq('id', taskData.board_id)
+        .single();
 
-    if (error) return { data: null, error };
+      if (boardError) {
+        console.error('Error fetching board:', boardError);
+        return { data: null, error: boardError };
+      }
 
-    // Transform the result using the helper method
-    const task = this.validateAndTransformTask(data);
-    return { data: task, error };
+      // Get next task number
+      const taskNumber = await this.getNextTaskNumber(taskData.board_id);
+      
+      // Generate board prefix and task key
+      const boardPrefix = this.generateBoardPrefix(boardData.name);
+      const taskKey = `${boardPrefix}-${taskNumber}`;
+
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert([{
+          board_id: taskData.board_id,
+          project_id: taskData.project_id,
+          task_number: taskNumber,
+          task_key: taskKey,
+          title: taskData.title,
+          description: taskData.description || '',
+          status: taskData.status,
+          priority: taskData.priority,
+          type: taskData.type,
+          visibility: taskData.visibility,
+          position: taskData.position,
+          actual_hours: taskData.actual_hours,
+          created_by: taskData.created_by,
+          assignee_id: taskData.assignee_id,
+          estimate_hours: taskData.estimate_hours,
+          due_date: taskData.due_date,
+          start_date: taskData.start_date,
+          sprint_id: taskData.sprint_id,
+          reporter_id: taskData.reporter_id,
+          assigned_to: taskData.assigned_to,
+          reviewer_id: taskData.reviewer_id,
+          parent_task_id: taskData.parent_task_id,
+          linked_task_ids: taskData.linked_task_ids,
+          recurrence_rule: taskData.recurrence_rule
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating task:', error);
+        return { data: null, error };
+      }
+
+      // Transform the result using the helper method
+      const task = this.validateAndTransformTask(data);
+      return { data: task, error: null };
+    } catch (e) {
+      console.error('Unexpected error creating task:', e);
+      return { data: null, error: { message: 'Failed to create task', details: e } };
+    }
   }
 
   async updateTask(taskId: string, updates: Partial<TaskMasterTask>, userId: string) {

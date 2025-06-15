@@ -48,9 +48,18 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
   };
 
   const handleTaskCreate = async (taskData: Partial<TaskMasterTask>) => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to create tasks',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     try {
+      console.log('Creating task with data:', taskData);
+      
       const { data, error } = await taskmasterService.createTask({
         ...taskData,
         board_id: board.id,
@@ -65,26 +74,28 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
       } as Omit<TaskMasterTask, 'id' | 'task_number' | 'task_key' | 'created_at' | 'updated_at'>);
 
       if (error) {
+        console.error('Task creation error:', error);
         toast({
           title: 'Error',
-          description: 'Failed to create task',
+          description: error.message || 'Failed to create task',
           variant: 'destructive',
         });
         return;
       }
 
       if (data) {
+        console.log('Task created successfully:', data);
         setTasks(prev => [...prev, data]);
         toast({
           title: 'Success',
-          description: 'Task created successfully',
+          description: `Task ${data.task_key} created successfully`,
         });
       }
     } catch (error) {
-      console.error('Error creating task:', error);
+      console.error('Unexpected error creating task:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create task',
+        description: 'An unexpected error occurred while creating the task',
         variant: 'destructive',
       });
     }
@@ -192,7 +203,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xs">{getTypeIcon(task.type)}</span>
-                      <span className="text-xs text-muted-foreground">{task.task_key}</span>
+                      <span className="text-xs text-muted-foreground font-mono">{task.task_key}</span>
                       <div className={`w-2 h-2 rounded-full ${getPriorityColor(task.priority)}`}></div>
                     </div>
                     <h4 className="text-sm font-medium line-clamp-2">{task.title}</h4>
