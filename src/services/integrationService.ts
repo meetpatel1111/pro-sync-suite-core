@@ -146,11 +146,18 @@ export const integrationService = {
       const taskTitle = messageContent.split('\n')[0].replace(/^(task:|todo:|create:)/i, '').trim();
       const taskDescription = messageContent.split('\n').slice(1).join('\n').trim();
 
-      return await this.createTaskFromNote(
+      const task = await this.createTaskFromNote(
         taskTitle || 'Task from chat',
         taskDescription || messageContent,
         projectId
       );
+
+      if (task) {
+        // Notify CollabSpace about new task
+        await this.notifyCollabSpaceTaskCreated(task, channelId);
+      }
+
+      return task;
     } catch (error) {
       console.error('Error creating task from chat:', error);
       return null;
@@ -193,6 +200,28 @@ export const integrationService = {
     }
   },
 
+  async notifyCollabSpaceTaskCreated(task: Task, channelId: string): Promise<boolean> {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return false;
+
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          channel_id: channelId,
+          user_id: userData.user.id,
+          content: `📋 New task created: **${task.title}**\n${task.description || 'No description'}`,
+          type: 'system',
+          is_system_message: true
+        });
+
+      return !error;
+    } catch (error) {
+      console.error('Error notifying CollabSpace:', error);
+      return false;
+    }
+  },
+
   // PlanBoard integrations
   async syncTaskToPlanBoard(taskId: string): Promise<boolean> {
     try {
@@ -204,6 +233,15 @@ export const integrationService = {
         .single();
 
       if (taskData && taskData.project_id) {
+        // Update project view preferences to reflect changes
+        await supabase
+          .from('project_views')
+          .upsert({
+            project_id: taskData.project_id,
+            user_id: taskData.created_by,
+            updated_at: new Date().toISOString()
+          });
+
         // Trigger PlanBoard refresh
         await this.triggerAutomation('task_updated', {
           task_id: taskId,
@@ -215,6 +253,31 @@ export const integrationService = {
       return true;
     } catch (error) {
       console.error('Error syncing task to PlanBoard:', error);
+      return false;
+    }
+  },
+
+  async updateProjectTimeline(projectId: string, timeEntries: TimeEntry[]): Promise<boolean> {
+    try {
+      // Calculate actual vs estimated times for timeline updates
+      const totalActualTime = timeEntries.reduce((sum, entry) => sum + entry.time_spent, 0);
+      
+      // Update project insights
+      await supabase
+        .from('insights')
+        .upsert({
+          project_id: projectId,
+          type: 'timeline_update',
+          data: {
+            total_actual_time: totalActualTime,
+            last_updated: new Date().toISOString(),
+            entries_count: timeEntries.length
+          }
+        });
+
+      return true;
+    } catch (error) {
+      console.error('Error updating project timeline:', error);
       return false;
     }
   },
@@ -262,6 +325,11 @@ export const integrationService = {
           access_level: accessLevel
         });
 
+      if (!error) {
+        // Notify ClientConnect
+        await this.notifyClientFileShared(clientId, fileId);
+      }
+
       return !error;
     } catch (error) {
       console.error('Error sharing file with client:', error);
@@ -299,6 +367,11 @@ export const integrationService = {
           date: timeEntry.date
         });
 
+      if (!error) {
+        // Check for budget alerts
+        await this.checkBudgetAlert(timeEntry.project_id);
+      }
+
       return !error;
     } catch (error) {
       console.error('Error creating expense from time entry:', error);
@@ -324,6 +397,9 @@ export const integrationService = {
           utilization: utilizationPercent,
           severity: utilizationPercent > 95 ? 'critical' : 'warning'
         });
+
+        // Notify RiskRadar about budget risk
+        await this.flagBudgetRisk(projectId, utilizationPercent);
         return true;
       }
 
@@ -331,6 +407,74 @@ export const integrationService = {
     } catch (error) {
       console.error('Error checking budget alert:', error);
       return false;
+    }
+  },
+
+  // InsightIQ integrations (data aggregation)
+  async aggregateTaskPerformance(projectId?: string): Promise<any> {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return null;
+
+      let query = supabase.from('tasks').select('*').eq('created_by', userData.user.id);
+      if (projectId) {
+        query = query.eq('project_id', projectId);
+      }
+
+      const { data: tasks } = await query;
+      if (!tasks) return null;
+
+      const performance = {
+        total_tasks: tasks.length,
+        completed_tasks: tasks.filter(t => t.status === 'done').length,
+        overdue_tasks: tasks.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done').length,
+        completion_rate: 0,
+        avg_completion_time: 0
+      };
+
+      performance.completion_rate = performance.total_tasks > 0 
+        ? (performance.completed_tasks / performance.total_tasks) * 100 
+        : 0;
+
+      // Store insights
+      await supabase.from('insights').insert({
+        project_id: projectId,
+        type: 'task_performance',
+        data: performance
+      });
+
+      return performance;
+    } catch (error) {
+      console.error('Error aggregating task performance:', error);
+      return null;
+    }
+  },
+
+  async generateProductivityReport(userId: string, period: { start: string; end: string }): Promise<any> {
+    try {
+      const [timeEntries, tasks] = await Promise.all([
+        supabase.from('time_entries').select('*').eq('user_id', userId)
+          .gte('date', period.start).lte('date', period.end),
+        supabase.from('tasks').select('*').eq('created_by', userId)
+          .gte('created_at', period.start).lte('created_at', period.end)
+      ]);
+
+      const report = {
+        period,
+        total_hours: timeEntries.data?.reduce((sum, entry) => sum + entry.time_spent, 0) || 0,
+        tasks_completed: tasks.data?.filter(t => t.status === 'done').length || 0,
+        avg_daily_hours: 0,
+        productivity_score: 0
+      };
+
+      const daysDiff = Math.ceil((new Date(period.end).getTime() - new Date(period.start).getTime()) / (1000 * 60 * 60 * 24));
+      report.avg_daily_hours = daysDiff > 0 ? (report.total_hours / 60) / daysDiff : 0;
+      report.productivity_score = Math.min(100, (report.tasks_completed * 10) + (report.avg_daily_hours * 5));
+
+      return report;
+    } catch (error) {
+      console.error('Error generating productivity report:', error);
+      return null;
     }
   },
 
@@ -349,11 +493,27 @@ export const integrationService = {
 
       if (!error) {
         await this.checkResourceUtilization(resourceId);
+        // Update task assignment
+        await this.updateTaskAssignment(taskId, resourceId);
       }
 
       return !error;
     } catch (error) {
       console.error('Error assigning resource to task:', error);
+      return false;
+    }
+  },
+
+  async updateTaskAssignment(taskId: string, resourceId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ assigned_to: [resourceId] })
+        .eq('id', taskId);
+
+      return !error;
+    } catch (error) {
+      console.error('Error updating task assignment:', error);
       return false;
     }
   },
@@ -373,6 +533,9 @@ export const integrationService = {
             resource_id: resourceId,
             allocation_percent: totalAllocation
           });
+
+          // Flag risk in RiskRadar
+          await this.flagResourceRisk(resourceId, totalAllocation);
         }
       }
     } catch (error) {
@@ -388,8 +551,6 @@ export const integrationService = {
     type: 'info' | 'warning' | 'success' = 'info'
   ): Promise<boolean> {
     try {
-      // For now, create a general notification
-      // In a full implementation, this would use a client-specific notification system
       const { error } = await supabase
         .from('notifications')
         .insert({
@@ -402,6 +563,30 @@ export const integrationService = {
       return !error;
     } catch (error) {
       console.error('Error creating client notification:', error);
+      return false;
+    }
+  },
+
+  async notifyClientFileShared(clientId: string, fileId: string): Promise<boolean> {
+    try {
+      const { data: fileData } = await supabase
+        .from('files')
+        .select('name')
+        .eq('id', fileId)
+        .single();
+
+      if (fileData) {
+        return await this.createClientNotification(
+          clientId,
+          'New File Shared',
+          `A new file "${fileData.name}" has been shared with you.`,
+          'info'
+        );
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error notifying client of shared file:', error);
       return false;
     }
   },
@@ -421,7 +606,7 @@ export const integrationService = {
           .gte('date', period.start).lte('date', period.end)
       ]);
 
-      return {
+      const report = {
         period,
         tasks: tasks.data || [],
         timeEntries: timeEntries.data || [],
@@ -433,6 +618,15 @@ export const integrationService = {
           totalExpenses: expenses.data?.reduce((sum, exp) => sum + exp.amount, 0) || 0
         }
       };
+
+      // Store report for InsightIQ
+      await supabase.from('insights').insert({
+        project_id: projectId,
+        type: 'client_report',
+        data: report
+      });
+
+      return report;
     } catch (error) {
       console.error('Error generating client report:', error);
       return null;
@@ -471,23 +665,36 @@ export const integrationService = {
         });
       }
 
-      // Check resource overallocation
-      const { data: resources } = await supabase
-        .from('resources')
-        .select('*, allocations(*)')
-        .eq('current_project_id', projectId);
+      // Check for missing time logs
+      const { data: tasksWithoutTime } = await supabase
+        .from('tasks')
+        .select(`
+          *,
+          time_entries(*)
+        `)
+        .eq('project_id', projectId)
+        .eq('status', 'in-progress');
 
-      if (resources) {
-        for (const resource of resources) {
-          if (resource.utilization && resource.utilization > 100) {
-            risks.push({
-              type: 'resource_overallocation',
-              severity: 'medium',
-              description: `Resource ${resource.name} is overallocated`,
-              data: resource
-            });
-          }
-        }
+      const tasksWithoutTimeEntries = tasksWithoutTime?.filter(task => 
+        !task.time_entries || task.time_entries.length === 0
+      ) || [];
+
+      if (tasksWithoutTimeEntries.length > 0) {
+        risks.push({
+          type: 'missing_time_logs',
+          severity: 'medium',
+          description: `${tasksWithoutTimeEntries.length} active tasks have no time logs`,
+          data: tasksWithoutTimeEntries
+        });
+      }
+
+      // Store risks for tracking
+      for (const risk of risks) {
+        await supabase.from('insights').insert({
+          project_id: projectId,
+          type: 'risk_detection',
+          data: risk
+        });
       }
 
       return risks;
@@ -497,15 +704,56 @@ export const integrationService = {
     }
   },
 
+  async flagBudgetRisk(projectId: string, utilizationPercent: number): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('insights')
+        .insert({
+          project_id: projectId,
+          type: 'budget_risk',
+          data: {
+            utilization_percent: utilizationPercent,
+            severity: utilizationPercent > 95 ? 'critical' : 'warning',
+            detected_at: new Date().toISOString()
+          }
+        });
+
+      return !error;
+    } catch (error) {
+      console.error('Error flagging budget risk:', error);
+      return false;
+    }
+  },
+
+  async flagResourceRisk(resourceId: string, allocationPercent: number): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('insights')
+        .insert({
+          type: 'resource_risk',
+          data: {
+            resource_id: resourceId,
+            allocation_percent: allocationPercent,
+            severity: 'warning',
+            detected_at: new Date().toISOString()
+          }
+        });
+
+      return !error;
+    } catch (error) {
+      console.error('Error flagging resource risk:', error);
+      return false;
+    }
+  },
+
   // Integration event handlers
   async triggerTaskCreatedIntegrations(task: any): Promise<void> {
     try {
       // Sync to PlanBoard
       await this.syncTaskToPlanBoard(task.id);
       
-      // Create CollabSpace notification
+      // Create CollabSpace notification if assigned
       if (task.assigned_to && task.assigned_to.length > 0) {
-        // Notify assigned users in relevant channels
         await this.triggerAutomation('task_assigned', task);
       }
       
@@ -513,6 +761,9 @@ export const integrationService = {
       if (task.project_id) {
         await this.detectProjectRisks(task.project_id);
       }
+
+      // Update InsightIQ metrics
+      await this.aggregateTaskPerformance(task.project_id);
     } catch (error) {
       console.error('Error triggering task created integrations:', error);
     }
@@ -534,6 +785,18 @@ export const integrationService = {
 
       // Sync to PlanBoard for timeline updates
       await this.syncTaskToPlanBoard(task.id);
+
+      // Update project timeline in PlanBoard
+      if (timeEntry.project_id) {
+        const { data: projectTimeEntries } = await supabase
+          .from('time_entries')
+          .select('*')
+          .eq('project_id', timeEntry.project_id);
+
+        if (projectTimeEntries) {
+          await this.updateProjectTimeline(timeEntry.project_id, projectTimeEntries);
+        }
+      }
 
       // Check resource utilization
       await this.checkResourceUtilization(timeEntry.user_id);
@@ -589,7 +852,6 @@ export const integrationService = {
             break;
           case 'send_notification':
             if (sourceData.user_id) {
-              // Safe access to action_payload properties
               const actionPayload = rule.action_payload as any;
               await integrationService.createClientNotification(
                 sourceData.user_id,
@@ -599,8 +861,7 @@ export const integrationService = {
             }
             break;
           case 'create_risk':
-            // This would integrate with RiskRadar
-            console.log('Risk created:', sourceData);
+            await integrationService.detectProjectRisks(sourceData.project_id);
             break;
         }
       }
@@ -640,7 +901,6 @@ export const integrationService = {
     }
   },
 
-  // Real-time method to subscribe to project changes
   subscribeToProjectChanges(projectId: string, callback: (data: any) => void) {
     const channel = supabase
       .channel(`project_${projectId}_changes`)
@@ -667,7 +927,6 @@ export const integrationService = {
     return channel;
   },
 
-  // Real-time method to get integration actions for a user
   async getUserIntegrationActions(userId: string) {
     try {
       const { data, error } = await supabase
@@ -684,7 +943,6 @@ export const integrationService = {
     }
   },
 
-  // Method to check project milestones and send notifications
   async checkProjectMilestones(): Promise<{ project: Project, tasksDue: Task[] }[]> {
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -751,7 +1009,6 @@ export const integrationService = {
     }
   },
 
-  // Method to link documents to tasks
   async linkDocumentToTask(
     taskId: string, 
     documentUrl: string, 
@@ -776,6 +1033,13 @@ export const integrationService = {
         
       if (error) throw error;
       
+      // Notify other integrations
+      await this.triggerAutomation('document_linked', {
+        task_id: taskId,
+        document_name: documentName,
+        document_url: documentUrl
+      });
+      
       return true;
     } catch (error) {
       console.error('Error linking document to task:', error);
@@ -783,7 +1047,6 @@ export const integrationService = {
     }
   },
 
-  // Method to create integration actions
   async createIntegrationAction(
     sourceApp: string, 
     targetApp: string, 
