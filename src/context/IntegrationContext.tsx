@@ -11,6 +11,9 @@ interface IntegrationContextType {
   logTimeForTask: (taskId: string, minutes: number, description?: string) => Promise<TimeEntry | null>;
   checkProjectMilestones: () => Promise<{ project: Project, tasksDue: Task[] }[]>;
   linkDocumentToTask: (taskId: string, documentUrl: string, documentName: string) => Promise<boolean>;
+  shareFileWithUser: (fileId: string, userId: string, accessLevel?: 'view' | 'download') => Promise<boolean>;
+  assignResourceToTask: (taskId: string, resourceId: string) => Promise<boolean>;
+  createIntegrationAction: (sourceApp: string, targetApp: string, actionType: string, config?: any) => Promise<boolean>;
   dueTasks: { project: Project, tasksDue: Task[] }[];
   isLoadingIntegrations: boolean;
   refreshIntegrations: () => Promise<void>;
@@ -147,15 +150,14 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const triggerAutomation = async (eventType: string, sourceData: any) => {
-    return await integrationService.triggerAutomation(eventType, sourceData);
-  };
-
   const value: IntegrationContextType = {
     createTaskFromNote: integrationService.createTaskFromNote,
     logTimeForTask: integrationService.logTimeForTask,
     checkProjectMilestones: integrationService.checkProjectMilestones,
     linkDocumentToTask: integrationService.linkDocumentToTask,
+    shareFileWithUser: integrationService.shareFileWithUser,
+    assignResourceToTask: integrationService.assignResourceToTask,
+    createIntegrationAction: integrationService.createIntegrationAction,
     dueTasks,
     isLoadingIntegrations,
     refreshIntegrations,
@@ -163,7 +165,7 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
     subscribeToProject,
     unsubscribeFromProject,
     integrationActions,
-    triggerAutomation
+    triggerAutomation: integrationService.triggerAutomation
   };
 
   return (

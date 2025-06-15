@@ -2,10 +2,13 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Task } from '@/utils/dbtypes';
-import { Clock, AlertCircle, FileBox, User } from 'lucide-react';
+import { Clock, AlertCircle, FileBox, User, Share, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import TaskIntegrations from './TaskIntegrations';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useIntegration } from '@/context/IntegrationContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface TaskDetailWithIntegrationsProps {
   task: Task | null;
@@ -18,6 +21,9 @@ const TaskDetailWithIntegrations: React.FC<TaskDetailWithIntegrationsProps> = ({
   projects, 
   teamMembers 
 }) => {
+  const { assignResourceToTask, shareFileWithUser, triggerAutomation } = useIntegration();
+  const { toast } = useToast();
+
   if (!task) {
     return (
       <Card>
@@ -51,6 +57,32 @@ const TaskDetailWithIntegrations: React.FC<TaskDetailWithIntegrationsProps> = ({
     }
   };
 
+  const handleAssignResource = async (resourceId: string) => {
+    const success = await assignResourceToTask(task.id, resourceId);
+    if (success) {
+      toast({
+        title: 'Resource Assigned',
+        description: 'Resource has been successfully assigned to the task.',
+      });
+    } else {
+      toast({
+        title: 'Assignment Failed',
+        description: 'Failed to assign resource to the task.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleQuickAction = async (actionType: string) => {
+    const success = await triggerAutomation(actionType, { task_id: task.id });
+    if (success) {
+      toast({
+        title: 'Action Triggered',
+        description: `${actionType} action has been triggered for this task.`,
+      });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Card>
@@ -62,10 +94,12 @@ const TaskDetailWithIntegrations: React.FC<TaskDetailWithIntegrationsProps> = ({
                 {getProjectName(task.project_id)}
               </CardDescription>
             </div>
-            <Badge variant={task.status === 'done' ? 'success' : 'secondary'}>
-              {task.status === 'inProgress' ? 'In Progress' : 
-               task.status.charAt(0).toUpperCase() + task.status.slice(1)}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant={task.status === 'done' ? 'success' : 'secondary'}>
+                {task.status === 'inProgress' ? 'In Progress' : 
+                 task.status.charAt(0).toUpperCase() + task.status.slice(1)}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -108,6 +142,37 @@ const TaskDetailWithIntegrations: React.FC<TaskDetailWithIntegrationsProps> = ({
               <span className="text-sm">
                 {`Assigned to: ${getAssigneeName(task.assigned_to)}`}
               </span>
+            </div>
+          </div>
+
+          {/* Quick Integration Actions */}
+          <div className="border-t pt-4">
+            <div className="text-sm font-medium mb-2">Quick Actions</div>
+            <div className="flex gap-2 flex-wrap">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => handleQuickAction('sync_planboard')}
+              >
+                <Share className="h-3 w-3 mr-1" />
+                Sync to PlanBoard
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => handleQuickAction('notify_team')}
+              >
+                <UserPlus className="h-3 w-3 mr-1" />
+                Notify Team
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => handleQuickAction('create_time_log')}
+              >
+                <Clock className="h-3 w-3 mr-1" />
+                Log Time
+              </Button>
             </div>
           </div>
         </CardContent>
