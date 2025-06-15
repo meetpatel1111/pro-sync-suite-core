@@ -169,7 +169,7 @@ const IntegrationDashboard: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
             Overview
@@ -185,10 +185,6 @@ const IntegrationDashboard: React.FC = () => {
           <TabsTrigger value="marketplace" className="flex items-center gap-2">
             <ShoppingCart className="h-4 w-4" />
             Marketplace
-          </TabsTrigger>
-          <TabsTrigger value="templates" className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            Templates
           </TabsTrigger>
           <TabsTrigger value="sync" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -272,33 +268,8 @@ const IntegrationDashboard: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="workflows">
-          <AutomationWorkflowBuilder />
-        </TabsContent>
-
-        <TabsContent value="monitoring">
-          <IntegrationMonitoring />
-        </TabsContent>
-
-        <TabsContent value="marketplace">
-          <IntegrationMarketplace />
-        </TabsContent>
-
-        <TabsContent value="templates">
-          <IntegrationTemplates />
-        </TabsContent>
-
-        <TabsContent value="sync">
-          <RealTimeSyncStatus />
-        </TabsContent>
-
-        <TabsContent value="api">
-          <APIManagement />
-        </TabsContent>
-
-        <TabsContent value="flows" className="space-y-4">
+          {/* Integration Flow Map */}
           <Card>
             <CardHeader>
               <CardTitle>Integration Flow Map</CardTitle>
@@ -327,6 +298,26 @@ const IntegrationDashboard: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="workflows">
+          <AutomationWorkflowBuilder />
+        </TabsContent>
+
+        <TabsContent value="monitoring">
+          <IntegrationMonitoring />
+        </TabsContent>
+
+        <TabsContent value="marketplace">
+          <IntegrationMarketplace />
+        </TabsContent>
+
+        <TabsContent value="sync">
+          <RealTimeSyncStatus />
+        </TabsContent>
+
+        <TabsContent value="api">
+          <APIManagement />
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">

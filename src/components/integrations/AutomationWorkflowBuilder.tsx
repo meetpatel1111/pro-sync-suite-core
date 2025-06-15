@@ -21,7 +21,7 @@ import {
   Target
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { integrationService } from '@/services/integrationService';
+import { integrationDatabaseService, AutomationWorkflow } from '@/services/integrationDatabaseService';
 import { useAuth } from '@/hooks/useAuth';
 
 interface WorkflowStep {
@@ -49,10 +49,11 @@ const AutomationWorkflowBuilder: React.FC = () => {
     enabled: true,
     steps: []
   });
+  const [savedWorkflows, setSavedWorkflows] = useState<AutomationWorkflow[]>([]);
   const [isBuilding, setIsBuilding] = useState(false);
-  const [userIntegrations, setUserIntegrations] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // All ProSync Suite apps
   const apps = [
     'TaskMaster', 'TimeTrackPro', 'CollabSpace', 'PlanBoard', 
     'FileVault', 'BudgetBuddy', 'InsightIQ', 'ResourceHub', 
@@ -60,28 +61,38 @@ const AutomationWorkflowBuilder: React.FC = () => {
   ];
 
   const triggerTypes = {
-    'TaskMaster': ['task_created', 'task_updated', 'task_completed', 'task_assigned'],
-    'TimeTrackPro': ['time_logged', 'timer_started', 'timer_stopped'],
-    'CollabSpace': ['message_posted', 'file_shared', 'mention_created'],
-    'BudgetBuddy': ['expense_created', 'budget_exceeded', 'payment_due'],
-    'FileVault': ['file_uploaded', 'file_shared', 'file_deleted']
+    'TaskMaster': ['task_created', 'task_updated', 'task_completed', 'task_assigned', 'task_deleted', 'deadline_approaching'],
+    'TimeTrackPro': ['time_logged', 'timer_started', 'timer_stopped', 'timesheet_submitted', 'overtime_detected'],
+    'CollabSpace': ['message_posted', 'file_shared', 'mention_created', 'channel_created', 'user_joined'],
+    'PlanBoard': ['project_created', 'milestone_reached', 'deadline_missed', 'project_completed', 'resource_assigned'],
+    'FileVault': ['file_uploaded', 'file_shared', 'file_deleted', 'folder_created', 'access_granted'],
+    'BudgetBuddy': ['expense_created', 'budget_exceeded', 'payment_due', 'invoice_generated', 'budget_updated'],
+    'InsightIQ': ['report_generated', 'threshold_exceeded', 'anomaly_detected', 'kpi_updated', 'dashboard_viewed'],
+    'ResourceHub': ['resource_allocated', 'skill_updated', 'availability_changed', 'capacity_exceeded', 'team_updated'],
+    'ClientConnect': ['contact_created', 'meeting_scheduled', 'email_sent', 'deal_closed', 'follow_up_due'],
+    'RiskRadar': ['risk_identified', 'risk_level_changed', 'mitigation_completed', 'assessment_due', 'alert_triggered']
   };
 
   const actionTypes = {
-    'TaskMaster': ['create_task', 'update_task', 'assign_task', 'add_comment'],
-    'CollabSpace': ['send_message', 'create_channel', 'notify_team'],
-    'TimeTrackPro': ['start_timer', 'log_time', 'create_report'],
-    'BudgetBuddy': ['create_expense', 'update_budget', 'send_alert'],
-    'FileVault': ['upload_file', 'share_file', 'backup_file']
+    'TaskMaster': ['create_task', 'update_task', 'assign_task', 'add_comment', 'set_priority', 'update_status'],
+    'TimeTrackPro': ['start_timer', 'log_time', 'create_report', 'stop_timer', 'submit_timesheet', 'calculate_overtime'],
+    'CollabSpace': ['send_message', 'create_channel', 'notify_team', 'share_file', 'mention_user', 'send_notification'],
+    'PlanBoard': ['create_project', 'update_milestone', 'assign_resource', 'update_timeline', 'generate_report', 'notify_stakeholders'],
+    'FileVault': ['upload_file', 'share_file', 'backup_file', 'create_folder', 'grant_access', 'sync_documents'],
+    'BudgetBuddy': ['create_expense', 'update_budget', 'send_alert', 'generate_invoice', 'track_payment', 'create_report'],
+    'InsightIQ': ['generate_report', 'update_dashboard', 'send_analytics', 'create_visualization', 'export_data', 'schedule_report'],
+    'ResourceHub': ['allocate_resource', 'update_skill', 'set_availability', 'create_team', 'plan_capacity', 'generate_schedule'],
+    'ClientConnect': ['create_contact', 'schedule_meeting', 'send_email', 'update_deal', 'log_interaction', 'set_reminder'],
+    'RiskRadar': ['create_risk', 'update_assessment', 'assign_mitigation', 'send_alert', 'generate_report', 'update_status']
   };
 
   useEffect(() => {
     if (user) {
-      loadUserIntegrations();
+      loadWorkflows();
     }
   }, [user]);
 
-  const loadUserIntegrations = async () => {
+  const loadWorkflows = async () => {
     if (!user) {
       setLoading(false);
       return;
@@ -89,17 +100,15 @@ const AutomationWorkflowBuilder: React.FC = () => {
 
     try {
       setLoading(true);
-      const integrationActions = await integrationService.getUserIntegrationActions(user.id);
-      
-      // Extract unique apps from user's integrations
-      const connectedApps = [...new Set([
-        ...integrationActions.map(action => action.source_app),
-        ...integrationActions.map(action => action.target_app)
-      ])].filter(Boolean);
-      
-      setUserIntegrations(connectedApps);
+      const workflows = await integrationDatabaseService.getAutomationWorkflows(user.id);
+      setSavedWorkflows(workflows);
     } catch (error) {
-      console.error('Error loading user integrations:', error);
+      console.error('Error loading workflows:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load automation workflows',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
@@ -166,30 +175,34 @@ const AutomationWorkflowBuilder: React.FC = () => {
 
     setIsBuilding(true);
     try {
-      const success = await integrationService.createIntegrationAction(
-        'WorkflowBuilder',
-        'AutomationEngine',
-        'custom_workflow',
-        {
-          workflow: workflow,
-          user_id: user.id
-        }
-      );
+      const triggers = workflow.steps.filter(step => step.type === 'trigger');
+      const actions = workflow.steps.filter(step => step.type === 'action');
+      const conditions = workflow.steps.filter(step => step.type === 'condition');
 
-      if (success) {
-        toast({
-          title: 'Workflow Saved',
-          description: `Workflow "${workflow.name}" has been saved successfully`
-        });
-        
-        // Reset form
-        setWorkflow({
-          name: '',
-          description: '',
-          enabled: true,
-          steps: []
-        });
-      }
+      await integrationDatabaseService.createAutomationWorkflow({
+        user_id: user.id,
+        name: workflow.name,
+        description: workflow.description,
+        trigger_config: triggers.length > 0 ? triggers[0] : {},
+        actions_config: actions,
+        conditions_config: conditions,
+        is_active: workflow.enabled,
+        execution_count: 0
+      });
+
+      toast({
+        title: 'Workflow Saved',
+        description: `Workflow "${workflow.name}" has been saved successfully`
+      });
+      
+      // Reset form and reload workflows
+      setWorkflow({
+        name: '',
+        description: '',
+        enabled: true,
+        steps: []
+      });
+      loadWorkflows();
     } catch (error) {
       console.error('Error saving workflow:', error);
       toast({
@@ -199,6 +212,44 @@ const AutomationWorkflowBuilder: React.FC = () => {
       });
     } finally {
       setIsBuilding(false);
+    }
+  };
+
+  const deleteWorkflow = async (workflowId: string) => {
+    try {
+      await integrationDatabaseService.deleteAutomationWorkflow(workflowId);
+      toast({
+        title: 'Workflow Deleted',
+        description: 'Workflow has been deleted successfully'
+      });
+      loadWorkflows();
+    } catch (error) {
+      console.error('Error deleting workflow:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete workflow',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const toggleWorkflow = async (workflowId: string, isActive: boolean) => {
+    try {
+      await integrationDatabaseService.updateAutomationWorkflow(workflowId, {
+        is_active: !isActive
+      });
+      toast({
+        title: 'Workflow Updated',
+        description: `Workflow ${!isActive ? 'enabled' : 'disabled'} successfully`
+      });
+      loadWorkflows();
+    } catch (error) {
+      console.error('Error updating workflow:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update workflow',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -227,8 +278,6 @@ const AutomationWorkflowBuilder: React.FC = () => {
     }
   };
 
-  const availableApps = userIntegrations.length > 0 ? userIntegrations : apps;
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -239,14 +288,61 @@ const AutomationWorkflowBuilder: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Saved Workflows */}
+      {savedWorkflows.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Saved Workflows</CardTitle>
+            <CardDescription>Your automation workflows</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {savedWorkflows.map((savedWorkflow) => (
+                <div key={savedWorkflow.id} className="flex items-center justify-between p-3 border rounded">
+                  <div className="flex-1">
+                    <h4 className="font-medium">{savedWorkflow.name}</h4>
+                    <p className="text-sm text-muted-foreground">{savedWorkflow.description}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Badge variant={savedWorkflow.is_active ? 'default' : 'secondary'}>
+                        {savedWorkflow.is_active ? 'Active' : 'Inactive'}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        Executed {savedWorkflow.execution_count} times
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => toggleWorkflow(savedWorkflow.id, savedWorkflow.is_active)}
+                    >
+                      {savedWorkflow.is_active ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => deleteWorkflow(savedWorkflow.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Workflow Builder */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Zap className="h-5 w-5" />
-            Automation Workflow Builder
+            Create New Automation Workflow
           </CardTitle>
           <CardDescription>
-            Create custom automation workflows between your ProSync apps
+            Create custom automation workflows between all ProSync Suite apps
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -285,19 +381,17 @@ const AutomationWorkflowBuilder: React.FC = () => {
             />
           </div>
 
-          {/* Connection Status */}
-          {userIntegrations.length > 0 && (
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-              <h4 className="font-medium text-green-800 mb-2">Connected Apps</h4>
-              <div className="flex flex-wrap gap-2">
-                {userIntegrations.map(app => (
-                  <Badge key={app} variant="outline" className="text-green-700 border-green-300">
-                    {app}
-                  </Badge>
-                ))}
-              </div>
+          {/* Available Apps */}
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h4 className="font-medium text-blue-800 mb-2">Available ProSync Apps</h4>
+            <div className="flex flex-wrap gap-2">
+              {apps.map(app => (
+                <Badge key={app} variant="outline" className="text-blue-700 border-blue-300">
+                  {app}
+                </Badge>
+              ))}
             </div>
-          )}
+          </div>
 
           {/* Workflow Steps */}
           <div className="space-y-4">
@@ -323,11 +417,9 @@ const AutomationWorkflowBuilder: React.FC = () => {
               <div className="text-center py-8 text-muted-foreground">
                 <Zap className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No steps added yet. Click the buttons above to start building your workflow.</p>
-                {userIntegrations.length === 0 && (
-                  <p className="text-sm mt-2">
-                    Set up integrations first to unlock workflow automation
-                  </p>
-                )}
+                <p className="text-sm mt-2">
+                  Start with a trigger, add conditions if needed, then define actions
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -351,7 +443,7 @@ const AutomationWorkflowBuilder: React.FC = () => {
                                 <SelectValue placeholder="Select app" />
                               </SelectTrigger>
                               <SelectContent>
-                                {availableApps.map(app => (
+                                {apps.map(app => (
                                   <SelectItem key={app} value={app}>{app}</SelectItem>
                                 ))}
                               </SelectContent>
@@ -359,7 +451,7 @@ const AutomationWorkflowBuilder: React.FC = () => {
                           </div>
 
                           <div>
-                            <Label>Action</Label>
+                            <Label>Action/Event</Label>
                             <Select
                               value={step.action}
                               onValueChange={(action) => updateStep(step.id, { action })}
@@ -371,7 +463,7 @@ const AutomationWorkflowBuilder: React.FC = () => {
                               <SelectContent>
                                 {step.app && (step.type === 'trigger' ? triggerTypes[step.app as keyof typeof triggerTypes] : actionTypes[step.app as keyof typeof actionTypes])?.map(action => (
                                   <SelectItem key={action} value={action}>
-                                    {action.replace('_', ' ').toUpperCase()}
+                                    {action.replace(/_/g, ' ').toUpperCase()}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
