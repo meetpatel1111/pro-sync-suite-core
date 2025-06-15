@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Brain, MessageSquare, Lightbulb, Search, PenTool, FileText, BarChart } from 'lucide-react';
+import { Brain, MessageSquare, Lightbulb, Search, PenTool, FileText, BarChart, Calendar, Clock, BookOpen } from 'lucide-react';
 import AIChatWidget from '@/components/ai/AIChatWidget';
 import AITaskSuggestions from '@/components/ai/AITaskSuggestions';
 import AIInsightsWidget from '@/components/ai/AIInsightsWidget';
@@ -9,6 +9,10 @@ import AISmartSearch from '@/components/ai/AISmartSearch';
 import AIContentGenerator from '@/components/ai/AIContentGenerator';
 import AIDocumentSummarizer from '@/components/ai/AIDocumentSummarizer';
 import AIProjectAnalyzer from '@/components/ai/AIProjectAnalyzer';
+import AIMeetingNotesGenerator from '@/components/ai/AIMeetingNotesGenerator';
+import AISmartScheduling from '@/components/ai/AISmartScheduling';
+import AIAutoDocumentation from '@/components/ai/AIAutoDocumentation';
+import AIContextSuggestions from '@/components/ai/AIContextSuggestions';
 import APIKeyManagement from '@/components/settings/APIKeyManagement';
 
 const AIFeaturesTab: React.FC = () => {
@@ -82,13 +86,33 @@ const AIFeaturesTab: React.FC = () => {
         </div>
       </div>
 
-      {/* AI Features Grid - Row 3: Advanced Analytics */}
+      {/* AI Features Grid - Row 3: Advanced Analytics & Suggestions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-full">
         <div className="min-w-0">
           <AIProjectAnalyzer />
         </div>
         <div className="min-w-0">
           <AITaskSuggestions />
+        </div>
+      </div>
+
+      {/* AI Features Grid - Row 4: Meeting & Scheduling */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-full">
+        <div className="min-w-0">
+          <AIMeetingNotesGenerator />
+        </div>
+        <div className="min-w-0">
+          <AISmartScheduling />
+        </div>
+      </div>
+
+      {/* AI Features Grid - Row 5: Documentation & Context */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-full">
+        <div className="min-w-0">
+          <AIAutoDocumentation />
+        </div>
+        <div className="min-w-0">
+          <AIContextSuggestions />
         </div>
       </div>
 

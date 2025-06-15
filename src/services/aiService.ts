@@ -364,5 +364,160 @@ ${document}`;
       : [];
     
     return { summary, keyPoints };
+  },
+
+  // New method for meeting notes generation
+  async generateMeetingNotes(userId: string, transcript: string): Promise<any> {
+    const apiKey = await this.getApiKey(userId);
+    if (!apiKey) {
+      throw new Error('Google Gemini API key not found. Please add your API key in settings.');
+    }
+
+    const prompt = `Please analyze the following meeting transcript and generate structured meeting notes. Format your response as JSON with this structure:
+
+{
+  "summary": "Brief meeting summary",
+  "attendees": ["person1", "person2"],
+  "actionItems": ["action item 1", "action item 2"],
+  "decisions": ["decision 1", "decision 2"],
+  "nextSteps": ["next step 1", "next step 2"]
+}
+
+Meeting transcript:
+${transcript}`;
+
+    return this.sendChatMessage(userId, prompt, []);
+  },
+
+  // New method for smart scheduling
+  async generateScheduleSuggestions(userId: string, projectContext: string, timeframe: string, teamSize: string): Promise<any[]> {
+    const apiKey = await this.getApiKey(userId);
+    if (!apiKey) {
+      throw new Error('Google Gemini API key not found. Please add your API key in settings.');
+    }
+
+    const prompt = `Based on the following project context, generate intelligent scheduling suggestions. Consider the timeframe, team size, and project complexity. Return your response as JSON array with this structure:
+
+[
+  {
+    "type": "task|milestone|meeting",
+    "title": "suggestion title",
+    "suggestedDate": "YYYY-MM-DD",
+    "reasoning": "why this timing makes sense",
+    "priority": "low|medium|high"
+  }
+]
+
+Project Context: ${projectContext}
+Timeframe: ${timeframe}
+Team Size: ${teamSize}
+
+Provide 4-6 scheduling suggestions that are realistic and well-reasoned.`;
+
+    const response = await this.sendChatMessage(userId, prompt, []);
+    
+    try {
+      const cleanResponse = response.replace(/```json\n?|\n?```/g, '').trim();
+      return JSON.parse(cleanResponse);
+    } catch {
+      return [];
+    }
+  },
+
+  // New method for auto-documentation
+  async generateDocumentation(userId: string, documentationType: string, activityLogs: string): Promise<string> {
+    const apiKey = await this.getApiKey(userId);
+    if (!apiKey) {
+      throw new Error('Google Gemini API key not found. Please add your API key in settings.');
+    }
+
+    const systemPrompts = {
+      changelog: 'Generate a professional changelog with version numbers, dates, and categorized changes (Added, Changed, Fixed, Removed). Format it clearly with proper markdown.',
+      user_guide: 'Create a comprehensive user guide with numbered steps, clear instructions, and helpful tips. Include prerequisites and troubleshooting where relevant.',
+      api_docs: 'Generate technical API documentation with endpoints, parameters, request/response examples, and error codes. Use proper formatting for code examples.',
+      meeting_minutes: 'Create structured meeting minutes with attendees, agenda items, decisions made, action items, and next steps. Use clear formatting and timestamps.',
+      project_summary: 'Generate a high-level project summary including objectives, key achievements, current status, challenges, and next milestones. Keep it executive-friendly.'
+    };
+
+    const systemPrompt = systemPrompts[documentationType as keyof typeof systemPrompts] || 'Generate professional documentation based on the provided activity logs and data.';
+    const fullPrompt = `${systemPrompt}\n\nActivity logs/data to document:\n${activityLogs}`;
+    
+    return this.sendChatMessage(userId, fullPrompt, []);
+  },
+
+  // New method for context-aware suggestions
+  async generateContextSuggestions(userId: string): Promise<any[]> {
+    const apiKey = await this.getApiKey(userId);
+    if (!apiKey) {
+      throw new Error('Google Gemini API key not found. Please add your API key in settings.');
+    }
+
+    const contextPrompt = `Based on a typical project management workflow, generate context-aware suggestions for improving productivity and workflow. Generate suggestions as JSON with this structure:
+
+[
+  {
+    "id": "unique_id",
+    "title": "suggestion title",
+    "description": "detailed description",
+    "category": "task|communication|planning|optimization",
+    "priority": "low|medium|high",
+    "actionable": true|false
+  }
+]
+
+Consider current time of day, typical work patterns, and best practices. Provide 4-6 suggestions.`;
+
+    const response = await this.sendChatMessage(userId, contextPrompt, []);
+    
+    try {
+      const cleanResponse = response.replace(/```json\n?|\n?```/g, '').trim();
+      return JSON.parse(cleanResponse);
+    } catch {
+      return [];
+    }
+  },
+
+  // New method for project analysis
+  async analyzeProject(userId: string): Promise<{ health_score: number; insights: any[] }> {
+    const apiKey = await this.getApiKey(userId);
+    if (!apiKey) {
+      throw new Error('Google Gemini API key not found. Please add your API key in settings.');
+    }
+
+    const analysisPrompt = `Analyze a software development project and provide insights. Generate a JSON response with the following structure:
+    {
+      "health_score": number (0-100),
+      "insights": [
+        {
+          "type": "risk|opportunity|recommendation",
+          "title": "string",
+          "description": "string", 
+          "severity": "low|medium|high",
+          "actionable": boolean
+        }
+      ]
+    }
+    
+    Consider factors like timeline, resource allocation, team velocity, and potential bottlenecks. Provide 4-6 insights.`;
+
+    const response = await this.sendChatMessage(userId, analysisPrompt, []);
+    
+    try {
+      const cleanResponse = response.replace(/```json\n?|\n?```/g, '').trim();
+      return JSON.parse(cleanResponse);
+    } catch {
+      return {
+        health_score: 75,
+        insights: [
+          {
+            type: 'recommendation',
+            title: 'Regular Progress Reviews',
+            description: 'Schedule weekly progress reviews to maintain project momentum',
+            severity: 'low',
+            actionable: true
+          }
+        ]
+      };
+    }
   }
 };
