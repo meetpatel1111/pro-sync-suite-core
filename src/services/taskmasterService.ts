@@ -49,10 +49,10 @@ class TaskmasterService {
       id: data.id,
       name: data.name,
       description: data.description || '',
-      key: data.key,
-      status: data.status,
-      created_by: data.created_by,
-      user_id: data.user_id,
+      key: data.key || data.name?.substring(0, 3).toUpperCase() || 'PRJ',
+      status: (data.status === 'active' || data.status === 'archived') ? data.status : 'active',
+      created_by: data.created_by || data.owner_id || projectData.created_by,
+      user_id: data.user_id || projectData.user_id,
       created_at: data.created_at,
       updated_at: data.updated_at || data.created_at
     };
@@ -75,9 +75,9 @@ class TaskmasterService {
       id: data.id,
       name: data.name,
       description: data.description || '',
-      key: data.key,
-      status: data.status,
-      created_by: data.created_by,
+      key: data.key || data.name?.substring(0, 3).toUpperCase() || 'PRJ',
+      status: (data.status === 'active' || data.status === 'archived') ? data.status : 'active',
+      created_by: data.created_by || data.owner_id || data.user_id,
       user_id: data.user_id,
       created_at: data.created_at,
       updated_at: data.updated_at || data.created_at
@@ -96,7 +96,6 @@ class TaskmasterService {
   }
 
   async getBoards(projectId: string) {
-    // Try to get boards directly from the boards table if it exists
     try {
       const { data, error } = await supabase
         .from('boards')
@@ -244,7 +243,7 @@ class TaskmasterService {
 
     if (error) return { data: null, error };
 
-    // Transform the data to match TaskMasterTask interface with safe type casting
+    // Transform the data to match TaskMasterTask interface
     const tasks: TaskMasterTask[] = (data || []).map((item: any) => ({
       id: item.id,
       task_number: item.task_number || 1,

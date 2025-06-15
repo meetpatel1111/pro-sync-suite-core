@@ -254,6 +254,50 @@ export type Database = {
           },
         ]
       }
+      boards: {
+        Row: {
+          config: Json | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          project_id: string | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          project_id?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          project_id?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boards_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       budget_messages: {
         Row: {
           budget_id: string
@@ -1609,37 +1653,46 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string
+          created_by: string | null
           description: string | null
           end_date: string | null
           id: string
+          key: string | null
           name: string
           owner_id: string | null
           start_date: string | null
           status: string | null
+          updated_at: string | null
           user_id: string
         }
         Insert: {
           color?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           end_date?: string | null
           id?: string
+          key?: string | null
           name: string
           owner_id?: string | null
           start_date?: string | null
           status?: string | null
+          updated_at?: string | null
           user_id: string
         }
         Update: {
           color?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           end_date?: string | null
           id?: string
+          key?: string | null
           name?: string
           owner_id?: string | null
           start_date?: string | null
           status?: string | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -2000,6 +2053,50 @@ export type Database = {
           },
         ]
       }
+      task_history: {
+        Row: {
+          action: string
+          created_at: string | null
+          description: string | null
+          field_name: string | null
+          id: string
+          new_value: string | null
+          old_value: string | null
+          task_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          description?: string | null
+          field_name?: string | null
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          task_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          description?: string | null
+          field_name?: string | null
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          task_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_history_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_mentions: {
         Row: {
           id: string
@@ -2112,60 +2209,103 @@ export type Database = {
       }
       tasks: {
         Row: {
+          actual_hours: number | null
           assigned_to: string[] | null
+          assignee_id: string | null
+          board_id: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
           due_date: string | null
+          estimate_hours: number | null
           id: string
+          linked_task_ids: string[] | null
           parent_task_id: string | null
+          position: number | null
           priority: string
           project_id: string | null
           recurrence_rule: string | null
+          reporter_id: string | null
           reviewer_id: string | null
+          sprint_id: string | null
           start_date: string | null
           status: string
+          task_key: string | null
+          task_number: number | null
           title: string
+          type: string | null
           updated_at: string | null
+          updated_by: string | null
           visibility: string | null
         }
         Insert: {
+          actual_hours?: number | null
           assigned_to?: string[] | null
+          assignee_id?: string | null
+          board_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           due_date?: string | null
+          estimate_hours?: number | null
           id?: string
+          linked_task_ids?: string[] | null
           parent_task_id?: string | null
+          position?: number | null
           priority: string
           project_id?: string | null
           recurrence_rule?: string | null
+          reporter_id?: string | null
           reviewer_id?: string | null
+          sprint_id?: string | null
           start_date?: string | null
           status: string
+          task_key?: string | null
+          task_number?: number | null
           title: string
+          type?: string | null
           updated_at?: string | null
+          updated_by?: string | null
           visibility?: string | null
         }
         Update: {
+          actual_hours?: number | null
           assigned_to?: string[] | null
+          assignee_id?: string | null
+          board_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           due_date?: string | null
+          estimate_hours?: number | null
           id?: string
+          linked_task_ids?: string[] | null
           parent_task_id?: string | null
+          position?: number | null
           priority?: string
           project_id?: string | null
           recurrence_rule?: string | null
+          reporter_id?: string | null
           reviewer_id?: string | null
+          sprint_id?: string | null
           start_date?: string | null
           status?: string
+          task_key?: string | null
+          task_number?: number | null
           title?: string
+          type?: string | null
           updated_at?: string | null
+          updated_by?: string | null
           visibility?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_parent_task_id_fkey"
             columns: ["parent_task_id"]
