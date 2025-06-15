@@ -9,7 +9,7 @@ import APIKeyManagement from '@/components/settings/APIKeyManagement';
 
 const AIFeaturesTab: React.FC = () => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-hidden">
       {/* Header */}
       <Card>
         <CardHeader>
@@ -24,22 +24,22 @@ const AIFeaturesTab: React.FC = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex items-center gap-3 p-4 border rounded-lg">
-              <MessageSquare className="h-8 w-8 text-blue-500" />
-              <div>
+              <MessageSquare className="h-8 w-8 text-blue-500 flex-shrink-0" />
+              <div className="min-w-0">
                 <h3 className="font-medium">AI Chat Assistant</h3>
                 <p className="text-sm text-muted-foreground">Get help with your projects</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-4 border rounded-lg">
-              <Lightbulb className="h-8 w-8 text-yellow-500" />
-              <div>
+              <Lightbulb className="h-8 w-8 text-yellow-500 flex-shrink-0" />
+              <div className="min-w-0">
                 <h3 className="font-medium">Smart Suggestions</h3>
                 <p className="text-sm text-muted-foreground">AI-powered task recommendations</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-4 border rounded-lg">
-              <Brain className="h-8 w-8 text-purple-500" />
-              <div>
+              <Brain className="h-8 w-8 text-purple-500 flex-shrink-0" />
+              <div className="min-w-0">
                 <h3 className="font-medium">Productivity Insights</h3>
                 <p className="text-sm text-muted-foreground">Data-driven productivity tips</p>
               </div>
@@ -52,20 +52,20 @@ const AIFeaturesTab: React.FC = () => {
       <APIKeyManagement />
 
       {/* AI Features Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-full">
         {/* AI Chat Widget */}
-        <div>
+        <div className="min-w-0">
           <AIChatWidget />
         </div>
 
         {/* AI Task Suggestions */}
-        <div>
+        <div className="min-w-0">
           <AITaskSuggestions />
         </div>
       </div>
 
       {/* AI Insights Widget - Full Width */}
-      <div>
+      <div className="max-w-full">
         <AIInsightsWidget />
       </div>
     </div>

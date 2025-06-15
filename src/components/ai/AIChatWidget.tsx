@@ -100,7 +100,7 @@ const AIChatWidget: React.FC = () => {
 
   if (hasApiKey === null) {
     return (
-      <Card className="h-96">
+      <Card className="h-[500px] max-h-[calc(100vh-200px)] min-h-[400px]">
         <CardContent className="flex items-center justify-center h-full">
           <Loader2 className="h-6 w-6 animate-spin" />
         </CardContent>
@@ -110,7 +110,7 @@ const AIChatWidget: React.FC = () => {
 
   if (!hasApiKey) {
     return (
-      <Card className="h-96">
+      <Card className="h-[500px] max-h-[calc(100vh-200px)] min-h-[400px]">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
@@ -123,7 +123,7 @@ const AIChatWidget: React.FC = () => {
           <p className="text-sm text-muted-foreground mb-4">
             To use the AI assistant, please add your Google Gemini API key in the settings.
           </p>
-          <Button onClick={() => window.location.href = '/user-settings'}>
+          <Button onClick={() => window.location.href = '/settings'}>
             Go to Settings
           </Button>
         </CardContent>
@@ -132,14 +132,14 @@ const AIChatWidget: React.FC = () => {
   }
 
   return (
-    <Card className="h-96 flex flex-col">
-      <CardHeader className="pb-3">
+    <Card className="h-[500px] max-h-[calc(100vh-200px)] min-h-[400px] flex flex-col overflow-hidden">
+      <CardHeader className="pb-3 flex-shrink-0">
         <CardTitle className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5" />
           AI Assistant
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col p-0">
+      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
         <ScrollArea className="flex-1 px-4">
           <div className="space-y-4 py-4">
             {messages.map((message) => (
@@ -150,12 +150,12 @@ const AIChatWidget: React.FC = () => {
                 }`}
               >
                 <div
-                  className={`flex gap-2 max-w-[80%] ${
+                  className={`flex gap-2 max-w-[85%] ${
                     message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
                   }`}
                 >
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                       message.role === 'user'
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted'
@@ -168,13 +168,13 @@ const AIChatWidget: React.FC = () => {
                     )}
                   </div>
                   <div
-                    className={`rounded-lg px-3 py-2 ${
+                    className={`rounded-lg px-3 py-2 break-words ${
                       message.role === 'user'
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted'
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    <p className="text-sm whitespace-pre-wrap word-break break-words">{message.content}</p>
                   </div>
                 </div>
               </div>
@@ -195,7 +195,7 @@ const AIChatWidget: React.FC = () => {
           </div>
         </ScrollArea>
         
-        <div className="border-t p-4">
+        <div className="border-t p-4 flex-shrink-0">
           <div className="flex gap-2">
             <Input
               value={input}
@@ -203,12 +203,13 @@ const AIChatWidget: React.FC = () => {
               onKeyPress={handleKeyPress}
               placeholder="Ask me anything about your projects..."
               disabled={isLoading}
-              className="flex-1"
+              className="flex-1 min-w-0"
             />
             <Button
               onClick={handleSendMessage}
               disabled={!input.trim() || isLoading}
               size="sm"
+              className="flex-shrink-0"
             >
               <Send className="h-4 w-4" />
             </Button>
