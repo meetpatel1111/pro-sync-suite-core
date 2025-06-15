@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Project, Board, TaskMasterTask } from '@/types/taskmaster';
 
@@ -94,6 +95,48 @@ class TaskmasterService {
     return { error };
   }
 
+  private validateAndTransformBoard(item: any): Board {
+    // Validate and cast board type
+    const validTypes = ['kanban', 'scrum', 'timeline', 'issue_tracker'] as const;
+    const boardType = validTypes.includes(item.type) ? item.type as typeof validTypes[number] : 'kanban';
+    
+    // Parse and validate config
+    let config;
+    try {
+      if (typeof item.config === 'string') {
+        config = JSON.parse(item.config);
+      } else {
+        config = item.config;
+      }
+    } catch {
+      config = {
+        columns: [
+          { id: 'todo', name: 'To Do' },
+          { id: 'in_progress', name: 'In Progress' },
+          { id: 'done', name: 'Done' }
+        ]
+      };
+    }
+
+    return {
+      id: item.id,
+      project_id: item.project_id,
+      name: item.name,
+      type: boardType,
+      description: item.description || '',
+      config: config || {
+        columns: [
+          { id: 'todo', name: 'To Do' },
+          { id: 'in_progress', name: 'In Progress' },
+          { id: 'done', name: 'Done' }
+        ]
+      },
+      created_by: item.created_by,
+      created_at: item.created_at,
+      updated_at: item.updated_at || item.created_at
+    };
+  }
+
   async getBoards(projectId: string) {
     try {
       const { data, error } = await supabase
@@ -106,47 +149,9 @@ class TaskmasterService {
         return { data: [], error: null };
       }
 
-      const boards: Board[] = (data || []).map((item: any) => {
-        // Validate and cast board type
-        const validTypes = ['kanban', 'scrum', 'timeline', 'issue_tracker'] as const;
-        const boardType = validTypes.includes(item.type) ? item.type as typeof validTypes[number] : 'kanban';
-        
-        // Parse and validate config
-        let config;
-        try {
-          if (typeof item.config === 'string') {
-            config = JSON.parse(item.config);
-          } else {
-            config = item.config;
-          }
-        } catch {
-          config = {
-            columns: [
-              { id: 'todo', name: 'To Do' },
-              { id: 'in_progress', name: 'In Progress' },
-              { id: 'done', name: 'Done' }
-            ]
-          };
-        }
-
-        return {
-          id: item.id,
-          project_id: item.project_id,
-          name: item.name,
-          type: boardType,
-          description: item.description || '',
-          config: config || {
-            columns: [
-              { id: 'todo', name: 'To Do' },
-              { id: 'in_progress', name: 'In Progress' },
-              { id: 'done', name: 'Done' }
-            ]
-          },
-          created_by: item.created_by,
-          created_at: item.created_at,
-          updated_at: item.updated_at || item.created_at
-        };
-      });
+      const boards: Board[] = (data || []).map((item: any) => 
+        this.validateAndTransformBoard(item)
+      );
 
       return { data: boards, error: null };
     } catch (e) {
@@ -178,40 +183,7 @@ class TaskmasterService {
 
       if (error) return { data: null, error };
 
-      // Validate and cast board type
-      const validTypes = ['kanban', 'scrum', 'timeline', 'issue_tracker'] as const;
-      const boardType = validTypes.includes(data.type) ? data.type as typeof validTypes[number] : 'kanban';
-      
-      // Parse config if it's a string
-      let config;
-      try {
-        if (typeof data.config === 'string') {
-          config = JSON.parse(data.config);
-        } else {
-          config = data.config;
-        }
-      } catch {
-        config = {
-          columns: [
-            { id: 'todo', name: 'To Do' },
-            { id: 'in_progress', name: 'In Progress' },
-            { id: 'done', name: 'Done' }
-          ]
-        };
-      }
-
-      const board: Board = {
-        id: data.id,
-        project_id: data.project_id,
-        name: data.name,
-        type: boardType,
-        description: data.description || '',
-        config: config,
-        created_by: data.created_by,
-        created_at: data.created_at,
-        updated_at: data.updated_at || data.created_at
-      };
-
+      const board = this.validateAndTransformBoard(data);
       return { data: board, error: null };
     } catch (e) {
       // Fallback: create a mock board if boards table doesn't exist yet
@@ -248,40 +220,7 @@ class TaskmasterService {
 
       if (error) return { data: null, error };
 
-      // Validate and cast board type
-      const validTypes = ['kanban', 'scrum', 'timeline', 'issue_tracker'] as const;
-      const boardType = validTypes.includes(data.type) ? data.type as typeof validTypes[number] : 'kanban';
-      
-      // Parse config if it's a string
-      let config;
-      try {
-        if (typeof data.config === 'string') {
-          config = JSON.parse(data.config);
-        } else {
-          config = data.config;
-        }
-      } catch {
-        config = {
-          columns: [
-            { id: 'todo', name: 'To Do' },
-            { id: 'in_progress', name: 'In Progress' },
-            { id: 'done', name: 'Done' }
-          ]
-        };
-      }
-
-      const board: Board = {
-        id: data.id,
-        project_id: data.project_id,
-        name: data.name,
-        type: boardType,
-        description: data.description || '',
-        config: config,
-        created_by: data.created_by,
-        created_at: data.created_at,
-        updated_at: data.updated_at || data.created_at
-      };
-
+      const board = this.validateAndTransformBoard(data);
       return { data: board, error: null };
     } catch (e) {
       return { data: null, error: { message: 'Board update not implemented yet' } };
@@ -304,15 +243,15 @@ class TaskmasterService {
   private validateAndTransformTask(item: any, boardId?: string): TaskMasterTask {
     // Validate priority
     const validPriorities = ['low', 'medium', 'high', 'critical'] as const;
-    const priority = validPriorities.includes(item.priority) ? item.priority : 'medium';
+    const priority = validPriorities.includes(item.priority) ? item.priority as typeof validPriorities[number] : 'medium';
     
     // Validate type
     const validTypes = ['task', 'bug', 'story', 'epic'] as const;
-    const type = validTypes.includes(item.type) ? item.type : 'task';
+    const type = validTypes.includes(item.type) ? item.type as typeof validTypes[number] : 'task';
     
     // Validate visibility
     const validVisibilities = ['team', 'private', 'public'] as const;
-    const visibility = validVisibilities.includes(item.visibility) ? item.visibility : 'team';
+    const visibility = validVisibilities.includes(item.visibility) ? item.visibility as typeof validVisibilities[number] : 'team';
 
     return {
       id: item.id,
