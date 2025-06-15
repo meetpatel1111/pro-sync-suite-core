@@ -68,6 +68,11 @@ export default function Auth() {
     navigate('/privacy');
   };
 
+  const handleAboutClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate('/about');
+  };
+
   const validateEmail = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) {
@@ -422,22 +427,27 @@ export default function Auth() {
               )}
             </Button>
             
-            <div className="text-center text-xs text-muted-foreground">
-              By logging in, you agree to our{" "}
-              <button
-                type="button"
-                onClick={handleTermsClick}
-                className="text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+            <div className="text-center text-sm text-muted-foreground">
+              By signing up, you agree to our{' '}
+              <button 
+                onClick={() => navigate('/terms', { state: { from: 'auth' } })}
+                className="underline underline-offset-4 hover:text-primary transition-colors"
               >
                 Terms of Service
-              </button>{" "}
-              and{" "}
-              <button
-                type="button"
-                onClick={handlePrivacyClick}
-                className="text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+              </button>{' '}
+              and{' '}
+              <button 
+                onClick={() => navigate('/privacy', { state: { from: 'auth' } })}
+                className="underline underline-offset-4 hover:text-primary transition-colors"
               >
                 Privacy Policy
+              </button>
+              {'. '}
+              <button 
+                onClick={() => navigate('/about', { state: { from: 'auth' } })}
+                className="underline underline-offset-4 hover:text-primary transition-colors"
+              >
+                About ProSync Suite
               </button>
             </div>
           </form>
