@@ -17,12 +17,14 @@ import {
   Zap,
   Workflow,
   Database,
-  Bell
+  Bell,
+  Info
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { integrationService } from '@/services/integrationService';
 import { useAuth } from '@/hooks/useAuth';
 import IntegrationHealthChecker from './IntegrationHealthChecker';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const QuickIntegrationActions: React.FC = () => {
   const { user } = useAuth();
@@ -397,6 +399,184 @@ const QuickIntegrationActions: React.FC = () => {
       case 'health-check':
         return <IntegrationHealthChecker />;
 
+      case 'link-file':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Link File to Task</CardTitle>
+              <CardDescription>Attach a file to an existing task using simple IDs</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Use simple reference IDs. For files, check FileVault for the file name or ID. For tasks, use the task key (e.g., "PROJ-123") or check TaskMaster.
+                </AlertDescription>
+              </Alert>
+              
+              <div>
+                <Label htmlFor="fileId">File ID or Name</Label>
+                <Input
+                  id="fileId"
+                  value={fileLinkForm.fileId}
+                  onChange={(e) => setFileLinkForm(prev => ({ ...prev, fileId: e.target.value }))}
+                  placeholder="e.g., document.pdf, file123, or report-2024"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter the file name, ID, or reference from FileVault
+                </p>
+              </div>
+              
+              <div>
+                <Label htmlFor="taskId">Task ID or Key</Label>
+                <Input
+                  id="taskId"
+                  value={fileLinkForm.taskId}
+                  onChange={(e) => setFileLinkForm(prev => ({ ...prev, taskId: e.target.value }))}
+                  placeholder="e.g., PROJ-123, task456, or Feature Implementation"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter the task key, ID, or title from TaskMaster
+                </p>
+              </div>
+              
+              <div className="flex space-x-2">
+                <Button onClick={handleLinkFile} disabled={loading}>
+                  {loading ? 'Linking...' : 'Link File'}
+                </Button>
+                <Button variant="outline" onClick={() => setActiveAction(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 'log-time':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Log Time to Task</CardTitle>
+              <CardDescription>Record time spent on a specific task</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Use the task key (e.g., "PROJ-123") or task title from TaskMaster to identify the task.
+                </AlertDescription>
+              </Alert>
+              
+              <div>
+                <Label htmlFor="taskId">Task ID or Key</Label>
+                <Input
+                  id="taskId"
+                  value={timeLogForm.taskId}
+                  onChange={(e) => setTimeLogForm(prev => ({ ...prev, taskId: e.target.value }))}
+                  placeholder="e.g., PROJ-123, Bug Fix, or task456"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter the task key, ID, or title from TaskMaster
+                </p>
+              </div>
+              
+              <div>
+                <Label htmlFor="minutes">Time (minutes)</Label>
+                <Input
+                  id="minutes"
+                  type="number"
+                  value={timeLogForm.minutes}
+                  onChange={(e) => setTimeLogForm(prev => ({ ...prev, minutes: parseInt(e.target.value) || 0 }))}
+                  placeholder="Enter minutes"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="description">Description (optional)</Label>
+                <Input
+                  id="description"
+                  value={timeLogForm.description}
+                  onChange={(e) => setTimeLogForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="What did you work on?"
+                />
+              </div>
+              
+              <div className="flex space-x-2">
+                <Button onClick={handleLogTime} disabled={loading}>
+                  {loading ? 'Logging...' : 'Log Time'}
+                </Button>
+                <Button variant="outline" onClick={() => setActiveAction(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 'task-from-chat':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Create Task from Chat Message</CardTitle>
+              <CardDescription>Convert a chat message into a structured task</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Use channel names (e.g., "general", "development") and project keys (e.g., "PROJ") for easy reference.
+                </AlertDescription>
+              </Alert>
+              
+              <div>
+                <Label htmlFor="message">Chat Message</Label>
+                <Textarea
+                  id="message"
+                  value={taskFromChatForm.message}
+                  onChange={(e) => setTaskFromChatForm(prev => ({ ...prev, message: e.target.value }))}
+                  placeholder="Enter the chat message to convert to a task..."
+                  rows={3}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="channelId">Channel Name (optional)</Label>
+                <Input
+                  id="channelId"
+                  value={taskFromChatForm.channelId}
+                  onChange={(e) => setTaskFromChatForm(prev => ({ ...prev, channelId: e.target.value }))}
+                  placeholder="e.g., general, development, support"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter the channel name from CollabSpace
+                </p>
+              </div>
+              
+              <div>
+                <Label htmlFor="projectId">Project Key (optional)</Label>
+                <Input
+                  id="projectId"
+                  value={taskFromChatForm.projectId}
+                  onChange={(e) => setTaskFromChatForm(prev => ({ ...prev, projectId: e.target.value }))}
+                  placeholder="e.g., PROJ, WEB, MOBILE"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter the project key from TaskMaster/PlanBoard
+                </p>
+              </div>
+              
+              <div className="flex space-x-2">
+                <Button onClick={handleCreateTaskFromChat} disabled={loading}>
+                  {loading ? 'Creating...' : 'Create Task'}
+                </Button>
+                <Button variant="outline" onClick={() => setActiveAction(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
       case 'bulk-sync':
         return (
           <Card>
@@ -596,140 +776,6 @@ const QuickIntegrationActions: React.FC = () => {
           </Card>
         );
 
-      case 'task-from-chat':
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Create Task from Chat Message</CardTitle>
-              <CardDescription>Convert a chat message into a structured task</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="message">Chat Message</Label>
-                <Textarea
-                  id="message"
-                  value={taskFromChatForm.message}
-                  onChange={(e) => setTaskFromChatForm(prev => ({ ...prev, message: e.target.value }))}
-                  placeholder="Enter the chat message to convert to a task..."
-                  rows={3}
-                />
-              </div>
-              <div>
-                <Label htmlFor="channelId">Channel ID (optional)</Label>
-                <Input
-                  id="channelId"
-                  value={taskFromChatForm.channelId}
-                  onChange={(e) => setTaskFromChatForm(prev => ({ ...prev, channelId: e.target.value }))}
-                  placeholder="Enter channel ID"
-                />
-              </div>
-              <div>
-                <Label htmlFor="projectId">Project ID (optional)</Label>
-                <Input
-                  id="projectId"
-                  value={taskFromChatForm.projectId}
-                  onChange={(e) => setTaskFromChatForm(prev => ({ ...prev, projectId: e.target.value }))}
-                  placeholder="Enter project ID"
-                />
-              </div>
-              <div className="flex space-x-2">
-                <Button onClick={handleCreateTaskFromChat} disabled={loading}>
-                  {loading ? 'Creating...' : 'Create Task'}
-                </Button>
-                <Button variant="outline" onClick={() => setActiveAction(null)}>
-                  Cancel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        );
-
-      case 'log-time':
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Log Time to Task</CardTitle>
-              <CardDescription>Record time spent on a specific task</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="taskId">Task ID</Label>
-                <Input
-                  id="taskId"
-                  value={timeLogForm.taskId}
-                  onChange={(e) => setTimeLogForm(prev => ({ ...prev, taskId: e.target.value }))}
-                  placeholder="Enter task ID"
-                />
-              </div>
-              <div>
-                <Label htmlFor="minutes">Time (minutes)</Label>
-                <Input
-                  id="minutes"
-                  type="number"
-                  value={timeLogForm.minutes}
-                  onChange={(e) => setTimeLogForm(prev => ({ ...prev, minutes: parseInt(e.target.value) || 0 }))}
-                  placeholder="Enter minutes"
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description (optional)</Label>
-                <Input
-                  id="description"
-                  value={timeLogForm.description}
-                  onChange={(e) => setTimeLogForm(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="What did you work on?"
-                />
-              </div>
-              <div className="flex space-x-2">
-                <Button onClick={handleLogTime} disabled={loading}>
-                  {loading ? 'Logging...' : 'Log Time'}
-                </Button>
-                <Button variant="outline" onClick={() => setActiveAction(null)}>
-                  Cancel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        );
-
-      case 'link-file':
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Link File to Task</CardTitle>
-              <CardDescription>Attach a file to an existing task</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="fileId">File ID</Label>
-                <Input
-                  id="fileId"
-                  value={fileLinkForm.fileId}
-                  onChange={(e) => setFileLinkForm(prev => ({ ...prev, fileId: e.target.value }))}
-                  placeholder="Enter file ID"
-                />
-              </div>
-              <div>
-                <Label htmlFor="taskId">Task ID</Label>
-                <Input
-                  id="taskId"
-                  value={fileLinkForm.taskId}
-                  onChange={(e) => setFileLinkForm(prev => ({ ...prev, taskId: e.target.value }))}
-                  placeholder="Enter task ID"
-                />
-              </div>
-              <div className="flex space-x-2">
-                <Button onClick={handleLinkFile} disabled={loading}>
-                  {loading ? 'Linking...' : 'Link File'}
-                </Button>
-                <Button variant="outline" onClick={() => setActiveAction(null)}>
-                  Cancel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        );
-
       default:
         return null;
     }
@@ -740,7 +786,7 @@ const QuickIntegrationActions: React.FC = () => {
       <div>
         <h3 className="text-lg font-semibold mb-2">Quick Integration Actions</h3>
         <p className="text-muted-foreground">
-          Perform common integration tasks across your ProSync Suite apps
+          Perform common integration tasks across your ProSync Suite apps using simple, human-readable IDs
         </p>
       </div>
 
