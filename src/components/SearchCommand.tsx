@@ -38,20 +38,20 @@ interface SearchCommandProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Updated type for Lucide icons
-type LucideIcon = React.ComponentType<{ className?: string; size?: number }>;
+// Use React.ComponentType for proper icon typing
+type IconComponent = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
 interface AppItem {
   name: string;
   path: string;
-  icon: LucideIcon;
+  icon: IconComponent;
   description: string;
 }
 
 interface ActionItem {
   name: string;
   action: () => void;
-  icon: LucideIcon;
+  icon: IconComponent;
   description: string;
 }
 
