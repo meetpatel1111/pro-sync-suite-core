@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
 import AppLayout from '@/components/AppLayout';
 import ProjectSidebar from '@/components/planboard/ProjectSidebar';
+import ProjectEditDialog from '@/components/planboard/ProjectEditDialog';
 import ViewSelector from '@/components/planboard/ViewSelector';
 import FilterPanel from '@/components/planboard/FilterPanel';
 import BoardView from '@/components/planboard/BoardView';
@@ -30,6 +31,8 @@ const PlanBoard = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({});
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [projectToEdit, setProjectToEdit] = useState<UIProject | null>(null);
   const [teamMembers] = useState([
     { id: '1', name: 'John Doe' },
     { id: '2', name: 'Jane Smith' },
@@ -144,10 +147,8 @@ const PlanBoard = () => {
   };
 
   const handleEditProject = (project: UIProject) => {
-    toast({
-      title: 'Edit Project',
-      description: `Edit modal for ${project.name} would open here`,
-    });
+    setProjectToEdit(project);
+    setEditDialogOpen(true);
   };
 
   const handleArchiveProject = (project: UIProject) => {
@@ -159,6 +160,10 @@ const PlanBoard = () => {
 
   const handleSelectProject = (project: UIProject) => {
     setSelectedProject(project);
+  };
+
+  const handleProjectUpdated = () => {
+    loadProjects();
   };
 
   const handleTaskMove = (taskId: string, newStatus: string, newIndex: number) => {
@@ -314,6 +319,13 @@ const PlanBoard = () => {
           </div>
         </div>
       </div>
+
+      <ProjectEditDialog
+        project={projectToEdit}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onProjectUpdated={handleProjectUpdated}
+      />
     </AppLayout>
   );
 };
