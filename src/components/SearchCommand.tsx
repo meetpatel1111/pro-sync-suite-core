@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   CommandDialog,
@@ -37,17 +38,20 @@ interface SearchCommandProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// Updated type for Lucide icons
+type LucideIcon = React.ComponentType<{ className?: string; size?: number }>;
+
 interface AppItem {
   name: string;
   path: string;
-  icon: React.ComponentType<any>;
+  icon: LucideIcon;
   description: string;
 }
 
 interface ActionItem {
   name: string;
   action: () => void;
-  icon: React.ComponentType<any>;
+  icon: LucideIcon;
   description: string;
 }
 

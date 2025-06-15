@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
 import { dbService } from '@/services/dbService';
@@ -8,11 +9,8 @@ import FilterPanel from '@/components/planboard/FilterPanel';
 import BoardView from '@/components/planboard/BoardView';
 import TimelineView from '@/components/planboard/TimelineView';
 import GanttChart from '@/components/GanttChart';
-import CreateProjectDialog from '@/components/planboard/CreateProjectDialog';
-import ProjectMembersDialog from '@/components/planboard/ProjectMembersDialog';
-import TaskDetailDialog from '@/components/planboard/TaskDetailDialog';
 import { Button } from '@/components/ui/button';
-import { Plus, Calendar as CalendarIcon, Users, Settings } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 type ViewType = 'gantt' | 'timeline' | 'calendar' | 'board';
@@ -25,11 +23,9 @@ interface Project {
   status: string;
   start_date?: string;
   end_date?: string;
-  owner_id: string;
   user_id: string;
   created_at: string;
   member_count?: number;
-  user_role?: string;
 }
 
 interface Task {
@@ -41,19 +37,10 @@ interface Task {
   start_date?: string;
   due_date?: string;
   assignee?: string;
-  assigned_to?: string[];
   project_id?: string;
   progress?: number;
-  estimated_hours?: number;
   comment_count?: number;
   attachment_count?: number;
-}
-
-interface ProjectMember {
-  id: string;
-  user_id: string;
-  role: 'viewer' | 'editor' | 'manager';
-  user_name?: string;
 }
 
 const PlanBoard = () => {
@@ -64,9 +51,6 @@ const PlanBoard = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({});
-  const [showCreateProject, setShowCreateProject] = useState(false);
-  const [showProjectMembers, setShowProjectMembers] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [teamMembers] = useState([
     { id: '1', name: 'John Doe' },
     { id: '2', name: 'Jane Smith' },
@@ -82,21 +66,19 @@ const PlanBoard = () => {
   useEffect(() => {
     if (selectedProject) {
       loadTasks();
-      loadUserProjectView();
     }
   }, [selectedProject]);
 
   const loadProjects = async () => {
     try {
-      const { data, error } = await dbService.getProjectsWithMembers(session!.user.id);
+      const { data, error } = await dbService.getProjects(session!.user.id);
       if (error) throw error;
       
       const projectsWithDefaults = (data || []).map(project => ({
         ...project,
         color: project.color || '#3b82f6',
         status: project.status || 'active',
-        member_count: Math.floor(Math.random() * 5) + 1, // Mock data for now
-        user_role: 'manager', // Will be determined by project_members query
+        member_count: Math.floor(Math.random() * 5) + 1, // Mock data
       }));
       
       setProjects(projectsWithDefaults);
@@ -120,14 +102,16 @@ const PlanBoard = () => {
     if (!selectedProject) return;
     
     try {
-      const { data, error } = await dbService.getProjectTasks(selectedProject.id, filters);
+      const { data, error } = await dbService.getTasks(session!.user.id, {
+        project: selectedProject.id,
+      });
       
       if (error) throw error;
       
-      const tasksWithMockData = (data || []).map((task: any) => ({
+      const tasksWithMockData = (data || []).map(task => ({
         ...task,
         start_date: task.start_date || new Date().toISOString().split('T')[0],
-        progress: task.progress || Math.floor(Math.random() * 100),
+        progress: Math.floor(Math.random() * 100),
         comment_count: Math.floor(Math.random() * 5),
         attachment_count: Math.floor(Math.random() * 3),
       }));
@@ -143,49 +127,12 @@ const PlanBoard = () => {
     }
   };
 
-  const loadUserProjectView = async () => {
-    if (!selectedProject) return;
-    
-    try {
-      const { data, error } = await dbService.getUserProjectView(selectedProject.id, session!.user.id);
-      if (!error && data && Array.isArray(data) && data.length > 0) {
-        setCurrentView(data[0].default_view as ViewType);
-      }
-    } catch (error) {
-      console.error('Error loading user project view:', error);
-    }
-  };
-
-  const handleCreateProject = async (projectData: { name: string; description?: string; color: string }) => {
-    try {
-      const { data, error } = await dbService.createProject({
-        ...projectData,
-        user_id: session!.user.id,
-        status: 'active',
-      });
-      
-      if (error) throw error;
-      
-      // Add the creator as a manager
-      if (data && data[0]) {
-        await dbService.addProjectMember(data[0].id, session!.user.id, 'manager');
-      }
-      
-      toast({
-        title: 'Success',
-        description: 'Project created successfully',
-      });
-      
-      loadProjects();
-      setShowCreateProject(false);
-    } catch (error) {
-      console.error('Error creating project:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create project',
-        variant: 'destructive',
-      });
-    }
+  const handleCreateProject = () => {
+    // This would open a project creation modal
+    toast({
+      title: 'Create Project',
+      description: 'Project creation modal would open here',
+    });
   };
 
   const handleEditProject = (project: Project) => {
@@ -195,44 +142,15 @@ const PlanBoard = () => {
     });
   };
 
-  const handleArchiveProject = async (project: Project) => {
-    try {
-      const { error } = await dbService.updateProject(project.id, { status: 'archived' });
-      if (error) throw error;
-      
-      toast({
-        title: 'Success',
-        description: `${project.name} has been archived`,
-      });
-      
-      loadProjects();
-    } catch (error) {
-      console.error('Error archiving project:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to archive project',
-        variant: 'destructive',
-      });
-    }
+  const handleArchiveProject = (project: Project) => {
+    toast({
+      title: 'Archive Project',
+      description: `${project.name} would be archived`,
+    });
   };
 
   const handleSelectProject = (project: Project) => {
     setSelectedProject(project);
-  };
-
-  const handleViewChange = async (view: ViewType) => {
-    setCurrentView(view);
-    
-    // Save user preference
-    if (selectedProject) {
-      try {
-        await dbService.updateUserProjectView(selectedProject.id, session!.user.id, {
-          default_view: view,
-        });
-      } catch (error) {
-        console.error('Error saving view preference:', error);
-      }
-    }
   };
 
   const handleTaskMove = (taskId: string, newStatus: string, newIndex: number) => {
@@ -244,11 +162,10 @@ const PlanBoard = () => {
   };
 
   const handleTaskClick = (task: Task) => {
-    setSelectedTask(task);
-  };
-
-  const handleManageMembers = () => {
-    setShowProjectMembers(true);
+    toast({
+      title: 'Task Details',
+      description: `Task details modal for "${task.title}" would open here`,
+    });
   };
 
   // Prepare board columns
@@ -330,7 +247,7 @@ const PlanBoard = () => {
           projects={projects}
           selectedProject={selectedProject}
           onSelectProject={handleSelectProject}
-          onCreateProject={() => setShowCreateProject(true)}
+          onCreateProject={handleCreateProject}
           onEditProject={handleEditProject}
           onArchiveProject={handleArchiveProject}
         />
@@ -339,42 +256,19 @@ const PlanBoard = () => {
           {/* Header */}
           <div className="border-b bg-background p-4">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <h1 className="text-2xl font-bold">
-                      {selectedProject?.name || 'Select a Project'}
-                    </h1>
-                    {selectedProject?.description && (
-                      <p className="text-muted-foreground mt-1">
-                        {selectedProject.description}
-                      </p>
-                    )}
-                  </div>
-                  {selectedProject && (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleManageMembers}
-                      >
-                        <Users className="h-4 w-4 mr-1" />
-                        Members
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                      >
-                        <Settings className="h-4 w-4 mr-1" />
-                        Settings
-                      </Button>
-                    </div>
-                  )}
-                </div>
+              <div>
+                <h1 className="text-2xl font-bold">
+                  {selectedProject?.name || 'Select a Project'}
+                </h1>
+                {selectedProject?.description && (
+                  <p className="text-muted-foreground mt-1">
+                    {selectedProject.description}
+                  </p>
+                )}
               </div>
               
               <div className="flex items-center gap-2">
-                <ViewSelector currentView={currentView} onViewChange={handleViewChange} />
+                <ViewSelector currentView={currentView} onViewChange={setCurrentView} />
                 <Button size="sm">
                   <Plus className="h-4 w-4 mr-1" />
                   Add Task
@@ -403,7 +297,7 @@ const PlanBoard = () => {
                   <p className="text-muted-foreground mb-4">
                     Choose a project from the sidebar to start planning
                   </p>
-                  <Button onClick={() => setShowCreateProject(true)}>
+                  <Button onClick={handleCreateProject}>
                     <Plus className="h-4 w-4 mr-2" />
                     Create New Project
                   </Button>
@@ -413,29 +307,6 @@ const PlanBoard = () => {
           </div>
         </div>
       </div>
-
-      {/* Dialogs */}
-      <CreateProjectDialog
-        open={showCreateProject}
-        onOpenChange={setShowCreateProject}
-        onCreateProject={handleCreateProject}
-      />
-
-      {selectedProject && (
-        <ProjectMembersDialog
-          open={showProjectMembers}
-          onOpenChange={setShowProjectMembers}
-          project={selectedProject}
-        />
-      )}
-
-      {selectedTask && (
-        <TaskDetailDialog
-          open={!!selectedTask}
-          onOpenChange={(open) => !open && setSelectedTask(null)}
-          task={selectedTask}
-        />
-      )}
     </AppLayout>
   );
 };
