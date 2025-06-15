@@ -30,10 +30,9 @@ export const aiService = {
   async hasApiKey(userId: string): Promise<boolean> {
     try {
       const { data, error } = await supabase
-        .from('openai_api_keys')
+        .from('gemini_api_keys')
         .select('id')
         .eq('user_id', userId)
-        .eq('provider', 'openai')
         .maybeSingle();
 
       if (error) {
@@ -52,11 +51,11 @@ export const aiService = {
   async saveApiKey(userId: string, apiKey: string): Promise<boolean> {
     try {
       const { error } = await supabase
-        .from('openai_api_keys')
+        .from('gemini_api_keys')
         .upsert({
           user_id: userId,
           api_key: apiKey,
-          provider: 'openai',
+          provider: 'google_gemini',
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id,provider'
@@ -78,10 +77,9 @@ export const aiService = {
   async getApiKey(userId: string): Promise<string | null> {
     try {
       const { data, error } = await supabase
-        .from('openai_api_keys')
+        .from('gemini_api_keys')
         .select('api_key')
         .eq('user_id', userId)
-        .eq('provider', 'openai')
         .maybeSingle();
 
       if (error) {
@@ -96,46 +94,43 @@ export const aiService = {
     }
   },
 
-  // Generate task suggestions
+  // Generate task suggestions using Gemini
   async generateTaskSuggestions(userId: string, context: string): Promise<TaskSuggestion[]> {
     const apiKey = await this.getApiKey(userId);
     if (!apiKey) {
-      throw new Error('OpenAI API key not found. Please add your API key in settings.');
+      throw new Error('Google Gemini API key not found. Please add your API key in settings.');
     }
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a helpful AI assistant that generates task suggestions for productivity improvement. Return suggestions as a JSON array with id, title, description, priority (low/medium/high), category, and estimatedTime fields.'
-            },
-            {
-              role: 'user',
-              content: `Generate 3-5 task suggestions based on this context: ${context}`
-            }
-          ],
-          max_tokens: 1000,
-          temperature: 0.7,
+          contents: [{
+            parts: [{
+              text: `You are a helpful AI assistant that generates task suggestions for productivity improvement. Generate 3-5 task suggestions based on this context: ${context}. Return your response as a JSON array with the following structure for each task: {"id": "unique_id", "title": "task title", "description": "task description", "priority": "low|medium|high", "category": "category name", "estimatedTime": "time estimate"}. Only return the JSON array, no other text.`
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 1,
+            topP: 1,
+            maxOutputTokens: 1000,
+          }
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+        throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
-      const content = data.choices[0]?.message?.content;
+      const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (!content) {
-        throw new Error('No response from OpenAI');
+        throw new Error('No response from Gemini');
       }
 
       // Try to parse JSON response
@@ -161,46 +156,43 @@ export const aiService = {
     }
   },
 
-  // Generate productivity insights
+  // Generate productivity insights using Gemini
   async generateProductivityInsights(userId: string): Promise<ProductivityInsight[]> {
     const apiKey = await this.getApiKey(userId);
     if (!apiKey) {
-      throw new Error('OpenAI API key not found. Please add your API key in settings.');
+      throw new Error('Google Gemini API key not found. Please add your API key in settings.');
     }
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a productivity expert AI. Generate actionable productivity insights as a JSON array with id, title, description, type (tip/warning/achievement), and actionable (boolean) fields.'
-            },
-            {
-              role: 'user',
-              content: 'Generate 3-4 productivity insights for a project management context.'
-            }
-          ],
-          max_tokens: 1000,
-          temperature: 0.7,
+          contents: [{
+            parts: [{
+              text: 'You are a productivity expert AI. Generate 3-4 actionable productivity insights for a project management context. Return your response as a JSON array with the following structure: {"id": "unique_id", "title": "insight title", "description": "insight description", "type": "tip|warning|achievement", "actionable": true|false}. Only return the JSON array, no other text.'
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 1,
+            topP: 1,
+            maxOutputTokens: 1000,
+          }
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+        throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
-      const content = data.choices[0]?.message?.content;
+      const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (!content) {
-        throw new Error('No response from OpenAI');
+        throw new Error('No response from Gemini');
       }
 
       // Try to parse JSON response
@@ -225,52 +217,52 @@ export const aiService = {
     }
   },
 
-  // Send chat message - this replaces the missing chatWithAI method
+  // Send chat message using Gemini
   async sendChatMessage(userId: string, message: string, conversation: ChatMessage[]): Promise<string> {
     const apiKey = await this.getApiKey(userId);
     if (!apiKey) {
-      throw new Error('OpenAI API key not found. Please add your API key in settings.');
+      throw new Error('Google Gemini API key not found. Please add your API key in settings.');
     }
 
     try {
-      const messages = [
-        {
-          role: 'system',
-          content: 'You are a helpful AI assistant for project management and productivity. Be concise and practical in your responses.'
-        },
-        ...conversation.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        })),
-        {
-          role: 'user',
-          content: message
-        }
-      ];
+      // Build conversation history for Gemini
+      let conversationText = 'You are a helpful AI assistant for project management and productivity. Be concise and practical in your responses.\n\n';
+      
+      conversation.forEach(msg => {
+        conversationText += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`;
+      });
+      
+      conversationText += `User: ${message}\nAssistant:`;
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: messages,
-          max_tokens: 500,
-          temperature: 0.7,
+          contents: [{
+            parts: [{
+              text: conversationText
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 1,
+            topP: 1,
+            maxOutputTokens: 500,
+          }
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+        throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
-      const content = data.choices[0]?.message?.content;
+      const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (!content) {
-        throw new Error('No response from OpenAI');
+        throw new Error('No response from Gemini');
       }
 
       return content;

@@ -52,7 +52,7 @@ const APIKeyManagement: React.FC = () => {
       if (success) {
         toast({
           title: 'Success',
-          description: 'OpenAI API key saved successfully'
+          description: 'Google Gemini API key saved successfully'
         });
         setHasExistingKey(true);
         setApiKey(''); // Clear the input for security
@@ -79,15 +79,15 @@ const APIKeyManagement: React.FC = () => {
           API Key Management
         </CardTitle>
         <CardDescription>
-          Manage your OpenAI API key to enable AI features across ProSync Suite
+          Manage your Google Gemini API key to enable AI features across ProSync Suite
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* OpenAI API Key Section */}
+        {/* Google Gemini API Key Section */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-medium">OpenAI API Key</h4>
+              <h4 className="font-medium">Google Gemini API Key</h4>
               <p className="text-sm text-muted-foreground">
                 Required for AI chat, task suggestions, and productivity insights
               </p>
@@ -101,14 +101,14 @@ const APIKeyManagement: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            <Label htmlFor="openai-api-key">API Key</Label>
+            <Label htmlFor="gemini-api-key">API Key</Label>
             <div className="relative">
               <Input
-                id="openai-api-key"
+                id="gemini-api-key"
                 type={showApiKey ? 'text' : 'password'}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder={hasExistingKey ? '••••••••••••••••' : 'sk-...'}
+                placeholder={hasExistingKey ? '••••••••••••••••' : 'AIza...'}
                 className="pr-10"
               />
               <Button
@@ -141,7 +141,7 @@ const APIKeyManagement: React.FC = () => {
                 asChild
               >
                 <a
-                  href="https://platform.openai.com/api-keys"
+                  href="https://aistudio.google.com/app/apikey"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1"
@@ -161,8 +161,8 @@ const APIKeyManagement: React.FC = () => {
                   Security Notice
                 </p>
                 <p className="text-amber-700 dark:text-amber-300 mt-1">
-                  Your API key is encrypted and stored securely. It's only used to make requests to OpenAI on your behalf. 
-                  You can revoke access anytime by removing the key from your OpenAI account.
+                  Your API key is encrypted and stored securely. It's only used to make requests to Google Gemini on your behalf. 
+                  You can revoke access anytime by removing the key from your Google AI Studio account.
                 </p>
               </div>
             </div>

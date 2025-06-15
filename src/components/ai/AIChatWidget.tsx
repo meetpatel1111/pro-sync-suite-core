@@ -69,7 +69,7 @@ const AIChatWidget: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await aiService.chatWithAI(user.id, [...messages, userMessage]);
+      const response = await aiService.chatWithAI(user.id, userMessage.content, messages);
       
       const assistantMessage: ChatMessage = {
         id: `assistant_${Date.now()}`,
@@ -121,7 +121,7 @@ const AIChatWidget: React.FC = () => {
           <Bot className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="font-medium mb-2">AI Assistant Setup Required</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            To use the AI assistant, please add your OpenAI API key in the settings.
+            To use the AI assistant, please add your Google Gemini API key in the settings.
           </p>
           <Button onClick={() => window.location.href = '/user-settings'}>
             Go to Settings

@@ -1135,6 +1135,33 @@ export type Database = {
           },
         ]
       }
+      gemini_api_keys: {
+        Row: {
+          api_key: string
+          created_at: string | null
+          id: string
+          provider: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          api_key: string
+          created_at?: string | null
+          id?: string
+          provider?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          api_key?: string
+          created_at?: string | null
+          id?: string
+          provider?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       group_message_members: {
         Row: {
           group_id: string
