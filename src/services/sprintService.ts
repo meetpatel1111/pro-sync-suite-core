@@ -59,8 +59,8 @@ class SprintService {
       start_date: data.start_date,
       end_date: data.end_date,
       status: data.status as 'planned' | 'active' | 'completed',
-      capacity: (data as any).capacity || 0,
-      velocity: (data as any).velocity || 0,
+      capacity: data.capacity || 0,
+      velocity: data.velocity || 0,
       created_by: data.created_by,
       created_at: data.created_at,
       updated_at: data.updated_at
@@ -88,8 +88,8 @@ class SprintService {
       start_date: data.start_date,
       end_date: data.end_date,
       status: data.status as 'planned' | 'active' | 'completed',
-      capacity: (data as any).capacity || 0,
-      velocity: (data as any).velocity || 0,
+      capacity: data.capacity || 0,
+      velocity: data.velocity || 0,
       created_by: data.created_by,
       created_at: data.created_at,
       updated_at: data.updated_at
