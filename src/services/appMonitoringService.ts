@@ -68,7 +68,11 @@ export const appMonitoringService = {
       return [];
     }
 
-    return data || [];
+    // Type assertion to ensure status field matches our interface
+    return (data || []).map(item => ({
+      ...item,
+      status: item.status as 'healthy' | 'warning' | 'critical'
+    })) as AppHealthMetric[];
   },
 
   // Get performance metrics for a user within a time range
