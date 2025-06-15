@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
 import AppLayout from '@/components/AppLayout';
@@ -104,10 +105,10 @@ const PlanBoard = () => {
         throw error;
       }
       
-      const tasksWithDefaults = (data || []).map(task => ({
+      const tasksWithDefaults: Task[] = (data || []).map(task => ({
         ...task,
         start_date: task.start_date || new Date().toISOString().split('T')[0],
-        assignee: task.assigned_to?.[0] || null,
+        // Remove the assignee property since it's not in the Task interface
       }));
       
       console.log('Loaded tasks:', tasksWithDefaults);

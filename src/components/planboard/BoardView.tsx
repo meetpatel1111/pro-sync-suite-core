@@ -5,17 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar, Flag, MessageSquare, Paperclip } from 'lucide-react';
-
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  status: string;
-  priority: string;
-  assignee?: string;
-  due_date?: string;
-  assigned_to?: string[];
-}
+import { Task } from '@/utils/dbtypes';
 
 interface Column {
   id: string;
@@ -94,7 +84,7 @@ const BoardView = ({ columns, onTaskMove, onTaskClick }: BoardViewProps) => {
                               <h4 className="font-medium text-sm leading-tight">{task.title}</h4>
                               <div
                                 className={`w-3 h-3 rounded-full flex-shrink-0 ${
-                                  priorityColors[task.priority as keyof typeof priorityColors]
+                                  priorityColors[task.priority as keyof typeof priorityColors] || 'bg-gray-500'
                                 }`}
                               />
                             </div>
@@ -117,11 +107,11 @@ const BoardView = ({ columns, onTaskMove, onTaskClick }: BoardViewProps) => {
                                 )}
                               </div>
                               
-                              {(task.assignee || (task.assigned_to && task.assigned_to.length > 0)) && (
+                              {(task.assigned_to && task.assigned_to.length > 0) && (
                                 <Avatar className="h-6 w-6">
-                                  <AvatarImage src={`/avatar-${task.assignee || task.assigned_to?.[0]}.png`} />
+                                  <AvatarImage src={`/avatar-${task.assigned_to[0]}.png`} />
                                   <AvatarFallback className="text-xs">
-                                    {(task.assignee || task.assigned_to?.[0] || '').substring(0, 2).toUpperCase()}
+                                    {task.assigned_to[0].substring(0, 2).toUpperCase()}
                                   </AvatarFallback>
                                 </Avatar>
                               )}

@@ -4,17 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-
-interface Task {
-  id: string;
-  title: string;
-  status: string;
-  priority: string;
-  start_date?: string;
-  due_date?: string;
-  assignee?: string;
-  assigned_to?: string[];
-}
+import { Task } from '@/utils/dbtypes';
 
 interface TimelineViewProps {
   tasks: Task[];
@@ -30,7 +20,7 @@ const priorityColors = {
 };
 
 const statusColors = {
-  todo: '#gray',
+  todo: '#6b7280',
   'in-progress': '#3b82f6',
   review: '#8b5cf6',
   done: '#10b981',
@@ -121,17 +111,17 @@ const TimelineView = ({ tasks, onTaskClick, dateRange }: TimelineViewProps) => {
                         </Badge>
                         <div
                           className={`w-2 h-2 rounded-full ${
-                            priorityColors[task.priority as keyof typeof priorityColors]
+                            priorityColors[task.priority as keyof typeof priorityColors] || 'bg-gray-500'
                           }`}
                         />
                       </div>
                     </div>
                     
-                    {(task.assignee || (task.assigned_to && task.assigned_to.length > 0)) && (
+                    {(task.assigned_to && task.assigned_to.length > 0) && (
                       <Avatar className="h-6 w-6 ml-2">
-                        <AvatarImage src={`/avatar-${task.assignee || task.assigned_to?.[0]}.png`} />
+                        <AvatarImage src={`/avatar-${task.assigned_to[0]}.png`} />
                         <AvatarFallback className="text-xs">
-                          {(task.assignee || task.assigned_to?.[0] || '').substring(0, 2).toUpperCase()}
+                          {task.assigned_to[0].substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                     )}
@@ -149,7 +139,7 @@ const TimelineView = ({ tasks, onTaskClick, dateRange }: TimelineViewProps) => {
                         className="absolute h-6 cursor-pointer hover:shadow-md transition-shadow rounded-md"
                         style={{
                           ...barStyle,
-                          backgroundColor: statusColors[task.status as keyof typeof statusColors],
+                          backgroundColor: statusColors[task.status as keyof typeof statusColors] || statusColors.todo,
                           top: '50%',
                           transform: 'translateY(-50%)',
                         }}
