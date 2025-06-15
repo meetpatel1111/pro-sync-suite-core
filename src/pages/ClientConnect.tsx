@@ -1,21 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, Plus, Search, Phone, Mail, Building, Edit, Trash2, MessageSquare, Clock, User, FileText, FileCheck, CreditCard, Calendar, Bell } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
+import { 
+  ArrowLeft, Plus, Search, Filter, Star, Mail, Phone, MapPin, 
+  Calendar, Users, DollarSign, TrendingUp, Activity, Eye, 
+  Edit, MoreVertical, UserPlus, Building, Target, Zap, Globe
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
-import { Client, ClientNote } from '@/utils/dbtypes';
-import { ContactBook } from '@/components/clientconnect/ContactBook';
-import { useAuthContext } from '@/context/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const ClientConnect = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('clients');
   const [clients, setClients] = useState<Client[]>([]);
@@ -321,8 +328,56 @@ const ClientConnect = () => {
 
   return (
     <AppLayout>
+      {/* Modern Hero Card */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-700 p-8 text-white shadow-2xl mb-8">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
+        <div className="relative z-10">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+              <Building className="h-8 w-8" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight mb-2">ClientConnect</h1>
+              <p className="text-xl text-indigo-100 leading-relaxed">
+                Advanced client relationship management and business development
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 mt-6">
+            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
+              <Users className="h-4 w-4 mr-2" />
+              Client Management
+            </Badge>
+            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
+              <Globe className="h-4 w-4 mr-2" />
+              Relationship Tracking
+            </Badge>
+            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
+              <Target className="h-4 w-4 mr-2" />
+              Business Growth
+            </Badge>
+          </div>
+        </div>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32 backdrop-blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24 backdrop-blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 w-32 h-32 bg-white/5 rounded-full -translate-x-16 -translate-y-16 backdrop-blur-3xl"></div>
+      </div>
+
       <div className="space-y-6">
-        <div className="flex flex-col space-y-2 md:flex-row md:justify-between md:space-y-0">
+        <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
+          <div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="mb-4 gap-1" 
+              onClick={() => navigate('/')}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Button>
+          </div>
+          
           <div>
             <h1 className="text-3xl font-bold tracking-tight">ClientConnect</h1>
             <p className="text-muted-foreground">
