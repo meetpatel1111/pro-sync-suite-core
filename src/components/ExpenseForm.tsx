@@ -144,7 +144,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
         amount: parseFloat(amount),
         date: date.toISOString(),
         category_id: category || null,
-        project_id: projectId || null,
+        project_id: projectId === 'none' ? null : projectId || null,
         user_id: user.id,
         currency,
         receipt_url: receiptUrl,
@@ -275,7 +275,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
               <SelectValue placeholder="Select project" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">None</SelectItem>
+              <SelectItem value="none">None</SelectItem>
               {projects.map((project) => (
                 <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
               ))}
