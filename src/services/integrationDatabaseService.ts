@@ -16,6 +16,41 @@ export interface AutomationWorkflow {
   updated_at: string;
 }
 
+export interface IntegrationHealthStatus {
+  id: string;
+  user_id: string;
+  integration_id?: string;
+  service_name: string;
+  status: 'healthy' | 'warning' | 'error' | 'checking';
+  response_time: number;
+  uptime_percentage: number;
+  last_checked_at: string;
+  error_details?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IntegrationTemplate {
+  id: string;
+  user_id: string;
+  name: string;
+  description?: string;
+  category: string;
+  difficulty: string;
+  apps: string[];
+  tags: string[];
+  template_config: Record<string, any>;
+  is_public: boolean;
+  is_verified: boolean;
+  rating: number;
+  downloads: number;
+  execution_count: number;
+  last_used_at?: string;
+  success_rate: number;
+  created_at: string;
+  updated_at: string;
+}
+
 class IntegrationDatabaseService {
   async getAutomationWorkflows(userId: string): Promise<AutomationWorkflow[]> {
     try {
@@ -30,7 +65,18 @@ class IntegrationDatabaseService {
         throw error;
       }
 
-      return data || [];
+      return (data || []).map(item => ({
+        ...item,
+        trigger_config: typeof item.trigger_config === 'string' 
+          ? JSON.parse(item.trigger_config) 
+          : (item.trigger_config as Record<string, any>),
+        actions_config: typeof item.actions_config === 'string'
+          ? JSON.parse(item.actions_config)
+          : (item.actions_config as Record<string, any>[]),
+        conditions_config: typeof item.conditions_config === 'string'
+          ? JSON.parse(item.conditions_config)
+          : (item.conditions_config as Record<string, any>[])
+      }));
     } catch (error) {
       console.error('Error in getAutomationWorkflows:', error);
       throw error;
@@ -50,7 +96,18 @@ class IntegrationDatabaseService {
         throw error;
       }
 
-      return data;
+      return {
+        ...data,
+        trigger_config: typeof data.trigger_config === 'string' 
+          ? JSON.parse(data.trigger_config) 
+          : (data.trigger_config as Record<string, any>),
+        actions_config: typeof data.actions_config === 'string'
+          ? JSON.parse(data.actions_config)
+          : (data.actions_config as Record<string, any>[]),
+        conditions_config: typeof data.conditions_config === 'string'
+          ? JSON.parse(data.conditions_config)
+          : (data.conditions_config as Record<string, any>[])
+      };
     } catch (error) {
       console.error('Error in createAutomationWorkflow:', error);
       throw error;
@@ -71,7 +128,18 @@ class IntegrationDatabaseService {
         throw error;
       }
 
-      return data;
+      return {
+        ...data,
+        trigger_config: typeof data.trigger_config === 'string' 
+          ? JSON.parse(data.trigger_config) 
+          : (data.trigger_config as Record<string, any>),
+        actions_config: typeof data.actions_config === 'string'
+          ? JSON.parse(data.actions_config)
+          : (data.actions_config as Record<string, any>[]),
+        conditions_config: typeof data.conditions_config === 'string'
+          ? JSON.parse(data.conditions_config)
+          : (data.conditions_config as Record<string, any>[])
+      };
     } catch (error) {
       console.error('Error in updateAutomationWorkflow:', error);
       throw error;
@@ -138,6 +206,67 @@ class IntegrationDatabaseService {
       return data;
     } catch (error) {
       console.error('Error in triggerWorkflow:', error);
+      throw error;
+    }
+  }
+
+  async getIntegrationHealthStatus(userId: string): Promise<IntegrationHealthStatus[]> {
+    try {
+      const { data, error } = await supabase
+        .from('integration_health_status')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching integration health status:', error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error in getIntegrationHealthStatus:', error);
+      throw error;
+    }
+  }
+
+  async createIntegrationHealthStatus(statusData: Omit<IntegrationHealthStatus, 'id' | 'created_at' | 'updated_at'>): Promise<IntegrationHealthStatus> {
+    try {
+      const { data, error } = await supabase
+        .from('integration_health_status')
+        .insert([statusData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating integration health status:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in createIntegrationHealthStatus:', error);
+      throw error;
+    }
+  }
+
+  async updateIntegrationHealthStatus(statusId: string, updates: Partial<IntegrationHealthStatus>): Promise<IntegrationHealthStatus> {
+    try {
+      const { data, error } = await supabase
+        .from('integration_health_status')
+        .update(updates)
+        .eq('id', statusId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating integration health status:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in updateIntegrationHealthStatus:', error);
       throw error;
     }
   }
