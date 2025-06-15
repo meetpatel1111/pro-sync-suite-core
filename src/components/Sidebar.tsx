@@ -18,7 +18,8 @@ import {
   Network,
   CreditCard,
   UserCog,
-  Box
+  Box,
+  Brain
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -91,6 +92,31 @@ const Sidebar = ({ className }: SidebarProps) => {
         </div>
         <div className="px-4 py-2">
           <h3 className="mb-2 px-4 text-xs font-semibold text-muted-foreground">
+            AI & Automation
+          </h3>
+          <nav className="space-y-2">
+            <Link to="/ai-features">
+              <Button variant="ghost" className="w-full justify-start group">
+                <div className="relative mr-2">
+                  <Brain className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
+                AI Features
+              </Button>
+            </Link>
+            <Link to="/integrations">
+              <Button variant="ghost" className="w-full justify-start group">
+                <div className="relative mr-2">
+                  <Network className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
+                Integrations
+              </Button>
+            </Link>
+          </nav>
+        </div>
+        <div className="px-4 py-2">
+          <h3 className="mb-2 px-4 text-xs font-semibold text-muted-foreground">
             More Apps
           </h3>
           <nav className="space-y-2">
@@ -137,15 +163,6 @@ const Sidebar = ({ className }: SidebarProps) => {
                   <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </div>
                 ResourceHub
-              </Button>
-            </Link>
-            <Link to="/integrations">
-              <Button variant="ghost" className="w-full justify-start group">
-                <div className="relative mr-2">
-                  <Network className="h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
-                  <div className="absolute inset-0 h-4 w-4 bg-primary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </div>
-                Integrations
               </Button>
             </Link>
           </nav>

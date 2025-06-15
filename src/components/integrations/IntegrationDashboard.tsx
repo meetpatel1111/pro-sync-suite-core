@@ -16,8 +16,7 @@ import {
   TrendingUp,
   ShoppingCart,
   BarChart3,
-  Workflow,
-  Brain
+  Workflow
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { integrationService } from '@/services/integrationService';
@@ -28,7 +27,6 @@ import IntegrationMarketplace from './IntegrationMarketplace';
 import IntegrationTemplates from './IntegrationTemplates';
 import RealTimeSyncStatus from './RealTimeSyncStatus';
 import APIManagement from './APIManagement';
-import AIFeaturesTab from './AIFeaturesTab';
 
 const IntegrationDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -172,7 +170,7 @@ const IntegrationDashboard: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
             Overview
@@ -196,10 +194,6 @@ const IntegrationDashboard: React.FC = () => {
           <TabsTrigger value="api" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             API Management
-          </TabsTrigger>
-          <TabsTrigger value="ai" className="flex items-center gap-2">
-            <Brain className="h-4 w-4" />
-            AI Features
           </TabsTrigger>
         </TabsList>
 
@@ -321,10 +315,6 @@ const IntegrationDashboard: React.FC = () => {
 
         <TabsContent value="api">
           <APIManagement />
-        </TabsContent>
-
-        <TabsContent value="ai">
-          <AIFeaturesTab />
         </TabsContent>
       </Tabs>
     </div>
