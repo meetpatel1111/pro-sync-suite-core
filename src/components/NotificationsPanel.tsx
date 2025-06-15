@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, BellOff, Check, Clock, MessageSquare, RefreshCw, X, AlertCircle, CalendarClock, FileText } from 'lucide-react';
+import { Bell, BellOff, Check, Clock, MessageSquare, RefreshCw, X, AlertCircle, CalendarClock, FileText, Users, DollarSign, Shield, TrendingUp, Briefcase, Target } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { dbService } from '@/services/dbService';
@@ -28,6 +29,25 @@ const NotificationsPanel = () => {
 
   useEffect(() => {
     fetchNotifications();
+    
+    // Set up real-time notifications
+    const channel = supabase
+      .channel('notifications')
+      .on('postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications'
+        },
+        () => {
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchNotifications = async () => {
@@ -40,9 +60,8 @@ const NotificationsPanel = () => {
           description: "Please log in to view your notifications",
           variant: "destructive",
         });
-        setIsLoading(false);
-        
         setNotifications(getSampleNotifications());
+        setIsLoading(false);
         return;
       }
 
@@ -172,9 +191,24 @@ const NotificationsPanel = () => {
       case 'task':
         return <FileText className="h-5 w-5" />;
       case 'meeting':
+      case 'client':
         return <CalendarClock className="h-5 w-5" />;
       case 'message':
         return <MessageSquare className="h-5 w-5" />;
+      case 'budget':
+        return <DollarSign className="h-5 w-5" />;
+      case 'file':
+        return <FileText className="h-5 w-5" />;
+      case 'risk':
+        return <Shield className="h-5 w-5" />;
+      case 'insight':
+        return <TrendingUp className="h-5 w-5" />;
+      case 'resource':
+        return <Users className="h-5 w-5" />;
+      case 'project':
+        return <Briefcase className="h-5 w-5" />;
+      case 'timetrack':
+        return <Clock className="h-5 w-5" />;
       default:
         switch (type) {
           case 'info':
@@ -189,6 +223,22 @@ const NotificationsPanel = () => {
             return <Bell className="h-5 w-5" />;
         }
     }
+  };
+
+  const getAppName = (relatedTo?: string) => {
+    const appNames = {
+      task: 'TaskMaster',
+      timetrack: 'TimeTrackPro',
+      message: 'CollabSpace',
+      budget: 'BudgetBuddy',
+      file: 'FileVault',
+      client: 'ClientConnect',
+      risk: 'RiskRadar',
+      project: 'PlanBoard',
+      resource: 'ResourceHub',
+      insight: 'InsightIQ'
+    };
+    return relatedTo ? appNames[relatedTo as keyof typeof appNames] : '';
   };
 
   const filteredNotifications = () => {
@@ -217,22 +267,42 @@ const NotificationsPanel = () => {
       {
         id: 'sample2',
         user_id: 'user1',
-        title: 'Meeting Reminder',
-        message: 'Team standup in 15 minutes',
-        type: 'info',
-        related_to: 'meeting',
+        title: 'Budget Alert',
+        message: 'Project "Website Redesign" has exceeded 80% of its budget',
+        type: 'warning',
+        related_to: 'budget',
         read: false,
         created_at: new Date(Date.now() - 30 * 60000).toISOString()
       },
       {
         id: 'sample3',
         user_id: 'user1',
-        title: 'Task Deadline Approaching',
-        message: 'Task "Website redesign" is due tomorrow',
-        type: 'warning',
-        related_to: 'task',
+        title: 'File Shared',
+        message: 'John shared "Project Brief.pdf" with you',
+        type: 'info',
+        related_to: 'file',
         read: true,
         created_at: new Date(Date.now() - 2 * 3600000).toISOString()
+      },
+      {
+        id: 'sample4',
+        user_id: 'user1',
+        title: 'Meeting Reminder',
+        message: 'Team standup meeting in 15 minutes',
+        type: 'info',
+        related_to: 'client',
+        read: false,
+        created_at: new Date(Date.now() - 45 * 60000).toISOString()
+      },
+      {
+        id: 'sample5',
+        user_id: 'user1',
+        title: 'High Risk Alert',
+        message: 'High risk identified: "Server security vulnerability"',
+        type: 'error',
+        related_to: 'risk',
+        read: false,
+        created_at: new Date(Date.now() - 90 * 60000).toISOString()
       }
     ];
   };
@@ -288,16 +358,35 @@ const NotificationsPanel = () => {
                 {displayNotifications.map((notification) => (
                   <div 
                     key={notification.id}
-                    className={`flex items-start gap-4 p-3 rounded-lg ${notification.read ? 'bg-muted/30' : 'bg-muted/50'}`}
+                    className={`flex items-start gap-4 p-3 rounded-lg border transition-colors ${
+                      notification.read 
+                        ? 'bg-muted/30 border-muted' 
+                        : 'bg-muted/50 border-muted-foreground/20 shadow-sm'
+                    }`}
                   >
-                    <div className={`mt-1 ${notification.type === 'warning' ? 'text-amber-500' : notification.type === 'success' ? 'text-green-500' : notification.type === 'error' ? 'text-red-500' : ''}`}>
+                    <div className={`mt-1 ${
+                      notification.type === 'warning' ? 'text-amber-500' : 
+                      notification.type === 'success' ? 'text-green-500' : 
+                      notification.type === 'error' ? 'text-red-500' : 
+                      'text-blue-500'
+                    }`}>
                       {getNotificationIcon(notification.type, notification.related_to)}
                     </div>
                     <div className="flex-1 space-y-1">
-                      <div className="flex justify-between">
-                        <p className="font-medium">{notification.title}</p>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium">{notification.title}</p>
+                          {notification.related_to && (
+                            <Badge variant="outline" className="text-xs mt-1">
+                              {getAppName(notification.related_to)}
+                            </Badge>
+                          )}
+                        </div>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(notification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(notification.created_at).toLocaleTimeString([], { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground">
@@ -348,16 +437,35 @@ const NotificationsPanel = () => {
                 {filteredNotifications().map((notification) => (
                   <div 
                     key={notification.id}
-                    className={`flex items-start gap-4 p-3 rounded-lg ${notification.read ? 'bg-muted/30' : 'bg-muted/50'}`}
+                    className={`flex items-start gap-4 p-3 rounded-lg border transition-colors ${
+                      notification.read 
+                        ? 'bg-muted/30 border-muted' 
+                        : 'bg-muted/50 border-muted-foreground/20 shadow-sm'
+                    }`}
                   >
-                    <div className={`mt-1 ${notification.type === 'warning' ? 'text-amber-500' : notification.type === 'success' ? 'text-green-500' : notification.type === 'error' ? 'text-red-500' : ''}`}>
+                    <div className={`mt-1 ${
+                      notification.type === 'warning' ? 'text-amber-500' : 
+                      notification.type === 'success' ? 'text-green-500' : 
+                      notification.type === 'error' ? 'text-red-500' : 
+                      'text-blue-500'
+                    }`}>
                       {getNotificationIcon(notification.type, notification.related_to)}
                     </div>
                     <div className="flex-1 space-y-1">
-                      <div className="flex justify-between">
-                        <p className="font-medium">{notification.title}</p>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium">{notification.title}</p>
+                          {notification.related_to && (
+                            <Badge variant="outline" className="text-xs mt-1">
+                              {getAppName(notification.related_to)}
+                            </Badge>
+                          )}
+                        </div>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(notification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(notification.created_at).toLocaleTimeString([], { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground">
@@ -408,16 +516,35 @@ const NotificationsPanel = () => {
                 {filteredNotifications().map((notification) => (
                   <div 
                     key={notification.id}
-                    className={`flex items-start gap-4 p-3 rounded-lg ${notification.read ? 'bg-muted/30' : 'bg-muted/50'}`}
+                    className={`flex items-start gap-4 p-3 rounded-lg border transition-colors ${
+                      notification.read 
+                        ? 'bg-muted/30 border-muted' 
+                        : 'bg-muted/50 border-muted-foreground/20 shadow-sm'
+                    }`}
                   >
-                    <div className={`mt-1 ${notification.type === 'warning' ? 'text-amber-500' : notification.type === 'success' ? 'text-green-500' : notification.type === 'error' ? 'text-red-500' : ''}`}>
+                    <div className={`mt-1 ${
+                      notification.type === 'warning' ? 'text-amber-500' : 
+                      notification.type === 'success' ? 'text-green-500' : 
+                      notification.type === 'error' ? 'text-red-500' : 
+                      'text-blue-500'
+                    }`}>
                       {getNotificationIcon(notification.type, notification.related_to)}
                     </div>
                     <div className="flex-1 space-y-1">
-                      <div className="flex justify-between">
-                        <p className="font-medium">{notification.title}</p>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium">{notification.title}</p>
+                          {notification.related_to && (
+                            <Badge variant="outline" className="text-xs mt-1">
+                              {getAppName(notification.related_to)}
+                            </Badge>
+                          )}
+                        </div>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(notification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(notification.created_at).toLocaleTimeString([], { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground">

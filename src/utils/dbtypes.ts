@@ -116,6 +116,19 @@ export interface DataSetting {
   updated_at: string;
 }
 
+// Enhanced Notification interface
+export interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'success' | 'error';
+  related_to?: string;
+  related_id?: string;
+  read: boolean;
+  created_at: string;
+}
+
 // Additional missing types
 export interface BudgetMessage {
   id: string;

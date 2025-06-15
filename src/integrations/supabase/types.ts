@@ -3295,6 +3295,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      create_budget_notification: {
+        Args: {
+          p_user_id: string
+          p_project_name: string
+          p_percentage: number
+        }
+        Returns: undefined
+      }
       create_check_table_exists_function: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -3305,6 +3313,10 @@ export type Database = {
       }
       create_notifications_table: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      create_time_reminder_notification: {
+        Args: { p_user_id: string; p_message: string }
         Returns: undefined
       }
       create_user_profiles_table: {
