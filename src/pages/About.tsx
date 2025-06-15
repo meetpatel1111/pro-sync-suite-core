@@ -90,7 +90,7 @@ const About = () => {
                   <h2 className="text-2xl font-bold text-foreground m-0">Copyright Notice</h2>
                 </div>
                 <p className="text-muted-foreground leading-relaxed">
-                  © 2025 ProSync Technologies. All rights reserved. This software and its source code are the exclusive property of ProSync Technologies. No part of this software may be reproduced, distributed, or transmitted in any form or by any means without the prior written permission of the copyright owner.
+                  © 2025 pmeet464@gmail.com, Meetkumar Patel. All rights reserved. This software and its source code are the exclusive property of Meetkumar Patel. No part of this software may be reproduced, distributed, or transmitted in any form or by any means without the prior written permission of the copyright owner.
                 </p>
               </section>
 
@@ -114,7 +114,7 @@ const About = () => {
                   <h2 className="text-2xl font-bold text-foreground m-0">Intellectual Property</h2>
                 </div>
                 <p className="text-muted-foreground leading-relaxed">
-                  All trademarks, service marks, trade names, logos, and other intellectual property rights used in connection with ProSync Suite are the property of ProSync Technologies or their respective owners. The software includes proprietary features, algorithms, and methodologies developed through extensive research and development.
+                  All trademarks, service marks, trade names, logos, and other intellectual property rights used in connection with ProSync Suite are the property of Meetkumar Patel or their respective owners. The software includes proprietary features, algorithms, and methodologies developed through extensive research and development.
                 </p>
               </section>
 
@@ -147,10 +147,10 @@ const About = () => {
                   <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center">
                     <Building2 className="h-4 w-4 text-white" />
                   </div>
-                  <h2 className="text-2xl font-bold text-foreground m-0">Company Information</h2>
+                  <h2 className="text-2xl font-bold text-foreground m-0">Developer Information</h2>
                 </div>
                 <p className="text-muted-foreground leading-relaxed">
-                  ProSync Technologies is a leading software development company specializing in enterprise project management solutions. Founded with the mission to revolutionize how organizations manage complex projects, we combine innovative technology with deep industry expertise to deliver unparalleled value to our clients.
+                  ProSync Suite is developed and maintained by Meetkumar Patel (pmeet464@gmail.com), a software developer specializing in enterprise project management solutions. Founded with the mission to revolutionize how organizations manage complex projects, combining innovative technology with deep industry expertise to deliver unparalleled value to clients.
                 </p>
               </section>
             </div>
