@@ -111,7 +111,7 @@ export const aiService = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
+          model: 'gpt-4o-mini',
           messages: [
             {
               role: 'system',
@@ -176,7 +176,7 @@ export const aiService = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
+          model: 'gpt-4o-mini',
           messages: [
             {
               role: 'system',
@@ -225,7 +225,7 @@ export const aiService = {
     }
   },
 
-  // Send chat message
+  // Send chat message - this replaces the missing chatWithAI method
   async sendChatMessage(userId: string, message: string, conversation: ChatMessage[]): Promise<string> {
     const apiKey = await this.getApiKey(userId);
     if (!apiKey) {
@@ -255,7 +255,7 @@ export const aiService = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
+          model: 'gpt-4o-mini',
           messages: messages,
           max_tokens: 500,
           temperature: 0.7,
@@ -278,5 +278,10 @@ export const aiService = {
       console.error('Error sending chat message:', error);
       throw error;
     }
+  },
+
+  // Alias for backward compatibility
+  async chatWithAI(userId: string, message: string, conversation: ChatMessage[]): Promise<string> {
+    return this.sendChatMessage(userId, message, conversation);
   }
 };
