@@ -305,7 +305,15 @@ const Index = () => {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-6">
                 {apps.map((app) => (
-                  <AppCard key={app.id} app={app} />
+                  <AppCard 
+                    key={app.id}
+                    title={app.title}
+                    description={app.description}
+                    icon={app.icon}
+                    bgColor={app.bgColor}
+                    route={app.route}
+                    featureCount={app.featureCount}
+                  />
                 ))}
               </div>
             </div>
