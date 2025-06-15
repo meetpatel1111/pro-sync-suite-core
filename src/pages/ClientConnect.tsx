@@ -35,7 +35,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { Client, ClientNote } from '@/utils/dbtypes';
-import ContactBook from '@/components/clientconnect/ContactBook';
+import { ContactBook } from '@/components/clientconnect/ContactBook';
 
 const ClientConnect = () => {
   const navigate = useNavigate();
