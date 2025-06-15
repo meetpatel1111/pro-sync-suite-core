@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,6 +39,7 @@ const IntegrationMarketplace: React.FC = () => {
   const [installations, setInstallations] = useState<MarketplaceInstallation[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewingTemplate, setPreviewingTemplate] = useState<IntegrationTemplate | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string>('');
 
   const categories = ['all', 'Productivity', 'Finance', 'Communication', 'Resource Management', 'Data Management', 'Project Management', 'Risk Management'];
   const difficulties = ['all', 'Beginner', 'Intermediate', 'Advanced'];
@@ -51,23 +51,52 @@ const IntegrationMarketplace: React.FC = () => {
   const loadMarketplaceData = async () => {
     try {
       setLoading(true);
-      console.log('Loading marketplace data...');
+      console.log('Starting marketplace data load...');
+      setDebugInfo('Starting data load...');
       
       // Get public templates (these are the ones we want to show in marketplace)
+      console.log('Calling getPublicTemplates...');
+      setDebugInfo('Calling getPublicTemplates...');
+      
       const publicTemplates = await integrationDatabaseService.getPublicTemplates();
-      console.log('Loaded public templates:', publicTemplates);
-      setTemplates(publicTemplates);
+      console.log('Raw response from getPublicTemplates:', publicTemplates);
+      console.log('Number of templates returned:', publicTemplates?.length || 0);
+      setDebugInfo(`Templates returned: ${publicTemplates?.length || 0}`);
+      
+      if (!publicTemplates || publicTemplates.length === 0) {
+        console.log('No public templates found - checking if any templates exist at all...');
+        setDebugInfo('No public templates found - checking database...');
+        
+        // Let's try to get ALL templates (not just public ones) to see if there's any data
+        try {
+          console.log('Attempting to fetch all templates for debugging...');
+          // We'll create a test call to see if the service is working
+          const testCall = await integrationDatabaseService.getIntegrationTemplates(user?.id || '00000000-0000-0000-0000-000000000000');
+          console.log('Test call result (user templates):', testCall);
+          setDebugInfo(`Debug: Found ${testCall?.length || 0} user templates. Public templates: ${publicTemplates?.length || 0}`);
+        } catch (testError) {
+          console.error('Test call failed:', testError);
+          setDebugInfo(`Test call failed: ${testError.message}`);
+        }
+      }
+      
+      setTemplates(publicTemplates || []);
       
       // Get user installations if user is logged in
       if (user) {
+        console.log('Loading user installations for user:', user.id);
         const userInstallations = await integrationDatabaseService.getMarketplaceInstallations(user.id);
         console.log('Loaded user installations:', userInstallations);
-        setInstallations(userInstallations);
+        setInstallations(userInstallations || []);
       } else {
+        console.log('No user logged in, skipping installations');
         setInstallations([]);
       }
+      
+      setDebugInfo(`Final: ${publicTemplates?.length || 0} templates, ${user ? 'User logged in' : 'No user'}`);
     } catch (error) {
       console.error('Error loading marketplace data:', error);
+      setDebugInfo(`Error: ${error.message}`);
       toast({
         title: 'Error',
         description: 'Failed to load marketplace data',
@@ -363,16 +392,26 @@ const IntegrationMarketplace: React.FC = () => {
         </div>
       </div>
 
-      {/* Debug Information */}
+      {/* Enhanced Debug Information */}
       {templates.length === 0 && !loading && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mb-2">
             <AlertCircle className="h-5 w-5 text-yellow-600" />
-            <span className="font-medium text-yellow-800">Debug Info</span>
+            <span className="font-medium text-yellow-800">Debug Information</span>
           </div>
-          <p className="text-yellow-700 mt-1">
-            No templates loaded from database. Check console for errors.
-          </p>
+          <div className="text-yellow-700 space-y-1">
+            <p>No templates loaded from database.</p>
+            <p className="text-sm">Debug status: {debugInfo}</p>
+            <p className="text-sm">User: {user ? `Logged in as ${user.email}` : 'Not logged in'}</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={loadMarketplaceData}
+              className="mt-2"
+            >
+              Retry Loading
+            </Button>
+          </div>
         </div>
       )}
 
