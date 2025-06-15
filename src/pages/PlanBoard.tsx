@@ -149,8 +149,8 @@ const PlanBoard = () => {
     
     try {
       const { data, error } = await dbService.getUserProjectView(selectedProject.id, session!.user.id);
-      if (!error && data) {
-        setCurrentView(data.default_view as ViewType);
+      if (!error && data && data.length > 0) {
+        setCurrentView(data[0].default_view as ViewType);
       }
     } catch (error) {
       console.error('Error loading user project view:', error);
@@ -162,7 +162,6 @@ const PlanBoard = () => {
       const { data, error } = await dbService.createProject({
         ...projectData,
         user_id: session!.user.id,
-        owner_id: session!.user.id,
         status: 'active',
       });
       

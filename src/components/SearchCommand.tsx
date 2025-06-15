@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   CommandDialog,
@@ -41,14 +40,14 @@ interface SearchCommandProps {
 interface AppItem {
   name: string;
   path: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string; size?: number; }>;
   description: string;
 }
 
 interface ActionItem {
   name: string;
   action: () => void;
-  icon: any;
+  icon: React.ComponentType<{ className?: string; size?: number; }>;
   description: string;
 }
 
