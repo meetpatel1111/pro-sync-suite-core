@@ -38,6 +38,20 @@ interface SearchCommandProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface AppItem {
+  name: string;
+  path: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+}
+
+interface ActionItem {
+  name: string;
+  action: () => void;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+}
+
 const SearchCommand = ({ open, onOpenChange }: SearchCommandProps) => {
   const navigate = useNavigate();
   const { session } = useAuthContext();
@@ -95,7 +109,7 @@ const SearchCommand = ({ open, onOpenChange }: SearchCommandProps) => {
     }
   };
 
-  const apps = [
+  const apps: AppItem[] = [
     { name: 'Dashboard', path: '/', icon: Home, description: 'Main dashboard overview' },
     { name: 'TaskMaster', path: '/taskmaster', icon: Calendar, description: 'Manage tasks and projects' },
     { name: 'TimeTrackPro', path: '/timetrackpro', icon: Clock, description: 'Track time and productivity' },
@@ -112,7 +126,7 @@ const SearchCommand = ({ open, onOpenChange }: SearchCommandProps) => {
     { name: 'Notifications', path: '/notifications', icon: Bell, description: 'View notifications' },
   ];
 
-  const quickActions = [
+  const quickActions: ActionItem[] = [
     { name: 'Create New Task', action: () => navigate('/taskmaster'), icon: Plus, description: 'Add a new task' },
     { name: 'Start Time Tracking', action: () => navigate('/timetrackpro'), icon: Clock, description: 'Begin tracking time' },
     { name: 'Upload File', action: () => navigate('/filevault'), icon: FolderOpen, description: 'Upload a new file' },
