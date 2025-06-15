@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
 import { dbService } from '@/services/dbService';
@@ -125,7 +124,7 @@ const PlanBoard = () => {
       
       if (error) throw error;
       
-      const tasksWithMockData = (data || []).map(task => ({
+      const tasksWithMockData = (data || []).map((task: any) => ({
         ...task,
         start_date: task.start_date || new Date().toISOString().split('T')[0],
         progress: task.progress || Math.floor(Math.random() * 100),
@@ -149,7 +148,7 @@ const PlanBoard = () => {
     
     try {
       const { data, error } = await dbService.getUserProjectView(selectedProject.id, session!.user.id);
-      if (!error && data && data.length > 0) {
+      if (!error && data && Array.isArray(data) && data.length > 0) {
         setCurrentView(data[0].default_view as ViewType);
       }
     } catch (error) {

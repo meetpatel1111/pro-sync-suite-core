@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -58,7 +57,15 @@ const ProjectMembersDialog = ({ open, onOpenChange, project }: ProjectMembersDia
       const { data, error } = await dbService.getProjectMembers(project.id);
       if (error) throw error;
       
-      setMembers(data || []);
+      // Transform the data to match our interface
+      const transformedMembers = (data || []).map((member: any) => ({
+        id: member.id,
+        user_id: member.user_id,
+        role: member.role as 'viewer' | 'editor' | 'manager',
+        user_name: member.user_profiles?.full_name || 'Unknown User'
+      }));
+      
+      setMembers(transformedMembers);
     } catch (error) {
       console.error('Error loading project members:', error);
       toast({

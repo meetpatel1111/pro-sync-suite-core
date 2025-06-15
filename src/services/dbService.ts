@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export const dbService = {
@@ -111,7 +112,7 @@ export const dbService = {
       .from('project_members')
       .select(`
         *,
-        users!inner(full_name)
+        user_profiles!inner(full_name)
       `)
       .eq('project_id', projectId);
   },
@@ -287,6 +288,94 @@ export const dbService = {
       .from('time_entries')
       .delete()
       .eq('id', id);
+  },
+
+  // Work session operations
+  async getWorkSessions(userId: string, filters: any = {}) {
+    let query = supabase
+      .from('work_sessions')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (filters.active_only) {
+      query = query.eq('is_active', true);
+    }
+
+    return await query.order('start_time', { ascending: false });
+  },
+
+  async startWorkSession(session: any) {
+    return await supabase
+      .from('work_sessions')
+      .insert([session])
+      .select();
+  },
+
+  async endWorkSession(sessionId: string, userId: string, endTime: string, duration: number) {
+    return await supabase
+      .from('work_sessions')
+      .update({
+        end_time: endTime,
+        duration_seconds: duration,
+        is_active: false
+      })
+      .eq('id', sessionId)
+      .eq('user_id', userId)
+      .select();
+  },
+
+  // Timesheet operations
+  async getTimesheets(userId: string) {
+    return await supabase
+      .from('timesheets')
+      .select('*')
+      .eq('user_id', userId)
+      .order('start_date', { ascending: false });
+  },
+
+  async createTimesheet(timesheet: any) {
+    return await supabase
+      .from('timesheets')
+      .insert([timesheet])
+      .select();
+  },
+
+  async updateTimesheet(id: string, userId: string, updates: any) {
+    return await supabase
+      .from('timesheets')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select();
+  },
+
+  async addTimeEntriesToTimesheet(timesheetId: string, entryIds: string[]) {
+    const entries = entryIds.map(entryId => ({
+      timesheet_id: timesheetId,
+      time_entry_id: entryId
+    }));
+    
+    return await supabase
+      .from('timesheet_entries')
+      .insert(entries)
+      .select();
+  },
+
+  // User profile operations
+  async getUserProfile(userId: string) {
+    return await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+  },
+
+  async updateUserProfile(userId: string, updates: any) {
+    return await supabase
+      .from('user_profiles')
+      .update(updates)
+      .eq('id', userId)
+      .select();
   },
 
   // Notification operations
