@@ -11,6 +11,7 @@ import { collabService } from '@/services/collabService';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MessageThreadProps {
   parentMessage: Message | null;
@@ -33,7 +34,7 @@ const MessageThread: React.FC<MessageThreadProps> = ({ parentMessage, onClose })
       try {
         const { data, error } = await collabService.getThreadReplies(parentMessage.id);
         if (error) throw error;
-        setReplies(data || []);
+        setReplies((data as Message[]) || []);
       } catch (error) {
         console.error('Error fetching thread replies:', error);
         toast({
@@ -49,8 +50,8 @@ const MessageThread: React.FC<MessageThreadProps> = ({ parentMessage, onClose })
     fetchReplies();
 
     // Subscribe to new replies
-    const channel = window.supabase
-      ?.channel(`thread_${parentMessage.id}`)
+    const channel = supabase
+      .channel(`thread_${parentMessage.id}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',

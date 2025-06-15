@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Search } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { collabService } from '@/services/collabService';
-import { DirectMessage } from '@/utils/dbtypes';
+import { DirectMessage, GroupMessage } from '@/utils/dbtypes';
 import { useToast } from '@/hooks/use-toast';
 
 interface DirectMessagesProps {
@@ -23,7 +22,7 @@ const DirectMessages: React.FC<DirectMessagesProps> = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const [directMessages, setDirectMessages] = useState<DirectMessage[]>([]);
-  const [groupMessages, setGroupMessages] = useState<any[]>([]);
+  const [groupMessages, setGroupMessages] = useState<GroupMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -38,11 +37,11 @@ const DirectMessages: React.FC<DirectMessagesProps> = ({
           collabService.getGroupMessages(user.id)
         ]);
 
-        if (dmResult.data) {
-          setDirectMessages(dmResult.data);
+        if (dmResult.data && Array.isArray(dmResult.data)) {
+          setDirectMessages(dmResult.data as DirectMessage[]);
         }
-        if (groupResult.data) {
-          setGroupMessages(groupResult.data);
+        if (groupResult.data && Array.isArray(groupResult.data)) {
+          setGroupMessages(groupResult.data as GroupMessage[]);
         }
       } catch (error) {
         console.error('Error fetching conversations:', error);
@@ -70,8 +69,8 @@ const DirectMessages: React.FC<DirectMessagesProps> = ({
       if (error) throw error;
       
       if (data) {
-        setDirectMessages(prev => [data, ...prev]);
-        onSelectConversation(data.id, 'dm');
+        setDirectMessages(prev => [data as DirectMessage, ...prev]);
+        onSelectConversation((data as DirectMessage).id, 'dm');
         toast({
           title: 'Success',
           description: 'Direct message created',

@@ -68,7 +68,7 @@ export const collabService = {
 
     // Add members to the group
     const members = memberIds.map(userId => ({
-      group_id: groupData.id,
+      group_id: (groupData as GroupMessage).id,
       user_id: userId
     }));
 
@@ -164,8 +164,7 @@ export const collabService = {
       // Update thread count
       await safeQueryTable('messages', (query) => 
         query
-          .update({ thread_count: (query as any).rpc('increment') })
-          .eq('id', messageData.reply_to_id)
+          .rpc('increment', { row_id: messageData.reply_to_id })
       );
     }
 
@@ -290,9 +289,8 @@ export const collabService = {
       // Add creator as member
       await safeQueryTable('channel_members', (query) => 
         query.insert({
-          channel_id: data.id,
-          user_id: createdBy,
-          role: 'admin'
+          channel_id: (data as Channel).id,
+          user_id: createdBy
         })
       );
     }
@@ -336,7 +334,8 @@ export const collabService = {
 
     if (error) return { data: null, error };
 
-    const reactions = message?.reactions || {};
+    const messageData = message as Message;
+    const reactions = messageData?.reactions || {};
     if (!reactions[emoji]) {
       reactions[emoji] = [];
     }
@@ -359,7 +358,8 @@ export const collabService = {
 
     if (error) return { data: null, error };
 
-    const reactions = message?.reactions || {};
+    const messageData = message as Message;
+    const reactions = messageData?.reactions || {};
     if (reactions[emoji]) {
       reactions[emoji] = reactions[emoji].filter((id: string) => id !== userId);
       if (reactions[emoji].length === 0) {

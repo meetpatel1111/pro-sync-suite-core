@@ -78,7 +78,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
         }
         
         if (result.error) throw result.error;
-        setMessages(result.data || []);
+        setMessages((result.data as Message[]) || []);
       } catch (error) {
         console.error("Error fetching messages:", error);
         toast({
@@ -111,7 +111,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
         } else if (payload.eventType === 'UPDATE') {
           setMessages(prev => 
             prev.map(msg => 
-              msg.id === payload.new.id ? payload.new as Message : msg
+              msg.id === (payload.new as Message).id ? payload.new as Message : msg
             )
           );
         }
@@ -147,12 +147,12 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
       if (taskMentions && data) {
         for (const mention of taskMentions) {
           const taskId = mention.replace('#TASK-', '');
-          await collabService.addTaskMention(data.id, taskId);
+          await collabService.addTaskMention((data as Message).id, taskId);
         }
       }
       
       // Index message for search
-      await collabService.indexMessageForSearch(data?.id || '', newMessage);
+      await collabService.indexMessageForSearch((data as Message)?.id || '', newMessage);
       
       setNewMessage("");
     } catch (error) {
