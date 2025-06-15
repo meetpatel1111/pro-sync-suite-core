@@ -281,18 +281,10 @@ class TaskmasterService {
     const validVisibilities = ['team', 'private', 'public'] as const;
     const visibility = validVisibilities.includes(item.visibility) ? item.visibility as typeof validVisibilities[number] : 'team';
 
-    // Properly handle assigned_to array field
+    // Handle assigned_to array field - now we can trust the database trigger maintains consistency
     let assignedTo: string[] | undefined;
-    if (item.assigned_to) {
-      if (Array.isArray(item.assigned_to)) {
-        assignedTo = item.assigned_to;
-      } else {
-        // Convert single value to array
-        assignedTo = [item.assigned_to];
-      }
-    } else if (item.assignee_id) {
-      // Fallback: use assignee_id if assigned_to is not present
-      assignedTo = [item.assignee_id];
+    if (item.assigned_to && Array.isArray(item.assigned_to)) {
+      assignedTo = item.assigned_to;
     }
 
     return {
@@ -367,7 +359,7 @@ class TaskmasterService {
       const boardPrefix = this.generateBoardPrefix(boardData.name);
       const taskKey = `${boardPrefix}-${taskNumber}`;
 
-      // Prepare the insert data - be very explicit about the assigned_to field
+      // Prepare the insert data - the database trigger will handle assignment consistency
       const insertData = {
         board_id: taskData.board_id,
         project_id: taskData.project_id,
@@ -392,8 +384,7 @@ class TaskmasterService {
         parent_task_id: taskData.parent_task_id || null,
         linked_task_ids: taskData.linked_task_ids || null,
         recurrence_rule: taskData.recurrence_rule || null,
-        // Handle assigned_to explicitly as array
-        assigned_to: taskData.assignee_id ? [taskData.assignee_id] : null
+        // Don't set assigned_to manually - let the database trigger handle it
       };
 
       console.log('Insert data:', insertData);
@@ -419,13 +410,21 @@ class TaskmasterService {
   }
 
   async updateTask(taskId: string, updates: Partial<TaskMasterTask>, userId: string) {
+    // Prepare updates - let the database trigger handle assignment consistency
+    const updateData: any = {
+      ...updates,
+      updated_by: userId,
+      updated_at: new Date().toISOString()
+    };
+
+    // Remove assigned_to from updates to let the trigger handle it
+    if ('assigned_to' in updateData) {
+      delete updateData.assigned_to;
+    }
+
     const { data, error } = await supabase
       .from('tasks')
-      .update({
-        ...updates,
-        updated_by: userId,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', taskId)
       .select()
       .single();
