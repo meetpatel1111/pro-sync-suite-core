@@ -1,570 +1,79 @@
-import React, { useState, useEffect } from 'react';
-import AppLayout from '@/components/AppLayout';
-import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Filter, Plus, Users, Calendar, Clock, Briefcase, Search, BarChart, Target } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import { safeQueryTable } from '@/utils/db-helpers';
-import { Resource, ResourceSkill } from '@/utils/dbtypes';
-import ResourceAllocation from '@/components/resourcehub/ResourceAllocation';
-import UtilizationDashboard from '@/components/resourcehub/UtilizationDashboard';
-import SkillMatrix from '@/components/resourcehub/SkillMatrix';
-import ResourceSchedule from '@/components/resourcehub/ResourceSchedule';
-import EditableResourceCard from '@/components/resourcehub/EditableResourceCard';
-import SkillManagement from '@/components/resourcehub/SkillManagement';
-import ResourceDetailView from '@/components/resourcehub/ResourceDetailView';
-import CapacityPlanning from '@/components/resourcehub/CapacityPlanning';
 
-interface ResourceFormState {
-  name: string;
-  role: string;
-  availability: string;
-  utilization: number;
-  skills: string[];
-}
+import React from 'react';
+import { Users, Calendar, Target, BarChart3, Zap, Settings } from 'lucide-react';
+import AppLayout from '@/components/AppLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 const ResourceHub = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('team');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [resources, setResources] = useState<Resource[]>([]);
-  const [allocations, setAllocations] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAddResourceOpen, setIsAddResourceOpen] = useState(false);
-  const [session, setSession] = useState<any>(null);
-  const [selectedResource, setSelectedResource] = useState<any>(null);
-  const [isResourceDetailOpen, setIsResourceDetailOpen] = useState(false);
-  
-  // New resource form state
-  const [newResource, setNewResource] = useState<ResourceFormState>({
-    name: '',
-    role: '',
-    availability: 'Available',
-    utilization: 0,
-    skills: ['']
-  });
-
-  // Check if user is authenticated
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Fetch resources data from Supabase
-  useEffect(() => {
-    const fetchResources = async () => {
-      if (!session) {
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        // Fetch resources using safeQueryTable helper
-        const { data: resourcesData, error: resourcesError } = await safeQueryTable<Resource>(
-          'resources',
-          (query) => query.select('*').eq('user_id', session.user.id)
-        );
-        
-        if (resourcesError) throw resourcesError;
-        
-        // Fetch allocations
-        const { data: allocationsData, error: allocationsError } = await safeQueryTable(
-          'allocations',
-          (query) => query.select('*')
-        );
-        
-        if (allocationsError) {
-          console.error('Error fetching allocations:', allocationsError);
-        } else {
-          setAllocations(allocationsData || []);
-        }
-        
-        if (resourcesData) {
-          // For each resource, fetch their skills
-          const resourcesWithSkills = await Promise.all(
-            resourcesData.map(async (resource) => {
-              // Fetch skills using safeQueryTable helper
-              const { data: skillsData, error: skillsError } = await safeQueryTable<ResourceSkill>(
-                'resource_skills',
-                (query) => query.select('skill').eq('resource_id', resource.id)
-              );
-              
-              if (skillsError) {
-                console.error('Error fetching skills:', skillsError);
-                return {
-                  ...resource,
-                  skills: [],
-                  schedule: [] // Placeholder for future schedule data
-                };
-              }
-              
-              return {
-                ...resource,
-                skills: skillsData ? skillsData.map(s => s.skill) : [],
-                schedule: [] // Placeholder for future schedule data
-              };
-            })
-          );
-          
-          setResources(resourcesWithSkills as Resource[]);
-        }
-      } catch (error) {
-        console.error('Error fetching resources:', error);
-        toast({
-          title: 'Failed to load resources',
-          description: 'There was a problem fetching resource data',
-          variant: 'destructive'
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchResources();
-  }, [session, toast]);
-
-  // Add a new resource to the database
-  const handleAddResource = async () => {
-    if (!session) {
-      toast({
-        title: 'Authentication required',
-        description: 'Please sign in to add resources',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    if (!newResource.name || !newResource.role) {
-      toast({
-        title: 'Missing information',
-        description: 'Please fill in all required fields',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    try {
-      // Insert new resource using safeQueryTable helper
-      const { data: resourceData, error: resourceError } = await safeQueryTable<Resource>(
-        'resources',
-        (query) => query.insert({
-          name: newResource.name,
-          role: newResource.role,
-          availability: newResource.availability,
-          utilization: newResource.utilization,
-          user_id: session.user.id
-        }).select()
-      );
-      
-      if (resourceError) throw resourceError;
-      
-      if (resourceData && resourceData.length > 0) {
-        // Insert skills for the resource
-        const skills = newResource.skills.filter(skill => skill.trim() !== '');
-        
-        if (skills.length > 0) {
-          const skillsToInsert = skills.map(skill => ({
-            resource_id: resourceData[0].id,
-            skill,
-            user_id: session.user.id
-          }));
-          
-          const { error: skillsError } = await safeQueryTable<ResourceSkill>(
-            'resource_skills',
-            (query) => query.insert(skillsToInsert)
-          );
-          
-          if (skillsError) throw skillsError;
-        }
-        
-        // Add the new resource to state
-        const newResourceComplete: Resource = {
-          ...resourceData[0],
-          skills: skills,
-          schedule: [],
-          user_id: session.user.id,
-          created_at: new Date().toISOString()
-        };
-        
-        setResources(prevResources => [...prevResources, newResourceComplete]);
-        
-        toast({
-          title: 'Resource added',
-          description: `${newResource.name} has been added successfully`,
-        });
-        
-        // Reset form
-        setNewResource({
-          name: '',
-          role: '',
-          availability: 'Available',
-          utilization: 0,
-          skills: ['']
-        });
-        
-        setIsAddResourceOpen(false);
-      }
-    } catch (error) {
-      console.error('Error adding resource:', error);
-      toast({
-        title: 'Failed to add resource',
-        description: 'There was a problem saving the resource',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  // Filter resources based on search query
-  const filteredResources = resources.filter(resource =>
-    resource.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    resource.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (resource.skills && resource.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase())))
-  );
-
-  // Function to determine badge variant based on availability
-  const getBadgeVariant = (availability: string) => {
-    if (availability === 'Available') return 'outline';
-    if (availability === 'Limited') return 'secondary';
-    return 'destructive';
-  };
-
-  // Add/remove skill fields in the form
-  const handleSkillChange = (index: number, value: string) => {
-    const updatedSkills = [...newResource.skills];
-    updatedSkills[index] = value;
-    setNewResource({ ...newResource, skills: updatedSkills });
-  };
-
-  const addSkillField = () => {
-    setNewResource({ ...newResource, skills: [...newResource.skills, ''] });
-  };
-
-  const removeSkillField = (index: number) => {
-    const updatedSkills = [...newResource.skills];
-    updatedSkills.splice(index, 1);
-    setNewResource({ ...newResource, skills: updatedSkills });
-  };
-
-  // Get all unique skills from resources
-  const allSkills = [...new Set(resources.flatMap(resource => resource.skills || []))];
-
-  // Render loading skeleton
-  const renderSkeleton = () => (
-    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-      {[1, 2, 3].map((i) => (
-        <Card key={i}>
-          <CardHeader className="flex flex-row items-center gap-4">
-            <Skeleton className="h-12 w-12 rounded-full" />
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-24" />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Skeleton className="h-3 w-full mb-2" />
-              <Skeleton className="h-2 w-full" />
-            </div>
-            <div>
-              <Skeleton className="h-3 w-full mb-2" />
-              <Skeleton className="h-2 w-full" />
-            </div>
-            <div>
-              <Skeleton className="h-3 w-full mb-2" />
-              <div className="flex flex-wrap gap-1 mt-1">
-                <Skeleton className="h-6 w-16 rounded-full" />
-                <Skeleton className="h-6 w-16 rounded-full" />
-                <Skeleton className="h-6 w-16 rounded-full" />
-              </div>
-            </div>
-            <Skeleton className="h-9 w-full" />
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-
-  // Add function to handle resource updates
-  const handleResourceUpdate = (updatedResource: Resource) => {
-    setResources(prevResources => 
-      prevResources.map(resource => 
-        resource.id === updatedResource.id ? updatedResource : resource
-      )
-    );
-  };
-
-  // Add function to handle resource deletion
-  const handleResourceDelete = (resourceId: string) => {
-    setResources(prevResources => 
-      prevResources.filter(resource => resource.id !== resourceId)
-    );
-  };
-
-  // Add new function to handle resource detail view
-  const handleResourceDetail = (resource: Resource) => {
-    setSelectedResource(resource);
-    setIsResourceDetailOpen(true);
-  };
-
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
-          <div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="mb-4 gap-1" 
-              onClick={() => navigate('/')}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
-            </Button>
-            <h1 className="text-3xl font-bold tracking-tight">Resource Hub</h1>
-            <p className="text-muted-foreground">
-              Manage team resources, availability, and allocation
+      <div className="space-y-8 animate-fade-in-up">
+        {/* Modern Header with Glass Effect */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-500 via-amber-600 to-yellow-600 p-8 text-white shadow-2xl">
+          <div className="absolute inset-0 bg-black/10 backdrop-blur-sm"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"></div>
+          
+          {/* Floating Elements */}
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-orange-300/20 rounded-full blur-2xl"></div>
+          
+          <div className="relative z-10">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm border border-white/30 shadow-lg">
+                <Users className="h-8 w-8" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-white to-orange-100 bg-clip-text">
+                  ResourceHub
+                </h1>
+                <p className="text-lg text-orange-100/90 font-medium">Resource Allocation & Management Center</p>
+              </div>
+            </div>
+            
+            <p className="text-lg text-orange-50/95 max-w-3xl mb-6 leading-relaxed">
+              Optimize resource utilization with intelligent allocation, capacity planning, 
+              skill management, and real-time availability tracking for maximum efficiency.
             </p>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button variant="outline" size="sm" className="gap-1">
-              <Filter className="h-4 w-4" />
-              Filter
-            </Button>
-            <Dialog open={isAddResourceOpen} onOpenChange={setIsAddResourceOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="gap-1">
-                  <Plus className="h-4 w-4" />
-                  Add Resource
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Add Resource</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="name">Name</Label>
-                    <Input 
-                      id="name" 
-                      value={newResource.name} 
-                      onChange={(e) => setNewResource({...newResource, name: e.target.value})}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="role">Role</Label>
-                    <Input 
-                      id="role" 
-                      value={newResource.role} 
-                      onChange={(e) => setNewResource({...newResource, role: e.target.value})}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="availability">Availability</Label>
-                    <Select 
-                      value={newResource.availability} 
-                      onValueChange={(value) => setNewResource({...newResource, availability: value})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select availability" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Available">Available</SelectItem>
-                        <SelectItem value="Limited">Limited</SelectItem>
-                        <SelectItem value="Unavailable">Unavailable</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="utilization">Utilization (%)</Label>
-                    <Input 
-                      id="utilization" 
-                      type="number" 
-                      min="0" 
-                      max="100" 
-                      value={newResource.utilization.toString()} 
-                      onChange={(e) => setNewResource({...newResource, utilization: parseInt(e.target.value) || 0})}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Skills</Label>
-                    {newResource.skills.map((skill, index) => (
-                      <div key={index} className="flex gap-2">
-                        <Input 
-                          value={skill} 
-                          onChange={(e) => handleSkillChange(index, e.target.value)}
-                          placeholder="Enter a skill"
-                        />
-                        {newResource.skills.length > 1 && (
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="icon" 
-                            onClick={() => removeSkillField(index)}
-                          >
-                            -
-                          </Button>
-                        )}
-                        {index === newResource.skills.length - 1 && (
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="icon" 
-                            onClick={addSkillField}
-                          >
-                            +
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsAddResourceOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="button" onClick={handleAddResource}>
-                    Add Resource
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2">
+                <Calendar className="h-4 w-4 mr-2" />
+                Capacity Planning
+              </Badge>
+              <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2">
+                <Target className="h-4 w-4 mr-2" />
+                Skill Management
+              </Badge>
+              <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Utilization Reports
+              </Badge>
+              <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2">
+                <Zap className="h-4 w-4 mr-2" />
+                Smart Allocation
+              </Badge>
+            </div>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 gap-2">
-            <TabsTrigger value="team" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              <span>Team</span>
-            </TabsTrigger>
-            <TabsTrigger value="utilization" className="flex items-center gap-2">
-              <BarChart className="h-4 w-4" />
-              <span>Utilization</span>
-            </TabsTrigger>
-            <TabsTrigger value="allocation" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              <span>Allocation</span>
-            </TabsTrigger>
-            <TabsTrigger value="skills" className="flex items-center gap-2">
-              <Briefcase className="h-4 w-4" />
-              <span>Skills</span>
-            </TabsTrigger>
-            <TabsTrigger value="schedule" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              <span>Schedule</span>
-            </TabsTrigger>
-            <TabsTrigger value="capacity" className="flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              <span>Capacity</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <div className="flex items-center space-x-2 mb-4">
-            <Search className="h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder="Search resources..."
-              className="flex-1"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <TabsContent value="team">
-            {isLoading ? (
-              renderSkeleton()
-            ) : (
-              session ? (
-                filteredResources.length > 0 ? (
-                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                    {filteredResources.map((resource) => (
-                      <div key={resource.id} onClick={() => handleResourceDetail(resource)} className="cursor-pointer">
-                        <EditableResourceCard
-                          resource={resource}
-                          onUpdate={handleResourceUpdate}
-                          onDelete={handleResourceDelete}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <Card className="p-8 text-center">
-                    <p className="text-muted-foreground mb-4">No resources found. Add your first resource to get started.</p>
-                    <Button 
-                      onClick={() => setIsAddResourceOpen(true)}
-                      className="gap-1"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add Resource
-                    </Button>
-                  </Card>
-                )
-              ) : (
-                <Card className="p-8 text-center">
-                  <p className="text-muted-foreground mb-4">Please sign in to manage resources.</p>
-                  <Button onClick={() => navigate('/auth')}>Sign In</Button>
-                </Card>
-              )
-            )}
-          </TabsContent>
-
-          <TabsContent value="utilization">
-            <UtilizationDashboard resources={resources} allocations={allocations} />
-          </TabsContent>
-
-          <TabsContent value="allocation">
-            <ResourceAllocation />
-          </TabsContent>
-
-          <TabsContent value="schedule">
-            <ResourceSchedule resources={resources} />
-          </TabsContent>
-
-          <TabsContent value="skills">
-            <SkillManagement 
-              resources={resources} 
-              onSkillUpdate={() => {
-                // Refresh resources when skills are updated
-                if (session) {
-                  // Re-fetch resources to get updated skills
-                }
-              }}
-            />
-          </TabsContent>
-
-          <TabsContent value="capacity">
-            <CapacityPlanning resources={resources} allocations={allocations} />
-          </TabsContent>
-        </Tabs>
-
-        {/* Resource Detail Modal */}
-        {selectedResource && (
-          <ResourceDetailView
-            resource={selectedResource}
-            isOpen={isResourceDetailOpen}
-            onClose={() => setIsResourceDetailOpen(false)}
-            onUpdate={handleResourceUpdate}
-          />
-        )}
+        {/* Main Content */}
+        <div className="animate-scale-in">
+          <Card className="modern-card">
+            <CardHeader>
+              <CardTitle>ResourceHub Dashboard</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-16">
+                <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Resource Management</h3>
+                <p className="text-muted-foreground">
+                  Your resource allocation and management tools will be available here
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </AppLayout>
   );
