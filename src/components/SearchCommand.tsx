@@ -38,20 +38,17 @@ interface SearchCommandProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Use React.ComponentType for proper icon typing
-type IconComponent = React.ComponentType<React.SVGProps<SVGSVGElement>>;
-
 interface AppItem {
   name: string;
   path: string;
-  icon: IconComponent;
+  icon: any;
   description: string;
 }
 
 interface ActionItem {
   name: string;
   action: () => void;
-  icon: IconComponent;
+  icon: any;
   description: string;
 }
 

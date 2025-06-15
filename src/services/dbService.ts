@@ -824,4 +824,23 @@ export const dbService = {
       return filteredQuery.order('created_at', { ascending: false });
     });
   },
+
+  // Update project
+  async updateProject(projectId: string, updates: {
+    name?: string;
+    description?: string;
+    color?: string;
+    status?: string;
+    start_date?: string;
+    end_date?: string;
+  }) {
+    return await safeQueryTable('projects', (query) => 
+      query
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', projectId)
+    );
+  },
 };
