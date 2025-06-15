@@ -351,9 +351,6 @@ class TaskmasterService {
       const boardPrefix = this.generateBoardPrefix(boardData.name);
       const taskKey = `${boardPrefix}-${taskNumber}`;
 
-      // Prepare assigned_to as array if assignee_id is provided
-      const assignedToArray = taskData.assignee_id ? [taskData.assignee_id] : null;
-
       const { data, error } = await supabase
         .from('tasks')
         .insert([{
@@ -371,7 +368,8 @@ class TaskmasterService {
           actual_hours: taskData.actual_hours,
           created_by: taskData.created_by,
           assignee_id: taskData.assignee_id,
-          assigned_to: assignedToArray,
+          // Only set assigned_to as array if assignee_id is provided
+          assigned_to: taskData.assignee_id ? [taskData.assignee_id] : null,
           estimate_hours: taskData.estimate_hours,
           due_date: taskData.due_date,
           start_date: taskData.start_date,
