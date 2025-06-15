@@ -16,45 +16,45 @@ const TimeTrackPro = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-8 animate-fade-in-up">
-        {/* Modern Header */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-indigo-700 p-6 text-white shadow-2xl">
+      <div className="space-y-6 animate-fade-in-up">
+        {/* Compact Header */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-indigo-700 p-4 text-white shadow-lg">
           <div className="absolute inset-0 bg-black/10"></div>
           <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
           <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-                <Timer className="h-6 w-6" />
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <Timer className="h-5 w-5" />
               </div>
-              <h1 className="text-3xl font-bold tracking-tight">TimeTrackPro</h1>
+              <h1 className="text-2xl font-bold tracking-tight">TimeTrackPro</h1>
             </div>
-            <p className="text-lg text-indigo-100 max-w-2xl mb-4 leading-relaxed">
+            <p className="text-sm text-indigo-100 max-w-2xl mb-3 leading-relaxed">
               Track time and maximize productivity across your projects with intelligent insights
             </p>
-            <div className="flex items-center gap-4">
-              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
-                <Target className="h-4 w-4 mr-2" />
+            <div className="flex items-center gap-3">
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 text-xs">
+                <Target className="h-3 w-3 mr-1" />
                 Smart Tracking
               </Badge>
-              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
-                <TrendingUp className="h-4 w-4 mr-2" />
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 text-xs">
+                <TrendingUp className="h-3 w-3 mr-1" />
                 Analytics
               </Badge>
             </div>
           </div>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32 backdrop-blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24 backdrop-blur-3xl"></div>
+          <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-24 translate-x-24 backdrop-blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-16 -translate-x-16 backdrop-blur-3xl"></div>
         </div>
 
-        {/* Modern Tabs */}
+        {/* Compact Tabs */}
         <Card className="modern-card">
           <CardContent className="p-0">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <div className="border-b border-border/50 bg-gradient-to-r from-gray-50/50 to-white/50 dark:from-gray-900/50 dark:to-gray-800/50 rounded-t-2xl">
-                <TabsList className="grid grid-cols-2 md:grid-cols-5 gap-2 p-6 bg-transparent">
+              <div className="border-b border-border/50 bg-gradient-to-r from-gray-50/50 to-white/50 dark:from-gray-900/50 dark:to-gray-800/50 rounded-t-xl">
+                <TabsList className="grid grid-cols-2 md:grid-cols-5 gap-1 p-4 bg-transparent">
                   <TabsTrigger 
                     value="track" 
-                    className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl px-6 py-3 transition-all duration-300"
+                    className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg px-4 py-2 transition-all duration-300 text-sm"
                   >
                     <Clock className="h-4 w-4" />
                     <span className="hidden sm:inline">Time Tracking</span>
@@ -62,7 +62,7 @@ const TimeTrackPro = () => {
                   </TabsTrigger>
                   <TabsTrigger 
                     value="entries" 
-                    className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl px-6 py-3 transition-all duration-300"
+                    className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg px-4 py-2 transition-all duration-300 text-sm"
                   >
                     <Calendar className="h-4 w-4" />
                     <span className="hidden sm:inline">Entries</span>
@@ -70,7 +70,7 @@ const TimeTrackPro = () => {
                   </TabsTrigger>
                   <TabsTrigger 
                     value="timesheets" 
-                    className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl px-6 py-3 transition-all duration-300"
+                    className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg px-4 py-2 transition-all duration-300 text-sm"
                   >
                     <FileText className="h-4 w-4" />
                     <span className="hidden sm:inline">Timesheets</span>
@@ -78,7 +78,7 @@ const TimeTrackPro = () => {
                   </TabsTrigger>
                   <TabsTrigger 
                     value="dashboard" 
-                    className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl px-6 py-3 transition-all duration-300"
+                    className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg px-4 py-2 transition-all duration-300 text-sm"
                   >
                     <BarChart2 className="h-4 w-4" />
                     <span className="hidden sm:inline">Dashboard</span>
@@ -86,7 +86,7 @@ const TimeTrackPro = () => {
                   </TabsTrigger>
                   <TabsTrigger 
                     value="reports" 
-                    className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl px-6 py-3 transition-all duration-300"
+                    className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg px-4 py-2 transition-all duration-300 text-sm"
                   >
                     <BarChart2 className="h-4 w-4" />
                     <span className="hidden sm:inline">Reports</span>
@@ -95,7 +95,7 @@ const TimeTrackPro = () => {
                 </TabsList>
               </div>
 
-              <div className="p-8">
+              <div className="p-6">
                 <TabsContent value="track" className="space-y-6 animate-fade-in-up">
                   <TimeTrackingForm />
                 </TabsContent>
