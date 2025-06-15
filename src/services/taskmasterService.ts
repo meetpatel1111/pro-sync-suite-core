@@ -281,6 +281,20 @@ class TaskmasterService {
     const validVisibilities = ['team', 'private', 'public'] as const;
     const visibility = validVisibilities.includes(item.visibility) ? item.visibility as typeof validVisibilities[number] : 'team';
 
+    // Properly handle assigned_to array field
+    let assignedTo: string[] | undefined;
+    if (item.assigned_to) {
+      if (Array.isArray(item.assigned_to)) {
+        assignedTo = item.assigned_to;
+      } else {
+        // Convert single value to array
+        assignedTo = [item.assigned_to];
+      }
+    } else if (item.assignee_id) {
+      // Fallback: use assignee_id if assigned_to is not present
+      assignedTo = [item.assignee_id];
+    }
+
     return {
       id: item.id,
       task_number: item.task_number || 1,
@@ -300,7 +314,7 @@ class TaskmasterService {
       assignee_id: item.assignee_id,
       reporter_id: item.reporter_id,
       created_by: item.created_by,
-      assigned_to: Array.isArray(item.assigned_to) ? item.assigned_to : (item.assigned_to ? [item.assigned_to] : undefined),
+      assigned_to: assignedTo,
       reviewer_id: item.reviewer_id,
       parent_task_id: item.parent_task_id,
       linked_task_ids: item.linked_task_ids,
@@ -332,6 +346,8 @@ class TaskmasterService {
 
   async createTask(taskData: Omit<TaskMasterTask, 'id' | 'task_number' | 'task_key' | 'created_at' | 'updated_at'>) {
     try {
+      console.log('Creating task with data:', taskData);
+      
       // Get the board to generate prefix
       const { data: boardData, error: boardError } = await supabase
         .from('boards')
@@ -351,35 +367,40 @@ class TaskmasterService {
       const boardPrefix = this.generateBoardPrefix(boardData.name);
       const taskKey = `${boardPrefix}-${taskNumber}`;
 
+      // Prepare the insert data - be very explicit about the assigned_to field
+      const insertData = {
+        board_id: taskData.board_id,
+        project_id: taskData.project_id,
+        task_number: taskNumber,
+        task_key: taskKey,
+        title: taskData.title,
+        description: taskData.description || '',
+        status: taskData.status,
+        priority: taskData.priority,
+        type: taskData.type,
+        visibility: taskData.visibility,
+        position: taskData.position,
+        actual_hours: taskData.actual_hours,
+        created_by: taskData.created_by,
+        assignee_id: taskData.assignee_id || null,
+        estimate_hours: taskData.estimate_hours || null,
+        due_date: taskData.due_date || null,
+        start_date: taskData.start_date || null,
+        sprint_id: taskData.sprint_id || null,
+        reporter_id: taskData.reporter_id || null,
+        reviewer_id: taskData.reviewer_id || null,
+        parent_task_id: taskData.parent_task_id || null,
+        linked_task_ids: taskData.linked_task_ids || null,
+        recurrence_rule: taskData.recurrence_rule || null,
+        // Handle assigned_to explicitly as array
+        assigned_to: taskData.assignee_id ? [taskData.assignee_id] : null
+      };
+
+      console.log('Insert data:', insertData);
+
       const { data, error } = await supabase
         .from('tasks')
-        .insert([{
-          board_id: taskData.board_id,
-          project_id: taskData.project_id,
-          task_number: taskNumber,
-          task_key: taskKey,
-          title: taskData.title,
-          description: taskData.description || '',
-          status: taskData.status,
-          priority: taskData.priority,
-          type: taskData.type,
-          visibility: taskData.visibility,
-          position: taskData.position,
-          actual_hours: taskData.actual_hours,
-          created_by: taskData.created_by,
-          assignee_id: taskData.assignee_id,
-          // Only set assigned_to as array if assignee_id is provided
-          assigned_to: taskData.assignee_id ? [taskData.assignee_id] : null,
-          estimate_hours: taskData.estimate_hours,
-          due_date: taskData.due_date,
-          start_date: taskData.start_date,
-          sprint_id: taskData.sprint_id,
-          reporter_id: taskData.reporter_id,
-          reviewer_id: taskData.reviewer_id,
-          parent_task_id: taskData.parent_task_id,
-          linked_task_ids: taskData.linked_task_ids,
-          recurrence_rule: taskData.recurrence_rule
-        }])
+        .insert([insertData])
         .select()
         .single();
 
