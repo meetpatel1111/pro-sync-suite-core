@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Brain, MessageSquare, Lightbulb, Search, PenTool, FileText, BarChart, Calendar, Clock, BookOpen, Command, RefreshCw, Shield, Radar, Sparkles, Zap } from 'lucide-react';
+import { Brain, MessageSquare, Lightbulb, Search, PenTool, FileText, BarChart, Calendar, Clock, BookOpen, Command, RefreshCw, Shield, Radar, Sparkles, Zap, Code, Mail, Workflow, Target } from 'lucide-react';
 import AIChatWidget from '@/components/ai/AIChatWidget';
 import AITaskSuggestions from '@/components/ai/AITaskSuggestions';
 import AIInsightsWidget from '@/components/ai/AIInsightsWidget';
@@ -17,6 +17,10 @@ import AIMultiAppCommandBar from '@/components/ai/AIMultiAppCommandBar';
 import AIDataSyncAdvisor from '@/components/ai/AIDataSyncAdvisor';
 import AIRiskPredictor from '@/components/ai/AIRiskPredictor';
 import AIAnomalyDetector from '@/components/ai/AIAnomalyDetector';
+import AICodeReviewer from '@/components/ai/AICodeReviewer';
+import AIEmailComposer from '@/components/ai/AIEmailComposer';
+import AIWorkflowOptimizer from '@/components/ai/AIWorkflowOptimizer';
+import AICompetitorAnalyzer from '@/components/ai/AICompetitorAnalyzer';
 import APIKeyManagement from '@/components/settings/APIKeyManagement';
 
 const AIFeaturesTab: React.FC = () => {
@@ -43,7 +47,7 @@ const AIFeaturesTab: React.FC = () => {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="group p-4 bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl hover:bg-white/20 transition-all duration-300 hover:scale-105">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-500/30 rounded-xl group-hover:bg-blue-500/50 transition-colors">
@@ -59,11 +63,11 @@ const AIFeaturesTab: React.FC = () => {
             <div className="group p-4 bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl hover:bg-white/20 transition-all duration-300 hover:scale-105">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-purple-500/30 rounded-xl group-hover:bg-purple-500/50 transition-colors">
-                  <Search className="h-5 w-5" />
+                  <Code className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm">Smart Search</h3>
-                  <p className="text-xs text-purple-100/80">Intelligent discovery</p>
+                  <h3 className="font-semibold text-sm">Code Review</h3>
+                  <p className="text-xs text-purple-100/80">Smart analysis</p>
                 </div>
               </div>
             </div>
@@ -71,11 +75,11 @@ const AIFeaturesTab: React.FC = () => {
             <div className="group p-4 bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl hover:bg-white/20 transition-all duration-300 hover:scale-105">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-green-500/30 rounded-xl group-hover:bg-green-500/50 transition-colors">
-                  <Command className="h-5 w-5" />
+                  <Mail className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm">AI Copilot</h3>
-                  <p className="text-xs text-green-100/80">Natural commands</p>
+                  <h3 className="font-semibold text-sm">Email Composer</h3>
+                  <p className="text-xs text-green-100/80">Professional emails</p>
                 </div>
               </div>
             </div>
@@ -83,11 +87,23 @@ const AIFeaturesTab: React.FC = () => {
             <div className="group p-4 bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl hover:bg-white/20 transition-all duration-300 hover:scale-105">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-orange-500/30 rounded-xl group-hover:bg-orange-500/50 transition-colors">
-                  <Shield className="h-5 w-5" />
+                  <Workflow className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm">Risk Analysis</h3>
-                  <p className="text-xs text-orange-100/80">Predictive insights</p>
+                  <h3 className="font-semibold text-sm">Workflow Optimizer</h3>
+                  <p className="text-xs text-orange-100/80">Process improvement</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="group p-4 bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl hover:bg-white/20 transition-all duration-300 hover:scale-105">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-pink-500/30 rounded-xl group-hover:bg-pink-500/50 transition-colors">
+                  <Target className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm">Competitor Analysis</h3>
+                  <p className="text-xs text-pink-100/80">Market insights</p>
                 </div>
               </div>
             </div>
@@ -136,7 +152,7 @@ const AIFeaturesTab: React.FC = () => {
             Core AI Tools
           </h2>
         </div>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div className="group hover:scale-[1.02] transition-all duration-300">
             <AIChatWidget />
           </div>
@@ -146,79 +162,71 @@ const AIFeaturesTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Content & Analysis with Modern Styling */}
+      {/* Content & Communication */}
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl">
             <PenTool className="h-5 w-5 text-white" />
           </div>
           <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-            Content & Analysis
+            Content & Communication
           </h2>
         </div>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div className="group hover:scale-[1.02] transition-all duration-300">
             <AIContentGenerator />
           </div>
           <div className="group hover:scale-[1.02] transition-all duration-300">
+            <AIEmailComposer />
+          </div>
+          <div className="group hover:scale-[1.02] transition-all duration-300">
             <AIDocumentSummarizer />
+          </div>
+          <div className="group hover:scale-[1.02] transition-all duration-300">
+            <AIMeetingNotesGenerator />
           </div>
         </div>
       </div>
 
-      {/* Project Management with Enhanced Design */}
+      {/* Development & Code Analysis */}
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-xl">
-            <BarChart className="h-5 w-5 text-white" />
+            <Code className="h-5 w-5 text-white" />
           </div>
           <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
-            Project Intelligence
+            Development & Code Analysis
           </h2>
         </div>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div className="group hover:scale-[1.02] transition-all duration-300">
+            <AICodeReviewer />
+          </div>
+          <div className="group hover:scale-[1.02] transition-all duration-300">
+            <AIAutoDocumentation />
+          </div>
+        </div>
+      </div>
+
+      {/* Project Intelligence & Optimization */}
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl">
+            <BarChart className="h-5 w-5 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+            Project Intelligence & Optimization
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div className="group hover:scale-[1.02] transition-all duration-300">
             <AIProjectAnalyzer />
           </div>
           <div className="group hover:scale-[1.02] transition-all duration-300">
+            <AIWorkflowOptimizer />
+          </div>
+          <div className="group hover:scale-[1.02] transition-all duration-300">
             <AITaskSuggestions />
-          </div>
-        </div>
-      </div>
-
-      {/* Risk & Data Analysis with Modern Cards */}
-      <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl">
-            <Shield className="h-5 w-5 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
-            Risk & Data Intelligence
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-          <div className="group hover:scale-[1.02] transition-all duration-300">
-            <AIRiskPredictor />
-          </div>
-          <div className="group hover:scale-[1.02] transition-all duration-300">
-            <AIAnomalyDetector />
-          </div>
-        </div>
-      </div>
-
-      {/* Meeting & Scheduling */}
-      <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-xl">
-            <Calendar className="h-5 w-5 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
-            Meeting & Scheduling
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-          <div className="group hover:scale-[1.02] transition-all duration-300">
-            <AIMeetingNotesGenerator />
           </div>
           <div className="group hover:scale-[1.02] transition-all duration-300">
             <AISmartScheduling />
@@ -226,19 +234,25 @@ const AIFeaturesTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Documentation & Sync */}
+      {/* Risk & Market Analysis */}
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-r from-violet-500 to-purple-500 rounded-xl">
-            <FileText className="h-5 w-5 text-white" />
+          <div className="p-2 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl">
+            <Shield className="h-5 w-5 text-white" />
           </div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-            Documentation & Sync
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+            Risk & Market Analysis
           </h2>
         </div>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div className="group hover:scale-[1.02] transition-all duration-300">
-            <AIAutoDocumentation />
+            <AIRiskPredictor />
+          </div>
+          <div className="group hover:scale-[1.02] transition-all duration-300">
+            <AICompetitorAnalyzer />
+          </div>
+          <div className="group hover:scale-[1.02] transition-all duration-300">
+            <AIAnomalyDetector />
           </div>
           <div className="group hover:scale-[1.02] transition-all duration-300">
             <AIDataSyncAdvisor />
@@ -256,7 +270,7 @@ const AIFeaturesTab: React.FC = () => {
             Context & Insights
           </h2>
         </div>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div className="group hover:scale-[1.02] transition-all duration-300">
             <AIContextSuggestions />
           </div>
