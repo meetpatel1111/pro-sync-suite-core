@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,6 @@ import {
   Settings,
   Trash2,
   Edit,
-  Download,
   Copy,
   ExternalLink
 } from 'lucide-react';
@@ -46,45 +46,45 @@ const APIManagement: React.FC = () => {
     is_active: true
   });
 
-  // ProSync Suite API endpoints
+  // Real ProSync Suite API endpoints using Edge Functions
   const preSyncAPIs = [
     // TaskMaster APIs
-    { app: 'TaskMaster', name: 'Get Tasks', method: 'GET', url: `${window.location.origin}/api/taskmaster/tasks.json`, description: 'Retrieve all tasks' },
-    { app: 'TaskMaster', name: 'Get Projects', method: 'GET', url: `${window.location.origin}/api/taskmaster/projects.json`, description: 'Retrieve all projects' },
+    { app: 'TaskMaster', name: 'Get Tasks', method: 'GET', url: `https://iqevpdydshphxaszljsp.supabase.co/functions/v1/api-taskmaster-tasks`, description: 'Retrieve all tasks from database' },
+    { app: 'TaskMaster', name: 'Get Projects', method: 'GET', url: `https://iqevpdydshphxaszljsp.supabase.co/functions/v1/api-taskmaster-projects`, description: 'Retrieve all projects from database' },
     
     // TimeTrackPro APIs
-    { app: 'TimeTrackPro', name: 'Get Time Entries', method: 'GET', url: `${window.location.origin}/api/timetrack/entries.json`, description: 'Retrieve time tracking entries' },
-    { app: 'TimeTrackPro', name: 'Get Time Summary', method: 'GET', url: `${window.location.origin}/api/timetrack/summary.json`, description: 'Get time tracking summary' },
+    { app: 'TimeTrackPro', name: 'Get Time Entries', method: 'GET', url: `https://iqevpdydshphxaszljsp.supabase.co/functions/v1/api-timetrack-entries`, description: 'Retrieve time tracking entries from database' },
+    { app: 'TimeTrackPro', name: 'Get Time Summary', method: 'GET', url: `https://iqevpdydshphxaszljsp.supabase.co/functions/v1/api-timetrack-summary`, description: 'Get calculated time tracking summary' },
     
     // BudgetBuddy APIs
-    { app: 'BudgetBuddy', name: 'Get Expenses', method: 'GET', url: `${window.location.origin}/api/budget/expenses.json`, description: 'Retrieve all expenses' },
-    { app: 'BudgetBuddy', name: 'Get Budgets', method: 'GET', url: `${window.location.origin}/api/budget/budgets.json`, description: 'Retrieve budget information' },
+    { app: 'BudgetBuddy', name: 'Get Expenses', method: 'GET', url: `https://iqevpdydshphxaszljsp.supabase.co/functions/v1/api-budget-expenses`, description: 'Retrieve all expenses from database' },
+    { app: 'BudgetBuddy', name: 'Get Budgets', method: 'GET', url: `https://iqevpdydshphxaszljsp.supabase.co/functions/v1/api-budget-budgets`, description: 'Retrieve budget information from database' },
     
     // CollabSpace APIs
-    { app: 'CollabSpace', name: 'Get Channels', method: 'GET', url: `${window.location.origin}/api/collab/channels.json`, description: 'Retrieve communication channels' },
-    { app: 'CollabSpace', name: 'Get Messages', method: 'GET', url: `${window.location.origin}/api/collab/messages.json`, description: 'Retrieve messages' },
+    { app: 'CollabSpace', name: 'Get Channels', method: 'GET', url: `https://iqevpdydshphxaszljsp.supabase.co/functions/v1/api-collab-channels`, description: 'Retrieve communication channels from database' },
+    { app: 'CollabSpace', name: 'Get Messages', method: 'GET', url: `https://iqevpdydshphxaszljsp.supabase.co/functions/v1/api-collab-messages`, description: 'Retrieve messages from database' },
     
-    // FileVault APIs
+    // FileVault APIs (using static for now)
     { app: 'FileVault', name: 'Get Files', method: 'GET', url: `${window.location.origin}/api/filevault/files.json`, description: 'Retrieve file listings' },
     { app: 'FileVault', name: 'Get Folders', method: 'GET', url: `${window.location.origin}/api/filevault/folders.json`, description: 'Retrieve folder structure' },
     
-    // PlanBoard APIs
+    // PlanBoard APIs (using static for now)
     { app: 'PlanBoard', name: 'Get Projects', method: 'GET', url: `${window.location.origin}/api/planboard/projects.json`, description: 'Retrieve planning projects' },
     { app: 'PlanBoard', name: 'Get Milestones', method: 'GET', url: `${window.location.origin}/api/planboard/milestones.json`, description: 'Retrieve project milestones' },
     
-    // ClientConnect APIs
+    // ClientConnect APIs (using static for now)
     { app: 'ClientConnect', name: 'Get Contacts', method: 'GET', url: `${window.location.origin}/api/clients/contacts.json`, description: 'Retrieve client contacts' },
     { app: 'ClientConnect', name: 'Get Interactions', method: 'GET', url: `${window.location.origin}/api/clients/interactions.json`, description: 'Retrieve client interactions' },
     
-    // ResourceHub APIs
+    // ResourceHub APIs (using static for now)
     { app: 'ResourceHub', name: 'Get Allocations', method: 'GET', url: `${window.location.origin}/api/resources/allocations.json`, description: 'Retrieve resource allocations' },
     { app: 'ResourceHub', name: 'Get Availability', method: 'GET', url: `${window.location.origin}/api/resources/availability.json`, description: 'Get resource availability' },
     
-    // InsightIQ APIs
+    // InsightIQ APIs (using static for now)
     { app: 'InsightIQ', name: 'Get Reports', method: 'GET', url: `${window.location.origin}/api/insights/reports.json`, description: 'Retrieve analytics reports' },
     { app: 'InsightIQ', name: 'Get Analytics', method: 'GET', url: `${window.location.origin}/api/insights/analytics.json`, description: 'Get analytics data' },
     
-    // RiskRadar APIs
+    // RiskRadar APIs (using static for now)
     { app: 'RiskRadar', name: 'Get Risk Assessments', method: 'GET', url: `${window.location.origin}/api/risks/assessments.json`, description: 'Retrieve risk assessments' },
     { app: 'RiskRadar', name: 'Get Mitigations', method: 'GET', url: `${window.location.origin}/api/risks/mitigations.json`, description: 'Get risk mitigations' }
   ];
@@ -181,15 +181,28 @@ const APIManagement: React.FC = () => {
       const startTime = Date.now();
       const response = await fetch(endpoint.url, {
         method: endpoint.method || 'GET',
-        headers: endpoint.headers || {},
+        headers: {
+          'Content-Type': 'application/json',
+          ...endpoint.headers
+        },
         signal: AbortSignal.timeout((endpoint.timeout_seconds || 30) * 1000)
       });
+      
       const responseTime = Date.now() - startTime;
+      let responseData;
+      
+      try {
+        responseData = await response.json();
+      } catch (e) {
+        responseData = { error: 'Invalid JSON response' };
+      }
+      
+      const isSuccess = response.ok && responseData.success !== false;
       
       toast({
-        title: response.ok ? 'Test Successful' : 'Test Failed',
-        description: `Status: ${response.status}, Time: ${responseTime}ms`,
-        variant: response.ok ? 'default' : 'destructive'
+        title: isSuccess ? 'Test Successful' : 'Test Failed',
+        description: `Status: ${response.status}, Time: ${responseTime}ms${responseData.error ? `, Error: ${responseData.error}` : ''}`,
+        variant: isSuccess ? 'default' : 'destructive'
       });
       
       if (endpoint.id) {
@@ -329,13 +342,23 @@ const APIManagement: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold">API Management</h2>
           <p className="text-muted-foreground">
-            Configure and test your API endpoints
+            Configure and test your real API endpoints
           </p>
         </div>
         <Button onClick={() => setShowAddForm(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Add Custom Endpoint
         </Button>
+      </div>
+
+      <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Globe className="h-5 w-5 text-blue-600" />
+          <h3 className="font-semibold text-blue-900 dark:text-blue-100">Real API Endpoints</h3>
+        </div>
+        <p className="text-sm text-blue-700 dark:text-blue-200">
+          These endpoints connect to your live Supabase database and return real data. TaskMaster, TimeTrackPro, BudgetBuddy, and CollabSpace use Edge Functions, while others use static JSON for now.
+        </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -349,7 +372,7 @@ const APIManagement: React.FC = () => {
             <CardHeader>
               <CardTitle>Available ProSync Suite APIs</CardTitle>
               <CardDescription>
-                Explore and test all available APIs from your ProSync Suite applications
+                Real API endpoints that connect to your live database and return dynamic data
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -365,6 +388,9 @@ const APIManagement: React.FC = () => {
                     <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
                       <Globe className="h-5 w-5" />
                       {app}
+                      {['TaskMaster', 'TimeTrackPro', 'BudgetBuddy', 'CollabSpace'].includes(app) && (
+                        <Badge variant="default" className="text-xs">Live Database</Badge>
+                      )}
                     </h3>
                     <div className="grid gap-3">
                       {apis.map((api, index) => (
@@ -373,10 +399,13 @@ const APIManagement: React.FC = () => {
                             <div className="flex items-center gap-2 mb-1">
                               <Badge variant="outline">{api.method}</Badge>
                               <span className="font-medium">{api.name}</span>
+                              {['TaskMaster', 'TimeTrackPro', 'BudgetBuddy', 'CollabSpace'].includes(app) && (
+                                <Badge variant="secondary" className="text-xs">Edge Function</Badge>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground mb-2">{api.description}</p>
                             <div className="flex items-center gap-2 text-xs font-mono">
-                              <span className="text-muted-foreground">{api.url}</span>
+                              <span className="text-muted-foreground truncate max-w-md">{api.url}</span>
                               <Button
                                 variant="ghost"
                                 size="sm"
