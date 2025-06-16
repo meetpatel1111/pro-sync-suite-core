@@ -27,6 +27,8 @@ import AppPlaceholder from "./pages/AppPlaceholder";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Notifications from "./pages/Notifications";
+import NotificationCenter from "./pages/NotificationCenter";
+import TeamDirectory from "./pages/TeamDirectory";
 import NotFound from "./pages/NotFound";
 import About from "./pages/About";
 
@@ -59,6 +61,8 @@ const App = () => (
                 <Route path="/integrations" element={<Integrations />} />
                 <Route path="/ai-features" element={<AIFeatures />} />
                 <Route path="/notifications" element={<Notifications />} />
+                <Route path="/notification-center" element={<NotificationCenter />} />
+                <Route path="/team-directory" element={<TeamDirectory />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/about" element={<About />} />
