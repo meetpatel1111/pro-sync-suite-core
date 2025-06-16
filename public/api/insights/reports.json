@@ -1,0 +1,23 @@
+
+{
+  "success": true,
+  "data": [
+    {
+      "id": "report-1",
+      "name": "Weekly Performance Report",
+      "type": "performance",
+      "generated_at": "2025-06-16T00:00:00Z",
+      "metrics": {
+        "productivity_score": 87.5,
+        "task_completion_rate": 92.3,
+        "budget_utilization": 78.2,
+        "team_satisfaction": 4.6
+      },
+      "insights": [
+        "Team productivity increased by 12% this week",
+        "Budget is on track for Q3 targets"
+      ]
+    }
+  ],
+  "total": 1
+}

@@ -1,0 +1,18 @@
+
+{
+  "success": true,
+  "data": [
+    {
+      "id": "milestone-1",
+      "project_id": "plan-proj-1",
+      "title": "API Development Complete",
+      "description": "All API endpoints developed and tested",
+      "due_date": "2025-07-15",
+      "status": "in-progress",
+      "progress": 75,
+      "dependencies": [],
+      "created_at": "2025-06-01T00:00:00Z"
+    }
+  ],
+  "total": 8
+}

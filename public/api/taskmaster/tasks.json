@@ -1,0 +1,33 @@
+
+{
+  "success": true,
+  "data": [
+    {
+      "id": "task-1",
+      "title": "Complete project documentation",
+      "description": "Write comprehensive documentation for the new feature",
+      "status": "in-progress",
+      "priority": "high",
+      "assignee": "john.doe@example.com",
+      "project_id": "proj-1",
+      "due_date": "2025-06-20",
+      "created_at": "2025-06-15T10:00:00Z",
+      "updated_at": "2025-06-16T14:30:00Z"
+    },
+    {
+      "id": "task-2",
+      "title": "Review code changes",
+      "description": "Review pull request #123 for security improvements",
+      "status": "pending",
+      "priority": "medium",
+      "assignee": "jane.smith@example.com",
+      "project_id": "proj-1",
+      "due_date": "2025-06-18",
+      "created_at": "2025-06-15T11:00:00Z",
+      "updated_at": "2025-06-16T09:15:00Z"
+    }
+  ],
+  "total": 2,
+  "page": 1,
+  "per_page": 10
+}

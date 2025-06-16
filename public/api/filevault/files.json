@@ -1,0 +1,20 @@
+
+{
+  "success": true,
+  "data": [
+    {
+      "id": "file-1",
+      "name": "API_Documentation.pdf",
+      "size": 2048576,
+      "type": "application/pdf",
+      "url": "/files/API_Documentation.pdf",
+      "project_id": "proj-1",
+      "uploaded_by": "john.doe@example.com",
+      "is_public": false,
+      "created_at": "2025-06-16T10:00:00Z"
+    }
+  ],
+  "total": 1,
+  "storage_used": "145.7 GB",
+  "storage_limit": "1 TB"
+}

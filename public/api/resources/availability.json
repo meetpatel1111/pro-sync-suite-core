@@ -1,0 +1,17 @@
+
+{
+  "success": true,
+  "data": [
+    {
+      "id": "res-1",
+      "name": "John Doe",
+      "role": "Senior Developer",
+      "skills": ["React", "TypeScript", "Node.js"],
+      "availability_percentage": 25,
+      "current_projects": 2,
+      "utilization_rate": 84.2,
+      "next_available": "2025-07-01"
+    }
+  ],
+  "total": 1
+}

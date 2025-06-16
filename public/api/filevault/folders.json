@@ -1,0 +1,15 @@
+
+{
+  "success": true,
+  "data": [
+    {
+      "id": "folder-1",
+      "name": "Project Documents",
+      "parent_id": null,
+      "file_count": 15,
+      "created_by": "john.doe@example.com",
+      "created_at": "2025-06-01T00:00:00Z"
+    }
+  ],
+  "total": 1
+}

@@ -1,0 +1,17 @@
+
+{
+  "success": true,
+  "data": [
+    {
+      "id": "mitigation-1",
+      "risk_id": "risk-1",
+      "action": "Implement Redis caching layer",
+      "status": "in-progress",
+      "assignee": "jane.smith@example.com",
+      "due_date": "2025-06-30",
+      "progress": 60,
+      "created_at": "2025-06-15T10:00:00Z"
+    }
+  ],
+  "total": 1
+}

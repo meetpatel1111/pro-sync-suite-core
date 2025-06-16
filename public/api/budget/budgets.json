@@ -1,0 +1,18 @@
+
+{
+  "success": true,
+  "data": [
+    {
+      "id": "budget-1",
+      "project_id": "proj-1",
+      "total_budget": 50000.00,
+      "spent_amount": 15672.00,
+      "remaining_amount": 34328.00,
+      "currency": "USD",
+      "period": "monthly",
+      "status": "on-track",
+      "created_at": "2025-06-01T00:00:00Z"
+    }
+  ],
+  "total": 1
+}

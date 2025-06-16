@@ -1,0 +1,17 @@
+
+{
+  "success": true,
+  "data": [
+    {
+      "id": "proj-1",
+      "name": "ProSync Suite Integration",
+      "description": "Main integration project for ProSync Suite",
+      "status": "active",
+      "owner": "john.doe@example.com",
+      "team_members": ["john.doe@example.com", "jane.smith@example.com"],
+      "created_at": "2025-06-01T00:00:00Z",
+      "updated_at": "2025-06-16T14:30:00Z"
+    }
+  ],
+  "total": 1
+}

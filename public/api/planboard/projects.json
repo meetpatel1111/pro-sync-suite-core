@@ -1,0 +1,20 @@
+
+{
+  "success": true,
+  "data": [
+    {
+      "id": "plan-proj-1",
+      "name": "Q3 Product Launch",
+      "description": "Launch new product features for Q3",
+      "status": "active",
+      "progress": 67.3,
+      "start_date": "2025-06-01",
+      "end_date": "2025-09-30",
+      "milestone_count": 8,
+      "task_count": 45,
+      "team_size": 12,
+      "created_at": "2025-06-01T00:00:00Z"
+    }
+  ],
+  "total": 1
+}

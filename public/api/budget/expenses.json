@@ -1,0 +1,20 @@
+
+{
+  "success": true,
+  "data": [
+    {
+      "id": "exp-1",
+      "amount": 1250.00,
+      "currency": "USD",
+      "category": "Software",
+      "description": "Monthly SaaS subscriptions",
+      "project_id": "proj-1",
+      "date": "2025-06-15",
+      "receipt_url": null,
+      "created_by": "john.doe@example.com",
+      "created_at": "2025-06-15T10:30:00Z"
+    }
+  ],
+  "total": 1,
+  "total_amount": 1250.00
+}

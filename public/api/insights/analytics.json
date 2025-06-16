@@ -1,0 +1,22 @@
+
+{
+  "success": true,
+  "data": {
+    "overview": {
+      "total_projects": 67,
+      "active_tasks": 1247,
+      "team_members": 89,
+      "completion_rate": 87.3
+    },
+    "trends": {
+      "productivity_trend": "increasing",
+      "budget_trend": "stable",
+      "quality_trend": "improving"
+    },
+    "predictions": {
+      "project_completion": "2025-08-15",
+      "budget_burndown": "on-track",
+      "resource_needs": "adequate"
+    }
+  }
+}

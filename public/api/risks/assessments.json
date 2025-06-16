@@ -1,0 +1,20 @@
+
+{
+  "success": true,
+  "data": [
+    {
+      "id": "risk-1",
+      "title": "API Rate Limiting",
+      "description": "Third-party API may implement stricter rate limits",
+      "category": "technical",
+      "probability": 0.3,
+      "impact": 0.8,
+      "risk_score": 0.6,
+      "status": "active",
+      "mitigation_plan": "Implement caching and request batching",
+      "owner": "john.doe@example.com",
+      "created_at": "2025-06-15T00:00:00Z"
+    }
+  ],
+  "total": 1
+}

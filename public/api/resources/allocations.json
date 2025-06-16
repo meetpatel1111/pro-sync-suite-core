@@ -1,0 +1,17 @@
+
+{
+  "success": true,
+  "data": [
+    {
+      "id": "alloc-1",
+      "resource_id": "res-1",
+      "project_id": "proj-1",
+      "allocation_percentage": 75,
+      "start_date": "2025-06-01",
+      "end_date": "2025-08-31",
+      "role": "Senior Developer",
+      "created_at": "2025-06-01T00:00:00Z"
+    }
+  ],
+  "total": 1
+}
