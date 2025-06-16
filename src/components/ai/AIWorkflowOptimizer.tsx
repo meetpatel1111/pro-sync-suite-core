@@ -124,17 +124,17 @@ const AIWorkflowOptimizer = () => {
                 <div className="flex items-center gap-4">
                   <div>
                     <span className="text-xs text-gray-500">Impact:</span>
-                    <Badge size="sm" className={getImpactColor(optimization.impact)}>
+                    <Badge className={getImpactColor(optimization.impact)}>
                       {optimization.impact}
                     </Badge>
                   </div>
                   <div>
                     <span className="text-xs text-gray-500">Effort:</span>
-                    <Badge size="sm" variant="outline">{optimization.effort}</Badge>
+                    <Badge variant="outline">{optimization.effort}</Badge>
                   </div>
                   <div>
                     <span className="text-xs text-gray-500">Category:</span>
-                    <Badge size="sm" variant="secondary">{optimization.category}</Badge>
+                    <Badge variant="secondary">{optimization.category}</Badge>
                   </div>
                 </div>
                 <div className="text-right">

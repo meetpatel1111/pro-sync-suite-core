@@ -279,7 +279,7 @@ const NotificationCenter = () => {
                                 {!notification.read && (
                                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                                 )}
-                                <Badge className={getPriorityColor(notification.priority)} size="sm">
+                                <Badge className={getPriorityColor(notification.priority)}>
                                   {notification.priority}
                                 </Badge>
                               </div>
@@ -292,7 +292,7 @@ const NotificationCenter = () => {
                                   <span>from {notification.sender}</span>
                                 )}
                                 {notification.actionRequired && (
-                                  <Badge variant="outline" className="text-xs">
+                                  <Badge variant="outline">
                                     Action Required
                                   </Badge>
                                 )}

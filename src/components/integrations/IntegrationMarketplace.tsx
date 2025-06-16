@@ -282,12 +282,12 @@ const IntegrationMarketplace = () => {
                       <div className="mb-4">
                         <div className="flex flex-wrap gap-1">
                           {integration.tags.slice(0, 3).map((tag, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
+                            <Badge key={index} variant="outline">
                               {tag}
                             </Badge>
                           ))}
                           {integration.tags.length > 3 && (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge variant="outline">
                               +{integration.tags.length - 3}
                             </Badge>
                           )}
@@ -329,7 +329,7 @@ const IntegrationMarketplace = () => {
                                 <CheckCircle className="h-4 w-4 text-blue-500" />
                               )}
                               {integration.featured && (
-                                <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                                <Badge className="bg-yellow-100 text-yellow-800">
                                   Featured
                                 </Badge>
                               )}
@@ -337,7 +337,7 @@ const IntegrationMarketplace = () => {
                             <p className="text-sm text-gray-600">{integration.description}</p>
                             <div className="flex items-center gap-4 mt-1">
                               <span className="text-xs text-gray-500">{integration.provider}</span>
-                              <Badge variant="outline" className="text-xs">{integration.category}</Badge>
+                              <Badge variant="outline">{integration.category}</Badge>
                               <div className="flex items-center gap-1">
                                 <Star className="h-3 w-3 text-yellow-500 fill-current" />
                                 <span className="text-xs">{integration.rating}</span>
@@ -414,7 +414,7 @@ const IntegrationMarketplace = () => {
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <Badge className={getPriceColor(integration.price)} className="px-3 py-1">
+                        <Badge className={`${getPriceColor(integration.price)} px-3 py-1`}>
                           {integration.price === 'freemium' ? 'Freemium' : integration.price.charAt(0).toUpperCase() + integration.price.slice(1)}
                         </Badge>
                         <div className="flex gap-2">
