@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @tailwind base;
 @tailwind components;
@@ -167,7 +166,7 @@
   }
 
   .morphing-border {
-    @apply relative before:absolute before:inset-0 before:rounded-inherit before:bg-gradient-to-r before:from-primary before:via-secondary before:to-primary before:bg-[length:200%_100%] before:animate-border-morph before:-z-10;
+    @apply relative before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-r before:from-primary before:via-secondary before:to-primary before:bg-[length:200%_100%] before:animate-border-morph before:-z-10;
   }
 }
 
