@@ -1,11 +1,11 @@
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Plus, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { taskmasterService } from '@/services/taskmasterService';
 import { useAuthContext } from '@/context/AuthContext';
@@ -13,16 +13,17 @@ import type { Project } from '@/types/taskmaster';
 
 interface CreateProjectDialogProps {
   onProjectCreated: (project: Project) => void;
-  children?: React.ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
   onProjectCreated,
-  children
+  open,
+  onOpenChange
 }) => {
   const { user } = useAuthContext();
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -108,7 +109,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
 
       if (project) {
         onProjectCreated(project);
-        setOpen(false);
+        onOpenChange(false);
         setFormData({
           name: '',
           key: '',
@@ -133,15 +134,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children || (
-          <Button className="animate-fade-in-up button-hover">
-            <Plus className="h-4 w-4 mr-2 icon-bounce" />
-            New Project
-          </Button>
-        )}
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md animate-scale-in">
         <DialogHeader>
           <DialogTitle className="text-gradient">Create New Project</DialogTitle>
@@ -194,7 +187,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             <Button 
               type="button" 
               variant="outline" 
-              onClick={() => setOpen(false)}
+              onClick={() => onOpenChange(false)}
               disabled={loading}
               className="button-hover"
             >

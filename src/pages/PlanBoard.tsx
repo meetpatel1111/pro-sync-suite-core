@@ -3,6 +3,7 @@ import { useAuthContext } from '@/context/AuthContext';
 import AppLayout from '@/components/AppLayout';
 import ProjectSidebar from '@/components/planboard/ProjectSidebar';
 import ProjectEditDialog from '@/components/planboard/ProjectEditDialog';
+import CreateProjectDialog from '@/components/taskmaster/CreateProjectDialog';
 import ViewSelector from '@/components/planboard/ViewSelector';
 import FilterPanel from '@/components/planboard/FilterPanel';
 import BoardView from '@/components/planboard/BoardView';
@@ -33,6 +34,7 @@ const PlanBoard = () => {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({});
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [createProjectDialogOpen, setCreateProjectDialogOpen] = useState(false);
   const [projectToEdit, setProjectToEdit] = useState<UIProject | null>(null);
   const [teamMembers] = useState([
     { id: '1', name: 'John Doe' },
@@ -70,7 +72,7 @@ const PlanBoard = () => {
       const projectsWithDefaults: UIProject[] = (data || []).map(project => ({
         ...project,
         color: '#3b82f6',
-        status: 'active',
+        status: project.status || 'active',
       }));
       
       console.log('Loaded projects:', projectsWithDefaults);
@@ -141,9 +143,24 @@ const PlanBoard = () => {
   };
 
   const handleCreateProject = () => {
+    setCreateProjectDialogOpen(true);
+  };
+
+  const handleProjectCreated = (project: any) => {
+    // Convert the project to UIProject format
+    const uiProject: UIProject = {
+      ...project,
+      color: '#3b82f6',
+      status: project.status || 'active',
+    };
+    
+    setProjects(prev => [uiProject, ...prev]);
+    setSelectedProject(uiProject);
+    setCreateProjectDialogOpen(false);
+    
     toast({
-      title: 'Create Project',
-      description: 'Project creation modal would open here',
+      title: 'Success',
+      description: `Project "${project.name}" created successfully`,
     });
   };
 
@@ -152,11 +169,32 @@ const PlanBoard = () => {
     setEditDialogOpen(true);
   };
 
-  const handleArchiveProject = (project: UIProject) => {
-    toast({
-      title: 'Archive Project',
-      description: `${project.name} would be archived`,
-    });
+  const handleArchiveProject = async (project: UIProject) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ status: 'archived' })
+        .eq('id', project.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setProjects(prev => prev.map(p => 
+        p.id === project.id ? { ...p, status: 'archived' } : p
+      ));
+
+      toast({
+        title: 'Success',
+        description: `Project "${project.name}" has been archived`,
+      });
+    } catch (error) {
+      console.error('Error archiving project:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to archive project',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleSelectProject = (project: UIProject) => {
@@ -167,17 +205,60 @@ const PlanBoard = () => {
     loadProjects();
   };
 
-  const handleTaskMove = (taskId: string, newStatus: string, newIndex: number) => {
-    toast({
-      title: 'Task Moved',
-      description: `Task moved to ${newStatus}`,
-    });
+  const handleTaskMove = async (taskId: string, newStatus: string, newIndex: number) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ 
+          status: newStatus,
+          position: newIndex,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', taskId);
+
+      if (error) throw error;
+
+      // Update local state
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? { ...task, status: newStatus } : task
+      ));
+
+      toast({
+        title: 'Success',
+        description: `Task moved to ${newStatus}`,
+      });
+    } catch (error) {
+      console.error('Error moving task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to move task',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleTaskClick = (task: Task) => {
+    // For now, just show task info - could be expanded to open a task detail modal
     toast({
-      title: 'Task Details',
-      description: `Task details modal for "${task.title}" would open here`,
+      title: 'Task Selected',
+      description: `Task: "${task.title}"`,
+    });
+  };
+
+  const handleAddTask = () => {
+    if (!selectedProject) {
+      toast({
+        title: 'No Project Selected',
+        description: 'Please select a project first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // This could open a create task dialog
+    toast({
+      title: 'Add Task',
+      description: 'Task creation functionality to be implemented',
     });
   };
 
@@ -316,7 +397,7 @@ const PlanBoard = () => {
                 
                 <div className="flex items-center gap-2">
                   <ViewSelector currentView={currentView} onViewChange={setCurrentView} />
-                  <Button size="sm">
+                  <Button size="sm" onClick={handleAddTask}>
                     <Plus className="h-4 w-4 mr-1" />
                     Add Task
                   </Button>
@@ -354,6 +435,13 @@ const PlanBoard = () => {
             </div>
           </div>
         </div>
+
+        {/* Dialogs */}
+        <CreateProjectDialog
+          onProjectCreated={handleProjectCreated}
+          open={createProjectDialogOpen}
+          onOpenChange={setCreateProjectDialogOpen}
+        />
 
         <ProjectEditDialog
           project={projectToEdit}
