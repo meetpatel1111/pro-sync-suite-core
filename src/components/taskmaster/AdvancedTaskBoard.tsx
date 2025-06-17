@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -227,11 +228,11 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          className={`mb-3 cursor-pointer hover:shadow-lg transition-all duration-200 ${
-            snapshot.isDragging ? 'shadow-2xl rotate-2' : ''
+          className={`mb-3 cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:scale-[1.02] ${
+            snapshot.isDragging ? 'shadow-2xl rotate-2 scale-105 animate-pulse-soft' : ''
           } ${
-            selectedTasks.has(task.id) ? 'ring-2 ring-primary' : ''
-          }`}
+            selectedTasks.has(task.id) ? 'ring-2 ring-primary animate-glow' : ''
+          } interactive-card`}
           onClick={(e) => {
             if (e.ctrlKey || e.metaKey) {
               const newSelected = new Set(selectedTasks);
@@ -249,64 +250,64 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
           <CardContent className="p-4">
             <div className="space-y-3">
               {/* Task Header */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between animate-fade-in-right">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm">{getTypeIcon(task.type)}</span>
-                  <Badge variant="outline" className="text-xs">
+                  <span className="text-sm animate-bounce-soft">{getTypeIcon(task.type)}</span>
+                  <Badge variant="outline" className="text-xs badge-pulse">
                     {task.task_key}
                   </Badge>
                 </div>
-                <div className={`w-2 h-2 rounded-full ${getPriorityColor(task.priority)}`} />
+                <div className={`w-2 h-2 rounded-full transition-all duration-300 hover:scale-150 ${getPriorityColor(task.priority)}`} />
               </div>
               
               {/* Task Title */}
-              <h4 className="text-sm font-medium line-clamp-2">
+              <h4 className="text-sm font-medium line-clamp-2 animate-fade-in text-shimmer">
                 {task.title}
               </h4>
               
               {/* Task Meta */}
-              <div className="flex flex-wrap gap-2 text-xs">
+              <div className="flex flex-wrap gap-2 text-xs stagger-container">
                 {task.assignee_id && (
-                  <Badge variant="secondary" className="bg-blue-50 text-blue-700">
-                    <User className="h-3 w-3 mr-1" />
+                  <Badge variant="secondary" className="bg-blue-50 text-blue-700 animate-scale-in hover:scale-110 transition-transform">
+                    <User className="h-3 w-3 mr-1 icon-bounce" />
                     Assigned
                   </Badge>
                 )}
                 {task.due_date && (
-                  <Badge variant="secondary" className="bg-amber-50 text-amber-700">
-                    <Calendar className="h-3 w-3 mr-1" />
+                  <Badge variant="secondary" className="bg-amber-50 text-amber-700 animate-scale-in hover:scale-110 transition-transform">
+                    <Calendar className="h-3 w-3 mr-1 icon-bounce" />
                     {new Date(task.due_date).toLocaleDateString()}
                   </Badge>
                 )}
                 {task.story_points && (
-                  <Badge variant="secondary" className="bg-purple-50 text-purple-700">
-                    <Target className="h-3 w-3 mr-1" />
+                  <Badge variant="secondary" className="bg-purple-50 text-purple-700 animate-scale-in hover:scale-110 transition-transform">
+                    <Target className="h-3 w-3 mr-1 icon-bounce" />
                     {task.story_points} SP
                   </Badge>
                 )}
                 {task.labels && task.labels.length > 0 && (
-                  <Badge variant="secondary" className="bg-green-50 text-green-700">
+                  <Badge variant="secondary" className="bg-green-50 text-green-700 animate-scale-in hover:scale-110 transition-transform">
                     {task.labels[0]}
                   </Badge>
                 )}
               </div>
 
               {/* Task Indicators */}
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center justify-between text-xs text-muted-foreground animate-fade-in-up">
                 <div className="flex items-center gap-2">
                   {task.watchers && task.watchers.length > 0 && (
-                    <span className="flex items-center gap-1">
-                      <Eye className="h-3 w-3" />
+                    <span className="flex items-center gap-1 hover:scale-110 transition-transform">
+                      <Eye className="h-3 w-3 icon-bounce" />
                       {task.watchers.length}
                     </span>
                   )}
                   {task.blocked_by && task.blocked_by.length > 0 && (
-                    <span className="text-red-500">🚫</span>
+                    <span className="text-red-500 animate-shake">🚫</span>
                   )}
                 </div>
                 {task.estimate_hours && (
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
+                  <span className="flex items-center gap-1 hover:scale-110 transition-transform">
+                    <Clock className="h-3 w-3 icon-bounce" />
                     {task.estimate_hours}h
                   </span>
                 )}
@@ -323,26 +324,28 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
     const isOverLimit = wipLimit && tasks.length > wipLimit;
 
     return (
-      <div key={column.id} className="flex-1 min-w-80">
-        <Card className="h-full">
+      <div key={column.id} className="flex-1 min-w-80 animate-fade-in-up" style={{ animationDelay: `${column.order * 0.1}s` }}>
+        <Card className="h-full interactive-card hover:shadow-2xl transition-all duration-500 morphing-border">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2 animate-slide-in-right">
                 {column.name}
                 <Badge 
                   variant={isOverLimit ? "destructive" : "secondary"}
-                  className="ml-2"
+                  className={`ml-2 transition-all duration-300 ${
+                    isOverLimit ? 'animate-shake badge-pulse' : 'hover:scale-110'
+                  }`}
                 >
                   {tasks.length}
                   {wipLimit && ` / ${wipLimit}`}
                 </Badge>
               </CardTitle>
-              <Button variant="ghost" size="sm">
-                <MoreHorizontal className="h-4 w-4" />
+              <Button variant="ghost" size="sm" className="button-hover">
+                <MoreHorizontal className="h-4 w-4 icon-bounce" />
               </Button>
             </div>
             {isOverLimit && (
-              <div className="text-sm text-destructive">
+              <div className="text-sm text-destructive animate-wiggle">
                 WIP limit exceeded!
               </div>
             )}
@@ -352,11 +355,13 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
               <CardContent
                 ref={provided.innerRef}
                 {...provided.droppableProps}
-                className={`min-h-96 pb-4 ${
-                  snapshot.isDraggingOver ? 'bg-primary/5' : ''
+                className={`min-h-96 pb-4 transition-all duration-300 ${
+                  snapshot.isDraggingOver ? 'bg-primary/5 scale-[1.02] animate-glow' : ''
                 }`}
               >
-                {tasks.map((task, index) => renderTaskCard(task, index))}
+                <div className="stagger-container">
+                  {tasks.map((task, index) => renderTaskCard(task, index))}
+                </div>
                 {provided.placeholder}
                 <CreateTaskDialog
                   boardId={board.id}
@@ -366,9 +371,9 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
                 >
                   <Button 
                     variant="ghost" 
-                    className="w-full border-2 border-dashed border-gray-300 hover:border-primary/50"
+                    className="w-full border-2 border-dashed border-gray-300 hover:border-primary/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg button-hover"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 mr-2 icon-bounce" />
                     Add task
                   </Button>
                 </CreateTaskDialog>
@@ -382,16 +387,16 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 stagger-container">
         {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i} className="animate-pulse">
+          <Card key={i} className="animate-pulse animate-fade-in loading-shimmer">
             <CardHeader>
-              <div className="h-6 bg-gray-200 rounded w-2/3" />
+              <div className="h-6 bg-gray-200 rounded w-2/3 skeleton" />
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {Array.from({ length: 2 }).map((_, j) => (
-                  <div key={j} className="h-24 bg-gray-200 rounded" />
+                  <div key={j} className="h-24 bg-gray-200 rounded skeleton" />
                 ))}
               </div>
             </CardContent>
@@ -402,58 +407,58 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-page-enter">
       {/* Board Header */}
-      <div className="flex items-center justify-between p-6 bg-white rounded-lg shadow-sm border">
+      <div className="flex items-center justify-between p-6 bg-white rounded-lg shadow-sm border glass-morphism animate-slide-in-down">
         <div className="flex items-center gap-4">
-          <div>
-            <h2 className="text-2xl font-bold">{board.name}</h2>
-            <p className="text-muted-foreground">
+          <div className="animate-fade-in-right">
+            <h2 className="text-2xl font-bold text-shimmer">{board.name}</h2>
+            <p className="text-muted-foreground animate-fade-in-up">
               {board.type.charAt(0).toUpperCase() + board.type.slice(1)} Board
             </p>
           </div>
           {board.type === 'scrum' && activeSprint && (
-            <Badge variant="default" className="bg-blue-100 text-blue-800">
+            <Badge variant="default" className="bg-blue-100 text-blue-800 animate-bounce-soft pulse-ring">
               Sprint: {activeSprint.name}
             </Badge>
           )}
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 animate-fade-in-left stagger-container">
           <CreateTaskDialog
             boardId={board.id}
             projectId={project.id}
             onTaskCreated={handleTaskCreated}
           >
-            <Button variant="outline" size="sm">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button variant="outline" size="sm" className="button-hover">
+              <Plus className="h-4 w-4 mr-2 icon-bounce" />
               Create
             </Button>
           </CreateTaskDialog>
-          <Button variant="outline" size="sm">
-            <Settings className="h-4 w-4" />
+          <Button variant="outline" size="sm" className="button-hover">
+            <Settings className="h-4 w-4 icon-bounce" />
           </Button>
         </div>
       </div>
 
       {/* Filters and Controls */}
-      <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-lg">
-        <div className="flex items-center gap-2">
-          <Search className="h-4 w-4" />
+      <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-lg glass-morphism animate-slide-in-up">
+        <div className="flex items-center gap-2 animate-scale-in">
+          <Search className="h-4 w-4 icon-bounce" />
           <Input
             placeholder="Search tasks..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-64"
+            className="w-64 input-focus"
           />
         </div>
         
         <Select value={swimlaneType} onValueChange={(value: any) => setSwimlaneType(value)}>
-          <SelectTrigger className="w-48">
-            <Layout className="h-4 w-4 mr-2" />
+          <SelectTrigger className="w-48 input-focus dropdown-enter">
+            <Layout className="h-4 w-4 mr-2 icon-bounce" />
             <SelectValue placeholder="Swimlanes" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="dropdown-enter bg-white/95 backdrop-blur-md z-50">
             <SelectItem value="none">No Swimlanes</SelectItem>
             <SelectItem value="assignee">By Assignee</SelectItem>
             <SelectItem value="priority">By Priority</SelectItem>
@@ -465,11 +470,11 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
           value={filters.priority || 'all'} 
           onValueChange={(value) => setFilters(prev => ({ ...prev, priority: value }))}
         >
-          <SelectTrigger className="w-40">
-            <Flag className="h-4 w-4 mr-2" />
+          <SelectTrigger className="w-40 input-focus dropdown-enter">
+            <Flag className="h-4 w-4 mr-2 icon-bounce" />
             <SelectValue placeholder="Priority" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="dropdown-enter bg-white/95 backdrop-blur-md z-50">
             <SelectItem value="all">All Priorities</SelectItem>
             <SelectItem value="critical">Critical</SelectItem>
             <SelectItem value="high">High</SelectItem>
@@ -482,11 +487,11 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
           value={filters.type || 'all'} 
           onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}
         >
-          <SelectTrigger className="w-40">
-            <CheckSquare className="h-4 w-4 mr-2" />
+          <SelectTrigger className="w-40 input-focus dropdown-enter">
+            <CheckSquare className="h-4 w-4 mr-2 icon-bounce" />
             <SelectValue placeholder="Type" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="dropdown-enter bg-white/95 backdrop-blur-md z-50">
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="task">Task</SelectItem>
             <SelectItem value="bug">Bug</SelectItem>
@@ -496,7 +501,7 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
         </Select>
 
         {selectedTasks.size > 0 && (
-          <Badge variant="secondary" className="ml-auto">
+          <Badge variant="secondary" className="ml-auto animate-tada badge-pulse">
             {selectedTasks.size} selected
           </Badge>
         )}
@@ -505,12 +510,12 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
       {/* Board Content */}
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="space-y-6">
-          {Object.entries(getSwimlaneGroups()).map(([groupName, groupTasks]) => (
-            <div key={groupName} className="space-y-4">
+          {Object.entries(getSwimlaneGroups()).map(([groupName, groupTasks], groupIndex) => (
+            <div key={groupName} className="space-y-4 animate-fade-in-up" style={{ animationDelay: `${groupIndex * 0.1}s` }}>
               {swimlaneType !== 'none' && (
-                <div className="flex items-center gap-2 px-4">
-                  <h3 className="font-semibold text-lg">{groupName}</h3>
-                  <Badge variant="outline">{groupTasks.length} tasks</Badge>
+                <div className="flex items-center gap-2 px-4 animate-slide-in-right">
+                  <h3 className="font-semibold text-lg text-gradient">{groupName}</h3>
+                  <Badge variant="outline" className="badge-pulse">{groupTasks.length} tasks</Badge>
                 </div>
               )}
               
@@ -529,10 +534,10 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
 
       {/* Empty State */}
       {getFilteredTasks().length === 0 && (
-        <div className="text-center py-16">
-          <CheckSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-xl font-semibold mb-2">No tasks found</h3>
-          <p className="text-muted-foreground mb-4">
+        <div className="text-center py-16 animate-zoom-in">
+          <CheckSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4 animate-float" />
+          <h3 className="text-xl font-semibold mb-2 animate-fade-in-up">No tasks found</h3>
+          <p className="text-muted-foreground mb-4 animate-fade-in-up">
             {searchQuery || Object.values(filters).some(v => v && v !== 'all')
               ? 'Try adjusting your filters or search terms'
               : 'Create your first task to get started'
@@ -543,8 +548,8 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
             projectId={project.id}
             onTaskCreated={handleTaskCreated}
           >
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
+            <Button className="animate-bounce-soft button-hover">
+              <Plus className="h-4 w-4 mr-2 icon-bounce" />
               Create Task
             </Button>
           </CreateTaskDialog>

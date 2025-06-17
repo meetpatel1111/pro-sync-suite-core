@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -175,41 +176,46 @@ export const AppearanceSettingsSection = () => {
   const currentFontSize = typeof settings.fontSize === 'number' ? settings.fontSize : customFontSize;
 
   if (loading) {
-    return <div className="flex items-center justify-center p-6">Loading appearance settings...</div>;
+    return (
+      <div className="flex items-center justify-center p-6 animate-fade-in">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <span className="ml-3 text-muted-foreground">Loading appearance settings...</span>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
+    <div className="space-y-6 animate-page-enter">
+      <Card className="interactive-card animate-fade-in-up">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 animate-slide-in-right">
+            <Palette className="h-5 w-5 icon-bounce" />
             Theme & Colors
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="animate-fade-in-up">
             Customize the visual appearance of your workspace
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Theme Selection */}
-          <div className="space-y-3">
+          <div className="space-y-3 animate-fade-in-up">
             <Label className="text-base font-medium">Color Theme</Label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 stagger-container">
               {THEMES.map((theme) => (
                 <div
                   key={theme.value}
-                  className={`p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg ${
                     settings.theme === theme.value 
-                      ? 'border-primary bg-primary/5' 
+                      ? 'border-primary bg-primary/5 animate-glow' 
                       : 'border-muted hover:border-muted-foreground/50'
-                  }`}
+                  } interactive-card`}
                   onClick={() => handleThemeChange(theme.value)}
                 >
                   <div className="flex items-center space-x-2 mb-2">
-                    <Monitor className="h-4 w-4" />
+                    <Monitor className="h-4 w-4 icon-bounce" />
                     <span className="font-medium">{theme.label}</span>
                     {settings.theme === theme.value && (
-                      <Badge variant="secondary" className="ml-auto">Active</Badge>
+                      <Badge variant="secondary" className="ml-auto badge-pulse">Active</Badge>
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground">{theme.description}</p>
@@ -221,34 +227,34 @@ export const AppearanceSettingsSection = () => {
           <Separator />
 
           {/* Primary Color */}
-          <div className="space-y-3">
+          <div className="space-y-3 animate-fade-in-up">
             <Label className="text-base font-medium">Primary Color</Label>
             <div className="space-y-4">
-              <div className="grid grid-cols-6 md:grid-cols-12 gap-2">
+              <div className="grid grid-cols-6 md:grid-cols-12 gap-2 stagger-container">
                 {PRESET_COLORS.map((color) => (
                   <button
                     key={color}
-                    className={`w-8 h-8 rounded-md border-2 ${
+                    className={`w-8 h-8 rounded-md border-2 transition-all duration-300 hover:scale-125 ${
                       settings.primaryColor === color 
-                        ? 'border-foreground scale-110' 
+                        ? 'border-foreground scale-110 animate-glow' 
                         : 'border-transparent hover:scale-105'
-                    } transition-transform`}
+                    } button-hover`}
                     style={{ backgroundColor: color }}
                     onClick={() => handleColorChange(color)}
                   />
                 ))}
               </div>
               
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-3 animate-scale-in">
                 <Label htmlFor="custom-color">Custom:</Label>
                 <input
                   id="custom-color"
                   type="color"
                   value={customColor}
                   onChange={(e) => handleColorChange(e.target.value)}
-                  className="w-12 h-8 rounded border"
+                  className="w-12 h-8 rounded border transition-transform duration-300 hover:scale-110"
                 />
-                <span className="text-sm text-muted-foreground">{customColor}</span>
+                <span className="text-sm text-muted-foreground animate-fade-in">{customColor}</span>
               </div>
             </div>
           </div>
@@ -256,11 +262,11 @@ export const AppearanceSettingsSection = () => {
           <Separator />
 
           {/* Font Settings */}
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in-up">
             {/* Font Family */}
             <div className="space-y-3">
               <Label className="text-base font-medium flex items-center gap-2">
-                <Type className="h-4 w-4" />
+                <Type className="h-4 w-4 icon-bounce" />
                 Font Family
               </Label>
               <FontFamilySelector
@@ -274,15 +280,15 @@ export const AppearanceSettingsSection = () => {
               <Label className="text-base font-medium">Font Size</Label>
               
               {/* Preset Sizes */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 stagger-container">
                 {FONT_SIZE_PRESETS.map((preset) => (
                   <button
                     key={preset.value}
-                    className={`p-3 rounded-lg border-2 cursor-pointer transition-colors text-left ${
+                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all duration-300 text-left hover:scale-105 hover:shadow-md ${
                       currentFontSize === preset.size
-                        ? 'border-primary bg-primary/5' 
+                        ? 'border-primary bg-primary/5 animate-glow' 
                         : 'border-muted hover:border-muted-foreground/50'
-                    }`}
+                    } interactive-card`}
                     onClick={() => handleFontSizeChange(preset.size)}
                   >
                     <div className="flex items-center justify-between mb-1">
@@ -297,16 +303,16 @@ export const AppearanceSettingsSection = () => {
               </div>
 
               {/* Custom Size Slider */}
-              <div className="space-y-3">
+              <div className="space-y-3 animate-scale-in">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-medium">Custom Size</Label>
                   <div className="flex items-center space-x-2">
-                    <span className="text-sm text-muted-foreground">{currentFontSize}px</span>
+                    <span className="text-sm text-muted-foreground animate-fade-in">{currentFontSize}px</span>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleFontSizeChange(16)}
-                      className="text-xs px-2 py-1"
+                      className="text-xs px-2 py-1 button-hover"
                     >
                       Reset
                     </Button>
@@ -320,7 +326,7 @@ export const AppearanceSettingsSection = () => {
                     min={10}
                     max={32}
                     step={1}
-                    className="w-full"
+                    className="w-full transition-all duration-300"
                   />
                   <div className="flex justify-between text-xs text-muted-foreground mt-1">
                     <span>10px</span>
@@ -329,9 +335,9 @@ export const AppearanceSettingsSection = () => {
                 </div>
 
                 {/* Live Preview */}
-                <div className="p-3 bg-muted rounded-lg">
+                <div className="p-3 bg-muted rounded-lg interactive-card">
                   <p className="text-muted-foreground text-xs mb-2">Live Preview:</p>
-                  <p style={{ fontSize: `${currentFontSize}px` }}>
+                  <p style={{ fontSize: `${currentFontSize}px` }} className="animate-fade-in">
                     The quick brown fox jumps over the lazy dog.
                   </p>
                 </div>
@@ -342,24 +348,24 @@ export const AppearanceSettingsSection = () => {
           <Separator />
 
           {/* UI Density */}
-          <div className="space-y-3">
+          <div className="space-y-3 animate-fade-in-up">
             <Label className="text-base font-medium">Interface Density</Label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 stagger-container">
               {UI_DENSITIES.map((density) => (
                 <div
                   key={density.value}
-                  className={`p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                  className={`p-3 rounded-lg border-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-md ${
                     settings.uiDensity === density.value 
-                      ? 'border-primary bg-primary/5' 
+                      ? 'border-primary bg-primary/5 animate-glow' 
                       : 'border-muted hover:border-muted-foreground/50'
-                  }`}
+                  } interactive-card`}
                   onClick={() => handleDensityChange(density.value)}
                 >
                   <div className="flex items-center space-x-2 mb-1">
-                    <Layout className="h-4 w-4" />
+                    <Layout className="h-4 w-4 icon-bounce" />
                     <span className="font-medium">{density.label}</span>
                     {settings.uiDensity === density.value && (
-                      <Badge variant="secondary" className="ml-auto">Active</Badge>
+                      <Badge variant="secondary" className="ml-auto badge-pulse">Active</Badge>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">{density.description}</p>
@@ -371,10 +377,10 @@ export const AppearanceSettingsSection = () => {
           <Separator />
 
           {/* Animations */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between animate-fade-in-up">
             <div className="space-y-1">
               <Label className="text-base font-medium flex items-center gap-2">
-                <Zap className="h-4 w-4" />
+                <Zap className="h-4 w-4 icon-bounce" />
                 Enable Animations
               </Label>
               <p className="text-sm text-muted-foreground">
@@ -384,37 +390,38 @@ export const AppearanceSettingsSection = () => {
             <Switch
               checked={settings.animationsEnabled}
               onCheckedChange={handleAnimationsChange}
+              className="transition-transform duration-300 hover:scale-110"
             />
           </div>
         </CardContent>
       </Card>
 
       {/* Preview Card */}
-      <Card>
+      <Card className="interactive-card animate-slide-in-up">
         <CardHeader>
-          <CardTitle>Preview</CardTitle>
-          <CardDescription>
+          <CardTitle className="animate-fade-in-right">Preview</CardTitle>
+          <CardDescription className="animate-fade-in-up">
             See how your settings affect the interface
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="p-4 bg-muted rounded-lg">
+          <div className="p-4 bg-muted rounded-lg glass-morphism animate-scale-in">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
                 <div 
-                  className="w-4 h-4 rounded"
+                  className="w-4 h-4 rounded animate-pulse-soft"
                   style={{ backgroundColor: settings.primaryColor }}
                 />
                 <span className="font-medium">Sample Component</span>
               </div>
-              <Badge>Preview</Badge>
+              <Badge className="badge-pulse">Preview</Badge>
             </div>
-            <p className="text-sm text-muted-foreground mb-3">
+            <p className="text-sm text-muted-foreground mb-3 animate-fade-in-up">
               This is how components will look with your selected theme and colors.
             </p>
             <Button 
               size="sm" 
-              className="transition-all duration-200"
+              className="transition-all duration-300 button-hover"
               style={{ 
                 backgroundColor: settings.primaryColor,
                 borderColor: settings.primaryColor 

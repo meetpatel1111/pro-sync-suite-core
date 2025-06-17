@@ -110,16 +110,16 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 stagger-container">
         {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i} className="animate-pulse modern-card">
+          <Card key={i} className="animate-pulse modern-card animate-fade-in loading-shimmer">
             <CardHeader>
-              <div className="h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded-lg w-2/3"></div>
+              <div className="h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded-lg w-2/3 skeleton"></div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {Array.from({ length: 2 }).map((_, j) => (
-                  <div key={j} className="h-24 bg-gradient-to-r from-gray-200 to-gray-300 rounded-xl"></div>
+                  <div key={j} className="h-24 bg-gradient-to-r from-gray-200 to-gray-300 rounded-xl skeleton"></div>
                 ))}
               </div>
             </CardContent>
@@ -130,31 +130,31 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-page-enter">
       {/* Board Header */}
-      <div className="flex items-center justify-between p-6 bg-white rounded-xl shadow-sm border">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-gray-900">{board.name}</h1>
-          <p className="text-lg text-gray-600">
+      <div className="flex items-center justify-between p-6 bg-white rounded-xl shadow-sm border glass-morphism animate-slide-in-down">
+        <div className="space-y-1 animate-fade-in-right">
+          <h1 className="text-3xl font-bold text-gray-900 text-shimmer">{board.name}</h1>
+          <p className="text-lg text-gray-600 animate-fade-in-up">
             {board.type.charAt(0).toUpperCase() + board.type.slice(1)} workflow for {project.name}
           </p>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 animate-fade-in-left stagger-container">
           <CreateTaskDialog
             boardId={board.id}
             projectId={project.id}
             onTaskCreated={handleTaskCreated}
           >
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button className="bg-blue-600 hover:bg-blue-700 button-hover">
+              <Plus className="h-4 w-4 mr-2 icon-bounce" />
               Create Task
             </Button>
           </CreateTaskDialog>
           
           <BoardConfigDialog board={board} onBoardUpdate={handleBoardUpdate}>
-            <Button variant="outline">
-              <Settings className="h-4 w-4 mr-2" />
+            <Button variant="outline" className="button-hover">
+              <Settings className="h-4 w-4 mr-2 icon-bounce" />
               Configure
             </Button>
           </BoardConfigDialog>
@@ -162,47 +162,47 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
       </div>
 
       {/* View Tabs */}
-      <Tabs value={activeView} onValueChange={(value: any) => setActiveView(value)}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="board" className="flex items-center gap-2">
-            <Kanban className="h-4 w-4" />
+      <Tabs value={activeView} onValueChange={(value: any) => setActiveView(value)} className="animate-fade-in-up">
+        <TabsList className="grid w-full grid-cols-4 glass-morphism">
+          <TabsTrigger value="board" className="flex items-center gap-2 transition-all duration-300 hover:scale-105 tab-enter">
+            <Kanban className="h-4 w-4 icon-bounce" />
             Board
           </TabsTrigger>
-          <TabsTrigger value="backlog" className="flex items-center gap-2">
-            <List className="h-4 w-4" />
+          <TabsTrigger value="backlog" className="flex items-center gap-2 transition-all duration-300 hover:scale-105 tab-enter">
+            <List className="h-4 w-4 icon-bounce" />
             Backlog
           </TabsTrigger>
           {board.type === 'scrum' && (
-            <TabsTrigger value="sprints" className="flex items-center gap-2">
-              <Timer className="h-4 w-4" />
+            <TabsTrigger value="sprints" className="flex items-center gap-2 transition-all duration-300 hover:scale-105 tab-enter">
+              <Timer className="h-4 w-4 icon-bounce" />
               Sprints
             </TabsTrigger>
           )}
-          <TabsTrigger value="reports" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
+          <TabsTrigger value="reports" className="flex items-center gap-2 transition-all duration-300 hover:scale-105 tab-enter">
+            <BarChart3 className="h-4 w-4 icon-bounce" />
             Reports
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="board" className="mt-6">
+        <TabsContent value="board" className="mt-6 tab-content-enter">
           <AdvancedTaskBoard 
             project={project} 
             board={board}
           />
         </TabsContent>
 
-        <TabsContent value="backlog" className="mt-6">
-          <div className="text-center py-16">
-            <List className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Backlog View</h3>
-            <p className="text-muted-foreground">
+        <TabsContent value="backlog" className="mt-6 tab-content-enter">
+          <div className="text-center py-16 animate-zoom-in">
+            <List className="h-16 w-16 text-muted-foreground mx-auto mb-4 animate-float" />
+            <h3 className="text-xl font-semibold mb-2 animate-fade-in-up">Backlog View</h3>
+            <p className="text-muted-foreground animate-fade-in-up">
               Prioritized list of tasks and stories ready for development
             </p>
           </div>
         </TabsContent>
 
         {board.type === 'scrum' && (
-          <TabsContent value="sprints" className="mt-6">
+          <TabsContent value="sprints" className="mt-6 tab-content-enter">
             <SprintManagement
               project={project}
               board={board}
@@ -211,11 +211,11 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
           </TabsContent>
         )}
 
-        <TabsContent value="reports" className="mt-6">
-          <div className="text-center py-16">
-            <BarChart3 className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Board Analytics</h3>
-            <p className="text-muted-foreground">
+        <TabsContent value="reports" className="mt-6 tab-content-enter">
+          <div className="text-center py-16 animate-zoom-in">
+            <BarChart3 className="h-16 w-16 text-muted-foreground mx-auto mb-4 animate-float" />
+            <h3 className="text-xl font-semibold mb-2 animate-fade-in-up">Board Analytics</h3>
+            <p className="text-muted-foreground animate-fade-in-up">
               Burndown charts, velocity tracking, and team performance metrics
             </p>
           </div>
