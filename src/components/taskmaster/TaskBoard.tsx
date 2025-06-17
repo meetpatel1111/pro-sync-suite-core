@@ -29,7 +29,6 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
   const [tasks, setTasks] = useState<TaskMasterTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskMasterTask | undefined>();
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [activeView, setActiveView] = useState<'board' | 'backlog' | 'sprints' | 'reports'>('board');
 
   useEffect(() => {
@@ -56,55 +55,13 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
     }
   };
 
-  const handleTaskCreate = async (taskData: Partial<TaskMasterTask>) => {
-    if (!user) {
-      toast({
-        title: 'Error',
-        description: 'You must be logged in to create tasks',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      const { data, error } = await taskmasterService.createTask({
-        ...taskData,
-        board_id: board.id,
-        project_id: project.id,
-        created_by: user.id,
-        status: taskData.status || 'todo',
-        priority: taskData.priority || 'medium',
-        type: taskData.type || 'task',
-        visibility: taskData.visibility || 'team',
-        position: tasks.length,
-        actual_hours: 0
-      } as Omit<TaskMasterTask, 'id' | 'task_number' | 'task_key' | 'created_at' | 'updated_at'>);
-
-      if (error) {
-        console.error('Task creation error:', error);
-        toast({
-          title: 'Error',
-          description: error.message || 'Failed to create task',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (data) {
-        setTasks(prev => [...prev, data]);
-        toast({
-          title: 'Success',
-          description: `Task ${data.task_key} created successfully`,
-        });
-      }
-    } catch (error) {
-      console.error('Unexpected error creating task:', error);
-      toast({
-        title: 'Error',
-        description: 'An unexpected error occurred while creating the task',
-        variant: 'destructive',
-      });
-    }
+  const handleTaskCreated = (task: TaskMasterTask) => {
+    setTasks(prev => [...prev, task]);
+    fetchTasks(); // Refresh to get the latest data
+    toast({
+      title: 'Success',
+      description: `Task ${task.task_key} created successfully`,
+    });
   };
 
   const handleTaskUpdate = async (taskId: string, updates: Partial<TaskMasterTask>) => {
@@ -184,13 +141,16 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
         </div>
         
         <div className="flex items-center gap-3">
-          <Button 
-            onClick={() => setIsCreateDialogOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700"
+          <CreateTaskDialog
+            boardId={board.id}
+            projectId={project.id}
+            onTaskCreated={handleTaskCreated}
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Task
-          </Button>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Task
+            </Button>
+          </CreateTaskDialog>
           
           <BoardConfigDialog board={board} onBoardUpdate={handleBoardUpdate}>
             <Button variant="outline">
@@ -262,15 +222,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
         </TabsContent>
       </Tabs>
 
-      {/* Dialogs */}
-      <CreateTaskDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        onTaskCreate={handleTaskCreate}
-        project={project}
-        board={board}
-      />
-
+      {/* Task Detail Dialog */}
       <TaskDetailDialog
         task={selectedTask}
         open={!!selectedTask}

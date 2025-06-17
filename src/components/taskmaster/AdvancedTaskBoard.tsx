@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,7 +32,6 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
   const [activeSprint, setActiveSprint] = useState<Sprint | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskMasterTask | undefined>();
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
   // View and filter state
   const [viewType, setViewType] = useState<'board' | 'backlog' | 'sprint'>('board');
@@ -105,56 +103,9 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
     setTasks(newTasks);
   }, [tasks, user]);
 
-  const handleTaskCreate = async (taskData: Partial<TaskMasterTask>) => {
-    if (!user) {
-      toast({
-        title: 'Error',
-        description: 'You must be logged in to create tasks',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      const { data, error } = await taskmasterService.createTask({
-        ...taskData,
-        board_id: board.id,
-        project_id: project.id,
-        created_by: user.id,
-        status: taskData.status || 'todo',
-        priority: taskData.priority || 'medium',
-        type: taskData.type || 'task',
-        visibility: taskData.visibility || 'team',
-        position: tasks.length,
-        actual_hours: 0,
-        sprint_id: activeSprint?.id
-      } as Omit<TaskMasterTask, 'id' | 'task_number' | 'task_key' | 'created_at' | 'updated_at'>);
-
-      if (error) {
-        console.error('Task creation error:', error);
-        toast({
-          title: 'Error',
-          description: error.message || 'Failed to create task',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (data) {
-        setTasks(prev => [...prev, data]);
-        toast({
-          title: 'Success',
-          description: `Task ${data.task_key} created successfully`,
-        });
-      }
-    } catch (error) {
-      console.error('Unexpected error creating task:', error);
-      toast({
-        title: 'Error',
-        description: 'An unexpected error occurred while creating the task',
-        variant: 'destructive',
-      });
-    }
+  const handleTaskCreated = (task: TaskMasterTask) => {
+    setTasks(prev => [...prev, task]);
+    fetchTasks(); // Refresh to get the latest data
   };
 
   const handleTaskUpdate = async (taskId: string, updates: Partial<TaskMasterTask>) => {
@@ -407,14 +358,20 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
               >
                 {tasks.map((task, index) => renderTaskCard(task, index))}
                 {provided.placeholder}
-                <Button 
-                  variant="ghost" 
-                  className="w-full border-2 border-dashed border-gray-300 hover:border-primary/50"
-                  onClick={() => setIsCreateDialogOpen(true)}
+                <CreateTaskDialog
+                  boardId={board.id}
+                  projectId={project.id}
+                  onTaskCreated={handleTaskCreated}
+                  defaultStatus={column.id}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add task
-                </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full border-2 border-dashed border-gray-300 hover:border-primary/50"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add task
+                  </Button>
+                </CreateTaskDialog>
               </CardContent>
             )}
           </Droppable>
@@ -463,14 +420,16 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
         </div>
         
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setIsCreateDialogOpen(true)}
+          <CreateTaskDialog
+            boardId={board.id}
+            projectId={project.id}
+            onTaskCreated={handleTaskCreated}
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Create
-          </Button>
+            <Button variant="outline" size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Create
+            </Button>
+          </CreateTaskDialog>
           <Button variant="outline" size="sm">
             <Settings className="h-4 w-4" />
           </Button>
@@ -579,22 +538,20 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
               : 'Create your first task to get started'
             }
           </p>
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Task
-          </Button>
+          <CreateTaskDialog
+            boardId={board.id}
+            projectId={project.id}
+            onTaskCreated={handleTaskCreated}
+          >
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Task
+            </Button>
+          </CreateTaskDialog>
         </div>
       )}
 
-      {/* Dialogs */}
-      <CreateTaskDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        onTaskCreate={handleTaskCreate}
-        project={project}
-        board={board}
-      />
-
+      {/* Task Detail Dialog */}
       <TaskDetailDialog
         task={selectedTask}
         open={!!selectedTask}
