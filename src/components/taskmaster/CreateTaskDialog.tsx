@@ -6,10 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Plus } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { Plus, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { taskmasterService } from '@/services/taskmasterService';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthContext } from '@/context/AuthContext';
 import type { TaskMasterTask } from '@/types/taskmaster';
 
 interface CreateTaskDialogProps {
@@ -27,7 +27,8 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
   defaultStatus = 'todo',
   children
 }) => {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -47,7 +48,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
     
     if (!user) {
       toast({
-        title: 'Error',
+        title: 'Authentication Required',
         description: 'You must be logged in to create tasks',
         variant: 'destructive',
       });
@@ -56,7 +57,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
 
     if (!formData.title.trim()) {
       toast({
-        title: 'Error',
+        title: 'Validation Error',
         description: 'Task title is required',
         variant: 'destructive',
       });
@@ -90,8 +91,8 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
       if (error) {
         console.error('Error creating task:', error);
         toast({
-          title: 'Error',
-          description: error.message || 'Failed to create task',
+          title: 'Creation Failed',
+          description: error.message || 'Failed to create task. Please try again.',
           variant: 'destructive',
         });
         return;
@@ -113,14 +114,14 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
         });
         
         toast({
-          title: 'Success',
-          description: `Task "${task.title}" created successfully`,
+          title: 'Task Created',
+          description: `Task "${task.title}" has been created successfully`,
         });
       }
     } catch (error) {
       console.error('Unexpected error creating task:', error);
       toast({
-        title: 'Error',
+        title: 'Unexpected Error',
         description: 'An unexpected error occurred while creating the task',
         variant: 'destructive',
       });
@@ -140,15 +141,15 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {children || (
-          <Button size="sm">
-            <Plus className="h-4 w-4 mr-2" />
+          <Button size="sm" className="animate-fade-in-up">
+            <Plus className="h-4 w-4 mr-2 icon-bounce" />
             Add Task
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md animate-scale-in">
         <DialogHeader>
-          <DialogTitle>Create New Task</DialogTitle>
+          <DialogTitle className="text-gradient">Create New Task</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -159,6 +160,8 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
               onChange={(e) => handleInputChange('title', e.target.value)}
               placeholder="Enter task title"
               required
+              disabled={loading}
+              className="input-focus"
             />
           </div>
 
@@ -170,14 +173,20 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
               onChange={(e) => handleInputChange('description', e.target.value)}
               placeholder="Enter task description"
               rows={3}
+              disabled={loading}
+              className="input-focus"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
-                <SelectTrigger>
+              <Select 
+                value={formData.status} 
+                onValueChange={(value) => handleInputChange('status', value)}
+                disabled={loading}
+              >
+                <SelectTrigger className="input-focus">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -191,8 +200,12 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="priority">Priority</Label>
-              <Select value={formData.priority} onValueChange={(value) => handleInputChange('priority', value)}>
-                <SelectTrigger>
+              <Select 
+                value={formData.priority} 
+                onValueChange={(value) => handleInputChange('priority', value)}
+                disabled={loading}
+              >
+                <SelectTrigger className="input-focus">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -208,8 +221,12 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="type">Type</Label>
-              <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
-                <SelectTrigger>
+              <Select 
+                value={formData.type} 
+                onValueChange={(value) => handleInputChange('type', value)}
+                disabled={loading}
+              >
+                <SelectTrigger className="input-focus">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -223,8 +240,12 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="visibility">Visibility</Label>
-              <Select value={formData.visibility} onValueChange={(value) => handleInputChange('visibility', value)}>
-                <SelectTrigger>
+              <Select 
+                value={formData.visibility} 
+                onValueChange={(value) => handleInputChange('visibility', value)}
+                disabled={loading}
+              >
+                <SelectTrigger className="input-focus">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -247,6 +268,8 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
                 value={formData.estimate_hours}
                 onChange={(e) => handleInputChange('estimate_hours', e.target.value)}
                 placeholder="0"
+                disabled={loading}
+                className="input-focus"
               />
             </div>
 
@@ -257,16 +280,35 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
                 type="date"
                 value={formData.due_date}
                 onChange={(e) => handleInputChange('due_date', e.target.value)}
+                disabled={loading}
+                className="input-focus"
               />
             </div>
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setOpen(false)}
+              disabled={loading}
+              className="button-hover"
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Task'}
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="button-hover"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Task'
+              )}
             </Button>
           </div>
         </form>
