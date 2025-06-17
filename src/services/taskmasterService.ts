@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Project, Board, TaskMasterTask } from '@/types/taskmaster';
 
@@ -281,7 +282,7 @@ class TaskmasterService {
     const validVisibilities = ['team', 'private', 'public'] as const;
     const visibility = validVisibilities.includes(item.visibility) ? item.visibility as typeof validVisibilities[number] : 'team';
 
-    // Handle assigned_to array field - now we can trust the database trigger maintains consistency
+    // Handle assigned_to array field - the database trigger maintains consistency
     let assignedTo: string[] | undefined;
     if (item.assigned_to && Array.isArray(item.assigned_to)) {
       assignedTo = item.assigned_to;
