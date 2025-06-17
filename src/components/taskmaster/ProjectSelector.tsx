@@ -21,6 +21,7 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({ onProjectSelect, sele
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -66,6 +67,7 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({ onProjectSelect, sele
 
   const handleProjectCreated = (project: Project) => {
     setProjects(prev => [project, ...prev]);
+    setCreateDialogOpen(false);
     console.log('Project created successfully:', project);
   };
 
@@ -124,14 +126,13 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({ onProjectSelect, sele
           <h3 className="text-2xl font-bold text-gradient">Projects</h3>
           <p className="text-muted-foreground text-lg">Select a project to manage boards and tasks</p>
         </div>
-        <CreateProjectDialog onProjectCreated={handleProjectCreated}>
-          <Button 
-            className="btn-primary px-6 py-3 text-base font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 button-hover animate-fade-in-left"
-          >
-            <Folder className="h-5 w-5 mr-2 icon-bounce" />
-            New Project
-          </Button>
-        </CreateProjectDialog>
+        <Button 
+          onClick={() => setCreateDialogOpen(true)}
+          className="btn-primary px-6 py-3 text-base font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 button-hover animate-fade-in-left"
+        >
+          <Folder className="h-5 w-5 mr-2 icon-bounce" />
+          New Project
+        </Button>
       </div>
 
       {/* Projects Grid */}
@@ -204,17 +205,22 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({ onProjectSelect, sele
             <p className="text-muted-foreground text-lg animate-fade-in-up">
               Create your first project to start organizing your work
             </p>
-            <CreateProjectDialog onProjectCreated={handleProjectCreated}>
-              <Button 
-                className="btn-primary px-6 py-3 text-base font-medium rounded-xl button-hover animate-bounce-soft"
-              >
-                <Folder className="h-4 w-4 mr-2 icon-bounce" />
-                Create First Project
-              </Button>
-            </CreateProjectDialog>
+            <Button 
+              onClick={() => setCreateDialogOpen(true)}
+              className="btn-primary px-6 py-3 text-base font-medium rounded-xl button-hover animate-bounce-soft"
+            >
+              <Folder className="h-4 w-4 mr-2 icon-bounce" />
+              Create First Project
+            </Button>
           </div>
         </div>
       )}
+
+      <CreateProjectDialog
+        onProjectCreated={handleProjectCreated}
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+      />
     </div>
   );
 };
