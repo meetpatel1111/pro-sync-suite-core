@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { Ticket, TicketComment, ChangeRequest, ProblemTicket } from '@/types/servicecore';
+import type { Ticket, TicketComment, ChangeRequest, ProblemTicket, CreateTicket, CreateTicketComment } from '@/types/servicecore';
 
 export const servicecoreService = {
   // Tickets
@@ -10,7 +10,7 @@ export const servicecoreService = {
       .select('*')
       .order('created_at', { ascending: false });
     
-    return { data, error };
+    return { data: data as Ticket[] | null, error };
   },
 
   async getTicket(id: string) {
@@ -20,17 +20,17 @@ export const servicecoreService = {
       .eq('id', id)
       .single();
     
-    return { data, error };
+    return { data: data as Ticket | null, error };
   },
 
-  async createTicket(ticket: Partial<Ticket>) {
+  async createTicket(ticket: CreateTicket) {
     const { data, error } = await supabase
       .from('tickets')
       .insert(ticket)
       .select()
       .single();
     
-    return { data, error };
+    return { data: data as Ticket | null, error };
   },
 
   async updateTicket(id: string, updates: Partial<Ticket>) {
@@ -41,7 +41,7 @@ export const servicecoreService = {
       .select()
       .single();
     
-    return { data, error };
+    return { data: data as Ticket | null, error };
   },
 
   // Ticket Comments
@@ -52,17 +52,17 @@ export const servicecoreService = {
       .eq('ticket_id', ticketId)
       .order('created_at', { ascending: true });
     
-    return { data, error };
+    return { data: data as TicketComment[] | null, error };
   },
 
-  async createTicketComment(comment: Partial<TicketComment>) {
+  async createTicketComment(comment: CreateTicketComment) {
     const { data, error } = await supabase
       .from('ticket_comments')
       .insert(comment)
       .select()
       .single();
     
-    return { data, error };
+    return { data: data as TicketComment | null, error };
   },
 
   // Change Requests
@@ -72,7 +72,7 @@ export const servicecoreService = {
       .select('*')
       .order('created_at', { ascending: false });
     
-    return { data, error };
+    return { data: data as ChangeRequest[] | null, error };
   },
 
   async createChangeRequest(changeRequest: Partial<ChangeRequest>) {
@@ -82,7 +82,7 @@ export const servicecoreService = {
       .select()
       .single();
     
-    return { data, error };
+    return { data: data as ChangeRequest | null, error };
   },
 
   // Problem Tickets
@@ -92,7 +92,7 @@ export const servicecoreService = {
       .select('*')
       .order('created_at', { ascending: false });
     
-    return { data, error };
+    return { data: data as ProblemTicket[] | null, error };
   },
 
   async createProblemTicket(problemTicket: Partial<ProblemTicket>) {
@@ -102,6 +102,6 @@ export const servicecoreService = {
       .select()
       .single();
     
-    return { data, error };
+    return { data: data as ProblemTicket | null, error };
   }
 };

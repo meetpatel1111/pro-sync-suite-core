@@ -72,3 +72,23 @@ export interface ProblemTicket {
   created_at: string;
   updated_at: string;
 }
+
+// Database insert types
+export interface CreateTicket {
+  title: string;
+  description?: string;
+  type: 'incident' | 'request' | 'problem' | 'change';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  submitted_by: string;
+  category?: string;
+  tags?: string[];
+  custom_fields?: Record<string, any>;
+}
+
+export interface CreateTicketComment {
+  ticket_id: string;
+  author_id: string;
+  comment: string;
+  is_private?: boolean;
+  mentions?: string[];
+}

@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { KnowledgePage, PageComment } from '@/types/knowledgenest';
+import type { KnowledgePage, PageComment, CreateKnowledgePage, CreatePageComment } from '@/types/knowledgenest';
 
 export const knowledgenestService = {
   // Knowledge Pages
@@ -12,7 +12,7 @@ export const knowledgenestService = {
       .eq('is_archived', false)
       .order('updated_at', { ascending: false });
     
-    return { data, error };
+    return { data: data as KnowledgePage[] | null, error };
   },
 
   async getPage(slug: string) {
@@ -23,17 +23,17 @@ export const knowledgenestService = {
       .eq('is_published', true)
       .single();
     
-    return { data, error };
+    return { data: data as KnowledgePage | null, error };
   },
 
-  async createPage(page: Partial<KnowledgePage>) {
+  async createPage(page: CreateKnowledgePage) {
     const { data, error } = await supabase
       .from('knowledge_pages')
       .insert(page)
       .select()
       .single();
     
-    return { data, error };
+    return { data: data as KnowledgePage | null, error };
   },
 
   async updatePage(id: string, updates: Partial<KnowledgePage>) {
@@ -44,7 +44,7 @@ export const knowledgenestService = {
       .select()
       .single();
     
-    return { data, error };
+    return { data: data as KnowledgePage | null, error };
   },
 
   async deletePage(id: string) {
@@ -64,17 +64,17 @@ export const knowledgenestService = {
       .eq('page_id', pageId)
       .order('created_at', { ascending: true });
     
-    return { data, error };
+    return { data: data as PageComment[] | null, error };
   },
 
-  async createComment(comment: Partial<PageComment>) {
+  async createComment(comment: CreatePageComment) {
     const { data, error } = await supabase
       .from('page_comments')
       .insert(comment)
       .select()
       .single();
     
-    return { data, error };
+    return { data: data as PageComment | null, error };
   },
 
   // Search
@@ -87,6 +87,6 @@ export const knowledgenestService = {
       .eq('is_archived', false)
       .order('updated_at', { ascending: false });
     
-    return { data, error };
+    return { data: data as KnowledgePage[] | null, error };
   }
 };

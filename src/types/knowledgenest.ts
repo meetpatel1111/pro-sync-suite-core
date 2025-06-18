@@ -44,3 +44,29 @@ export interface PageComment {
   created_at: string;
   updated_at: string;
 }
+
+// Database insert types
+export interface CreateKnowledgePage {
+  title: string;
+  slug: string;
+  content?: string;
+  author_id: string;
+  parent_id?: string;
+  tags?: string[];
+  permissions?: {
+    visibility: 'public' | 'internal' | 'restricted';
+    editors: string[];
+    viewers: string[];
+    commenters: string[];
+  };
+  app_context?: string;
+  is_template?: boolean;
+}
+
+export interface CreatePageComment {
+  page_id: string;
+  author_id: string;
+  comment: string;
+  parent_id?: string;
+  line_reference?: string;
+}

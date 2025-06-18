@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -65,7 +64,17 @@ const ServiceCore: React.FC = () => {
       if (ticketsResult.error) {
         console.error('Error fetching tickets:', ticketsResult.error);
       } else {
-        setTickets((ticketsResult.data || []) as Ticket[]);
+        // Convert the database response to our Ticket type
+        const typedTickets: Ticket[] = (ticketsResult.data || []).map(ticket => ({
+          ...ticket,
+          type: ticket.type as 'incident' | 'request' | 'problem' | 'change',
+          priority: ticket.priority as 'low' | 'medium' | 'high' | 'critical',
+          status: ticket.status as 'open' | 'in_progress' | 'resolved' | 'closed',
+          custom_fields: typeof ticket.custom_fields === 'string' 
+            ? JSON.parse(ticket.custom_fields) 
+            : ticket.custom_fields || {}
+        }));
+        setTickets(typedTickets);
       }
 
       if (changesResult.error) {
@@ -107,20 +116,32 @@ const ServiceCore: React.FC = () => {
         return;
       }
 
-      setTickets(prev => [data, ...prev]);
-      setCreateTicketOpen(false);
-      setTicketForm({
-        title: '',
-        description: '',
-        type: 'incident',
-        priority: 'medium',
-        category: ''
-      });
-      
-      toast({
-        title: 'Success',
-        description: 'Ticket created successfully',
-      });
+      if (data) {
+        const newTicket: Ticket = {
+          ...data,
+          type: data.type as 'incident' | 'request' | 'problem' | 'change',
+          priority: data.priority as 'low' | 'medium' | 'high' | 'critical',
+          status: data.status as 'open' | 'in_progress' | 'resolved' | 'closed',
+          custom_fields: typeof data.custom_fields === 'string' 
+            ? JSON.parse(data.custom_fields) 
+            : data.custom_fields || {}
+        };
+        
+        setTickets(prev => [newTicket, ...prev]);
+        setCreateTicketOpen(false);
+        setTicketForm({
+          title: '',
+          description: '',
+          type: 'incident',
+          priority: 'medium',
+          category: ''
+        });
+        
+        toast({
+          title: 'Success',
+          description: 'Ticket created successfully',
+        });
+      }
     } catch (error) {
       console.error('Error creating ticket:', error);
     }
