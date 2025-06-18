@@ -92,3 +92,32 @@ export interface CreateTicketComment {
   is_private?: boolean;
   mentions?: string[];
 }
+
+export interface CreateChangeRequest {
+  title: string;
+  description?: string;
+  requested_by: string;
+  status?: 'draft' | 'review' | 'approved' | 'implementation' | 'completed' | 'closed';
+  change_type?: 'standard' | 'emergency' | 'normal';
+  risk_level?: 'low' | 'medium' | 'high';
+  impact_level?: 'low' | 'medium' | 'high';
+  linked_tickets?: string[];
+  rollback_plan?: string;
+  implementation_plan?: string;
+}
+
+export interface CreateProblemTicket {
+  title: string;
+  description?: string;
+  identified_by: string;
+  assigned_to?: string;
+  linked_incidents?: string[];
+  root_cause?: string;
+  resolution_plan?: string;
+  workaround?: string;
+  status?: 'open' | 'investigating' | 'resolved' | 'closed';
+  priority?: string;
+  impact_assessment?: string;
+  preventive_actions?: string;
+  knowledge_articles?: string[];
+}

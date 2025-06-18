@@ -1,6 +1,15 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { Ticket, TicketComment, ChangeRequest, ProblemTicket, CreateTicket, CreateTicketComment } from '@/types/servicecore';
+import type { 
+  Ticket, 
+  TicketComment, 
+  ChangeRequest, 
+  ProblemTicket, 
+  CreateTicket, 
+  CreateTicketComment,
+  CreateChangeRequest,
+  CreateProblemTicket
+} from '@/types/servicecore';
 
 export const servicecoreService = {
   // Tickets
@@ -75,7 +84,7 @@ export const servicecoreService = {
     return { data: data as ChangeRequest[] | null, error };
   },
 
-  async createChangeRequest(changeRequest: Partial<ChangeRequest>) {
+  async createChangeRequest(changeRequest: CreateChangeRequest) {
     const { data, error } = await supabase
       .from('change_requests')
       .insert(changeRequest)
@@ -95,7 +104,7 @@ export const servicecoreService = {
     return { data: data as ProblemTicket[] | null, error };
   },
 
-  async createProblemTicket(problemTicket: Partial<ProblemTicket>) {
+  async createProblemTicket(problemTicket: CreateProblemTicket) {
     const { data, error } = await supabase
       .from('problem_tickets')
       .insert(problemTicket)
