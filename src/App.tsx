@@ -4,76 +4,50 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/context/AuthContext";
-import { SettingsProvider } from "@/context/SettingsContext";
-import { IntegrationProvider } from "@/context/IntegrationContext";
+import { AuthContextProvider } from "./context/AuthContext";
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import UserSettings from "./pages/UserSettings";
-import ProfileSettings from "./pages/ProfileSettings";
-import BudgetBuddy from "./pages/BudgetBuddy";
-import TaskMaster from "./pages/TaskMaster";
-import TimeTrackPro from "./pages/TimeTrackPro";
-import CollabSpace from "./pages/CollabSpace";
-import FileVault from "./pages/FileVault";
-import ClientConnect from "./pages/ClientConnect";
-import PlanBoard from "./pages/PlanBoard";
-import RiskRadar from "./pages/RiskRadar";
-import InsightIQ from "./pages/InsightIQ";
-import ResourceHub from "./pages/ResourceHub";
-import Integrations from "./pages/Integrations";
-import AIFeatures from "./pages/AIFeatures";
-import AppPlaceholder from "./pages/AppPlaceholder";
-import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";
-import Notifications from "./pages/Notifications";
-import NotificationCenter from "./pages/NotificationCenter";
-import TeamDirectory from "./pages/TeamDirectory";
-import NotFound from "./pages/NotFound";
-import About from "./pages/About";
+import Login from "./pages/Login";
+import TaskMasterPage from "./pages/TaskMasterPage";
+import TimeTrackProPage from "./pages/TimeTrackProPage";
+import BudgetBuddyPage from "./pages/BudgetBuddyPage";
+import FileVaultPage from "./pages/FileVaultPage";
+import CollabSpacePage from "./pages/CollabSpacePage";
+import ResourceHubPage from "./pages/ResourceHubPage";
+import ClientConnectPage from "./pages/ClientConnectPage";
+import IntegrationHubPage from "./pages/IntegrationHubPage";
+import InsightIQPage from "./pages/InsightIQPage";
+import RiskRadarPage from "./pages/RiskRadarPage";
+import KnowledgeNestPage from "./pages/KnowledgeNestPage";
+import ServiceCorePage from "./pages/ServiceCorePage";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <SettingsProvider>
-            <IntegrationProvider>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/settings" element={<UserSettings />} />
-                <Route path="/profile" element={<ProfileSettings />} />
-                <Route path="/budgetbuddy" element={<BudgetBuddy />} />
-                <Route path="/taskmaster" element={<TaskMaster />} />
-                <Route path="/timetrackpro" element={<TimeTrackPro />} />
-                <Route path="/collabspace" element={<CollabSpace />} />
-                <Route path="/filevault" element={<FileVault />} />
-                <Route path="/clientconnect" element={<ClientConnect />} />
-                <Route path="/planboard" element={<PlanBoard />} />
-                <Route path="/riskradar" element={<RiskRadar />} />
-                <Route path="/insightiq" element={<InsightIQ />} />
-                <Route path="/resourcehub" element={<ResourceHub />} />
-                <Route path="/integrations" element={<Integrations />} />
-                <Route path="/ai-features" element={<AIFeatures />} />
-                <Route path="/notifications" element={<Notifications />} />
-                <Route path="/notification-center" element={<NotificationCenter />} />
-                <Route path="/team-directory" element={<TeamDirectory />} />
-                <Route path="/terms" element={<Terms />} />
-                <Route path="/privacy" element={<Privacy />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/app/:appName" element={<AppPlaceholder title="App" description="Application placeholder" />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </IntegrationProvider>
-          </SettingsProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthContextProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/taskmaster" element={<TaskMasterPage />} />
+            <Route path="/timetrackpro" element={<TimeTrackProPage />} />
+            <Route path="/budgetbuddy" element={<BudgetBuddyPage />} />
+            <Route path="/filevault" element={<FileVaultPage />} />
+            <Route path="/collabspace" element={<CollabSpacePage />} />
+            <Route path="/resourcehub" element={<ResourceHubPage />} />
+            <Route path="/clientconnect" element={<ClientConnectPage />} />
+            <Route path="/integrationhub" element={<IntegrationHubPage />} />
+            <Route path="/insightiq" element={<InsightIQPage />} />
+            <Route path="/riskradar" element={<RiskRadarPage />} />
+            <Route path="/knowledgenest" element={<KnowledgeNestPage />} />
+            <Route path="/servicecore" element={<ServiceCorePage />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthContextProvider>
   </QueryClientProvider>
 );
 

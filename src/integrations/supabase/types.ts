@@ -720,6 +720,81 @@ export type Database = {
           },
         ]
       }
+      change_requests: {
+        Row: {
+          actual_end_time: string | null
+          actual_start_time: string | null
+          approved_by: string[] | null
+          cab_members: string[] | null
+          change_type: string | null
+          created_at: string | null
+          description: string | null
+          end_time: string | null
+          id: string
+          impact_level: string | null
+          implementation_plan: string | null
+          linked_tickets: string[] | null
+          post_implementation_review: string | null
+          requested_by: string
+          risk_level: string | null
+          rollback_plan: string | null
+          start_time: string | null
+          status: string | null
+          success_criteria: string | null
+          testing_plan: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          actual_end_time?: string | null
+          actual_start_time?: string | null
+          approved_by?: string[] | null
+          cab_members?: string[] | null
+          change_type?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          impact_level?: string | null
+          implementation_plan?: string | null
+          linked_tickets?: string[] | null
+          post_implementation_review?: string | null
+          requested_by: string
+          risk_level?: string | null
+          rollback_plan?: string | null
+          start_time?: string | null
+          status?: string | null
+          success_criteria?: string | null
+          testing_plan?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          actual_end_time?: string | null
+          actual_start_time?: string | null
+          approved_by?: string[] | null
+          cab_members?: string[] | null
+          change_type?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          impact_level?: string | null
+          implementation_plan?: string | null
+          linked_tickets?: string[] | null
+          post_implementation_review?: string | null
+          requested_by?: string
+          risk_level?: string | null
+          rollback_plan?: string | null
+          start_time?: string | null
+          status?: string | null
+          success_criteria?: string | null
+          testing_plan?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       channel_members: {
         Row: {
           channel_id: string | null
@@ -1596,6 +1671,71 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_pages: {
+        Row: {
+          app_context: string | null
+          author_id: string
+          content: string | null
+          created_at: string | null
+          id: string
+          is_archived: boolean | null
+          is_published: boolean | null
+          is_template: boolean | null
+          last_edited_by: string | null
+          parent_id: string | null
+          permissions: Json | null
+          slug: string
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          version: number | null
+        }
+        Insert: {
+          app_context?: string | null
+          author_id: string
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          is_archived?: boolean | null
+          is_published?: boolean | null
+          is_template?: boolean | null
+          last_edited_by?: string | null
+          parent_id?: string | null
+          permissions?: Json | null
+          slug: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          version?: number | null
+        }
+        Update: {
+          app_context?: string | null
+          author_id?: string
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          is_archived?: boolean | null
+          is_published?: boolean | null
+          is_template?: boolean | null
+          last_edited_by?: string | null
+          parent_id?: string | null
+          permissions?: Json | null
+          slug?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_pages_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketplace_installations: {
         Row: {
           configuration: Json | null
@@ -1954,6 +2094,95 @@ export type Database = {
         }
         Relationships: []
       }
+      page_comments: {
+        Row: {
+          author_id: string
+          comment: string
+          created_at: string | null
+          id: string
+          is_resolved: boolean | null
+          line_reference: string | null
+          page_id: string
+          parent_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          author_id: string
+          comment: string
+          created_at?: string | null
+          id?: string
+          is_resolved?: boolean | null
+          line_reference?: string | null
+          page_id: string
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          author_id?: string
+          comment?: string
+          created_at?: string | null
+          id?: string
+          is_resolved?: boolean | null
+          line_reference?: string | null
+          page_id?: string
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_comments_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "page_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "page_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      page_versions: {
+        Row: {
+          change_summary: string | null
+          content: string | null
+          editor_id: string
+          id: string
+          page_id: string
+          updated_at: string | null
+          version: number
+        }
+        Insert: {
+          change_summary?: string | null
+          content?: string | null
+          editor_id: string
+          id?: string
+          page_id: string
+          updated_at?: string | null
+          version: number
+        }
+        Update: {
+          change_summary?: string | null
+          content?: string | null
+          editor_id?: string
+          id?: string
+          page_id?: string
+          updated_at?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_versions_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pinned_messages: {
         Row: {
           channel_id: string | null
@@ -2091,6 +2320,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      problem_tickets: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          identified_by: string
+          impact_assessment: string | null
+          knowledge_articles: string[] | null
+          linked_incidents: string[] | null
+          preventive_actions: string | null
+          priority: string | null
+          resolution_plan: string | null
+          root_cause: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          workaround: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          identified_by: string
+          impact_assessment?: string | null
+          knowledge_articles?: string[] | null
+          linked_incidents?: string[] | null
+          preventive_actions?: string | null
+          priority?: string | null
+          resolution_plan?: string | null
+          root_cause?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          workaround?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          identified_by?: string
+          impact_assessment?: string | null
+          knowledge_articles?: string[] | null
+          linked_incidents?: string[] | null
+          preventive_actions?: string | null
+          priority?: string | null
+          resolution_plan?: string | null
+          root_cause?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          workaround?: string | null
+        }
+        Relationships: []
       }
       productivity_metrics: {
         Row: {
@@ -2481,6 +2767,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      service_assets: {
+        Row: {
+          asset_type: string
+          assigned_to: string | null
+          cost: number | null
+          created_at: string | null
+          id: string
+          ip_address: unknown | null
+          location: string | null
+          mac_address: string | null
+          maintenance_schedule: Json | null
+          model: string | null
+          name: string
+          purchase_date: string | null
+          serial_number: string | null
+          specifications: Json | null
+          status: string | null
+          updated_at: string | null
+          vendor: string | null
+          warranty_expiry: string | null
+        }
+        Insert: {
+          asset_type: string
+          assigned_to?: string | null
+          cost?: number | null
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          location?: string | null
+          mac_address?: string | null
+          maintenance_schedule?: Json | null
+          model?: string | null
+          name: string
+          purchase_date?: string | null
+          serial_number?: string | null
+          specifications?: Json | null
+          status?: string | null
+          updated_at?: string | null
+          vendor?: string | null
+          warranty_expiry?: string | null
+        }
+        Update: {
+          asset_type?: string
+          assigned_to?: string | null
+          cost?: number | null
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          location?: string | null
+          mac_address?: string | null
+          maintenance_schedule?: Json | null
+          model?: string | null
+          name?: string
+          purchase_date?: string | null
+          serial_number?: string | null
+          specifications?: Json | null
+          status?: string | null
+          updated_at?: string | null
+          vendor?: string | null
+          warranty_expiry?: string | null
+        }
+        Relationships: []
       }
       sprint_tasks: {
         Row: {
@@ -3129,6 +3478,164 @@ export type Database = {
         }
         Relationships: []
       }
+      ticket_attachments: {
+        Row: {
+          created_at: string | null
+          file_id: string | null
+          file_name: string
+          file_url: string | null
+          id: string
+          ticket_id: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_id?: string | null
+          file_name: string
+          file_url?: string | null
+          id?: string
+          ticket_id: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string | null
+          file_id?: string | null
+          file_name?: string
+          file_url?: string | null
+          id?: string
+          ticket_id?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_attachments_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_attachments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_comments: {
+        Row: {
+          author_id: string
+          comment: string
+          created_at: string | null
+          id: string
+          is_private: boolean | null
+          is_system_comment: boolean | null
+          mentions: string[] | null
+          ticket_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          author_id: string
+          comment: string
+          created_at?: string | null
+          id?: string
+          is_private?: boolean | null
+          is_system_comment?: boolean | null
+          mentions?: string[] | null
+          ticket_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          author_id?: string
+          comment?: string
+          created_at?: string | null
+          id?: string
+          is_private?: boolean | null
+          is_system_comment?: boolean | null
+          mentions?: string[] | null
+          ticket_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_comments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tickets: {
+        Row: {
+          assigned_to: string | null
+          category: string | null
+          closed_at: string | null
+          created_at: string | null
+          custom_fields: Json | null
+          customer_satisfaction: number | null
+          description: string | null
+          id: string
+          priority: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          sla_due: string | null
+          status: string
+          subcategory: string | null
+          submitted_by: string
+          tags: string[] | null
+          ticket_number: number
+          title: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: string | null
+          closed_at?: string | null
+          created_at?: string | null
+          custom_fields?: Json | null
+          customer_satisfaction?: number | null
+          description?: string | null
+          id?: string
+          priority?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          sla_due?: string | null
+          status?: string
+          subcategory?: string | null
+          submitted_by: string
+          tags?: string[] | null
+          ticket_number?: number
+          title: string
+          type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string | null
+          closed_at?: string | null
+          created_at?: string | null
+          custom_fields?: Json | null
+          customer_satisfaction?: number | null
+          description?: string | null
+          id?: string
+          priority?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          sla_due?: string | null
+          status?: string
+          subcategory?: string | null
+          submitted_by?: string
+          tags?: string[] | null
+          ticket_number?: number
+          title?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       time_entries: {
         Row: {
           billable: boolean | null
@@ -3364,6 +3871,30 @@ export type Database = {
           location?: string | null
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          app_context: string | null
+          created_at: string | null
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          app_context?: string | null
+          created_at?: string | null
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          app_context?: string | null
+          created_at?: string | null
+          id?: string
+          role?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -4121,6 +4652,10 @@ export type Database = {
           p_error_rate: number
         }
         Returns: undefined
+      }
+      user_has_role: {
+        Args: { user_id: string; required_role: string }
+        Returns: boolean
       }
     }
     Enums: {
