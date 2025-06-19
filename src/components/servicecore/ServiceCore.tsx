@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import ChangeManagement from './ChangeManagement';
 import ProblemManagement from './ProblemManagement';
+import IncidentManagement from './IncidentManagement';
 
 const ServiceCore = () => {
   const [activeTab, setActiveTab] = useState('incidents');
@@ -114,17 +115,7 @@ const ServiceCore = () => {
         </TabsList>
 
         <TabsContent value="incidents" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Incident Management</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                <Ticket className="h-12 w-12 mx-auto mb-4" />
-                <p>Incident management interface coming soon...</p>
-              </div>
-            </CardContent>
-          </Card>
+          <IncidentManagement />
         </TabsContent>
 
         <TabsContent value="requests" className="space-y-4">
