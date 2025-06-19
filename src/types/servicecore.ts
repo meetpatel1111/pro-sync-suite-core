@@ -50,6 +50,11 @@ export interface ChangeRequest {
   implementation_plan?: string;
   start_time?: string;
   end_time?: string;
+  actual_start_time?: string;
+  actual_end_time?: string;
+  post_implementation_review?: string;
+  success_criteria?: string;
+  testing_plan?: string;
   created_at: string;
   updated_at: string;
 }

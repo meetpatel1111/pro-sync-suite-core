@@ -94,6 +94,17 @@ export const servicecoreService = {
     return { data: data as ChangeRequest | null, error };
   },
 
+  async updateChangeRequest(id: string, updates: Partial<ChangeRequest>) {
+    const { data, error } = await supabase
+      .from('change_requests')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    return { data: data as ChangeRequest | null, error };
+  },
+
   // Problem Tickets
   async getProblemTickets(userId: string) {
     const { data, error } = await supabase
@@ -108,6 +119,17 @@ export const servicecoreService = {
     const { data, error } = await supabase
       .from('problem_tickets')
       .insert(problemTicket)
+      .select()
+      .single();
+    
+    return { data: data as ProblemTicket | null, error };
+  },
+
+  async updateProblemTicket(id: string, updates: Partial<ProblemTicket>) {
+    const { data, error } = await supabase
+      .from('problem_tickets')
+      .update(updates)
+      .eq('id', id)
       .select()
       .single();
     
