@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, MessageSquare, FileText, BarChart2, 
          PieChart, Users, Shield, FileCog, FolderLock, Sparkles, TrendingUp, 
-         Zap, Target, Rocket } from 'lucide-react';
+         Zap, Target, Rocket, BookOpen, Headphones } from 'lucide-react';
 import AppCard from '@/components/AppCard';
 import AppLayout from '@/components/AppLayout';
 import DashboardStats from '@/components/DashboardStats';
@@ -234,6 +234,24 @@ const Index = () => {
       route: '/resourcehub',
       featureCount: 0,
       category: 'Management'
+    },
+    {
+      title: 'KnowledgeNest',
+      description: 'Wiki & Knowledge Base',
+      icon: BookOpen,
+      bgColor: 'bg-gradient-to-br from-teal-500 to-teal-600',
+      route: '/knowledgenest',
+      featureCount: 0,
+      category: 'Knowledge'
+    },
+    {
+      title: 'ServiceCore',
+      description: 'ITSM & Support Desk',
+      icon: Headphones,
+      bgColor: 'bg-gradient-to-br from-violet-500 to-violet-600',
+      route: '/servicecore',
+      featureCount: 0,
+      category: 'Support'
     }
   ];
 
@@ -257,12 +275,12 @@ const Index = () => {
               </div>
             </div>
             <p className="text-sm text-blue-100 max-w-3xl mb-4 leading-relaxed">
-              Your comprehensive project management solution with AI-powered insights, real-time collaboration, and seamless integrations across 10 powerful applications.
+              Your comprehensive project management solution with AI-powered insights, real-time collaboration, and seamless integrations across 12 powerful applications.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
                 <TrendingUp className="h-3 w-3 mr-1" />
-                10 Integrated Apps
+                12 Integrated Apps
               </Badge>
               <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
                 <Rocket className="h-3 w-3 mr-1" />

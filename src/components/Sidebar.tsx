@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -24,7 +23,9 @@ import {
   UserCircle,
   ChevronLeft,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  BookOpen,
+  Headphones
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -138,6 +139,22 @@ const Sidebar = () => {
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
       description: 'Resource allocation'
+    },
+    {
+      title: 'KnowledgeNest',
+      href: '/knowledgenest',
+      icon: BookOpen,
+      color: 'text-teal-600',
+      bgColor: 'bg-teal-50',
+      description: 'Wiki & knowledge base'
+    },
+    {
+      title: 'ServiceCore',
+      href: '/servicecore',
+      icon: Headphones,
+      color: 'text-violet-600',
+      bgColor: 'bg-violet-50',
+      description: 'ITSM & support desk'
     }
   ];
 
