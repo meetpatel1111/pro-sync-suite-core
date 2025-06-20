@@ -20,6 +20,12 @@ import InsightIQ from "./pages/InsightIQ";
 import RiskRadar from "./pages/RiskRadar";
 import KnowledgeNestPage from "./pages/KnowledgeNestPage";
 import ServiceCorePage from "./pages/ServiceCorePage";
+import NotificationCenter from "./pages/NotificationCenter";
+import AIFeatures from "./pages/AIFeatures";
+import ProfileSettings from "./pages/ProfileSettings";
+import TeamDirectoryPage from "./pages/TeamDirectoryPage";
+import PlanBoardPage from "./pages/PlanBoardPage";
+import SettingsPage from "./pages/SettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +52,12 @@ const App = () => (
               <Route path="/riskradar" element={<RiskRadar />} />
               <Route path="/knowledgenest" element={<KnowledgeNestPage />} />
               <Route path="/servicecore" element={<ServiceCorePage />} />
+              <Route path="/notification-center" element={<NotificationCenter />} />
+              <Route path="/ai-features" element={<AIFeatures />} />
+              <Route path="/profile" element={<ProfileSettings />} />
+              <Route path="/team-directory" element={<TeamDirectoryPage />} />
+              <Route path="/planboard" element={<PlanBoardPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Routes>
           </BrowserRouter>
         </TooltipProvider>

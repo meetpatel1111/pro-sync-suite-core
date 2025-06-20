@@ -2094,6 +2094,50 @@ export type Database = {
         }
         Relationships: []
       }
+      page_categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          parent_id: string | null
+          slug: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          parent_id?: string | null
+          slug: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          parent_id?: string | null
+          slug?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "page_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       page_comments: {
         Row: {
           author_id: string
@@ -2828,6 +2872,54 @@ export type Database = {
           updated_at?: string | null
           vendor?: string | null
           warranty_expiry?: string | null
+        }
+        Relationships: []
+      }
+      sla_policies: {
+        Row: {
+          business_hours_only: boolean | null
+          conditions: Json
+          created_at: string | null
+          description: string | null
+          escalation_after: number | null
+          escalation_enabled: boolean | null
+          escalation_team: string | null
+          id: string
+          name: string
+          priority: string
+          resolution_time: number
+          response_time: number
+          updated_at: string | null
+        }
+        Insert: {
+          business_hours_only?: boolean | null
+          conditions: Json
+          created_at?: string | null
+          description?: string | null
+          escalation_after?: number | null
+          escalation_enabled?: boolean | null
+          escalation_team?: string | null
+          id?: string
+          name: string
+          priority: string
+          resolution_time: number
+          response_time: number
+          updated_at?: string | null
+        }
+        Update: {
+          business_hours_only?: boolean | null
+          conditions?: Json
+          created_at?: string | null
+          description?: string | null
+          escalation_after?: number | null
+          escalation_enabled?: boolean | null
+          escalation_team?: string | null
+          id?: string
+          name?: string
+          priority?: string
+          resolution_time?: number
+          response_time?: number
+          updated_at?: string | null
         }
         Relationships: []
       }
