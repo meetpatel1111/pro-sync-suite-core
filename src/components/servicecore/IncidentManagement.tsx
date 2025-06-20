@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,28 +10,33 @@ import { Label } from '@/components/ui/label';
 import { 
   Plus, 
   Edit, 
-  Search, 
-  Filter,
+  Trash2, 
+  Clock, 
+  User, 
   AlertTriangle,
-  Clock,
-  User,
-  Calendar
+  CheckCircle,
+  XCircle,
+  Filter,
+  Search
 } from 'lucide-react';
 import { servicecoreService } from '@/services/servicecoreService';
 import { useAuthContext } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Ticket, CreateTicket } from '@/types/servicecore';
 
-const IncidentManagement = () => {
+interface IncidentManagementProps {
+  searchQuery?: string;
+}
+
+const IncidentManagement: React.FC<IncidentManagementProps> = ({ searchQuery = '' }) => {
   const { user } = useAuthContext();
   const { toast } = useToast();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
 
   useEffect(() => {
     if (user) {
@@ -41,17 +45,16 @@ const IncidentManagement = () => {
   }, [user]);
 
   const loadTickets = async () => {
-    if (!user) return;
-    
+    setLoading(true);
     try {
-      const { data, error } = await servicecoreService.getTickets(user.id);
+      const { data, error } = await servicecoreService.getTickets(user?.id || '');
       if (error) throw error;
       setTickets(data || []);
     } catch (error) {
-      console.error('Error loading tickets:', error);
+      console.error('Error loading incidents:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load tickets',
+        description: 'Failed to load incidents',
         variant: 'destructive',
       });
     } finally {
@@ -66,6 +69,7 @@ const IncidentManagement = () => {
       const { data, error } = await servicecoreService.createTicket({
         ...ticketData,
         submitted_by: user.id,
+        type: 'incident'
       });
 
       if (error) throw error;
@@ -78,7 +82,7 @@ const IncidentManagement = () => {
       setShowCreateDialog(false);
       loadTickets();
     } catch (error) {
-      console.error('Error creating ticket:', error);
+      console.error('Error creating incident:', error);
       toast({
         title: 'Error',
         description: 'Failed to create incident',
@@ -87,11 +91,9 @@ const IncidentManagement = () => {
     }
   };
 
-  const handleUpdateTicket = async (updates: Partial<Ticket>) => {
-    if (!editingTicket) return;
-
+  const handleUpdateTicket = async (id: string, updates: Partial<Ticket>) => {
     try {
-      const { data, error } = await servicecoreService.updateTicket(editingTicket.id, updates);
+      const { data, error } = await servicecoreService.updateTicket(id, updates);
 
       if (error) throw error;
 
@@ -100,11 +102,9 @@ const IncidentManagement = () => {
         description: 'Incident updated successfully',
       });
 
-      setShowEditDialog(false);
-      setEditingTicket(null);
       loadTickets();
     } catch (error) {
-      console.error('Error updating ticket:', error);
+      console.error('Error updating incident:', error);
       toast({
         title: 'Error',
         description: 'Failed to update incident',
@@ -112,6 +112,15 @@ const IncidentManagement = () => {
       });
     }
   };
+
+  const filteredTickets = tickets.filter(ticket => {
+    const matchesSearch = ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         ticket.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
+    const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter;
+    
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -123,21 +132,15 @@ const IncidentManagement = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'open': return 'bg-blue-500';
-      case 'in_progress': return 'bg-yellow-500';
-      case 'resolved': return 'bg-green-500';
-      case 'closed': return 'bg-gray-500';
-      default: return 'bg-gray-500';
+      case 'open': return <AlertTriangle className="h-4 w-4 text-red-500" />;
+      case 'in_progress': return <Clock className="h-4 w-4 text-yellow-500" />;
+      case 'resolved': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'closed': return <XCircle className="h-4 w-4 text-gray-500" />;
+      default: return <AlertTriangle className="h-4 w-4" />;
     }
   };
-
-  const filteredTickets = tickets.filter(ticket =>
-    ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    ticket.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    ticket.ticket_number.toString().includes(searchQuery)
-  ).filter(ticket => ticket.type === 'incident');
 
   if (loading) {
     return (
@@ -149,282 +152,211 @@ const IncidentManagement = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Enhanced Header with Filters */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Incident Management</h2>
-          <p className="text-muted-foreground">
-            Manage and track security incidents and service disruptions
+          <p className="text-muted-foreground">Track and resolve service incidents</p>
+        </div>
+        <div className="flex items-center space-x-3">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="open">Open</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="resolved">Resolved</SelectItem>
+              <SelectItem value="closed">Closed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Priority</SelectItem>
+              <SelectItem value="critical">Critical</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Incident
+          </Button>
+        </div>
+      </div>
+
+      {/* Enhanced Incidents Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredTickets.map((ticket) => (
+          <Card key={ticket.id} className="hover:shadow-lg transition-shadow">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center space-x-2">
+                  {getStatusIcon(ticket.status)}
+                  <Badge variant="outline">INC-{ticket.ticket_number}</Badge>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <div className={`w-3 h-3 rounded-full ${getPriorityColor(ticket.priority)}`} />
+                  <span className="text-xs text-muted-foreground capitalize">{ticket.priority}</span>
+                </div>
+              </div>
+              <CardTitle className="text-lg line-clamp-2">{ticket.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground line-clamp-3">
+                {ticket.description}
+              </p>
+              
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Status:</span>
+                  <Badge variant={ticket.status === 'open' ? 'destructive' : 'secondary'}>
+                    {ticket.status.replace('_', ' ')}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Created:</span>
+                  <span>{new Date(ticket.created_at).toLocaleDateString()}</span>
+                </div>
+                {ticket.sla_due && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">SLA Due:</span>
+                    <span className="text-red-600">{new Date(ticket.sla_due).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditingTicket(ticket)}
+                >
+                  <Edit className="h-3 w-3 mr-1" />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleUpdateTicket(ticket.id, { 
+                    status: ticket.status === 'open' ? 'in_progress' : 'resolved' 
+                  })}
+                >
+                  {ticket.status === 'open' ? 'Start' : 'Resolve'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {filteredTickets.length === 0 && (
+        <div className="text-center py-12">
+          <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <h3 className="text-lg font-semibold mb-2">No incidents found</h3>
+          <p className="text-muted-foreground mb-4">
+            {searchQuery ? 'Try adjusting your search terms' : 'Create your first incident to get started'}
           </p>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Incident
+          </Button>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Incident
-        </Button>
-      </div>
+      )}
 
-      {/* Search and Filters */}
-      <div className="flex items-center space-x-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search incidents..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Button variant="outline">
-          <Filter className="h-4 w-4 mr-2" />
-          Filter
-        </Button>
-      </div>
-
-      {/* Incidents Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Active Incidents</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {filteredTickets.map((ticket) => (
-              <div
-                key={ticket.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                onClick={() => setSelectedTicket(ticket)}
-              >
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span className="font-medium">INC-{ticket.ticket_number}</span>
-                  </div>
-                  <div>
-                    <h3 className="font-medium">{ticket.title}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {ticket.description?.substring(0, 100)}...
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-4">
-                  <Badge className={`${getPriorityColor(ticket.priority)} text-white`}>
-                    {ticket.priority}
-                  </Badge>
-                  <Badge className={`${getStatusColor(ticket.status)} text-white`}>
-                    {ticket.status}
-                  </Badge>
-                  <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>{new Date(ticket.created_at).toLocaleDateString()}</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditingTicket(ticket);
-                      setShowEditDialog(true);
-                    }}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-
-            {filteredTickets.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <AlertTriangle className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>No incidents found</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Create Incident Dialog */}
-      <CreateIncidentDialog
-        isOpen={showCreateDialog}
-        onClose={() => setShowCreateDialog(false)}
-        onCreate={handleCreateTicket}
+      {/* Create/Edit Dialog */}
+      <IncidentDialog
+        isOpen={showCreateDialog || editingTicket !== null}
+        onClose={() => {
+          setShowCreateDialog(false);
+          setEditingTicket(null);
+        }}
+        onSubmit={editingTicket ? 
+          (data) => handleUpdateTicket(editingTicket.id, data) : 
+          handleCreateTicket
+        }
+        initialData={editingTicket}
+        isEditing={editingTicket !== null}
       />
-
-      {/* Edit Incident Dialog */}
-      {editingTicket && (
-        <EditIncidentDialog
-          isOpen={showEditDialog}
-          onClose={() => {
-            setShowEditDialog(false);
-            setEditingTicket(null);
-          }}
-          ticket={editingTicket}
-          onUpdate={handleUpdateTicket}
-        />
-      )}
-
-      {/* Incident Detail Dialog */}
-      {selectedTicket && (
-        <IncidentDetailDialog
-          ticket={selectedTicket}
-          onClose={() => setSelectedTicket(null)}
-        />
-      )}
     </div>
   );
 };
 
-// Create Incident Dialog Component
-const CreateIncidentDialog: React.FC<{
+// Create/Edit Dialog Component
+const IncidentDialog: React.FC<{
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (ticket: CreateTicket) => void;
-}> = ({ isOpen, onClose, onCreate }) => {
-  const [formData, setFormData] = useState<CreateTicket>({
+  onSubmit: (data: any) => void;
+  initialData?: Ticket | null;
+  isEditing: boolean;
+}> = ({ isOpen, onClose, onSubmit, initialData, isEditing }) => {
+  const [formData, setFormData] = useState({
     title: '',
     description: '',
-    type: 'incident',
     priority: 'medium',
-    submitted_by: '',
+    status: 'open',
     category: '',
-    tags: [],
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.title.trim()) {
-      onCreate(formData);
+  useEffect(() => {
+    if (initialData) {
       setFormData({
-        title: '',
-        description: '',
-        type: 'incident',
-        priority: 'medium',
-        submitted_by: '',
-        category: '',
-        tags: [],
+        title: initialData.title,
+        description: initialData.description || '',
+        priority: initialData.priority,
+        status: initialData.status,
+        category: initialData.category || '',
       });
     }
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Create New Incident</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Brief description of the incident"
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Detailed description of the incident"
-              rows={4}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="priority">Priority</Label>
-              <Select
-                value={formData.priority}
-                onValueChange={(value) => setFormData({ ...formData, priority: value as any })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="critical">Critical</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="category">Category</Label>
-              <Select
-                value={formData.category || ''}
-                onValueChange={(value) => setFormData({ ...formData, category: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hardware">Hardware</SelectItem>
-                  <SelectItem value="software">Software</SelectItem>
-                  <SelectItem value="network">Network</SelectItem>
-                  <SelectItem value="security">Security</SelectItem>
-                  <SelectItem value="database">Database</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!formData.title.trim()}>
-              Create Incident
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-// Edit Incident Dialog Component
-const EditIncidentDialog: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  ticket: Ticket;
-  onUpdate: (updates: Partial<Ticket>) => void;
-}> = ({ isOpen, onClose, ticket, onUpdate }) => {
-  const [formData, setFormData] = useState({
-    title: ticket.title,
-    description: ticket.description || '',
-    priority: ticket.priority,
-    status: ticket.status,
-    category: ticket.category || '',
-    resolution_notes: ticket.resolution_notes || '',
-  });
+  }, [initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdate(formData);
+    onSubmit(formData);
+    setFormData({
+      title: '',
+      description: '',
+      priority: 'medium',
+      status: 'open',
+      category: '',
+    });
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Edit Incident INC-{ticket.ticket_number}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? 'Edit Incident' : 'Create New Incident'}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Title *</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="category">Category</Label>
+              <Input
+                id="category"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              />
+            </div>
           </div>
-
-          <div>
+          
+          <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
@@ -435,12 +367,9 @@ const EditIncidentDialog: React.FC<{
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="priority">Priority</Label>
-              <Select
-                value={formData.priority}
-                onValueChange={(value) => setFormData({ ...formData, priority: value as any })}
-              >
+              <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -452,110 +381,33 @@ const EditIncidentDialog: React.FC<{
                 </SelectContent>
               </Select>
             </div>
-
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) => setFormData({ ...formData, status: value as any })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="open">Open</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                  <SelectItem value="closed">Closed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {isEditing && (
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
-          <div>
-            <Label htmlFor="resolution">Resolution Notes</Label>
-            <Textarea
-              id="resolution"
-              value={formData.resolution_notes}
-              onChange={(e) => setFormData({ ...formData, resolution_notes: e.target.value })}
-              placeholder="Resolution details and steps taken"
-              rows={3}
-            />
-          </div>
-
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit">
-              Update Incident
+              {isEditing ? 'Update Incident' : 'Create Incident'}
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-// Incident Detail Dialog Component
-const IncidentDetailDialog: React.FC<{
-  ticket: Ticket;
-  onClose: () => void;
-}> = ({ ticket, onClose }) => {
-  return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Incident INC-{ticket.ticket_number}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-6">
-          <div className="flex items-center space-x-4">
-            <Badge className={`${ticket.priority === 'critical' ? 'bg-red-500' : ticket.priority === 'high' ? 'bg-orange-500' : ticket.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'} text-white`}>
-              {ticket.priority}
-            </Badge>
-            <Badge className={`${ticket.status === 'open' ? 'bg-blue-500' : ticket.status === 'in_progress' ? 'bg-yellow-500' : ticket.status === 'resolved' ? 'bg-green-500' : 'bg-gray-500'} text-white`}>
-              {ticket.status}
-            </Badge>
-          </div>
-
-          <div>
-            <h3 className="font-semibold mb-2">Title</h3>
-            <p>{ticket.title}</p>
-          </div>
-
-          {ticket.description && (
-            <div>
-              <h3 className="font-semibold mb-2">Description</h3>
-              <p className="whitespace-pre-wrap">{ticket.description}</p>
-            </div>
-          )}
-
-          {ticket.resolution_notes && (
-            <div>
-              <h3 className="font-semibold mb-2">Resolution Notes</h3>
-              <p className="whitespace-pre-wrap">{ticket.resolution_notes}</p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="font-semibold">Created:</span> {new Date(ticket.created_at).toLocaleString()}
-            </div>
-            <div>
-              <span className="font-semibold">Last Updated:</span> {new Date(ticket.updated_at).toLocaleString()}
-            </div>
-            {ticket.resolved_at && (
-              <div>
-                <span className="font-semibold">Resolved:</span> {new Date(ticket.resolved_at).toLocaleString()}
-              </div>
-            )}
-            {ticket.closed_at && (
-              <div>
-                <span className="font-semibold">Closed:</span> {new Date(ticket.closed_at).toLocaleString()}
-              </div>
-            )}
-          </div>
-        </div>
       </DialogContent>
     </Dialog>
   );

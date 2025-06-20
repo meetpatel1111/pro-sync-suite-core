@@ -1,7 +1,7 @@
 
 import React from 'react';
 import AppLayout from '@/components/AppLayout';
-import UserProfileSettings from '@/components/UserProfileSettings';
+import SettingsForm from '@/components/settings/SettingsForm';
 
 const SettingsPage: React.FC = () => {
   return (
@@ -10,10 +10,10 @@ const SettingsPage: React.FC = () => {
         <div className="border-b pb-4">
           <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
           <p className="text-muted-foreground mt-2">
-            Manage your account settings and preferences.
+            Manage your application settings and preferences.
           </p>
         </div>
-        <UserProfileSettings />
+        <SettingsForm />
       </div>
     </AppLayout>
   );
