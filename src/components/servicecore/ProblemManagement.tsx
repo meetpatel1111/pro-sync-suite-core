@@ -2,51 +2,66 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Search, AlertTriangle, Clock, CheckCircle, Plus, Bug } from 'lucide-react';
-import { servicecoreService } from '@/services/servicecoreService';
-import { useAuthContext } from '@/context/AuthContext';
+import { 
+  Plus, 
+  Edit, 
+  Search, 
+  Clock, 
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Bug
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { ProblemTicket, CreateProblemTicket } from '@/types/servicecore';
 
-const ProblemManagement = () => {
-  const { user } = useAuthContext();
+interface ProblemManagementProps {
+  searchQuery?: string;
+}
+
+const ProblemManagement: React.FC<ProblemManagementProps> = ({ searchQuery = '' }) => {
   const { toast } = useToast();
-  const [problemTickets, setProblemTickets] = useState<ProblemTicket[]>([]);
+  const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedProblem, setSelectedProblem] = useState<ProblemTicket | null>(null);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [formData, setFormData] = useState<CreateProblemTicket>({
-    title: '',
-    description: '',
-    identified_by: user?.id || '',
-    status: 'open',
-    priority: 'medium',
-  });
 
   useEffect(() => {
-    if (user) {
-      loadProblemTickets();
-    }
-  }, [user]);
+    loadProblems();
+  }, []);
 
-  const loadProblemTickets = async () => {
-    if (!user) return;
-    
+  const loadProblems = async () => {
+    setLoading(true);
     try {
-      const { data, error } = await servicecoreService.getProblemTickets(user.id);
-      if (error) throw error;
-      setProblemTickets(data || []);
+      // Mock data for now - replace with actual service call
+      const mockProblems = [
+        {
+          id: '1',
+          title: 'Recurring Email Delivery Issues',
+          description: 'Multiple incidents related to email delivery failures',
+          status: 'investigating',
+          priority: 'high',
+          category: 'email',
+          created_at: new Date().toISOString(),
+          problem_number: '2001',
+          related_incidents: 5
+        },
+        {
+          id: '2',
+          title: 'Database Performance Degradation',
+          description: 'Slow response times across multiple applications',
+          status: 'known_error',
+          priority: 'medium',
+          category: 'database',
+          created_at: new Date().toISOString(),
+          problem_number: '2002',
+          related_incidents: 3
+        }
+      ];
+      setProblems(mockProblems);
     } catch (error) {
-      console.error('Error loading problem tickets:', error);
+      console.error('Error loading problems:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load problem tickets',
+        description: 'Failed to load problem records',
         variant: 'destructive',
       });
     } finally {
@@ -54,229 +69,119 @@ const ProblemManagement = () => {
     }
   };
 
-  const handleCreateProblem = async () => {
-    if (!user) return;
+  const filteredProblems = problems.filter(problem =>
+    problem.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    problem.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-    try {
-      const { data, error } = await servicecoreService.createProblemTicket({
-        ...formData,
-        identified_by: user.id,
-      });
-      
-      if (error) throw error;
-
-      toast({
-        title: 'Success',
-        description: 'Problem ticket created successfully',
-      });
-
-      setShowCreateDialog(false);
-      setFormData({
-        title: '',
-        description: '',
-        identified_by: user.id,
-        status: 'open',
-        priority: 'medium',
-      });
-      loadProblemTickets();
-    } catch (error) {
-      console.error('Error creating problem ticket:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create problem ticket',
-        variant: 'destructive',
-      });
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'critical': return 'bg-red-500';
+      case 'high': return 'bg-orange-500';
+      case 'medium': return 'bg-yellow-500';
+      case 'low': return 'bg-green-500';
+      default: return 'bg-gray-500';
     }
   };
 
-  const getStatusBadgeColor = (status: string) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'open': return 'bg-red-100 text-red-800';
-      case 'investigating': return 'bg-yellow-100 text-yellow-800';
-      case 'resolved': return 'bg-green-100 text-green-800';
-      case 'closed': return 'bg-gray-100 text-gray-600';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPriorityBadgeColor = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'critical': return 'bg-red-100 text-red-800';
-      case 'high': return 'bg-orange-100 text-orange-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'investigating': return <Search className="h-4 w-4 text-blue-500" />;
+      case 'known_error': return <Bug className="h-4 w-4 text-orange-500" />;
+      case 'resolved': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'closed': return <XCircle className="h-4 w-4 text-gray-500" />;
+      default: return <AlertTriangle className="h-4 w-4" />;
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Loading problem tickets...</div>
+      <div className="flex items-center justify-center h-64 animate-fade-in">
+        <div className="text-muted-foreground">Loading problem records...</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Problem Management</h2>
-          <p className="text-muted-foreground">Identify and resolve underlying problems</p>
+          <p className="text-muted-foreground">Identify and resolve root causes</p>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              New Problem
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Create Problem Ticket</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Enter problem title"
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Describe the problem"
-                  rows={4}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="priority">Priority</Label>
-                  <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="critical">Critical</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as any })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="open">Open</SelectItem>
-                      <SelectItem value="investigating">Investigating</SelectItem>
-                      <SelectItem value="resolved">Resolved</SelectItem>
-                      <SelectItem value="closed">Closed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="impact_assessment">Impact Assessment</Label>
-                <Textarea
-                  id="impact_assessment"
-                  value={formData.impact_assessment || ''}
-                  onChange={(e) => setFormData({ ...formData, impact_assessment: e.target.value })}
-                  placeholder="Assess the impact of this problem"
-                  rows={3}
-                />
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreateProblem}>
-                  Create Problem
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button className="shadow-sm">
+          <Plus className="h-4 w-4 mr-2" />
+          New Problem
+        </Button>
       </div>
 
-      <div className="grid gap-4">
-        {problemTickets.map((problem) => (
-          <Card key={problem.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedProblem(problem)}>
+      {/* Problems Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredProblems.map((problem) => (
+          <Card key={problem.id} className="hover:shadow-lg transition-all duration-300 animate-scale-in">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center">
-                  <Bug className="h-5 w-5 mr-2 text-red-500" />
-                  {problem.title}
-                </CardTitle>
+              <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-2">
-                  <Badge className={getPriorityBadgeColor(problem.priority)}>
-                    {problem.priority}
-                  </Badge>
-                  <Badge className={getStatusBadgeColor(problem.status)}>
-                    {problem.status}
-                  </Badge>
+                  {getStatusIcon(problem.status)}
+                  <Badge variant="outline">PRB-{problem.problem_number}</Badge>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <div className={`w-3 h-3 rounded-full ${getPriorityColor(problem.priority)}`} />
+                  <span className="text-xs text-muted-foreground capitalize">{problem.priority}</span>
                 </div>
               </div>
+              <CardTitle className="text-lg line-clamp-2">{problem.title}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
-                <span className="flex items-center">
-                  <Clock className="h-4 w-4 mr-1" />
-                  {new Date(problem.created_at).toLocaleDateString()}
-                </span>
-                {problem.linked_incidents.length > 0 && (
-                  <span>{problem.linked_incidents.length} linked incidents</span>
-                )}
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground line-clamp-3">
+                {problem.description}
+              </p>
+              
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Status:</span>
+                  <Badge variant={problem.status === 'resolved' ? 'default' : 'secondary'}>
+                    {problem.status.replace('_', ' ')}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Related Incidents:</span>
+                  <span className="font-medium">{problem.related_incidents}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Created:</span>
+                  <span>{new Date(problem.created_at).toLocaleDateString()}</span>
+                </div>
               </div>
-              {problem.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                  {problem.description}
-                </p>
-              )}
-              {problem.root_cause && (
-                <div className="mt-2 p-2 bg-yellow-50 rounded-md">
-                  <p className="text-sm">
-                    <strong>Root Cause:</strong> {problem.root_cause}
-                  </p>
-                </div>
-              )}
-              {problem.workaround && (
-                <div className="mt-2 p-2 bg-blue-50 rounded-md">
-                  <p className="text-sm">
-                    <strong>Workaround:</strong> {problem.workaround}
-                  </p>
-                </div>
-              )}
+
+              <div className="flex items-center space-x-2 pt-2">
+                <Button variant="outline" size="sm" className="hover-scale">
+                  <Edit className="h-3 w-3 mr-1" />
+                  Edit
+                </Button>
+                <Button variant="outline" size="sm" className="hover-scale">
+                  <Search className="h-3 w-3 mr-1" />
+                  Investigate
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {problemTickets.length === 0 && (
-        <Card>
-          <CardContent className="py-12">
-            <div className="text-center">
-              <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No problems found</h3>
-              <p className="text-muted-foreground mb-4">
-                Create your first problem ticket to start tracking and resolving issues.
-              </p>
-              <Button onClick={() => setShowCreateDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Problem
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      {filteredProblems.length === 0 && (
+        <div className="text-center py-12 animate-fade-in">
+          <Bug className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <h3 className="text-lg font-semibold mb-2">No problems found</h3>
+          <p className="text-muted-foreground mb-4">
+            {searchQuery ? 'Try adjusting your search terms' : 'Create your first problem record to get started'}
+          </p>
+          <Button className="hover-scale">
+            <Plus className="h-4 w-4 mr-2" />
+            Create Problem Record
+          </Button>
+        </div>
       )}
     </div>
   );
