@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Clock, Play, Calendar, FileText, BarChart2, Timer, Target, TrendingUp, Stopwatch, Activity } from 'lucide-react';
+import { Clock, Play, Calendar, FileText, BarChart2, Timer, Target, TrendingUp, Activity } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,45 +18,45 @@ const TimeTrackPro = () => {
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
         {/* Enhanced Header */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700 p-6 text-white shadow-xl">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"></div>
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-violet-500 via-purple-600 to-pink-700 p-8 text-white shadow-2xl">
+          <div className="absolute inset-0 bg-black/10 backdrop-blur-sm"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-white/15 to-transparent animate-gradient-shift"></div>
           
           {/* Floating Elements */}
-          <div className="absolute -top-16 -right-16 w-40 h-40 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-cyan-300/20 rounded-full blur-2xl"></div>
+          <div className="absolute -top-20 -right-20 w-48 h-48 bg-white/15 rounded-full blur-3xl animate-float"></div>
+          <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-violet-300/25 rounded-full blur-2xl animate-float" style={{ animationDelay: '1.5s' }}></div>
           
           <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm border border-white/30 shadow-lg">
-                <Timer className="h-6 w-6" />
+            <div className="flex items-center gap-4 mb-6 animate-slide-in-right">
+              <div className="p-3 bg-white/25 rounded-2xl backdrop-blur-sm border border-white/30 shadow-xl animate-heartbeat">
+                <Timer className="h-8 w-8 animate-spin-slow" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">TimeTrackPro</h1>
-                <p className="text-lg text-cyan-100/90 font-medium">Professional Time Management</p>
+                <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-white via-purple-100 to-pink-100 bg-clip-text animate-neon-glow">TimeTrackPro</h1>
+                <p className="text-xl text-purple-100/95 font-semibold animate-fade-in-up" style={{ animationDelay: '0.3s' }}>Professional Time Management</p>
               </div>
             </div>
             
-            <p className="text-cyan-50/95 max-w-3xl mb-4 leading-relaxed">
+            <p className="text-purple-50/95 max-w-3xl mb-6 leading-relaxed text-lg animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
               Advanced time tracking and productivity analysis platform with intelligent insights,
               automated reporting, and comprehensive project management capabilities.
             </p>
             
-            <div className="flex flex-wrap items-center gap-3">
-              <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm animate-scale-in">
-                <Stopwatch className="h-4 w-4 mr-2" />
+            <div className="flex flex-wrap items-center gap-4 stagger-animation">
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/25 px-6 py-3 text-base font-medium rounded-full hover-scale animate-rubber-band">
+                <Clock className="h-5 w-5 mr-3 animate-tada" />
                 Smart Time Tracking
               </Badge>
-              <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm animate-scale-in">
-                <Activity className="h-4 w-4 mr-2" />
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/25 px-6 py-3 text-base font-medium rounded-full hover-scale animate-rubber-band">
+                <Activity className="h-5 w-5 mr-3 animate-tada" />
                 Productivity Analytics
               </Badge>
-              <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm animate-scale-in">
-                <Target className="h-4 w-4 mr-2" />
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/25 px-6 py-3 text-base font-medium rounded-full hover-scale animate-rubber-band">
+                <Target className="h-5 w-5 mr-3 animate-tada" />
                 Goal Tracking
               </Badge>
-              <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm animate-scale-in">
-                <TrendingUp className="h-4 w-4 mr-2" />
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/25 px-6 py-3 text-base font-medium rounded-full hover-scale animate-rubber-band">
+                <TrendingUp className="h-5 w-5 mr-3 animate-tada" />
                 Performance Insights
               </Badge>
             </div>
@@ -64,16 +64,16 @@ const TimeTrackPro = () => {
         </div>
 
         {/* Enhanced Tabs */}
-        <Card className="shadow-lg animate-scale-in">
+        <Card className="shadow-2xl animate-scale-in border-0 bg-gradient-to-br from-white to-purple-50/30" style={{ animationDelay: '0.8s' }}>
           <CardContent className="p-0">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <div className="border-b border-border/50 bg-gradient-to-r from-gray-50/50 to-white/50 dark:from-gray-900/50 dark:to-gray-800/50 rounded-t-xl">
-                <TabsList className="grid grid-cols-2 md:grid-cols-5 gap-1 p-4 bg-transparent">
+              <div className="border-b border-purple-200/50 bg-gradient-to-r from-purple-50/50 via-pink-50/30 to-violet-50/50 rounded-t-xl">
+                <TabsList className="grid grid-cols-2 md:grid-cols-5 gap-2 p-6 bg-transparent">
                   <TabsTrigger 
                     value="track" 
-                    className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg px-4 py-3 transition-all duration-300 text-sm hover-scale"
+                    className="flex items-center gap-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white data-[state=active]:shadow-xl rounded-xl px-6 py-4 transition-all duration-500 text-base font-medium hover-scale animate-jello"
                   >
-                    <Clock className="h-4 w-4" />
+                    <Clock className="h-5 w-5 animate-pulse" />
                     <span className="hidden sm:inline">Time Tracking</span>
                     <span className="sm:hidden">Track</span>
                   </TabsTrigger>
@@ -112,8 +112,8 @@ const TimeTrackPro = () => {
                 </TabsList>
               </div>
 
-              <div className="p-6">
-                <TabsContent value="track" className="space-y-6 animate-fade-in">
+              <div className="p-8 bg-gradient-to-br from-white to-purple-50/20">
+                <TabsContent value="track" className="space-y-6 animate-fade-in-up">
                   <TimeTrackingForm />
                 </TabsContent>
 
