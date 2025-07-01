@@ -246,25 +246,25 @@ const RealTimeNotifications: React.FC = () => {
             <div className="flex items-center gap-2 mt-2">
               <Button
                 variant={filter === 'all' ? 'default' : 'outline'}
-                size="xs"
+                size="sm"
                 onClick={() => setFilter('all')}
-                className="hover-scale"
+                className="hover-scale text-xs px-2 py-1"
               >
                 All
               </Button>
               <Button
                 variant={filter === 'unread' ? 'default' : 'outline'}
-                size="xs"
+                size="sm"
                 onClick={() => setFilter('unread')}
-                className="hover-scale"
+                className="hover-scale text-xs px-2 py-1"
               >
                 Unread
               </Button>
               <Button
                 variant={filter === 'high' ? 'default' : 'outline'}
-                size="xs"
+                size="sm"
                 onClick={() => setFilter('high')}
-                className="hover-scale"
+                className="hover-scale text-xs px-2 py-1"
               >
                 High Priority
               </Button>
@@ -319,24 +319,24 @@ const RealTimeNotifications: React.FC = () => {
                                 {!notification.read && (
                                   <Button
                                     variant="ghost"
-                                    size="xs"
+                                    size="sm"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       markAsRead(notification.id);
                                     }}
-                                    className="hover-scale"
+                                    className="hover-scale h-6 w-6 p-0"
                                   >
                                     <CheckCircle className="h-3 w-3" />
                                   </Button>
                                 )}
                                 <Button
                                   variant="ghost"
-                                  size="xs"
+                                  size="sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     deleteNotification(notification.id);
                                   }}
-                                  className="hover-scale text-red-500"
+                                  className="hover-scale text-red-500 h-6 w-6 p-0"
                                 >
                                   <Trash2 className="h-3 w-3" />
                                 </Button>
