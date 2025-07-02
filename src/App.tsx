@@ -12,7 +12,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import UserSettings from "./pages/UserSettings";
 
-// Import all the colorful app pages
+// Import all the app pages
 import TaskMaster from "./pages/TaskMaster";
 import TimeTrackPro from "./pages/TimeTrackPro";
 import CollabSpace from "./pages/CollabSpace";
@@ -20,6 +20,11 @@ import PlanBoard from "./pages/PlanBoard";
 import FileVault from "./pages/FileVault";
 import ServiceCore from "./pages/ServiceCore";
 import KnowledgeNest from "./pages/KnowledgeNest";
+import BudgetBuddy from "./pages/BudgetBuddy";
+import InsightIQ from "./pages/InsightIQ";
+import ClientConnect from "./pages/ClientConnect";
+import RiskRadar from "./pages/RiskRadar";
+import ResourceHub from "./pages/ResourceHub";
 
 const queryClient = new QueryClient();
 
@@ -41,7 +46,7 @@ function App() {
                         <Route path="/" element={<Index />} />
                         <Route path="/settings" element={<UserSettings />} />
                         
-                        {/* Colorful App Routes */}
+                        {/* All App Routes */}
                         <Route path="/taskmaster" element={<TaskMaster />} />
                         <Route path="/timetrackpro" element={<TimeTrackPro />} />
                         <Route path="/collabspace" element={<CollabSpace />} />
@@ -49,13 +54,11 @@ function App() {
                         <Route path="/filevault" element={<FileVault />} />
                         <Route path="/servicecore" element={<ServiceCore />} />
                         <Route path="/knowledgenest" element={<KnowledgeNest />} />
-                        
-                        {/* Placeholder routes for other apps */}
-                        <Route path="/budgetbuddy" element={<Navigate to="/" />} />
-                        <Route path="/insightiq" element={<Navigate to="/" />} />
-                        <Route path="/clientconnect" element={<Navigate to="/" />} />
-                        <Route path="/riskradar" element={<Navigate to="/" />} />
-                        <Route path="/resourcehub" element={<Navigate to="/" />} />
+                        <Route path="/budgetbuddy" element={<BudgetBuddy />} />
+                        <Route path="/insightiq" element={<InsightIQ />} />
+                        <Route path="/clientconnect" element={<ClientConnect />} />
+                        <Route path="/riskradar" element={<RiskRadar />} />
+                        <Route path="/resourcehub" element={<ResourceHub />} />
                       </Routes>
                     </Layout>
                   } />

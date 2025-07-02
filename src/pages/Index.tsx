@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, MessageSquare, FileText, BarChart2, 
@@ -256,9 +255,9 @@ const Index = () => {
   ];
 
   return (
-    <div className="p-6 space-y-10 animate-fade-in-up">
+    <div className="p-6 space-y-8 animate-fade-in-up">
       {/* Enhanced Hero Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-prosync-500 via-prosync-600 to-prosync-700 p-8 text-white shadow-2xl">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-prosync-500 via-prosync-600 to-prosync-700 p-6 text-white shadow-2xl">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
         <div className="relative z-10">
@@ -301,9 +300,9 @@ const Index = () => {
       </div>
 
       {/* Two Column Layout for Main Content */}
-      <div className="grid grid-cols-1 2xl:grid-cols-4 gap-10">
-        {/* Left Column - Main Content (More Space for Apps) */}
-        <div className="2xl:col-span-3 space-y-10">
+      <div className="grid grid-cols-1 2xl:grid-cols-4 gap-8">
+        {/* Left Column - Main Content */}
+        <div className="2xl:col-span-3 space-y-8">
           {/* Enhanced Quick Actions */}
           <Card className="modern-card animate-slide-in-right">
             <CardContent className="p-8">
@@ -357,25 +356,25 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          {/* Enhanced Apps Section with More Space */}
+          {/* Enhanced Apps Section with Smaller Cards */}
           <div className="animate-fade-in-up">
-            <div className="flex items-center justify-between mb-10">
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-4xl font-bold tracking-tight text-gradient mb-3">Your Applications</h2>
-                <p className="text-muted-foreground text-xl">Access all your productivity tools in one unified workspace</p>
+                <h2 className="text-3xl font-bold tracking-tight text-gradient mb-2">Your Applications</h2>
+                <p className="text-muted-foreground text-lg">Access all your productivity tools in one unified workspace</p>
               </div>
-              <Badge variant="outline" className="px-6 py-3 text-base font-medium backdrop-blur-sm">
+              <Badge variant="outline" className="px-4 py-2 text-sm font-medium backdrop-blur-sm">
                 {appList.length} Apps Available
               </Badge>
             </div>
             
-            {/* Much more spacious grid layout */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 3xl:grid-cols-8 gap-8">
+            {/* Smaller, more compact grid layout */}
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 gap-4">
               {appList.map((app, index) => (
                 <div 
                   key={app.title}
                   className="animate-scale-in"
-                  style={{ animationDelay: `${index * 0.1}s` }}
+                  style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   <AppCard 
                     title={app.title}
@@ -391,8 +390,8 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Right Column - Sidebar Content (Reduced) */}
-        <div className="space-y-8">
+        {/* Right Column - Sidebar Content */}
+        <div className="space-y-6">
           {/* Notifications */}
           <div className="animate-slide-in-left">
             <EnhancedNotificationSystem />
@@ -406,7 +405,7 @@ const Index = () => {
       </div>
 
       {/* Enhanced Footer Section */}
-      <div className="pt-16 border-t border-border/50">
+      <div className="pt-12 border-t border-border/50">
         <div className="text-center">
           <div className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-2xl border border-primary/20 backdrop-blur-sm mb-6">
             <Sparkles className="h-5 w-5 text-primary" />
