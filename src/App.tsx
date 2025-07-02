@@ -3,73 +3,67 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { IntegrationProvider } from "./context/IntegrationContext";
-import { SettingsProvider } from "./context/SettingsContext";
-import Layout from "./components/Layout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import UserSettings from "./pages/UserSettings";
-
-// Import all the app pages
 import TaskMaster from "./pages/TaskMaster";
 import TimeTrackPro from "./pages/TimeTrackPro";
-import CollabSpace from "./pages/CollabSpace";
-import PlanBoard from "./pages/PlanBoard";
-import FileVault from "./pages/FileVault";
-import ServiceCore from "./pages/ServiceCore";
-import KnowledgeNest from "./pages/KnowledgeNest";
 import BudgetBuddy from "./pages/BudgetBuddy";
-import InsightIQ from "./pages/InsightIQ";
-import ClientConnect from "./pages/ClientConnect";
-import RiskRadar from "./pages/RiskRadar";
+import FileVault from "./pages/FileVault";
+import CollabSpace from "./pages/CollabSpace";
 import ResourceHub from "./pages/ResourceHub";
+import ClientConnect from "./pages/ClientConnect";
+import Integrations from "./pages/Integrations";
+import InsightIQ from "./pages/InsightIQ";
+import RiskRadar from "./pages/RiskRadar";
+import KnowledgeNestPage from "./pages/KnowledgeNestPage";
+import ServiceCorePage from "./pages/ServiceCorePage";
+import NotificationCenter from "./pages/NotificationCenter";
+import AIFeatures from "./pages/AIFeatures";
+import ProfileSettings from "./pages/ProfileSettings";
+import TeamDirectoryPage from "./pages/TeamDirectoryPage";
+import PlanBoardPage from "./pages/PlanBoardPage";
+import SettingsPage from "./pages/SettingsPage";
 
 const queryClient = new QueryClient();
 
-function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            <IntegrationProvider>
-              <SettingsProvider>
-                <Routes>
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/*" element={
-                    <Layout>
-                      <Routes>
-                        <Route path="/" element={<Index />} />
-                        <Route path="/settings" element={<UserSettings />} />
-                        
-                        {/* All App Routes */}
-                        <Route path="/taskmaster" element={<TaskMaster />} />
-                        <Route path="/timetrackpro" element={<TimeTrackPro />} />
-                        <Route path="/collabspace" element={<CollabSpace />} />
-                        <Route path="/planboard" element={<PlanBoard />} />
-                        <Route path="/filevault" element={<FileVault />} />
-                        <Route path="/servicecore" element={<ServiceCore />} />
-                        <Route path="/knowledgenest" element={<KnowledgeNest />} />
-                        <Route path="/budgetbuddy" element={<BudgetBuddy />} />
-                        <Route path="/insightiq" element={<InsightIQ />} />
-                        <Route path="/clientconnect" element={<ClientConnect />} />
-                        <Route path="/riskradar" element={<RiskRadar />} />
-                        <Route path="/resourcehub" element={<ResourceHub />} />
-                      </Routes>
-                    </Layout>
-                  } />
-                </Routes>
-              </SettingsProvider>
-            </IntegrationProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  );
-}
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <IntegrationProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/taskmaster" element={<TaskMaster />} />
+              <Route path="/timetrackpro" element={<TimeTrackPro />} />
+              <Route path="/budgetbuddy" element={<BudgetBuddy />} />
+              <Route path="/filevault" element={<FileVault />} />
+              <Route path="/collabspace" element={<CollabSpace />} />
+              <Route path="/resourcehub" element={<ResourceHub />} />
+              <Route path="/clientconnect" element={<ClientConnect />} />
+              <Route path="/integrations" element={<Integrations />} />
+              <Route path="/insightiq" element={<InsightIQ />} />
+              <Route path="/riskradar" element={<RiskRadar />} />
+              <Route path="/knowledgenest" element={<KnowledgeNestPage />} />
+              <Route path="/servicecore" element={<ServiceCorePage />} />
+              <Route path="/notification-center" element={<NotificationCenter />} />
+              <Route path="/ai-features" element={<AIFeatures />} />
+              <Route path="/profile" element={<ProfileSettings />} />
+              <Route path="/team-directory" element={<TeamDirectoryPage />} />
+              <Route path="/planboard" element={<PlanBoardPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </IntegrationProvider>
+    </AuthProvider>
+  </QueryClientProvider>
+);
 
 export default App;

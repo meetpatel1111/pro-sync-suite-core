@@ -1,114 +1,523 @@
+import React, { useState, useEffect } from 'react';
+import AppLayout from '@/components/AppLayout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CalendarIcon, CheckCircle2, Circle, BarChart3, ListChecks, User2, Sparkles, Target, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { format, startOfWeek, endOfWeek, isWithinInterval, isSameDay } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { ChevronDown } from 'lucide-react';
+import { Progress } from "@/components/ui/progress"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Task } from '@/utils/dbtypes';
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ColorfulButton } from '@/components/ui/colorful-button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  BarChart2, 
-  TrendingUp, 
-  Users, 
-  Activity, 
-  Plus, 
-  Filter,
-  Download,
-  Calendar,
-  Target,
-  Zap
-} from 'lucide-react';
-import { GradientBackground } from '@/components/ui/gradient-background';
+interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  start_date?: string;
+  end_date?: string;
+  status?: string;
+  created_at: string;
+}
+
+interface UserProfile {
+  id: string;
+  full_name?: string;
+  avatar_url?: string;
+  bio?: string;
+  job_title?: string;
+  phone?: string;
+  location?: string;
+  created_at: string;
+  updated_at: string;
+}
 
 const InsightIQ = () => {
+  const { toast } = useToast();
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [userProfiles, setUserProfiles] = useState<UserProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [filterProject, setFilterProject] = useState('all');
+  const [session, setSession] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    async function fetchTasks() {
+      if (!session) {
+        const storedTasks = localStorage.getItem('tasks');
+        if (storedTasks) {
+          setTasks(JSON.parse(storedTasks));
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('tasks')
+          .select('*');
+
+        if (error) {
+          throw error;
+        }
+
+        if (data) {
+          const mappedTasks = data.map((task): Task => ({
+            id: task.id,
+            title: task.title,
+            description: task.description || '',
+            status: validateStatus(task.status),
+            priority: validatePriority(task.priority),
+            start_date: task.start_date,
+            due_date: task.due_date,
+            assigned_to: task.assigned_to,
+            project_id: task.project_id,
+            created_by: task.created_by,
+            parent_task_id: task.parent_task_id,
+            reviewer_id: task.reviewer_id,
+            recurrence_rule: task.recurrence_rule,
+            visibility: task.visibility,
+            created_at: task.created_at,
+            updated_at: task.updated_at,
+          }));
+
+          setTasks(mappedTasks);
+        } else {
+          const storedTasks = localStorage.getItem('tasks');
+          if (storedTasks) {
+            setTasks(JSON.parse(storedTasks));
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+
+        const storedTasks = localStorage.getItem('tasks');
+        if (storedTasks) {
+          setTasks(JSON.parse(storedTasks));
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    async function fetchProjects() {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData?.user) return;
+
+        const { data, error } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('user_id', userData.user.id);
+
+        if (error) throw error;
+        setProjects(data || []);
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+        toast({
+          title: "Failed to load projects",
+          description: "An error occurred while loading your projects",
+          variant: "destructive",
+        });
+      }
+    }
+
+    async function fetchUserProfiles() {
+      try {
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select('*');
+
+        if (error) throw error;
+        setUserProfiles(data || []);
+      } catch (error) {
+        console.error('Error fetching user profiles:', error);
+        toast({
+          title: "Failed to load user profiles",
+          description: "An error occurred while loading user profiles",
+          variant: "destructive",
+        });
+      }
+    }
+
+    fetchTasks();
+    fetchProjects();
+    fetchUserProfiles();
+  }, [session, toast]);
+
+  const validateStatus = (status: string): 'todo' | 'inProgress' | 'review' | 'done' => {
+    const validStatuses: Array<'todo' | 'inProgress' | 'review' | 'done'> = ['todo', 'inProgress', 'review', 'done'];
+    return validStatuses.includes(status as any) ? (status as 'todo' | 'inProgress' | 'review' | 'done') : 'todo';
+  };
+
+  const validatePriority = (priority: string): 'low' | 'medium' | 'high' => {
+    const validPriorities: Array<'low' | 'medium' | 'high'> = ['low', 'medium', 'high'];
+    return validPriorities.includes(priority as any) ? (priority as 'low' | 'medium' | 'high') : 'medium';
+  };
+
+  const getTasksForWeek = (date: Date) => {
+    const start = startOfWeek(date, { weekStartsOn: 1 });
+    const end = endOfWeek(date, { weekStartsOn: 1 });
+
+    return tasks.filter(task => {
+      if (!task.due_date) return false;
+      const dueDate = new Date(task.due_date);
+      return isWithinInterval(dueDate, { start, end });
+    });
+  };
+
+  const getTasksForToday = () => {
+    return tasks.filter(task => {
+      if (!task.due_date) return false;
+      return isSameDay(new Date(task.due_date), selectedDate);
+    });
+  };
+
+  const getTaskStatusCounts = (tasks: Task[]) => {
+    const counts = {
+      todo: 0,
+      inProgress: 0,
+      review: 0,
+      done: 0,
+    };
+
+    tasks.forEach(task => {
+      counts[task.status]++;
+    });
+
+    return counts;
+  };
+
+  const tasksThisWeek = getTasksForWeek(selectedDate);
+  const tasksToday = getTasksForToday();
+  const statusCountsThisWeek = getTaskStatusCounts(tasksThisWeek);
+  const statusCountsToday = getTaskStatusCounts(tasksToday);
+
+  const calculateOverallProgress = () => {
+    const totalTasks = tasksThisWeek.length;
+    const completedTasks = statusCountsThisWeek.done;
+
+    if (totalTasks === 0) return 0;
+
+    return (completedTasks / totalTasks) * 100;
+  };
+
+  const overallProgress = calculateOverallProgress();
+
+  const projectMap: Record<string, string> = {
+    'project1': 'Website Redesign',
+    'project2': 'Mobile App',
+    'project3': 'Marketing Campaign',
+    'project4': 'Database Migration'
+  };
+
+  const assigneeMap: Record<string, string> = {
+    'user1': 'Alex Johnson',
+    'user2': 'Jamie Smith',
+    'user3': 'Taylor Lee',
+    'user4': 'Morgan Chen'
+  };
+
+  const getUserAvatar = (userId: string | undefined) => {
+    const userProfile = userProfiles.find(profile => profile.id === userId);
+    return userProfile?.avatar_url || '';
+  };
+
+  const getUserName = (userId: string | undefined) => {
+    const userProfile = userProfiles.find(profile => profile.id === userId);
+    return userProfile?.full_name || 'Unknown User';
+  };
+
+  if (!session) {
+    return (
+      <AppLayout>
+        <div className="text-center py-8">
+          <h1 className="text-2xl font-semibold mb-4">Task Insights</h1>
+          <p className="text-muted-foreground">Please log in to view task insights.</p>
+          <Button
+            variant="default"
+            className="mt-4"
+            onClick={() => window.location.href = '/auth'}
+          >
+            Log In / Sign Up
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="text-center py-8">
+          <h1 className="text-2xl font-semibold mb-4">Task Insights</h1>
+          <p className="text-muted-foreground">Loading task insights...</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
-    <GradientBackground variant="red" className="min-h-screen">
-      <div className="p-6 space-y-8 animate-fade-in">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 bg-clip-text text-transparent">
-              InsightIQ
-            </h1>
-            <p className="text-muted-foreground text-lg mt-2">
-              Advanced analytics and intelligent reporting platform
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <ColorfulButton variant="outline" size="sm">
-              <Filter className="h-4 w-4 mr-2" />
-              Filter
-            </ColorfulButton>
-            <ColorfulButton variant="secondary" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </ColorfulButton>
-            <ColorfulButton variant="primary">
-              <Plus className="h-4 w-4 mr-2" />
-              New Report
-            </ColorfulButton>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {[
-            { title: 'Active Reports', value: '24', icon: BarChart2, color: 'from-red-500 to-rose-600' },
-            { title: 'Data Sources', value: '8', icon: Activity, color: 'from-orange-500 to-red-600' },
-            { title: 'Users Served', value: '156', icon: Users, color: 'from-purple-500 to-pink-600' },
-            { title: 'Insights Generated', value: '342', icon: Zap, color: 'from-blue-500 to-purple-600' }
-          ].map((stat, index) => (
-            <Card key={index} className="border-0 shadow-xl bg-gradient-to-br from-white/90 to-white/80 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`p-3 rounded-xl bg-gradient-to-r ${stat.color} shadow-lg`}>
-                    <stat.icon className="h-6 w-6 text-white" />
-                  </div>
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                </div>
-                <div className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</div>
-                <div className="text-sm text-gray-600">{stat.title}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Main Dashboard */}
-        <Card className="border-0 shadow-2xl bg-gradient-to-br from-white via-white/95 to-white/90">
-          <CardHeader className="bg-gradient-to-r from-red-100/80 via-rose-100/80 to-pink-100/80 rounded-t-2xl">
-            <CardTitle className="text-xl bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-2">
-              <BarChart2 className="h-6 w-6 text-red-600" />
-              Analytics Dashboard
-              <Badge className="ml-auto bg-gradient-to-r from-red-500 to-rose-500 text-white animate-pulse">
-                Real-time
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-8">
-            <div className="text-center py-16">
-              <div className="grid grid-cols-3 gap-8 mb-8">
-                {[
-                  { icon: BarChart2, label: 'Performance Metrics', color: 'text-red-500' },
-                  { icon: TrendingUp, label: 'Trend Analysis', color: 'text-rose-500' },
-                  { icon: Target, label: 'Goal Tracking', color: 'text-pink-500' }
-                ].map((item, index) => (
-                  <div key={index} className="text-center animate-bounce-soft" style={{ animationDelay: `${index * 0.2}s` }}>
-                    <item.icon className={`h-16 w-16 mx-auto mb-4 ${item.color}`} />
-                    <p className="text-sm font-medium">{item.label}</p>
-                  </div>
-                ))}
-              </div>
-              <Zap className="h-20 w-20 mx-auto mb-4 opacity-50 animate-pulse" />
-              <h3 className="text-2xl font-semibold mb-2">AI-Powered Analytics</h3>
-              <p className="max-w-2xl mx-auto text-gray-600 mb-6">
-                Leverage advanced machine learning algorithms to discover hidden patterns, predict trends, and generate actionable insights from your data automatically.
-              </p>
-              <ColorfulButton variant="primary" size="lg">
-                <BarChart2 className="h-5 w-5 mr-2" />
-                Launch Analytics Engine
-              </ColorfulButton>
+    <AppLayout>
+      {/* Compact Header Card */}
+      <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-red-500 via-red-600 to-rose-700 p-6 text-white shadow-lg mb-6">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+              <BarChart3 className="h-5 w-5" />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight mb-1">InsightIQ</h1>
+              <p className="text-sm text-red-100 leading-relaxed">
+                Analytics and reporting for data-driven project decisions
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-4">
+            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 text-xs">
+              <Target className="h-3 w-3 mr-1" />
+              Task Analytics
+            </Badge>
+            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 text-xs">
+              <BarChart3 className="h-3 w-3 mr-1" />
+              Performance Metrics
+            </Badge>
+            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 text-xs">
+              <Zap className="h-3 w-3 mr-1" />
+              Smart Reports
+            </Badge>
+          </div>
+        </div>
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16 backdrop-blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12 backdrop-blur-3xl"></div>
       </div>
-    </GradientBackground>
+
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold">Task Insights</h2>
+          <Select value={filterProject} onValueChange={setFilterProject}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filter by project" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Projects</SelectItem>
+              {projects.map((project) => (
+                <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="md:col-span-1">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                <div className="flex items-center">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  This Week
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{tasksThisWeek.length} Tasks</div>
+              <p className="text-sm text-muted-foreground">
+                Due this week
+              </p>
+              <Progress value={overallProgress} className="mt-4" />
+              <div className="flex justify-between text-sm text-muted-foreground mt-2">
+                <span>0%</span>
+                <span>100%</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="md:col-span-1">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                <div className="flex items-center">
+                  <ListChecks className="mr-2 h-4 w-4" />
+                  Status
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">To Do</span>
+                  <span className="font-medium">{statusCountsThisWeek.todo}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">In Progress</span>
+                  <span className="font-medium">{statusCountsThisWeek.inProgress}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Review</span>
+                  <span className="font-medium">{statusCountsThisWeek.review}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Done</span>
+                  <span className="font-medium">{statusCountsThisWeek.done}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="md:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                <div className="flex items-center">
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Overall Progress
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-4">
+                <div className="w-3/4">
+                  <Progress value={overallProgress} />
+                </div>
+                <div className="w-1/4 text-right font-medium">{overallProgress.toFixed(0)}%</div>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Progress of all tasks due this week
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+          <Card className="md:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                <div className="flex items-center">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(selectedDate, 'MMMM yyyy')}
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                className="rounded-md border"
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="md:col-span-5 h-full">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-md">
+                  {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+                </CardTitle>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      Sort By <ChevronDown className="h-4 w-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>Priority</DropdownMenuItem>
+                    <DropdownMenuItem>Due Date</DropdownMenuItem>
+                    <DropdownMenuItem>Assignee</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[600px] pr-4">
+                {tasksToday.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No tasks due on this date
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {tasksToday.map((task) => (
+                      <div key={task.id} className="border-b pb-3 last:border-0 last:pb-0">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="font-medium">{task.title}</h3>
+                            {task.description && (
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {task.description}
+                              </p>
+                            )}
+                            <div className="mt-2 flex items-center text-sm text-muted-foreground">
+                              <CalendarIcon className="mr-1 h-4 w-4" />
+                              <span>{task.due_date ? format(new Date(task.due_date), 'MMM d, yyyy') : 'No due date'}</span>
+                            </div>
+                          </div>
+                          <div className="flex-col items-end">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={getUserAvatar(task.created_by)} />
+                              <AvatarFallback>{getUserName(task.created_by)}</AvatarFallback>
+                            </Avatar>
+                          </div>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {task.project_id && (
+                            <Badge variant="outline" className="text-xs">
+                              {projectMap[task.project_id] || task.project_id}
+                            </Badge>
+                          )}
+                          {task.assigned_to?.[0] && (
+                            <Badge variant="secondary" className="text-xs">
+                              {assigneeMap[task.assigned_to?.[0]] || task.assigned_to?.[0]}
+                            </Badge>
+                          )}
+                          <Badge className={`text-xs ${
+                            task.status === 'done'
+                              ? 'bg-green-500'
+                              : task.status === 'review'
+                                ? 'bg-purple-500'
+                                : task.status === 'inProgress'
+                                  ? 'bg-blue-500'
+                                  : 'bg-slate-500'
+                          }`}>
+                            {task.status === 'inProgress'
+                              ? 'In Progress'
+                              : task.status.charAt(0).toUpperCase() + task.status.slice(1)
+                            }
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </AppLayout>
   );
 };
 

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Settings, Cog, Shield, Bell, Palette, Database, Key, Sparkles, Zap } from 'lucide-react';
+import { Settings, Cog, Shield, Bell, Palette, Database, Key } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import SettingsForm from '@/components/settings/SettingsForm';
 import { Badge } from '@/components/ui/badge';
@@ -10,50 +10,45 @@ const SettingsPage: React.FC = () => {
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
         {/* Enhanced Header */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 via-blue-600 to-cyan-700 p-8 text-white shadow-2xl">
-          <div className="absolute inset-0 bg-black/10 backdrop-blur-sm"></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-white/15 to-transparent animate-gradient-shift"></div>
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-600 via-gray-700 to-zinc-800 p-6 text-white shadow-xl">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"></div>
           
           {/* Floating Elements */}
-          <div className="absolute -top-20 -right-20 w-48 h-48 bg-white/15 rounded-full blur-3xl animate-float"></div>
-          <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-blue-300/25 rounded-full blur-2xl animate-float" style={{ animationDelay: '1s' }}></div>
-          <div className="absolute top-1/3 left-1/2 w-24 h-24 bg-cyan-300/20 rounded-full blur-xl animate-float" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute -top-16 -right-16 w-40 h-40 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-gray-300/20 rounded-full blur-2xl"></div>
           
           <div className="relative z-10">
-            <div className="flex items-center gap-4 mb-6 animate-slide-in-right">
-              <div className="relative p-3 bg-white/25 rounded-2xl backdrop-blur-sm border border-white/30 shadow-xl animate-spin-slow">
-                <Settings className="h-8 w-8" />
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer rounded-2xl"></div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm border border-white/30 shadow-lg">
+                <Settings className="h-6 w-6" />
               </div>
               <div>
-                <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-white via-blue-100 to-cyan-100 bg-clip-text animate-neon-glow">Settings</h1>
-                <p className="text-xl text-blue-100/95 font-semibold animate-fade-in-up flex items-center gap-2" style={{ animationDelay: '0.2s' }}>
-                  Application Configuration 
-                  <Sparkles className="h-5 w-5 text-yellow-300 animate-pulse" />
-                </p>
+                <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+                <p className="text-lg text-gray-100/90 font-medium">Application Configuration</p>
               </div>
             </div>
             
-            <p className="text-blue-50/95 max-w-3xl mb-6 leading-relaxed text-lg animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+            <p className="text-gray-50/95 max-w-3xl mb-4 leading-relaxed">
               Manage your application settings, preferences, and configurations.
-              Customize your experience and control security settings with our advanced control panel.
+              Customize your experience and control security settings.
             </p>
             
-            <div className="flex flex-wrap items-center gap-4 stagger-animation">
-              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/25 px-6 py-3 text-base font-medium rounded-full hover-scale animate-jello">
-                <Cog className="h-5 w-5 mr-3 animate-spin-slow" />
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm animate-scale-in">
+                <Cog className="h-4 w-4 mr-2" />
                 General Settings
               </Badge>
-              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/25 px-6 py-3 text-base font-medium rounded-full hover-scale animate-jello">
-                <Shield className="h-5 w-5 mr-3 animate-pulse" />
+              <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm animate-scale-in">
+                <Shield className="h-4 w-4 mr-2" />
                 Security & Privacy
               </Badge>
-              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/25 px-6 py-3 text-base font-medium rounded-full hover-scale animate-jello">
-                <Bell className="h-5 w-5 mr-3 animate-wiggle" />
+              <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm animate-scale-in">
+                <Bell className="h-4 w-4 mr-2" />
                 Notifications
               </Badge>
-              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/25 px-6 py-3 text-base font-medium rounded-full hover-scale animate-jello">
-                <Palette className="h-5 w-5 mr-3 animate-bounce-soft" />
+              <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm animate-scale-in">
+                <Palette className="h-4 w-4 mr-2" />
                 Appearance
               </Badge>
             </div>
@@ -61,7 +56,7 @@ const SettingsPage: React.FC = () => {
         </div>
 
         {/* Main Content */}
-        <div className="animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
+        <div className="animate-fade-in">
           <SettingsForm />
         </div>
       </div>

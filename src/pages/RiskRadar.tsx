@@ -1,161 +1,321 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ColorfulButton } from '@/components/ui/colorful-button';
-import { Badge } from '@/components/ui/badge';
+import AppLayout from '@/components/AppLayout';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { 
-  Shield, 
-  AlertTriangle, 
-  TrendingUp, 
-  Eye, 
+  ArrowLeft, 
   Plus, 
-  Filter,
+  Filter, 
+  AlertTriangle, 
+  Shield, 
+  ShieldAlert,
+  ShieldCheck,
+  PieChart,
+  BarChart3,
+  Clock,
+  ChevronDown,
+  Search,
+  Sparkles,
   Target,
-  Activity,
-  CheckCircle,
-  XCircle
+  Zap
 } from 'lucide-react';
-import { GradientBackground } from '@/components/ui/gradient-background';
+import { useNavigate } from 'react-router-dom';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import RiskRadarChart from '@/components/RiskRadarChart';
+import RiskTable from '@/components/RiskTable';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const RiskRadar = () => {
+  const navigate = useNavigate();
+  
   return (
-    <GradientBackground variant="rose" className="min-h-screen">
-      <div className="p-6 space-y-8 animate-fade-in">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-rose-600 via-red-600 to-orange-600 bg-clip-text text-transparent">
-              RiskRadar
-            </h1>
-            <p className="text-muted-foreground text-lg mt-2">
-              Advanced risk assessment and issue tracking system
+    <AppLayout>
+      <div className="space-y-6 animate-fade-in-up">
+        {/* Compact Header */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-rose-500 via-rose-600 to-red-700 p-4 text-white shadow-lg">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <Shield className="h-5 w-5" />
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight">RiskRadar</h1>
+            </div>
+            <p className="text-sm text-rose-100 max-w-2xl mb-3 leading-relaxed">
+              Proactive risk and issue tracking for confident project management
             </p>
+            <div className="flex items-center gap-3">
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 text-xs">
+                <Target className="h-3 w-3 mr-1" />
+                Risk Assessment
+              </Badge>
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 text-xs">
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                Issue Tracking
+              </Badge>
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 text-xs">
+                <Zap className="h-3 w-3 mr-1" />
+                Mitigation Plans
+              </Badge>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <ColorfulButton variant="outline" size="sm">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-24 translate-x-24 backdrop-blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-16 -translate-x-16 backdrop-blur-3xl"></div>
+        </div>
+
+        <div className="mb-4">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="gap-1 mb-4" 
+            onClick={() => navigate('/')}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </div>
+        
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm">
               <Filter className="h-4 w-4 mr-2" />
               Filter
-            </ColorfulButton>
-            <ColorfulButton variant="secondary" size="sm">
-              <Eye className="h-4 w-4 mr-2" />
-              Monitor
-            </ColorfulButton>
-            <ColorfulButton variant="primary">
+            </Button>
+            <Button size="sm">
               <Plus className="h-4 w-4 mr-2" />
-              Add Risk
-            </ColorfulButton>
+              New Risk
+            </Button>
           </div>
         </div>
-
-        {/* Risk Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {[
-            { title: 'High Risk Items', value: '3', icon: AlertTriangle, color: 'from-red-500 to-rose-600', status: 'critical' },
-            { title: 'Medium Risk Items', value: '7', icon: Shield, color: 'from-orange-500 to-red-600', status: 'warning' },
-            { title: 'Monitored Risks', value: '15', icon: Eye, color: 'from-blue-500 to-indigo-600', status: 'info' },
-            { title: 'Resolved Issues', value: '42', icon: CheckCircle, color: 'from-green-500 to-emerald-600', status: 'success' }
-          ].map((stat, index) => (
-            <Card key={index} className="border-0 shadow-xl bg-gradient-to-br from-white/90 to-white/80 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`p-3 rounded-xl bg-gradient-to-r ${stat.color} shadow-lg`}>
-                    <stat.icon className="h-6 w-6 text-white" />
+        
+        {/* Risk Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card className="p-4">
+            <div className="flex items-center mb-3">
+              <div className="p-2 rounded-full bg-amber-100 mr-3">
+                <AlertTriangle className="h-5 w-5 text-amber-700" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Total Risks</p>
+                <h3 className="text-2xl font-bold">24</h3>
+              </div>
+            </div>
+            <Progress value={65} className="h-1 bg-amber-100" />
+            <p className="text-xs text-muted-foreground mt-2">65% have mitigation plans</p>
+          </Card>
+          
+          <Card className="p-4">
+            <div className="flex items-center mb-3">
+              <div className="p-2 rounded-full bg-red-100 mr-3">
+                <ShieldAlert className="h-5 w-5 text-red-700" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">High Priority</p>
+                <h3 className="text-2xl font-bold">8</h3>
+              </div>
+            </div>
+            <Progress value={75} className="h-1 bg-red-100" />
+            <p className="text-xs text-muted-foreground mt-2">75% actively monitored</p>
+          </Card>
+          
+          <Card className="p-4">
+            <div className="flex items-center mb-3">
+              <div className="p-2 rounded-full bg-amber-100 mr-3">
+                <Shield className="h-5 w-5 text-amber-700" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Medium Priority</p>
+                <h3 className="text-2xl font-bold">10</h3>
+              </div>
+            </div>
+            <Progress value={60} className="h-1 bg-amber-100" />
+            <p className="text-xs text-muted-foreground mt-2">60% have mitigation plans</p>
+          </Card>
+          
+          <Card className="p-4">
+            <div className="flex items-center mb-3">
+              <div className="p-2 rounded-full bg-green-100 mr-3">
+                <ShieldCheck className="h-5 w-5 text-green-700" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Resolved</p>
+                <h3 className="text-2xl font-bold">14</h3>
+              </div>
+            </div>
+            <Progress value={100} className="h-1 bg-green-100" />
+            <p className="text-xs text-muted-foreground mt-2">In the last 30 days</p>
+          </Card>
+        </div>
+        
+        {/* Risk Visualization and Management */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <Card className="lg:col-span-2 p-4">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-medium">Risk Assessment Matrix</h3>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm">
+                  <Clock className="h-4 w-4 mr-2" />
+                  Last 30 Days
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      Project Alpha
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem>All Projects</DropdownMenuItem>
+                    <DropdownMenuItem>Project Alpha</DropdownMenuItem>
+                    <DropdownMenuItem>Project Beta</DropdownMenuItem>
+                    <DropdownMenuItem>Project Gamma</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+            
+            <Tabs defaultValue="matrix">
+              <TabsList className="mb-4">
+                <TabsTrigger value="matrix">Risk Matrix</TabsTrigger>
+                <TabsTrigger value="trends">Risk Trends</TabsTrigger>
+                <TabsTrigger value="categories">Categories</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="matrix" className="space-y-4">
+                <div className="h-[300px]">
+                  <RiskRadarChart />
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="trends" className="space-y-4">
+                <div className="h-[300px] flex items-center justify-center">
+                  <div className="text-center">
+                    <BarChart3 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-medium mb-2">Risk Trends</h3>
+                    <p className="text-muted-foreground max-w-md mb-4">
+                      Track how risks evolve over time with detailed trend analysis.
+                    </p>
                   </div>
-                  <div className={`w-3 h-3 rounded-full ${
-                    stat.status === 'critical' ? 'bg-red-500 animate-pulse' :
-                    stat.status === 'warning' ? 'bg-orange-500' :
-                    stat.status === 'info' ? 'bg-blue-500' : 'bg-green-500'
-                  }`} />
                 </div>
-                <div className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</div>
-                <div className="text-sm text-gray-600">{stat.title}</div>
-              </CardContent>
-            </Card>
-          ))}
+              </TabsContent>
+              
+              <TabsContent value="categories" className="space-y-4">
+                <div className="h-[300px] flex items-center justify-center">
+                  <div className="text-center">
+                    <PieChart className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-medium mb-2">Risk Categories</h3>
+                    <p className="text-muted-foreground max-w-md mb-4">
+                      Visualize distribution of risks across different categories.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </Card>
+          
+          <Card className="p-4">
+            <h3 className="font-medium mb-4">Risk Categories</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm">Technical</span>
+                  <span className="text-sm font-medium">9 risks</span>
+                </div>
+                <Progress value={38} className="h-2 bg-red-100" />
+                <p className="text-xs text-muted-foreground mt-1">3 high, 4 medium, 2 low</p>
+              </div>
+              
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm">Schedule</span>
+                  <span className="text-sm font-medium">6 risks</span>
+                </div>
+                <Progress value={25} className="h-2 bg-amber-100" />
+                <p className="text-xs text-muted-foreground mt-1">2 high, 3 medium, 1 low</p>
+              </div>
+              
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm">Resource</span>
+                  <span className="text-sm font-medium">5 risks</span>
+                </div>
+                <Progress value={21} className="h-2 bg-amber-100" />
+                <p className="text-xs text-muted-foreground mt-1">1 high, 2 medium, 2 low</p>
+              </div>
+              
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm">Financial</span>
+                  <span className="text-sm font-medium">4 risks</span>
+                </div>
+                <Progress value={16} className="h-2 bg-emerald-100" />
+                <p className="text-xs text-muted-foreground mt-1">0 high, 1 medium, 3 low</p>
+              </div>
+            </div>
+            
+            <div className="mt-6 pt-4 border-t">
+              <h4 className="text-sm font-medium mb-2">Risk Alerts</h4>
+              
+              <div className="space-y-3">
+                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm text-red-800">3 high priority risks require immediate attention</p>
+                </div>
+                
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+                  <p className="text-sm text-amber-800">5 risks have passed their review date</p>
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
-
-        {/* Risk Dashboard */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Active Risks */}
-          <div className="lg:col-span-2">
-            <Card className="border-0 shadow-2xl bg-gradient-to-br from-white via-white/95 to-white/90">
-              <CardHeader className="bg-gradient-to-r from-rose-100/80 via-red-100/80 to-orange-100/80 rounded-t-2xl">
-                <CardTitle className="text-xl bg-gradient-to-r from-rose-600 via-red-600 to-orange-600 bg-clip-text text-transparent flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-rose-600" />
-                  Active Risk Items
-                  <Badge className="ml-auto bg-gradient-to-r from-rose-500 to-red-500 text-white">
-                    10 Active
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {[
-                    { title: 'Server Infrastructure Vulnerability', level: 'High', probability: '75%', impact: 'Critical', status: 'Open' },
-                    { title: 'Data Backup System Failure', level: 'Medium', probability: '40%', impact: 'High', status: 'Monitoring' },
-                    { title: 'Third-party API Dependency', level: 'Low', probability: '20%', impact: 'Medium', status: 'Tracked' }
-                  ].map((risk, index) => (
-                    <div key={index} className="p-4 rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 hover:from-rose-50 hover:to-red-50 transition-all duration-300 border border-gray-200">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 mb-1">{risk.title}</h3>
-                          <div className="flex items-center gap-4 text-sm text-gray-600">
-                            <span>Probability: {risk.probability}</span>
-                            <span>Impact: {risk.impact}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={
-                            risk.level === 'High' ? 'destructive' : 
-                            risk.level === 'Medium' ? 'default' : 'secondary'
-                          }>
-                            {risk.level}
-                          </Badge>
-                          <Badge variant="outline">{risk.status}</Badge>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <ColorfulButton variant="outline" size="sm">
-                          <Eye className="h-3 w-3 mr-1" />
-                          View
-                        </ColorfulButton>
-                        <ColorfulButton variant="secondary" size="sm">
-                          <Target className="h-3 w-3 mr-1" />
-                          Mitigate
-                        </ColorfulButton>
-                      </div>
-                    </div>
-                  ))}
+        
+        {/* Risk List */}
+        <div>
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-medium">Risk Register</h3>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    type="search" 
+                    placeholder="Search risks..." 
+                    className="pl-8 w-[200px]"
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Risk Analytics */}
-          <div>
-            <Card className="border-0 shadow-2xl bg-gradient-to-br from-white via-white/95 to-white/90">
-              <CardHeader className="bg-gradient-to-r from-rose-100/80 via-red-100/80 to-orange-100/80 rounded-t-2xl">
-                <CardTitle className="text-lg bg-gradient-to-r from-rose-600 via-red-600 to-orange-600 bg-clip-text text-transparent">
-                  Risk Analytics
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="text-center py-8">
-                  <Activity className="h-16 w-16 mx-auto mb-4 text-rose-500 animate-pulse" />
-                  <h3 className="text-lg font-semibold mb-2">Risk Heat Map</h3>
-                  <p className="text-gray-600 text-sm mb-4">
-                    Visual representation of risk probability vs impact analysis
-                  </p>
-                  <ColorfulButton variant="primary" size="sm">
-                    View Heat Map
-                  </ColorfulButton>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      Status: All
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem>All</DropdownMenuItem>
+                    <DropdownMenuItem>Open</DropdownMenuItem>
+                    <DropdownMenuItem>Mitigated</DropdownMenuItem>
+                    <DropdownMenuItem>Closed</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+            
+            <RiskTable />
+          </Card>
         </div>
       </div>
-    </GradientBackground>
+    </AppLayout>
   );
 };
 

@@ -4,6 +4,7 @@ import { Calendar, Clock, MessageSquare, FileText, BarChart2,
          PieChart, Users, Shield, FileCog, FolderLock, Sparkles, TrendingUp, 
          Zap, Target, Rocket, BookOpen, Headphones } from 'lucide-react';
 import AppCard from '@/components/AppCard';
+import AppLayout from '@/components/AppLayout';
 import DashboardStats from '@/components/DashboardStats';
 import LoadingFallback from '@/components/ui/loading-fallback';
 import { useAuthContext } from '@/context/AuthContext';
@@ -255,181 +256,183 @@ const Index = () => {
   ];
 
   return (
-    <div className="p-6 space-y-8 animate-fade-in-up">
-      {/* Enhanced Hero Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-prosync-500 via-prosync-600 to-prosync-700 p-6 text-white shadow-2xl">
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-              <Sparkles className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Welcome back to ProSync Suite</h1>
-              <p className="text-blue-100 opacity-90">
-                Hello {getDisplayName()}
-              </p>
-            </div>
-          </div>
-          <p className="text-sm text-blue-100 max-w-3xl mb-4 leading-relaxed">
-            Your comprehensive project management solution with AI-powered insights, real-time collaboration, and seamless integrations across 12 powerful applications.
-          </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              12 Integrated Apps
-            </Badge>
-            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
-              <Rocket className="h-3 w-3 mr-1" />
-              AI-Powered Insights
-            </Badge>
-            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
-              <Zap className="h-3 w-3 mr-1" />
-              Real-time Sync
-            </Badge>
-          </div>
-        </div>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32 backdrop-blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24 backdrop-blur-3xl"></div>
-      </div>
-
-      {/* Enhanced Analytics Dashboard */}
-      <div className="animate-scale-in">
-        <DashboardAnalytics />
-      </div>
-
-      {/* Two Column Layout for Main Content */}
-      <div className="grid grid-cols-1 2xl:grid-cols-4 gap-8">
-        {/* Left Column - Main Content */}
-        <div className="2xl:col-span-3 space-y-8">
-          {/* Enhanced Quick Actions */}
-          <Card className="modern-card animate-slide-in-right">
-            <CardContent className="p-8">
-              <div className="flex items-center gap-2 mb-8">
-                <div className="p-2 bg-gradient-to-br from-primary to-primary/80 rounded-xl">
-                  <Target className="h-5 w-5 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold">Quick Actions</h3>
-                <Badge variant="outline" className="ml-auto">
-                  Boost Productivity
-                </Badge>
+    <AppLayout>
+      <div className="space-y-10 animate-fade-in-up">
+        {/* Enhanced Hero Section */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-prosync-500 via-prosync-600 to-prosync-700 p-8 text-white shadow-2xl">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                <Sparkles className="h-6 w-6" />
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <button 
-                  onClick={() => handleQuickAction('newTask')}
-                  className="group flex flex-col items-center gap-4 p-8 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
-                >
-                  <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                    <Calendar className="h-6 w-6 text-white" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-primary">Create Task</span>
-                </button>
-                <button 
-                  onClick={() => handleQuickAction('startTimer')}
-                  className="group flex flex-col items-center gap-4 p-8 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
-                >
-                  <div className="p-4 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                    <Clock className="h-6 w-6 text-white" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-primary">Track Time</span>
-                </button>
-                <button 
-                  onClick={() => handleQuickAction('newProject')}
-                  className="group flex flex-col items-center gap-4 p-8 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
-                >
-                  <div className="p-4 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                    <FileText className="h-6 w-6 text-white" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-primary">New Project</span>
-                </button>
-                <button 
-                  onClick={() => handleQuickAction('teamChat')}
-                  className="group flex flex-col items-center gap-4 p-8 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
-                >
-                  <div className="p-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                    <MessageSquare className="h-6 w-6 text-white" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-primary">Team Chat</span>
-                </button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Enhanced Apps Section with Smaller Cards */}
-          <div className="animate-fade-in-up">
-            <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-3xl font-bold tracking-tight text-gradient mb-2">Your Applications</h2>
-                <p className="text-muted-foreground text-lg">Access all your productivity tools in one unified workspace</p>
+                <h1 className="text-3xl font-bold tracking-tight">Welcome back to ProSync Suite</h1>
+                <p className="text-blue-100 opacity-90">
+                  Hello {getDisplayName()}
+                </p>
               </div>
-              <Badge variant="outline" className="px-4 py-2 text-sm font-medium backdrop-blur-sm">
-                {appList.length} Apps Available
+            </div>
+            <p className="text-sm text-blue-100 max-w-3xl mb-4 leading-relaxed">
+              Your comprehensive project management solution with AI-powered insights, real-time collaboration, and seamless integrations across 12 powerful applications.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
+                <TrendingUp className="h-3 w-3 mr-1" />
+                12 Integrated Apps
+              </Badge>
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
+                <Rocket className="h-3 w-3 mr-1" />
+                AI-Powered Insights
+              </Badge>
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20">
+                <Zap className="h-3 w-3 mr-1" />
+                Real-time Sync
               </Badge>
             </div>
-            
-            {/* Smaller, more compact grid layout */}
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 gap-4">
-              {appList.map((app, index) => (
-                <div 
-                  key={app.title}
-                  className="animate-scale-in"
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  <AppCard 
-                    title={app.title}
-                    description={app.description}
-                    icon={app.icon}
-                    bgColor={app.bgColor}
-                    route={app.route}
-                    featureCount={app.featureCount}
-                  />
+          </div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32 backdrop-blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24 backdrop-blur-3xl"></div>
+        </div>
+
+        {/* Enhanced Analytics Dashboard */}
+        <div className="animate-scale-in">
+          <DashboardAnalytics />
+        </div>
+
+        {/* Two Column Layout for Main Content */}
+        <div className="grid grid-cols-1 2xl:grid-cols-4 gap-10">
+          {/* Left Column - Main Content (More Space for Apps) */}
+          <div className="2xl:col-span-3 space-y-10">
+            {/* Enhanced Quick Actions */}
+            <Card className="modern-card animate-slide-in-right">
+              <CardContent className="p-8">
+                <div className="flex items-center gap-2 mb-8">
+                  <div className="p-2 bg-gradient-to-br from-primary to-primary/80 rounded-xl">
+                    <Target className="h-5 w-5 text-white" />
+                  </div>
+                  <h3 className="text-xl font-semibold">Quick Actions</h3>
+                  <Badge variant="outline" className="ml-auto">
+                    Boost Productivity
+                  </Badge>
                 </div>
-              ))}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <button 
+                    onClick={() => handleQuickAction('newTask')}
+                    className="group flex flex-col items-center gap-4 p-8 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                  >
+                    <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                      <Calendar className="h-6 w-6 text-white" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-primary">Create Task</span>
+                  </button>
+                  <button 
+                    onClick={() => handleQuickAction('startTimer')}
+                    className="group flex flex-col items-center gap-4 p-8 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                  >
+                    <div className="p-4 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                      <Clock className="h-6 w-6 text-white" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-primary">Track Time</span>
+                  </button>
+                  <button 
+                    onClick={() => handleQuickAction('newProject')}
+                    className="group flex flex-col items-center gap-4 p-8 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                  >
+                    <div className="p-4 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                      <FileText className="h-6 w-6 text-white" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-primary">New Project</span>
+                  </button>
+                  <button 
+                    onClick={() => handleQuickAction('teamChat')}
+                    className="group flex flex-col items-center gap-4 p-8 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                  >
+                    <div className="p-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                      <MessageSquare className="h-6 w-6 text-white" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-primary">Team Chat</span>
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Enhanced Apps Section with More Space */}
+            <div className="animate-fade-in-up">
+              <div className="flex items-center justify-between mb-10">
+                <div>
+                  <h2 className="text-4xl font-bold tracking-tight text-gradient mb-3">Your Applications</h2>
+                  <p className="text-muted-foreground text-xl">Access all your productivity tools in one unified workspace</p>
+                </div>
+                <Badge variant="outline" className="px-6 py-3 text-base font-medium backdrop-blur-sm">
+                  {appList.length} Apps Available
+                </Badge>
+              </div>
+              
+              {/* Much more spacious grid layout */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 3xl:grid-cols-8 gap-8">
+                {appList.map((app, index) => (
+                  <div 
+                    key={app.title}
+                    className="animate-scale-in"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <AppCard 
+                      title={app.title}
+                      description={app.description}
+                      icon={app.icon}
+                      bgColor={app.bgColor}
+                      route={app.route}
+                      featureCount={app.featureCount}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Sidebar Content (Reduced) */}
+          <div className="space-y-8">
+            {/* Notifications */}
+            <div className="animate-slide-in-left">
+              <EnhancedNotificationSystem />
+            </div>
+
+            {/* Productivity Insights */}
+            <div className="animate-slide-in-left" style={{ animationDelay: '0.2s' }}>
+              <ProductivityInsights />
             </div>
           </div>
         </div>
 
-        {/* Right Column - Sidebar Content */}
-        <div className="space-y-6">
-          {/* Notifications */}
-          <div className="animate-slide-in-left">
-            <EnhancedNotificationSystem />
-          </div>
-
-          {/* Productivity Insights */}
-          <div className="animate-slide-in-left" style={{ animationDelay: '0.2s' }}>
-            <ProductivityInsights />
-          </div>
-        </div>
-      </div>
-
-      {/* Enhanced Footer Section */}
-      <div className="pt-12 border-t border-border/50">
-        <div className="text-center">
-          <div className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-2xl border border-primary/20 backdrop-blur-sm mb-6">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <p className="text-muted-foreground font-medium text-lg">
-              ProSync Suite v2.0 - Engineered for teams that value efficiency, collaboration, and growth
-            </p>
-          </div>
-          <div className="flex justify-center gap-8 text-base text-muted-foreground">
-            <span className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Built for Teams
-            </span>
-            <span className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Enterprise Security
-            </span>
-            <span className="flex items-center gap-2">
-              <Zap className="h-5 w-5" />
-              AI-Enhanced
-            </span>
+        {/* Enhanced Footer Section */}
+        <div className="pt-16 border-t border-border/50">
+          <div className="text-center">
+            <div className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-2xl border border-primary/20 backdrop-blur-sm mb-6">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <p className="text-muted-foreground font-medium text-lg">
+                ProSync Suite v2.0 - Engineered for teams that value efficiency, collaboration, and growth
+              </p>
+            </div>
+            <div className="flex justify-center gap-8 text-base text-muted-foreground">
+              <span className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Built for Teams
+              </span>
+              <span className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Enterprise Security
+              </span>
+              <span className="flex items-center gap-2">
+                <Zap className="h-5 w-5" />
+                AI-Enhanced
+              </span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </AppLayout>
   );
 };
 
