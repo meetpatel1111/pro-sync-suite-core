@@ -11,7 +11,7 @@ import {
   BarChart3, 
   Plus, 
   Filter,
-  Gantt,
+  BarChart2,
   Target,
   Clock,
   TrendingUp,
@@ -91,7 +91,7 @@ const PlanBoard = () => {
                 Filter
               </ColorfulButton>
               <ColorfulButton variant="secondary" size="sm">
-                <Gantt className="h-4 w-4 mr-2" />
+                <BarChart2 className="h-4 w-4 mr-2" />
                 Gantt View
               </ColorfulButton>
               <ColorfulButton variant="primary">
@@ -206,7 +206,7 @@ const PlanBoard = () => {
           <Card className="border-0 shadow-2xl bg-gradient-to-br from-white via-white/95 to-white/90 backdrop-blur-sm">
             <CardHeader className="bg-gradient-to-r from-amber-100/80 via-orange-100/80 to-red-100/80 rounded-t-2xl">
               <CardTitle className="text-2xl bg-gradient-to-r from-amber-600 via-orange-600 to-red-600 bg-clip-text text-transparent flex items-center gap-2">
-                <Gantt className="h-6 w-6 text-amber-600" />
+                <BarChart2 className="h-6 w-6 text-amber-600" />
                 Project Timeline
                 <Badge className="ml-auto bg-gradient-to-r from-blue-500 to-purple-500 text-white">
                   Interactive
@@ -233,7 +233,7 @@ const PlanBoard = () => {
                   Visualize project timelines, dependencies, and milestones with our interactive Gantt chart view.
                 </p>
                 <ColorfulButton variant="primary" className="mt-4">
-                  <Gantt className="h-4 w-4 mr-2" />
+                  <BarChart2 className="h-4 w-4 mr-2" />
                   Open Gantt View
                 </ColorfulButton>
               </div>
