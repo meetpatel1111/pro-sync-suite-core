@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { LucideIcon } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import { ColorfulButton } from '@/components/ui/colorful-button';
+import { LucideIcon, ArrowRight, Zap, Star } from 'lucide-react';
 
 interface AppCardProps {
   title: string;
@@ -11,70 +11,78 @@ interface AppCardProps {
   icon: LucideIcon;
   bgColor: string;
   route: string;
-  featureCount: number;
+  featureCount?: number;
 }
 
-const AppCard: React.FC<AppCardProps> = ({ 
-  title, 
-  description, 
-  icon: Icon, 
-  bgColor, 
-  route, 
-  featureCount 
-}) => {
+const AppCard = ({ title, description, icon: Icon, bgColor, route, featureCount }: AppCardProps) => {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    navigate(route);
+  };
+
   return (
-    <Link to={route} className="block group">
-      <Card className="h-48 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-3 border-0 modern-card group-hover:border-primary/20 overflow-hidden">
-        <CardContent className="p-4 h-full flex flex-col">
-          {/* Icon Container with Enhanced Animations */}
-          <div className="relative mb-3">
-            <div className={`${bgColor} w-12 h-12 rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg group-hover:shadow-2xl relative z-10`}>
-              <Icon className="h-6 w-6 text-white group-hover:scale-110 transition-transform duration-300" />
+    <div className="group relative overflow-hidden">
+      {/* Main Card */}
+      <div 
+        className="relative p-8 rounded-3xl shadow-xl transition-all duration-500 cursor-pointer hover:shadow-2xl hover:-translate-y-2 hover:scale-105 border-2 border-white/20 backdrop-blur-sm animate-fade-in-up"
+        onClick={handleClick}
+      >
+        {/* Gradient Background */}
+        <div className={`absolute inset-0 ${bgColor} opacity-90 rounded-3xl`} />
+        
+        {/* Animated Background Elements */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-150 transition-transform duration-700" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12 group-hover:scale-125 transition-transform duration-700" />
+        
+        {/* Content */}
+        <div className="relative z-10 space-y-6">
+          {/* Header */}
+          <div className="flex items-start justify-between">
+            <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm group-hover:bg-white/30 transition-colors duration-300 group-hover:scale-110 transform">
+              <Icon className="h-8 w-8 text-white drop-shadow-lg" />
             </div>
-            {/* Glow effect */}
-            <div className={`${bgColor} w-12 h-12 rounded-xl absolute top-0 left-0 opacity-0 group-hover:opacity-30 blur-xl transition-all duration-500 scale-150`}></div>
+            <div className="flex flex-col gap-2">
+              <Star className="h-5 w-5 text-yellow-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse" />
+              {featureCount !== undefined && featureCount > 0 && (
+                <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm">
+                  {featureCount} new
+                </Badge>
+              )}
+            </div>
           </div>
-          
-          {/* Content - flexible area */}
-          <div className="flex-1 flex flex-col">
-            <div className="flex items-start justify-between mb-2">
-              <h3 className="font-bold text-base text-gray-900 dark:text-white group-hover:text-primary transition-colors duration-300 leading-tight flex-1 mr-2">
-                {title}
-              </h3>
-              <Badge 
-                variant="secondary" 
-                className="text-xs bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20 group-hover:from-primary group-hover:to-primary/80 group-hover:text-white transition-all duration-300 flex-shrink-0"
-              >
-                New
-              </Badge>
-            </div>
-            
-            <p className="text-xs text-muted-foreground mb-3 line-clamp-2 leading-relaxed group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors duration-300 flex-1">
+
+          {/* Title & Description */}
+          <div className="space-y-3">
+            <h3 className="text-2xl font-bold text-white drop-shadow-lg group-hover:scale-105 transition-transform duration-300">
+              {title}
+            </h3>
+            <p className="text-white/90 text-sm leading-relaxed group-hover:text-white transition-colors duration-300">
               {description}
             </p>
           </div>
-          
-          {/* Footer with Enhanced Styling - fixed at bottom */}
-          <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800 group-hover:border-primary/20 transition-colors duration-300 mt-auto">
-            {featureCount > 0 ? (
-              <span className="text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors duration-300">
-                {featureCount}+ features
-              </span>
-            ) : (
-              <span className="text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors duration-300">
-                Ready to use
-              </span>
-            )}
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 group-hover:bg-emerald-500 group-hover:scale-125 transition-all duration-300 shadow-lg shadow-emerald-400/50"></div>
-              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                Active
-              </span>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between pt-4">
+            <div className="flex items-center gap-2 text-white/80 text-sm">
+              <Zap className="h-4 w-4" />
+              <span>Enhanced</span>
+            </div>
+            
+            <div className="flex items-center gap-2 text-white group-hover:translate-x-1 transition-transform duration-300">
+              <span className="text-sm font-medium">Launch</span>
+              <ArrowRight className="h-4 w-4 group-hover:scale-125 transition-transform duration-300" />
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </Link>
+        </div>
+
+        {/* Shine Effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
+      </div>
+
+      {/* Hover Glow Effect */}
+      <div className={`absolute inset-0 ${bgColor} opacity-0 group-hover:opacity-20 rounded-3xl blur-xl transition-opacity duration-500 -z-10`} />
+    </div>
   );
 };
 
