@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Clock, Play, Calendar, FileText, BarChart2, Timer, Target, TrendingUp, Stopwatch, Activity } from 'lucide-react';
+import { Clock, Play, Calendar, FileText, BarChart2, Timer, Target, TrendingUp, Clock4, Activity } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,7 +44,7 @@ const TimeTrackPro = () => {
             
             <div className="flex flex-wrap items-center gap-3">
               <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm animate-scale-in">
-                <Stopwatch className="h-4 w-4 mr-2" />
+                <Clock4 className="h-4 w-4 mr-2" />
                 Smart Time Tracking
               </Badge>
               <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm animate-scale-in">

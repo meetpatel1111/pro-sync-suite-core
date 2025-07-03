@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Calendar, Gantt, Timeline, Target, Users, TrendingUp, Map, Clock } from 'lucide-react';
+import { Calendar, BarChart3, Target, Users, TrendingUp, Map, Clock } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import PlanBoard from '@/components/planboard/PlanBoard';
 import { Badge } from '@/components/ui/badge';
@@ -36,11 +36,11 @@ const PlanBoardPage: React.FC = () => {
             
             <div className="flex flex-wrap items-center gap-3">
               <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm animate-scale-in">
-                <Gantt className="h-4 w-4 mr-2" />
+                <BarChart3 className="h-4 w-4 mr-2" />
                 Gantt Charts
               </Badge>
               <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm animate-scale-in">
-                <Timeline className="h-4 w-4 mr-2" />
+                <Map className="h-4 w-4 mr-2" />
                 Timeline Views
               </Badge>
               <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm animate-scale-in">

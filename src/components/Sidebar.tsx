@@ -1,343 +1,175 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import {
-  Calendar,
-  Clock,
-  MessageSquare,
-  FileText,
-  BarChart2,
-  PieChart,
-  Users,
-  Shield,
-  FileCog,
-  FolderLock,
+
+import { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { 
   Home,
+  CheckSquare,
+  Clock,
+  DollarSign,
+  FileText,
+  Users,
+  MessageSquare,
+  Database,
+  BarChart3,
+  Shield,
+  Target,
+  Brain,
   Settings,
-  Zap,
+  User,
   Bell,
-  UserCircle,
-  ChevronLeft,
-  ChevronRight,
-  Sparkles,
+  Calendar,
+  Menu,
+  X,
+  Zap,
+  Globe,
   BookOpen,
-  Headphones
+  Wrench,
+  TrendingUp,
+  AlertTriangle
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 const Sidebar = () => {
-  const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const navigate = useNavigate();
 
-  const mainNavItems = [
-    {
-      title: 'Dashboard',
-      href: '/',
-      icon: Home,
-      description: 'Main dashboard overview'
-    },
-    {
-      title: 'Team Directory',
-      href: '/team-directory',
-      icon: Users,
-      description: 'Team member directory'
-    },
-    {
-      title: 'Notification Center',
-      href: '/notification-center',
-      icon: Bell,
-      description: 'All notifications'
-    },
-    {
-      title: 'AI Features',
-      href: '/ai-features',
-      icon: Sparkles,
-      description: 'AI-powered tools'
-    }
+  const mainApps = [
+    { name: 'Dashboard', icon: Home, path: '/', color: 'text-blue-600' },
+    { name: 'TaskMaster', icon: CheckSquare, path: '/taskmaster', color: 'text-purple-600' },
+    { name: 'TimeTrackPro', icon: Clock, path: '/timetrackpro', color: 'text-emerald-600' },
+    { name: 'BudgetBuddy', icon: DollarSign, path: '/budgetbuddy', color: 'text-green-600' },
+    { name: 'PlanBoard', icon: Calendar, path: '/planboard', color: 'text-orange-600' },
+    { name: 'FileVault', icon: FileText, path: '/filevault', color: 'text-indigo-600' },
+    { name: 'CollabSpace', icon: MessageSquare, path: '/collabspace', color: 'text-pink-600' },
+    { name: 'ResourceHub', icon: Database, path: '/resourcehub', color: 'text-cyan-600' },
+    { name: 'ClientConnect', icon: Users, path: '/clientconnect', color: 'text-violet-600' },
   ];
 
-  const appNavItems = [
-    {
-      title: 'TaskMaster',
-      href: '/taskmaster',
-      icon: Calendar,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      description: 'Task & workflow management'
-    },
-    {
-      title: 'TimeTrackPro',
-      href: '/timetrackpro',
-      icon: Clock,
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-50',
-      description: 'Time tracking & productivity'
-    },
-    {
-      title: 'CollabSpace',
-      href: '/collabspace',
-      icon: MessageSquare,
-      color: 'text-emerald-600',
-      bgColor: 'bg-emerald-50',
-      description: 'Team communication'
-    },
-    {
-      title: 'PlanBoard',
-      href: '/planboard',
-      icon: FileText,
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-50',
-      description: 'Project planning'
-    },
-    {
-      title: 'FileVault',
-      href: '/filevault',
-      icon: FolderLock,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      description: 'File management'
-    },
-    {
-      title: 'BudgetBuddy',
-      href: '/budgetbuddy',
-      icon: PieChart,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      description: 'Budget tracking'
-    },
-    {
-      title: 'InsightIQ',
-      href: '/insightiq',
-      icon: BarChart2,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
-      description: 'Analytics & reports'
-    },
-    {
-      title: 'ClientConnect',
-      href: '/clientconnect',
-      icon: Users,
-      color: 'text-sky-600',
-      bgColor: 'bg-sky-50',
-      description: 'Client management'
-    },
-    {
-      title: 'RiskRadar',
-      href: '/riskradar',
-      icon: Shield,
-      color: 'text-rose-600',
-      bgColor: 'bg-rose-50',
-      description: 'Risk tracking'
-    },
-    {
-      title: 'ResourceHub',
-      href: '/resourcehub',
-      icon: Users,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
-      description: 'Resource allocation'
-    },
-    {
-      title: 'KnowledgeNest',
-      href: '/knowledgenest',
-      icon: BookOpen,
-      color: 'text-teal-600',
-      bgColor: 'bg-teal-50',
-      description: 'Wiki & knowledge base'
-    },
-    {
-      title: 'ServiceCore',
-      href: '/servicecore',
-      icon: Headphones,
-      color: 'text-violet-600',
-      bgColor: 'bg-violet-50',
-      description: 'ITSM & support desk'
-    }
+  const analyticsApps = [
+    { name: 'InsightIQ', icon: BarChart3, path: '/insightiq', color: 'text-blue-600' },
+    { name: 'RiskRadar', icon: AlertTriangle, path: '/riskradar', color: 'text-red-600' },
+    { name: 'AI Features', icon: Brain, path: '/ai-features', color: 'text-purple-600' },
   ];
 
-  const bottomNavItems = [
-    {
-      title: 'Integrations',
-      href: '/integrations',
-      icon: Zap,
-      description: 'App integrations'
-    },
-    {
-      title: 'Settings',
-      href: '/settings',
-      icon: Settings,
-      description: 'User settings'
-    },
-    {
-      title: 'Profile',
-      href: '/profile',
-      icon: UserCircle,
-      description: 'User profile'
-    }
+  const systemApps = [
+    { name: 'Integrations', icon: Zap, path: '/integrations', color: 'text-yellow-600' },
+    { name: 'KnowledgeNest', icon: BookOpen, path: '/knowledgenest', color: 'text-teal-600' },
+    { name: 'ServiceCore', icon: Wrench, path: '/servicecore', color: 'text-gray-600' },
   ];
 
-  const isActive = (href: string) => {
-    if (href === '/') {
-      return location.pathname === '/';
-    }
-    return location.pathname.startsWith(href);
-  };
+  const utilityItems = [
+    { name: 'Notifications', icon: Bell, path: '/notification-center', color: 'text-orange-500' },
+    { name: 'Team Directory', icon: Users, path: '/team-directory', color: 'text-indigo-500' },
+    { name: 'Profile', icon: User, path: '/profile', color: 'text-gray-500' },
+    { name: 'Settings', icon: Settings, path: '/settings', color: 'text-gray-500' },
+  ];
+
+  const NavItem = ({ item, isActive }: { item: any; isActive: boolean }) => (
+    <NavLink
+      to={item.path}
+      className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group ${
+        isActive
+          ? 'bg-primary text-primary-foreground shadow-sm'
+          : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+      }`}
+    >
+      <item.icon className={`h-5 w-5 ${isActive ? 'text-white' : item.color}`} />
+      {!isCollapsed && (
+        <span className="font-medium text-sm">{item.name}</span>
+      )}
+    </NavLink>
+  );
+
+  const SectionHeader = ({ title }: { title: string }) => (
+    !isCollapsed && (
+      <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-3 py-2">
+        {title}
+      </h3>
+    )
+  );
 
   return (
-    <div className={cn(
-      "flex flex-col h-screen bg-white border-r border-gray-200 transition-all duration-300",
-      isCollapsed ? "w-16" : "w-64"
-    )}>
+    <div className={`${isCollapsed ? 'w-16' : 'w-64'} bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300 ease-in-out`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
         {!isCollapsed && (
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">PS</span>
-            </div>
-            <span className="font-bold text-lg">ProSync</span>
-          </Link>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+            ProSync Suite
+          </h1>
         )}
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-1.5"
+          className="p-2"
         >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
+          {isCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
         </Button>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="p-4 space-y-6">
-          {/* Main Navigation */}
-          <div className="space-y-2">
-            {!isCollapsed && (
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Main
-              </h3>
-            )}
-            <nav className="space-y-1">
-              {mainNavItems.map((item) => (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                    isActive(item.href)
-                      ? "bg-blue-50 text-blue-700 border border-blue-200"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                  )}
-                  title={isCollapsed ? item.title : undefined}
-                >
-                  <item.icon className="h-4 w-4 flex-shrink-0" />
-                  {!isCollapsed && <span>{item.title}</span>}
-                  {!isCollapsed && isActive(item.href) && (
-                    <div className="ml-auto w-2 h-2 bg-blue-600 rounded-full" />
-                  )}
-                </Link>
-              ))}
-            </nav>
-          </div>
-
-          <Separator />
-
-          {/* Applications */}
-          <div className="space-y-2">
-            {!isCollapsed && (
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Applications
-                </h3>
-                <Badge variant="secondary" className="text-xs">
-                  {appNavItems.length}
-                </Badge>
-              </div>
-            )}
-            <nav className="space-y-1">
-              {appNavItems.map((item) => (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 group",
-                    isActive(item.href)
-                      ? `${item.bgColor} ${item.color} border`
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                  )}
-                  title={isCollapsed ? `${item.title} - ${item.description}` : undefined}
-                >
-                  <item.icon className={cn(
-                    "h-4 w-4 flex-shrink-0 transition-colors",
-                    isActive(item.href) ? item.color : "text-gray-400 group-hover:text-gray-600"
-                  )} />
-                  {!isCollapsed && (
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium">{item.title}</div>
-                      {!isActive(item.href) && (
-                        <div className="text-xs text-gray-500 truncate">{item.description}</div>
-                      )}
-                    </div>
-                  )}
-                  {!isCollapsed && isActive(item.href) && (
-                    <div className={cn("ml-auto w-2 h-2 rounded-full", item.color.replace('text-', 'bg-'))} />
-                  )}
-                </Link>
-              ))}
-            </nav>
-          </div>
-
-          <Separator />
-
-          {/* Bottom Navigation */}
-          <div className="space-y-2">
-            {!isCollapsed && (
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                System
-              </h3>
-            )}
-            <nav className="space-y-1">
-              {bottomNavItems.map((item) => (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                    isActive(item.href)
-                      ? "bg-gray-100 text-gray-900"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                  )}
-                  title={isCollapsed ? item.title : undefined}
-                >
-                  <item.icon className="h-4 w-4 flex-shrink-0" />
-                  {!isCollapsed && <span>{item.title}</span>}
-                  {!isCollapsed && item.href === '/integrations' && (
-                    <Badge variant="outline" className="ml-auto text-xs">
-                      New
-                    </Badge>
-                  )}
-                </Link>
-              ))}
-            </nav>
-          </div>
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
+        {/* Main Apps */}
+        <div className="space-y-2">
+          <SectionHeader title="Main Apps" />
+          {mainApps.map((item) => (
+            <NavItem
+              key={item.path}
+              item={item}
+              isActive={location.pathname === item.path}
+            />
+          ))}
         </div>
-      </ScrollArea>
+
+        {/* Analytics & Insights */}
+        <div className="space-y-2">
+          <SectionHeader title="Analytics" />
+          {analyticsApps.map((item) => (
+            <NavItem
+              key={item.path}
+              item={item}
+              isActive={location.pathname === item.path}
+            />
+          ))}
+        </div>
+
+        {/* System Apps */}
+        <div className="space-y-2">
+          <SectionHeader title="System" />
+          {systemApps.map((item) => (
+            <NavItem
+              key={item.path}
+              item={item}
+              isActive={location.pathname === item.path}
+            />
+          ))}
+        </div>
+
+        {/* Utilities */}
+        <div className="space-y-2">
+          <SectionHeader title="Utilities" />
+          {utilityItems.map((item) => (
+            <NavItem
+              key={item.path}
+              item={item}
+              isActive={location.pathname === item.path}
+            />
+          ))}
+        </div>
+      </nav>
 
       {/* Footer */}
-      {!isCollapsed && (
-        <div className="p-4 border-t bg-gray-50">
-          <div className="text-xs text-gray-500 text-center">
-            ProSync Suite v2.0
+      <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+        {!isCollapsed && (
+          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <Badge variant="secondary" className="text-xs">
+              v2.0
+            </Badge>
+            <span>ProSync Suite</span>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

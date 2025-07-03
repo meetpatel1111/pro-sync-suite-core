@@ -8,9 +8,8 @@ import ViewSelector from '@/components/planboard/ViewSelector';
 import FilterPanel from '@/components/planboard/FilterPanel';
 import BoardView from '@/components/planboard/BoardView';
 import TimelineView from '@/components/planboard/TimelineView';
-import GanttChart from '@/components/GanttChart';
 import { Button } from '@/components/ui/button';
-import { Plus, Calendar as CalendarIcon, FileText, Sparkles, Target, Zap } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, FileText, Target, Zap, BarChart3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -147,7 +146,6 @@ const PlanBoard = () => {
   };
 
   const handleProjectCreated = (project: any) => {
-    // Convert the project to UIProject format
     const uiProject: UIProject = {
       ...project,
       color: '#3b82f6',
@@ -178,7 +176,6 @@ const PlanBoard = () => {
 
       if (error) throw error;
 
-      // Update local state
       setProjects(prev => prev.map(p => 
         p.id === project.id ? { ...p, status: 'archived' } : p
       ));
@@ -218,7 +215,6 @@ const PlanBoard = () => {
 
       if (error) throw error;
 
-      // Update local state
       setTasks(prev => prev.map(task => 
         task.id === taskId ? { ...task, status: newStatus } : task
       ));
@@ -238,7 +234,6 @@ const PlanBoard = () => {
   };
 
   const handleTaskClick = (task: Task) => {
-    // For now, just show task info - could be expanded to open a task detail modal
     toast({
       title: 'Task Selected',
       description: `Task: "${task.title}"`,
@@ -255,7 +250,6 @@ const PlanBoard = () => {
       return;
     }
 
-    // This could open a create task dialog
     toast({
       title: 'Add Task',
       description: 'Task creation functionality to be implemented',
@@ -317,7 +311,13 @@ const PlanBoard = () => {
         );
       case 'gantt':
       default:
-        return <GanttChart />;
+        return (
+          <div className="p-8 text-center">
+            <BarChart3 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-medium mb-2">Gantt Chart</h3>
+            <p className="text-muted-foreground">Interactive Gantt chart will be displayed here</p>
+          </div>
+        );
     }
   };
 
