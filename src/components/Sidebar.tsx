@@ -171,138 +171,147 @@ const Sidebar = () => {
   );
 
   return (
-    <div className={cn(
-      "bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-500 ease-in-out shadow-xl",
-      "backdrop-blur-lg bg-white/95 dark:bg-gray-900/95",
-      isCollapsed ? 'w-20' : 'w-72'
-    )}>
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-primary/5 to-transparent">
-        {!isCollapsed && (
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-gradient-to-r from-primary to-primary/80 rounded-xl shadow-lg">
-              <Globe className="h-5 w-5 text-white" />
+    <>
+      <div className={cn(
+        "bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-500 ease-in-out shadow-xl",
+        "backdrop-blur-lg bg-white/95 dark:bg-gray-900/95",
+        isCollapsed ? 'w-20' : 'w-72'
+      )}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-primary/5 to-transparent">
+          {!isCollapsed && (
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-gradient-to-r from-primary to-primary/80 rounded-xl shadow-lg">
+                <Globe className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-gray-900 dark:text-white">
+                  ProSync Suite
+                </h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Business Suite
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900 dark:text-white">
-                ProSync Suite
-              </h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Business Suite
-              </p>
-            </div>
-          </div>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className={cn(
-            "p-2 hover:bg-primary/10 transition-all duration-300 hover:scale-110",
-            isCollapsed && "mx-auto"
           )}
-        >
-          {isCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
-        </Button>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-6 overflow-y-auto custom-scrollbar">
-        {/* Main Apps */}
-        <div className="space-y-2">
-          <SectionHeader title="Main Apps" section="main" count={mainApps.length} />
-          <AnimatedSection isExpanded={expandedSections.main}>
-            {mainApps.map((item) => (
-              <NavItem
-                key={item.path}
-                item={item}
-                isActive={location.pathname === item.path}
-              />
-            ))}
-          </AnimatedSection>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className={cn(
+              "p-2 hover:bg-primary/10 transition-all duration-300 hover:scale-110",
+              isCollapsed && "mx-auto"
+            )}
+          >
+            {isCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
+          </Button>
         </div>
 
-        {/* Analytics & Insights */}
-        <div className="space-y-2">
-          <SectionHeader title="Analytics" section="analytics" count={analyticsApps.length} />
-          <AnimatedSection isExpanded={expandedSections.analytics}>
-            {analyticsApps.map((item) => (
-              <NavItem
-                key={item.path}
-                item={item}
-                isActive={location.pathname === item.path}
-              />
-            ))}
-          </AnimatedSection>
-        </div>
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
+          {/* Main Apps */}
+          <div className="space-y-2">
+            <SectionHeader title="Main Apps" section="main" count={mainApps.length} />
+            <AnimatedSection isExpanded={expandedSections.main}>
+              {mainApps.map((item) => (
+                <NavItem
+                  key={item.path}
+                  item={item}
+                  isActive={location.pathname === item.path}
+                />
+              ))}
+            </AnimatedSection>
+          </div>
 
-        {/* System Apps */}
-        <div className="space-y-2">
-          <SectionHeader title="System" section="system" count={systemApps.length} />
-          <AnimatedSection isExpanded={expandedSections.system}>
-            {systemApps.map((item) => (
-              <NavItem
-                key={item.path}
-                item={item}
-                isActive={location.pathname === item.path}
-              />
-            ))}
-          </AnimatedSection>
-        </div>
+          {/* Analytics & Insights */}
+          <div className="space-y-2">
+            <SectionHeader title="Analytics" section="analytics" count={analyticsApps.length} />
+            <AnimatedSection isExpanded={expandedSections.analytics}>
+              {analyticsApps.map((item) => (
+                <NavItem
+                  key={item.path}
+                  item={item}
+                  isActive={location.pathname === item.path}
+                />
+              ))}
+            </AnimatedSection>
+          </div>
 
-        {/* Utilities */}
-        <div className="space-y-2">
-          <SectionHeader title="Utilities" section="utilities" count={utilityItems.length} />
-          <AnimatedSection isExpanded={expandedSections.utilities}>
-            {utilityItems.map((item) => (
-              <NavItem
-                key={item.path}
-                item={item}
-                isActive={location.pathname === item.path}
-              />
-            ))}
-          </AnimatedSection>
-        </div>
-      </nav>
+          {/* System Apps */}
+          <div className="space-y-2">
+            <SectionHeader title="System" section="system" count={systemApps.length} />
+            <AnimatedSection isExpanded={expandedSections.system}>
+              {systemApps.map((item) => (
+                <NavItem
+                  key={item.path}
+                  item={item}
+                  isActive={location.pathname === item.path}
+                />
+              ))}
+            </AnimatedSection>
+          </div>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-800/50">
-        {!isCollapsed ? (
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-              <Badge variant="secondary" className="text-xs bg-gradient-to-r from-primary/20 to-primary/10 text-primary">
-                v2.1
-              </Badge>
-              <span>ProSync Suite</span>
+          {/* Utilities */}
+          <div className="space-y-2">
+            <SectionHeader title="Utilities" section="utilities" count={utilityItems.length} />
+            <AnimatedSection isExpanded={expandedSections.utilities}>
+              {utilityItems.map((item) => (
+                <NavItem
+                  key={item.path}
+                  item={item}
+                  isActive={location.pathname === item.path}
+                />
+              ))}
+            </AnimatedSection>
+          </div>
+        </nav>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-800/50">
+          {!isCollapsed ? (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                <Badge variant="secondary" className="text-xs bg-gradient-to-r from-primary/20 to-primary/10 text-primary">
+                  v2.1
+                </Badge>
+                <span>ProSync Suite</span>
+              </div>
+              <div className="flex gap-1 ml-auto">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-xs text-green-600">Online</span>
+              </div>
             </div>
-            <div className="flex gap-1 ml-auto">
+          ) : (
+            <div className="flex justify-center">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-xs text-green-600">Online</span>
             </div>
-          </div>
-        ) : (
-          <div className="flex justify-center">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
+      <style>{`
+        nav::-webkit-scrollbar {
           width: 4px;
         }
-        .custom-scrollbar::-webkit-scrollbar-track {
+        nav::-webkit-scrollbar-track {
           background: transparent;
         }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
+        nav::-webkit-scrollbar-thumb {
           background: rgba(156, 163, 175, 0.3);
           border-radius: 4px;
         }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        nav::-webkit-scrollbar-thumb:hover {
           background: rgba(156, 163, 175, 0.5);
         }
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
       `}</style>
-    </div>
+    </>
   );
 };
 
