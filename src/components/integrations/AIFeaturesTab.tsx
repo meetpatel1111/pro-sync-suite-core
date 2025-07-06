@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Brain, MessageSquare, Lightbulb, Search, PenTool, FileText, BarChart, Calendar, Clock, BookOpen, Command, RefreshCw, Shield, Radar, Sparkles, Zap, Code, Mail, Workflow, Target } from 'lucide-react';
+import { Brain, MessageSquare, Lightbulb, Search, PenTool, FileText, BarChart, Calendar, Clock, BookOpen, Command, RefreshCw, Shield, Radar, Sparkles, Zap, Code, Mail, Workflow, Target, Cpu, Bot, Eye, Mic, Image, Video, Globe, Database, Network, Settings } from 'lucide-react';
 import AIChatWidget from '@/components/ai/AIChatWidget';
 import AITaskSuggestions from '@/components/ai/AITaskSuggestions';
 import AIInsightsWidget from '@/components/ai/AIInsightsWidget';
@@ -22,6 +22,13 @@ import AIEmailComposer from '@/components/ai/AIEmailComposer';
 import AIWorkflowOptimizer from '@/components/ai/AIWorkflowOptimizer';
 import AICompetitorAnalyzer from '@/components/ai/AICompetitorAnalyzer';
 import APIKeyManagement from '@/components/settings/APIKeyManagement';
+import AIVoiceAssistant from '@/components/ai/AIVoiceAssistant';
+import AIImageAnalyzer from '@/components/ai/AIImageAnalyzer';
+import AIVideoProcessor from '@/components/ai/AIVideoProcessor';
+import AISentimentAnalyzer from '@/components/ai/AISentimentAnalyzer';
+import AILanguageTranslator from '@/components/ai/AILanguageTranslator';
+import AIDataMiningTool from '@/components/ai/AIDataMiningTool';
+import AIPredictiveAnalytics from '@/components/ai/AIPredictiveAnalytics';
 
 const AIFeaturesTab: React.FC = () => {
   return (
@@ -46,7 +53,7 @@ const AIFeaturesTab: React.FC = () => {
             </div>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <div className="p-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl hover:bg-white/20 transition-all">
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-4 w-4" />
@@ -96,6 +103,16 @@ const AIFeaturesTab: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            <div className="p-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl hover:bg-white/20 transition-all">
+              <div className="flex items-center gap-2">
+                <Mic className="h-4 w-4" />
+                <div>
+                  <h3 className="font-medium text-sm">Voice AI</h3>
+                  <p className="text-xs text-cyan-100/80">Speech</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -104,7 +121,7 @@ const AIFeaturesTab: React.FC = () => {
       <div className="space-y-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
-            <Sparkles className="h-4 w-4 text-white" />
+            <Settings className="h-4 w-4 text-white" />
           </div>
           <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Setup & Configuration
@@ -126,7 +143,7 @@ const AIFeaturesTab: React.FC = () => {
         <AIMultiAppCommandBar />
       </div>
 
-      {/* Core Tools */}
+      {/* Core AI Tools */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-gradient-to-r from-green-500 to-teal-500 rounded-lg">
@@ -139,6 +156,8 @@ const AIFeaturesTab: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <AIChatWidget />
           <AISmartSearch />
+          <AIVoiceAssistant />
+          <AIContextSuggestions />
         </div>
       </div>
 
@@ -157,6 +176,24 @@ const AIFeaturesTab: React.FC = () => {
           <AIEmailComposer />
           <AIDocumentSummarizer />
           <AIMeetingNotesGenerator />
+          <AILanguageTranslator />
+          <AISentimentAnalyzer />
+        </div>
+      </div>
+
+      {/* Media & Visual AI */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-gradient-to-r from-pink-500 to-rose-500 rounded-lg">
+            <Image className="h-4 w-4 text-white" />
+          </div>
+          <h2 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
+            Media & Visual AI
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <AIImageAnalyzer />
+          <AIVideoProcessor />
         </div>
       </div>
 
@@ -191,6 +228,8 @@ const AIFeaturesTab: React.FC = () => {
           <AIWorkflowOptimizer />
           <AITaskSuggestions />
           <AISmartScheduling />
+          <AIPredictiveAnalytics />
+          <AIDataMiningTool />
         </div>
       </div>
 
@@ -223,7 +262,6 @@ const AIFeaturesTab: React.FC = () => {
           </h2>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <AIContextSuggestions />
           <AIInsightsWidget />
         </div>
       </div>

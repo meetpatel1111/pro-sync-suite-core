@@ -16,7 +16,16 @@ import {
   TrendingUp,
   ShoppingCart,
   BarChart3,
-  Workflow
+  Workflow,
+  Brain,
+  Cloud,
+  Database,
+  Globe,
+  Shield,
+  Bot,
+  Cpu,
+  Network,
+  Webhook
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { integrationService } from '@/services/integrationService';
@@ -27,6 +36,7 @@ import IntegrationMarketplace from './IntegrationMarketplace';
 import IntegrationTemplates from './IntegrationTemplates';
 import RealTimeSyncStatus from './RealTimeSyncStatus';
 import APIManagement from './APIManagement';
+import AIFeaturesTab from './AIFeaturesTab';
 
 const IntegrationDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -48,8 +58,7 @@ const IntegrationDashboard: React.FC = () => {
       const actions = await integrationService.getUserIntegrationActions(user!.id);
       setIntegrationActions(actions);
       
-      // In a real implementation, you'd fetch automation events from the database
-      // For now, we'll use mock data
+      // Enhanced mock data with more realistic automation events
       setAutomationEvents([
         {
           id: '1',
@@ -57,7 +66,8 @@ const IntegrationDashboard: React.FC = () => {
           source_module: 'CollabSpace',
           target_module: 'TaskMaster',
           status: 'completed',
-          triggered_at: new Date().toISOString()
+          triggered_at: new Date().toISOString(),
+          description: 'Auto-created task from chat message'
         },
         {
           id: '2',
@@ -65,7 +75,26 @@ const IntegrationDashboard: React.FC = () => {
           source_module: 'TimeTrackPro',
           target_module: 'BudgetBuddy',
           status: 'processing',
-          triggered_at: new Date().toISOString()
+          triggered_at: new Date().toISOString(),
+          description: 'Updating project budget based on time entries'
+        },
+        {
+          id: '3',
+          event_type: 'file_shared',
+          source_module: 'FileVault',
+          target_module: 'CollabSpace',
+          status: 'completed',
+          triggered_at: new Date(Date.now() - 300000).toISOString(),
+          description: 'File automatically shared in team channel'
+        },
+        {
+          id: '4',
+          event_type: 'milestone_reached',
+          source_module: 'PlanBoard',
+          target_module: 'ClientConnect',
+          status: 'completed',
+          triggered_at: new Date(Date.now() - 600000).toISOString(),
+          description: 'Client notification sent for project milestone'
         }
       ]);
     } catch (error) {
@@ -105,31 +134,55 @@ const IntegrationDashboard: React.FC = () => {
     }
   };
 
+  // Enhanced app integrations with more comprehensive mappings
   const appIntegrations = [
     {
       source: 'TaskMaster',
       targets: ['TimeTrackPro', 'CollabSpace', 'PlanBoard', 'FileVault', 'BudgetBuddy', 'InsightIQ', 'ResourceHub', 'ClientConnect', 'RiskRadar'],
-      color: 'bg-blue-500'
+      color: 'bg-blue-500',
+      description: 'Central task management hub'
     },
     {
       source: 'TimeTrackPro',
       targets: ['TaskMaster', 'CollabSpace', 'PlanBoard', 'BudgetBuddy', 'InsightIQ', 'ResourceHub', 'ClientConnect', 'RiskRadar'],
-      color: 'bg-green-500'
+      color: 'bg-green-500',
+      description: 'Time tracking and productivity analytics'
     },
     {
       source: 'CollabSpace',
       targets: ['TaskMaster', 'PlanBoard', 'FileVault', 'BudgetBuddy', 'InsightIQ', 'ResourceHub', 'ClientConnect', 'RiskRadar'],
-      color: 'bg-purple-500'
+      color: 'bg-purple-500',
+      description: 'Team communication and collaboration'
     },
     {
       source: 'PlanBoard',
       targets: ['TaskMaster', 'TimeTrackPro', 'CollabSpace', 'FileVault', 'BudgetBuddy', 'InsightIQ', 'ResourceHub', 'ClientConnect', 'RiskRadar'],
-      color: 'bg-orange-500'
+      color: 'bg-orange-500',
+      description: 'Project planning and timeline management'
     },
     {
       source: 'FileVault',
       targets: ['TaskMaster', 'CollabSpace', 'PlanBoard', 'BudgetBuddy', 'InsightIQ', 'ResourceHub', 'ClientConnect', 'RiskRadar'],
-      color: 'bg-cyan-500'
+      color: 'bg-cyan-500',
+      description: 'Document management and file sharing'
+    },
+    {
+      source: 'BudgetBuddy',
+      targets: ['TaskMaster', 'TimeTrackPro', 'PlanBoard', 'InsightIQ', 'ResourceHub', 'ClientConnect', 'RiskRadar'],
+      color: 'bg-emerald-500',
+      description: 'Financial tracking and budget management'
+    },
+    {
+      source: 'InsightIQ',
+      targets: ['TaskMaster', 'TimeTrackPro', 'CollabSpace', 'PlanBoard', 'BudgetBuddy', 'ResourceHub', 'ClientConnect', 'RiskRadar'],
+      color: 'bg-indigo-500',
+      description: 'Business intelligence and analytics'
+    },
+    {
+      source: 'ResourceHub',
+      targets: ['TaskMaster', 'TimeTrackPro', 'PlanBoard', 'BudgetBuddy', 'InsightIQ', 'ClientConnect', 'RiskRadar'],
+      color: 'bg-rose-500',
+      description: 'Resource allocation and management'
     }
   ];
 
@@ -170,7 +223,7 @@ const IntegrationDashboard: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-scale-in">
-        <TabsList className="grid w-full grid-cols-6 glass-morphism">
+        <TabsList className="grid w-full grid-cols-8 glass-morphism">
           <TabsTrigger value="overview" className="flex items-center gap-2 nav-item">
             <Activity className="h-4 w-4 icon-bounce" />
             Overview
@@ -178,6 +231,10 @@ const IntegrationDashboard: React.FC = () => {
           <TabsTrigger value="workflows" className="flex items-center gap-2 nav-item">
             <Workflow className="h-4 w-4 icon-bounce" />
             Workflows
+          </TabsTrigger>
+          <TabsTrigger value="ai-features" className="flex items-center gap-2 nav-item">
+            <Brain className="h-4 w-4 icon-bounce" />
+            AI Features
           </TabsTrigger>
           <TabsTrigger value="monitoring" className="flex items-center gap-2 nav-item">
             <BarChart3 className="h-4 w-4 icon-bounce" />
@@ -192,13 +249,18 @@ const IntegrationDashboard: React.FC = () => {
             Sync Status
           </TabsTrigger>
           <TabsTrigger value="api" className="flex items-center gap-2 nav-item">
-            <Settings className="h-4 w-4 icon-bounce" />
+            <Database className="h-4 w-4 icon-bounce" />
             API Management
+          </TabsTrigger>
+          <TabsTrigger value="webhooks" className="flex items-center gap-2 nav-item">
+            <Webhook className="h-4 w-4 icon-bounce" />
+            Webhooks
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4 tab-content-enter">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 stagger-container">
+          {/* Enhanced Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 stagger-container">
             <Card className="interactive-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Active Integrations</CardTitle>
@@ -237,8 +299,22 @@ const IntegrationDashboard: React.FC = () => {
                 </p>
               </CardContent>
             </Card>
+
+            <Card className="interactive-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">AI Processes</CardTitle>
+                <Bot className="h-4 w-4 text-muted-foreground animate-pulse-soft" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold animate-fade-in">12</div>
+                <p className="text-xs text-muted-foreground animate-fade-in-up">
+                  AI automations running
+                </p>
+              </CardContent>
+            </Card>
           </div>
 
+          {/* Recent Integration Activity */}
           <Card className="interactive-card animate-slide-in-up">
             <CardHeader>
               <CardTitle className="animate-fade-in-right">Recent Integration Activity</CardTitle>
@@ -247,26 +323,34 @@ const IntegrationDashboard: React.FC = () => {
             <CardContent>
               <div className="space-y-3 stagger-container">
                 {automationEvents.map((event) => (
-                  <div key={event.id} className="flex items-center justify-between p-3 border rounded hover:bg-accent/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-md">
-                    <div className="flex items-center space-x-3">
+                  <div key={event.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-md">
+                    <div className="flex items-center space-x-4">
                       {getStatusIcon(event.status)}
                       <div className="animate-fade-in-right">
                         <p className="font-medium">{event.event_type.replace('_', ' ').toUpperCase()}</p>
                         <p className="text-sm text-muted-foreground">
                           {event.source_module} → {event.target_module}
                         </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {event.description}
+                        </p>
                       </div>
                     </div>
-                    <Badge variant={event.status === 'completed' ? 'default' : 'secondary'} className="badge-pulse">
-                      {event.status}
-                    </Badge>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant={event.status === 'completed' ? 'default' : 'secondary'} className="badge-pulse">
+                        {event.status}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(event.triggered_at).toLocaleTimeString()}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
 
-          {/* Integration Flow Map */}
+          {/* Enhanced Integration Flow Map */}
           <Card className="interactive-card animate-slide-in-up">
             <CardHeader>
               <CardTitle className="animate-fade-in-right">Integration Flow Map</CardTitle>
@@ -275,12 +359,20 @@ const IntegrationDashboard: React.FC = () => {
             <CardContent>
               <div className="space-y-6 stagger-container">
                 {appIntegrations.map((integration, index) => (
-                  <div key={integration.source} className="space-y-2 animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-3 h-3 rounded-full ${integration.color} animate-pulse-soft`}></div>
-                      <span className="font-medium text-gradient">{integration.source}</span>
+                  <div key={integration.source} className="space-y-3 animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-4 h-4 rounded-full ${integration.color} animate-pulse-soft`}></div>
+                        <div>
+                          <span className="font-medium text-gradient">{integration.source}</span>
+                          <p className="text-sm text-muted-foreground">{integration.description}</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {integration.targets.length} connections
+                      </Badge>
                     </div>
-                    <div className="flex flex-wrap gap-2 ml-5">
+                    <div className="flex flex-wrap gap-2 ml-7">
                       {integration.targets.map((target, targetIndex) => (
                         <div key={target} className="flex items-center space-x-1 animate-scale-in" style={{ animationDelay: `${targetIndex * 0.05}s` }}>
                           <ArrowRight className="h-3 w-3 text-muted-foreground icon-bounce" />
@@ -301,6 +393,10 @@ const IntegrationDashboard: React.FC = () => {
           <AutomationWorkflowBuilder />
         </TabsContent>
 
+        <TabsContent value="ai-features" className="tab-content-enter">
+          <AIFeaturesTab />
+        </TabsContent>
+
         <TabsContent value="monitoring" className="tab-content-enter">
           <IntegrationMonitoring />
         </TabsContent>
@@ -315,6 +411,33 @@ const IntegrationDashboard: React.FC = () => {
 
         <TabsContent value="api" className="tab-content-enter">
           <APIManagement />
+        </TabsContent>
+
+        <TabsContent value="webhooks" className="tab-content-enter">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Webhook className="h-5 w-5" />
+                Webhook Management
+              </CardTitle>
+              <CardDescription>
+                Configure webhooks for real-time integrations with external services
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <Webhook className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">Webhook Configuration</h3>
+                <p className="text-muted-foreground mb-4">
+                  Set up webhooks to receive real-time notifications from external services
+                </p>
+                <Button>
+                  <Webhook className="mr-2 h-4 w-4" />
+                  Configure Webhooks
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
