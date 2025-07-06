@@ -1,439 +1,310 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Search, 
-  Filter, 
-  Star, 
   Download, 
-  ExternalLink,
-  Zap,
-  Shield,
+  Star, 
+  Filter, 
+  Zap, 
+  Globe, 
   Clock,
   Users,
   TrendingUp,
-  Award,
-  CheckCircle
+  Shield,
+  Sparkles
 } from 'lucide-react';
-
-interface Integration {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  provider: string;
-  rating: number;
-  downloads: number;
-  price: 'free' | 'paid' | 'freemium';
-  verified: boolean;
-  featured: boolean;
-  icon?: string;
-  screenshots: string[];
-  tags: string[];
-  lastUpdated: string;
-  version: string;
-}
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const IntegrationMarketplace = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedFilter, setSelectedFilter] = useState('all');
+  const [templates, setTemplates] = useState([]);
+  const [filteredTemplates, setFilteredTemplates] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [difficultyFilter, setDifficultyFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  const integrations: Integration[] = [
-    {
-      id: '1',
-      name: 'Slack Connector',
-      description: 'Connect your workspace with Slack for seamless team communication and notifications.',
-      category: 'Communication',
-      provider: 'ProSync',
-      rating: 4.8,
-      downloads: 12500,
-      price: 'free',
-      verified: true,
-      featured: true,
-      tags: ['Slack', 'Messaging', 'Notifications', 'Team'],
-      lastUpdated: '2024-01-15',
-      version: '2.1.0',
-      screenshots: []
-    },
-    {
-      id: '2',
-      name: 'GitHub Integration',
-      description: 'Sync code repositories, track commits, and manage development workflows.',
-      category: 'Development',
-      provider: 'GitHub Inc.',
-      rating: 4.9,
-      downloads: 8900,
-      price: 'freemium',
-      verified: true,
-      featured: true,
-      tags: ['GitHub', 'Git', 'Code', 'Development'],
-      lastUpdated: '2024-01-10',
-      version: '3.2.1',
-      screenshots: []
-    },
-    {
-      id: '3',
-      name: 'Google Drive Sync',
-      description: 'Automatically sync files and documents with Google Drive cloud storage.',
-      category: 'Storage',
-      provider: 'Google',
-      rating: 4.6,
-      downloads: 15200,
-      price: 'free',
-      verified: true,
-      featured: false,
-      tags: ['Google Drive', 'Cloud', 'Files', 'Sync'],
-      lastUpdated: '2024-01-12',
-      version: '1.8.3',
-      screenshots: []
-    },
-    {
-      id: '4',
-      name: 'Jira Workflow',
-      description: 'Connect with Jira for enhanced project management and issue tracking.',
-      category: 'Project Management',
-      provider: 'Atlassian',
-      rating: 4.7,
-      downloads: 6800,
-      price: 'paid',
-      verified: true,
-      featured: false,
-      tags: ['Jira', 'Atlassian', 'Issues', 'Agile'],
-      lastUpdated: '2024-01-08',
-      version: '2.5.0',
-      screenshots: []
-    },
-    {
-      id: '5',
-      name: 'Salesforce CRM',
-      description: 'Integrate customer relationship management with your project workflows.',
-      category: 'CRM',
-      provider: 'Salesforce',
-      rating: 4.5,
-      downloads: 4200,
-      price: 'paid',
-      verified: true,
-      featured: false,
-      tags: ['Salesforce', 'CRM', 'Sales', 'Customers'],
-      lastUpdated: '2024-01-05',
-      version: '1.4.2',
-      screenshots: []
-    },
-    {
-      id: '6',
-      name: 'Zapier Automation',
-      description: 'Connect with 5000+ apps through Zapier automation workflows.',
-      category: 'Automation',
-      provider: 'Zapier',
-      rating: 4.8,
-      downloads: 9600,
-      price: 'freemium',
-      verified: true,
-      featured: true,
-      tags: ['Zapier', 'Automation', 'Workflows', 'API'],
-      lastUpdated: '2024-01-14',
-      version: '2.0.5',
-      screenshots: []
-    }
-  ];
+  useEffect(() => {
+    loadTemplates();
+  }, []);
 
-  const categories = ['all', 'Communication', 'Development', 'Storage', 'Project Management', 'CRM', 'Automation', 'Analytics'];
-  const filters = ['all', 'featured', 'verified', 'free', 'paid', 'most-downloaded'];
+  useEffect(() => {
+    filterTemplates();
+  }, [templates, searchTerm, categoryFilter, difficultyFilter]);
 
-  const filteredIntegrations = integrations.filter(integration => {
-    const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         integration.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         integration.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesCategory = selectedCategory === 'all' || integration.category === selectedCategory;
-    
-    const matchesFilter = selectedFilter === 'all' ||
-                         (selectedFilter === 'featured' && integration.featured) ||
-                         (selectedFilter === 'verified' && integration.verified) ||
-                         (selectedFilter === 'free' && integration.price === 'free') ||
-                         (selectedFilter === 'paid' && integration.price === 'paid');
-    
-    return matchesSearch && matchesCategory && matchesFilter;
-  });
+  const loadTemplates = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('integration_templates')
+        .select('*')
+        .eq('is_public', true)
+        .order('downloads', { ascending: false });
 
-  const getPriceColor = (price: string) => {
-    switch (price) {
-      case 'free': return 'bg-green-100 text-green-800';
-      case 'paid': return 'bg-blue-100 text-blue-800';
-      case 'freemium': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
+      if (error) throw error;
+
+      setTemplates(data || []);
+    } catch (error) {
+      console.error('Error loading templates:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load integration templates',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const formatDownloads = (downloads: number) => {
-    if (downloads >= 1000) {
-      return `${(downloads / 1000).toFixed(1)}k`;
+  const filterTemplates = () => {
+    let filtered = [...templates];
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(template =>
+        template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        template.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        template.apps.some(app => app.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
     }
-    return downloads.toString();
+
+    // Category filter
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(template => template.category === categoryFilter);
+    }
+
+    // Difficulty filter
+    if (difficultyFilter !== 'all') {
+      filtered = filtered.filter(template => template.difficulty === difficultyFilter);
+    }
+
+    setFilteredTemplates(filtered);
   };
+
+  const installTemplate = async (templateId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: 'Authentication Required',
+          description: 'Please log in to install templates',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Check if already installed
+      const { data: existing } = await supabase
+        .from('marketplace_installations')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('template_id', templateId)
+        .single();
+
+      if (existing) {
+        toast({
+          title: 'Already Installed',
+          description: 'This template is already installed',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Install template
+      const { error: installError } = await supabase
+        .from('marketplace_installations')
+        .insert({
+          user_id: user.id,
+          template_id: templateId,
+          is_active: true
+        });
+
+      if (installError) throw installError;
+
+      // Increment download count
+      const { error: updateError } = await supabase.rpc('increment_template_downloads', {
+        template_id: templateId
+      });
+
+      if (updateError) console.error('Error updating download count:', updateError);
+
+      await loadTemplates();
+
+      toast({
+        title: 'Template Installed',
+        description: 'Integration template has been installed successfully'
+      });
+    } catch (error) {
+      console.error('Error installing template:', error);
+      toast({
+        title: 'Installation Failed',
+        description: 'Failed to install template',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const categories = [...new Set(templates.map(t => t.category))];
+  const difficulties = [...new Set(templates.map(t => t.difficulty))];
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5" />
-            Integration Marketplace
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search integrations..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-2">
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="border rounded-md px-3 py-2"
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Integration Marketplace</h2>
+          <p className="text-muted-foreground">
+            Discover and install pre-built integration templates
+          </p>
+        </div>
+        <Badge variant="outline" className="text-sm">
+          {filteredTemplates.length} templates available
+        </Badge>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search templates..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.map(category => (
+              <SelectItem key={category} value={category}>{category}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Difficulty" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Levels</SelectItem>
+            {difficulties.map(difficulty => (
+              <SelectItem key={difficulty} value={difficulty}>{difficulty}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Template Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredTemplates.map((template) => (
+          <Card key={template.id} className="hover:shadow-lg transition-shadow duration-300">
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <CardTitle className="text-lg mb-2">{template.name}</CardTitle>
+                  <CardDescription className="text-sm">
+                    {template.description}
+                  </CardDescription>
+                </div>
+                {template.is_verified && (
+                  <Badge className="bg-blue-100 text-blue-700 ml-2">
+                    <Shield className="h-3 w-3 mr-1" />
+                    Verified
+                  </Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Apps */}
+              <div>
+                <div className="text-sm font-medium mb-2">Connected Apps:</div>
+                <div className="flex flex-wrap gap-1">
+                  {template.apps.map((app, index) => (
+                    <Badge key={index} variant="outline" className="text-xs">
+                      {app}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tags */}
+              {template.tags && template.tags.length > 0 && (
+                <div>
+                  <div className="text-sm font-medium mb-2">Tags:</div>
+                  <div className="flex flex-wrap gap-1">
+                    {template.tags.map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="flex items-center gap-1">
+                  <Download className="h-4 w-4 text-muted-foreground" />
+                  <span>{template.downloads}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  <span>{template.rating?.toFixed(1) || 'N/A'}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  <span>{template.success_rate?.toFixed(0) || 100}%</span>
+                </div>
+              </div>
+
+              {/* Category and Difficulty */}
+              <div className="flex justify-between items-center">
+                <Badge variant="outline">{template.category}</Badge>
+                <Badge variant={
+                  template.difficulty === 'Beginner' ? 'default' :
+                  template.difficulty === 'Intermediate' ? 'secondary' : 'destructive'
+                }>
+                  {template.difficulty}
+                </Badge>
+              </div>
+
+              {/* Install Button */}
+              <Button 
+                className="w-full" 
+                onClick={() => installTemplate(template.id)}
               >
-                {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category === 'all' ? 'All Categories' : category}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={selectedFilter}
-                onChange={(e) => setSelectedFilter(e.target.value)}
-                className="border rounded-md px-3 py-2"
-              >
-                <option value="all">All Integrations</option>
-                <option value="featured">Featured</option>
-                <option value="verified">Verified</option>
-                <option value="free">Free</option>
-                <option value="paid">Paid</option>
-                <option value="most-downloaded">Most Downloaded</option>
-              </select>
-            </div>
-          </div>
+                <Download className="h-4 w-4 mr-2" />
+                Install Template
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-          <Tabs defaultValue="grid" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="grid">Grid View</TabsTrigger>
-              <TabsTrigger value="list">List View</TabsTrigger>
-              <TabsTrigger value="featured">Featured</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="grid">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredIntegrations.map((integration) => (
-                  <Card key={integration.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
-                            {integration.name.charAt(0)}
-                          </div>
-                          <div>
-                            <h3 className="font-semibold">{integration.name}</h3>
-                            <p className="text-sm text-gray-600">{integration.provider}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {integration.featured && (
-                            <Badge className="bg-yellow-100 text-yellow-800">
-                              <Award className="h-3 w-3 mr-1" />
-                              Featured
-                            </Badge>
-                          )}
-                          {integration.verified && (
-                            <CheckCircle className="h-4 w-4 text-blue-500" />
-                          )}
-                        </div>
-                      </div>
-
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                        {integration.description}
-                      </p>
-
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1">
-                            <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                            <span className="text-sm font-medium">{integration.rating}</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-gray-500">
-                            <Download className="h-4 w-4" />
-                            <span className="text-sm">{formatDownloads(integration.downloads)}</span>
-                          </div>
-                        </div>
-                        <Badge className={getPriceColor(integration.price)}>
-                          {integration.price === 'freemium' ? 'Freemium' : integration.price.charAt(0).toUpperCase() + integration.price.slice(1)}
-                        </Badge>
-                      </div>
-
-                      <div className="mb-4">
-                        <div className="flex flex-wrap gap-1">
-                          {integration.tags.slice(0, 3).map((tag, index) => (
-                            <Badge key={index} variant="outline">
-                              {tag}
-                            </Badge>
-                          ))}
-                          {integration.tags.length > 3 && (
-                            <Badge variant="outline">
-                              +{integration.tags.length - 3}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button size="sm" className="flex-1">
-                          Install
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      <div className="mt-3 text-xs text-gray-500">
-                        Updated {integration.lastUpdated} • v{integration.version}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="list">
-              <div className="space-y-2">
-                {filteredIntegrations.map((integration) => (
-                  <Card key={integration.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
-                            {integration.name.charAt(0)}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-semibold">{integration.name}</h3>
-                              {integration.verified && (
-                                <CheckCircle className="h-4 w-4 text-blue-500" />
-                              )}
-                              {integration.featured && (
-                                <Badge className="bg-yellow-100 text-yellow-800">
-                                  Featured
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-gray-600">{integration.description}</p>
-                            <div className="flex items-center gap-4 mt-1">
-                              <span className="text-xs text-gray-500">{integration.provider}</span>
-                              <Badge variant="outline">{integration.category}</Badge>
-                              <div className="flex items-center gap-1">
-                                <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                                <span className="text-xs">{integration.rating}</span>
-                              </div>
-                              <div className="flex items-center gap-1 text-gray-500">
-                                <Download className="h-3 w-3" />
-                                <span className="text-xs">{formatDownloads(integration.downloads)}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className={getPriceColor(integration.price)}>
-                            {integration.price === 'freemium' ? 'Freemium' : integration.price.charAt(0).toUpperCase() + integration.price.slice(1)}
-                          </Badge>
-                          <Button size="sm">
-                            Install
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="featured">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {filteredIntegrations.filter(i => i.featured).map((integration) => (
-                  <Card key={integration.id} className="border-2 border-yellow-200">
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4 mb-4">
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">
-                          {integration.name.charAt(0)}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="text-xl font-semibold">{integration.name}</h3>
-                            <Badge className="bg-yellow-100 text-yellow-800">
-                              <Award className="h-3 w-3 mr-1" />
-                              Featured
-                            </Badge>
-                            {integration.verified && (
-                              <CheckCircle className="h-5 w-5 text-blue-500" />
-                            )}
-                          </div>
-                          <p className="text-gray-600 mb-3">{integration.description}</p>
-                          <div className="flex items-center gap-6 text-sm">
-                            <div className="flex items-center gap-1">
-                              <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                              <span className="font-medium">{integration.rating}/5</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Download className="h-4 w-4 text-gray-500" />
-                              <span>{formatDownloads(integration.downloads)} downloads</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Users className="h-4 w-4 text-gray-500" />
-                              <span>{integration.provider}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {integration.tags.map((tag, index) => (
-                          <Badge key={index} variant="outline">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <Badge className={`${getPriceColor(integration.price)} px-3 py-1`}>
-                          {integration.price === 'freemium' ? 'Freemium' : integration.price.charAt(0).toUpperCase() + integration.price.slice(1)}
-                        </Badge>
-                        <div className="flex gap-2">
-                          <Button>
-                            Install Integration
-                          </Button>
-                          <Button variant="outline">
-                            Learn More
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+      {filteredTemplates.length === 0 && !loading && (
+        <Card className="p-8 text-center">
+          <Globe className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-xl font-semibold mb-2">No Templates Found</h3>
+          <p className="text-muted-foreground">
+            Try adjusting your search criteria or check back later for new templates
+          </p>
+        </Card>
+      )}
     </div>
   );
 };

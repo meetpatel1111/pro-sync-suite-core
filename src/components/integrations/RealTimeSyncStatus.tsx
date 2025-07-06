@@ -7,241 +7,160 @@ import { Progress } from '@/components/ui/progress';
 import { 
   RefreshCw, 
   CheckCircle, 
-  AlertTriangle, 
-  XCircle,
-  Clock,
-  Wifi,
-  WifiOff,
+  AlertCircle, 
+  Clock, 
+  Zap,
   Database,
   Activity,
-  Pause,
-  Play,
-  Settings
+  TrendingUp
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { integrationDatabaseService } from '@/services/integrationDatabaseService';
-import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
-interface SyncStatus {
-  id: string;
-  source_app: string;
-  target_app: string;
-  sync_type: string;
-  status: 'synced' | 'syncing' | 'error' | 'paused';
-  last_sync_at: string;
-  next_sync_at: string;
-  records_synced: number;
-  error_message?: string;
-  progress?: number;
-}
-
-const RealTimeSyncStatus: React.FC = () => {
-  const { user } = useAuth();
+const RealTimeSyncStatus = () => {
+  const [syncStatus, setSyncStatus] = useState([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(new Date());
   const { toast } = useToast();
-  const [syncStatuses, setSyncStatuses] = useState<SyncStatus[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isConnected, setIsConnected] = useState(true);
-
-  // Mock sync statuses for demonstration
-  const mockSyncStatuses: SyncStatus[] = [
-    {
-      id: '1',
-      source_app: 'TaskMaster',
-      target_app: 'PlanBoard',
-      sync_type: 'real-time',
-      status: 'synced',
-      last_sync_at: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-      next_sync_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
-      records_synced: 45,
-      progress: 100
-    },
-    {
-      id: '2',
-      source_app: 'TimeTrackPro',
-      target_app: 'BudgetBuddy',
-      sync_type: 'scheduled',
-      status: 'syncing',
-      last_sync_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      next_sync_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-      records_synced: 127,
-      progress: 65
-    },
-    {
-      id: '3',
-      source_app: 'FileVault',
-      target_app: 'CollabSpace',
-      sync_type: 'event-driven',
-      status: 'error',
-      last_sync_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-      next_sync_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-      records_synced: 0,
-      error_message: 'Authentication failed - please check API credentials',
-      progress: 0
-    },
-    {
-      id: '4',
-      source_app: 'CollabSpace',
-      target_app: 'TaskMaster',
-      sync_type: 'real-time',
-      status: 'paused',
-      last_sync_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      next_sync_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-      records_synced: 89,
-      progress: 0
-    },
-    {
-      id: '5',
-      source_app: 'ResourceHub',
-      target_app: 'InsightIQ',
-      sync_type: 'batch',
-      status: 'synced',
-      last_sync_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-      next_sync_at: new Date(Date.now() + 50 * 60 * 1000).toISOString(),
-      records_synced: 203,
-      progress: 100
-    }
-  ];
 
   useEffect(() => {
-    loadSyncStatuses();
+    loadSyncStatus();
     
-    // Simulate real-time updates
+    // Set up real-time updates
     const interval = setInterval(() => {
-      updateSyncStatuses();
-    }, 5000);
+      loadSyncStatus();
+    }, 10000); // Update every 10 seconds
 
     return () => clearInterval(interval);
   }, []);
 
-  const loadSyncStatuses = async () => {
+  const loadSyncStatus = async () => {
     try {
-      setLoading(true);
-      // In a real app, this would fetch from the database
-      setSyncStatuses(mockSyncStatuses);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get active integrations
+      const { data: integrations } = await supabase
+        .from('integration_actions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('enabled', true);
+
+      // Get recent time entries for sync status
+      const { data: timeEntries } = await supabase
+        .from('time_entries')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      // Get recent tasks for sync status
+      const { data: tasks } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(5);
+
+      // Get projects for sync status
+      const { data: projects } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(3);
+
+      // Build sync status data
+      const statusData = [
+        {
+          app: 'TaskMaster',
+          status: tasks && tasks.length > 0 ? 'synced' : 'pending',
+          lastSync: tasks && tasks.length > 0 ? new Date(tasks[0].updated_at) : null,
+          recordCount: tasks?.length || 0,
+          syncType: 'Tasks & Projects'
+        },
+        {
+          app: 'TimeTrackPro',
+          status: timeEntries && timeEntries.length > 0 ? 'synced' : 'pending',
+          lastSync: timeEntries && timeEntries.length > 0 ? new Date(timeEntries[0].created_at) : null,
+          recordCount: timeEntries?.length || 0,
+          syncType: 'Time Entries'
+        },
+        {
+          app: 'PlanBoard',
+          status: projects && projects.length > 0 ? 'synced' : 'pending',
+          lastSync: projects && projects.length > 0 ? new Date(projects[0].updated_at) : null,
+          recordCount: projects?.length || 0,
+          syncType: 'Project Planning'
+        },
+        {
+          app: 'Integration Hub',
+          status: integrations && integrations.length > 0 ? 'active' : 'inactive',
+          lastSync: new Date(),
+          recordCount: integrations?.length || 0,
+          syncType: 'Cross-App Sync'
+        }
+      ];
+
+      setSyncStatus(statusData);
+      setLastUpdate(new Date());
     } catch (error) {
-      console.error('Error loading sync statuses:', error);
+      console.error('Error loading sync status:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load sync statuses',
+        description: 'Failed to load sync status',
         variant: 'destructive'
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const updateSyncStatuses = () => {
-    setSyncStatuses(prev => prev.map(status => {
-      if (status.status === 'syncing' && status.progress < 100) {
-        return {
-          ...status,
-          progress: Math.min(100, status.progress + Math.random() * 15),
-          records_synced: status.records_synced + Math.floor(Math.random() * 3)
-        };
-      }
-      if (status.status === 'syncing' && status.progress >= 100) {
-        return {
-          ...status,
-          status: 'synced' as const,
-          last_sync_at: new Date().toISOString()
-        };
-      }
-      return status;
-    }));
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadSyncStatus();
+    setIsRefreshing(false);
+    
+    toast({
+      title: 'Refreshed',
+      description: 'Sync status has been updated'
+    });
   };
 
-  const forceSyncNow = async (syncId: string) => {
-    try {
-      setSyncStatuses(prev => prev.map(status => 
-        status.id === syncId 
-          ? { ...status, status: 'syncing' as const, progress: 0 }
-          : status
-      ));
-      
-      toast({
-        title: 'Sync Started',
-        description: 'Manual sync has been initiated',
-      });
-    } catch (error) {
-      toast({
-        title: 'Sync Failed',
-        description: 'Failed to start manual sync',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const pauseSync = async (syncId: string) => {
-    try {
-      setSyncStatuses(prev => prev.map(status => 
-        status.id === syncId 
-          ? { ...status, status: 'paused' as const }
-          : status
-      ));
-      
-      toast({
-        title: 'Sync Paused',
-        description: 'Sync has been paused',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to pause sync',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const resumeSync = async (syncId: string) => {
-    try {
-      setSyncStatuses(prev => prev.map(status => 
-        status.id === syncId 
-          ? { ...status, status: 'synced' as const }
-          : status
-      ));
-      
-      toast({
-        title: 'Sync Resumed',
-        description: 'Sync has been resumed',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to resume sync',
-        variant: 'destructive'
-      });
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'synced':
+      case 'active':
+        return 'text-green-600 bg-green-100';
+      case 'syncing':
+        return 'text-blue-600 bg-blue-100';
+      case 'pending':
+        return 'text-yellow-600 bg-yellow-100';
+      case 'error':
+        return 'text-red-600 bg-red-100';
+      default:
+        return 'text-gray-600 bg-gray-100';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'synced':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'active':
+        return CheckCircle;
       case 'syncing':
-        return <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />;
+        return RefreshCw;
+      case 'pending':
+        return Clock;
       case 'error':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'paused':
-        return <Pause className="h-4 w-4 text-gray-500" />;
+        return AlertCircle;
       default:
-        return <Clock className="h-4 w-4 text-gray-500" />;
+        return Activity;
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'synced': return 'default';
-      case 'syncing': return 'secondary';
-      case 'error': return 'destructive';
-      case 'paused': return 'outline';
-      default: return 'outline';
-    }
-  };
-
-  const formatTimeAgo = (timestamp: string) => {
+  const formatLastSync = (date: Date | null) => {
+    if (!date) return 'Never';
+    
     const now = new Date();
-    const time = new Date(timestamp);
-    const diffInMinutes = Math.floor((now.getTime() - time.getTime()) / (1000 * 60));
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
     
     if (diffInMinutes < 1) return 'Just now';
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
@@ -249,214 +168,144 @@ const RealTimeSyncStatus: React.FC = () => {
     return `${Math.floor(diffInMinutes / 1440)}d ago`;
   };
 
-  const formatNextSync = (timestamp: string) => {
-    const now = new Date();
-    const time = new Date(timestamp);
-    const diffInMinutes = Math.floor((time.getTime() - now.getTime()) / (1000 * 60));
-    
-    if (diffInMinutes < 1) return 'Syncing now';
-    if (diffInMinutes < 60) return `In ${diffInMinutes}m`;
-    if (diffInMinutes < 1440) return `In ${Math.floor(diffInMinutes / 60)}h`;
-    return `In ${Math.floor(diffInMinutes / 1440)}d`;
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Real-Time Sync Status</h2>
           <p className="text-muted-foreground">
-            Monitor data synchronization across all integrated apps
+            Monitor data synchronization across all ProSync Suite apps
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            {isConnected ? (
-              <Wifi className="h-4 w-4 text-green-500" />
-            ) : (
-              <WifiOff className="h-4 w-4 text-red-500" />
-            )}
-            <span className="text-sm">
-              {isConnected ? 'Connected' : 'Disconnected'}
-            </span>
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            Last updated: {lastUpdate.toLocaleTimeString()}
           </div>
-          <Button variant="outline" onClick={loadSyncStatuses}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
+          <Button onClick={handleRefresh} disabled={isRefreshing}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
         </div>
       </div>
 
-      {/* Overall Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Sync Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Apps</CardTitle>
+            <Database className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{syncStatus.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Connected applications
+            </p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Syncs</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {syncStatuses.filter(s => s.status !== 'paused').length}
+            <div className="text-2xl font-bold text-green-600">
+              {syncStatus.filter(s => s.status === 'synced' || s.status === 'active').length}
             </div>
             <p className="text-xs text-muted-foreground">
-              of {syncStatuses.length} total
+              Currently synchronized
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Records Synced</CardTitle>
-            <Database className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Data Records</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {syncStatuses.reduce((sum, s) => sum + s.records_synced, 0)}
+              {syncStatus.reduce((acc, s) => acc + s.recordCount, 0)}
             </div>
             <p className="text-xs text-muted-foreground">
-              in last 24 hours
+              Total synchronized records
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sync Errors</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Sync Health</CardTitle>
+            <Zap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {syncStatuses.filter(s => s.status === 'error').length}
+            <div className="text-2xl font-bold text-green-600">
+              {Math.round((syncStatus.filter(s => s.status === 'synced' || s.status === 'active').length / Math.max(syncStatus.length, 1)) * 100)}%
             </div>
             <p className="text-xs text-muted-foreground">
-              require attention
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Uptime</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">99.8%</div>
-            <p className="text-xs text-muted-foreground">
-              last 30 days
+              Overall health score
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Sync Status List */}
+      {/* Detailed Sync Status */}
       <div className="space-y-4">
-        {syncStatuses.map((sync) => (
-          <Card key={sync.id}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {getStatusIcon(sync.status)}
-                  <div>
-                    <CardTitle className="text-base">
-                      {sync.source_app} → {sync.target_app}
-                    </CardTitle>
-                    <CardDescription>
-                      {sync.sync_type} sync • {sync.records_synced} records
-                    </CardDescription>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={getStatusColor(sync.status)}>
-                    {sync.status}
-                  </Badge>
-                  <div className="flex gap-1">
-                    {sync.status === 'paused' ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => resumeSync(sync.id)}
-                      >
-                        <Play className="h-3 w-3" />
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => pauseSync(sync.id)}
-                      >
-                        <Pause className="h-3 w-3" />
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => forceSyncNow(sync.id)}
-                      disabled={sync.status === 'syncing'}
-                    >
-                      <RefreshCw className="h-3 w-3" />
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Settings className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {sync.status === 'syncing' && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Sync Progress</span>
-                    <span>{Math.round(sync.progress || 0)}%</span>
-                  </div>
-                  <Progress value={sync.progress || 0} className="h-2" />
-                </div>
-              )}
-
-              {sync.error_message && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
+        <h3 className="text-lg font-semibold">Application Sync Details</h3>
+        {syncStatus.map((app, index) => {
+          const StatusIcon = getStatusIcon(app.status);
+          
+          return (
+            <Card key={index} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-lg ${getStatusColor(app.status)}`}>
+                      <StatusIcon className="h-5 w-5" />
+                    </div>
                     <div>
-                      <div className="text-sm font-medium text-red-800">Sync Error</div>
-                      <div className="text-sm text-red-600">{sync.error_message}</div>
+                      <h4 className="font-semibold text-lg">{app.app}</h4>
+                      <p className="text-sm text-muted-foreground">{app.syncType}</p>
                     </div>
                   </div>
+                  <div className="text-right">
+                    <Badge className={getStatusColor(app.status)}>
+                      {app.status}
+                    </Badge>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {app.recordCount} records
+                    </p>
+                  </div>
                 </div>
-              )}
-
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <div className="flex items-center gap-4">
-                  <span>Last sync: {formatTimeAgo(sync.last_sync_at)}</span>
-                  {sync.status !== 'error' && (
-                    <span>Next sync: {formatNextSync(sync.next_sync_at)}</span>
-                  )}
+                
+                <div className="mt-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Last sync: {formatLastSync(app.lastSync)}</span>
+                    <span className="text-muted-foreground">
+                      {app.status === 'synced' || app.status === 'active' ? 'Up to date' : 'Sync pending'}
+                    </span>
+                  </div>
+                  <Progress 
+                    value={app.status === 'synced' || app.status === 'active' ? 100 : 
+                           app.status === 'syncing' ? 65 : 
+                           app.status === 'pending' ? 30 : 0} 
+                    className="h-2" 
+                  />
                 </div>
-                <Badge variant="outline" className="text-xs">
-                  {sync.sync_type}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      {syncStatuses.length === 0 && (
-        <div className="text-center py-16">
-          <Database className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-xl font-semibold mb-2">No Active Syncs</h3>
+      {syncStatus.length === 0 && (
+        <Card className="p-8 text-center">
+          <Database className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-xl font-semibold mb-2">No Sync Data</h3>
           <p className="text-muted-foreground">
-            Set up integrations to start syncing data between apps
+            Start using ProSync Suite apps to see real-time sync status
           </p>
-        </div>
+        </Card>
       )}
     </div>
   );
