@@ -51,7 +51,7 @@ const RealTimeSyncStatus = () => {
         .from('time_entries')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+        .order('start_time', { ascending: false })
         .limit(5);
 
       // Get recent tasks for sync status
@@ -81,7 +81,7 @@ const RealTimeSyncStatus = () => {
         {
           app: 'TimeTrackPro',
           status: timeEntries && timeEntries.length > 0 ? 'synced' : 'pending',
-          lastSync: timeEntries && timeEntries.length > 0 ? new Date(timeEntries[0].created_at) : null,
+          lastSync: timeEntries && timeEntries.length > 0 ? new Date(timeEntries[0].start_time) : null,
           recordCount: timeEntries?.length || 0,
           syncType: 'Time Entries'
         },
