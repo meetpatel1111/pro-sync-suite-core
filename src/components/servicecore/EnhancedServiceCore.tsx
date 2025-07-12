@@ -89,7 +89,13 @@ const EnhancedServiceCore = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTickets(data || []);
+      // Type assertion to ensure proper typing
+      setTickets((data || []).map(ticket => ({
+        ...ticket,
+        type: ticket.type as 'incident' | 'request' | 'problem' | 'change',
+        priority: ticket.priority as 'low' | 'medium' | 'high' | 'critical',
+        status: ticket.status as 'open' | 'in_progress' | 'resolved' | 'closed'
+      })));
     } catch (error) {
       console.error('Error loading tickets:', error);
       toast({
@@ -145,7 +151,12 @@ const EnhancedServiceCore = () => {
 
       if (error) throw error;
 
-      setTickets(prev => [data, ...prev]);
+      setTickets(prev => [{
+        ...data,
+        type: data.type as 'incident' | 'request' | 'problem' | 'change',
+        priority: data.priority as 'low' | 'medium' | 'high' | 'critical',
+        status: data.status as 'open' | 'in_progress' | 'resolved' | 'closed'
+      }, ...prev]);
       setNewTicket({
         title: '',
         description: '',
