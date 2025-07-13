@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProjectSelector from './ProjectSelector';
 import BoardSelector from './BoardSelector';
-import TaskBoard from './TaskBoard';
+import AdvancedTaskBoard from './AdvancedTaskBoard';
 import TaskList from './TaskList';
 import TaskCalendar from './TaskCalendar';
 import TaskReports from './TaskReports';
@@ -112,7 +112,7 @@ const TaskMasterMain: React.FC = () => {
           </TabsList>
 
           <TabsContent value="board" className="space-y-4">
-            <TaskBoard project={selectedProject} board={selectedBoard} />
+            <AdvancedTaskBoard project={selectedProject} board={selectedBoard} />
           </TabsContent>
 
           <TabsContent value="list" className="space-y-4">

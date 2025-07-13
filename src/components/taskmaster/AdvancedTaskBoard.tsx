@@ -1,570 +1,430 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { 
-  Plus, User, Calendar, Clock, Flag, CheckSquare, Filter, Settings, 
-  MoreHorizontal, Search, Layout, Eye, Users, Target, Zap
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
+import {
+  Plus, Clock, AlertCircle, User, Calendar, Flag,
+  MessageSquare, Paperclip, Eye, MoreVertical, Filter
 } from 'lucide-react';
-import { useAuthContext } from '@/context/AuthContext';
-import { taskmasterService } from '@/services/taskmasterService';
 import { useToast } from '@/hooks/use-toast';
-import TaskDetailDialog from './TaskDetailDialog';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import type { Project, Board } from '@/types/taskmaster';
 import CreateTaskDialog from './CreateTaskDialog';
-import type { Project, Board, TaskMasterTask, Sprint } from '@/types/taskmaster';
+import TaskDetailDialog from './TaskDetailDialog';
 
 interface AdvancedTaskBoardProps {
   project: Project;
   board: Board;
 }
 
+interface Column {
+  id: string;
+  name: string;
+  color?: string;
+  wipLimit?: number;
+  tasks: any[];
+}
+
 const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board }) => {
-  const { user } = useAuthContext();
   const { toast } = useToast();
-  
-  // State management
-  const [tasks, setTasks] = useState<TaskMasterTask[]>([]);
-  const [sprints, setSprints] = useState<Sprint[]>([]);
-  const [activeSprint, setActiveSprint] = useState<Sprint | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedTask, setSelectedTask] = useState<TaskMasterTask | undefined>();
-  
-  // View and filter state
-  const [viewType, setViewType] = useState<'board' | 'backlog' | 'sprint'>('board');
-  const [swimlaneType, setSwimlaneType] = useState<'none' | 'assignee' | 'priority' | 'epic'>('none');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState<Record<string, any>>({});
-  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
-  
-  // Board configuration
-  const [wipLimits, setWipLimits] = useState<Record<string, number>>(board.wip_limits || {});
-  const [boardColumns, setBoardColumns] = useState(board.config.columns);
+  const { user } = useAuth();
+  const [columns, setColumns] = useState<Column[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [createTaskDialogOpen, setCreateTaskDialogOpen] = useState(false);
+  const [selectedColumnId, setSelectedColumnId] = useState<string>('');
+  const [selectedTask, setSelectedTask] = useState<any | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterAssignee, setFilterAssignee] = useState<string>('all');
 
   useEffect(() => {
-    fetchTasks();
-    if (board.type === 'scrum') {
-      fetchSprints();
+    if (user && board) {
+      loadBoardData();
+      subscribeToTasks();
     }
-  }, [board.id]);
+  }, [user, board]);
 
-  const fetchTasks = async () => {
+  const loadBoardData = async () => {
+    setIsLoading(true);
     try {
-      const { data, error } = await taskmasterService.getTasks(board.id);
-      if (error) {
-        console.error('Error fetching tasks:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load tasks',
-          variant: 'destructive',
-        });
-        return;
-      }
-      setTasks((data || []) as TaskMasterTask[]);
+      // Load tasks for this board
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('board_id', board.id)
+        .order('position', { ascending: true });
+
+      if (tasksError) throw tasksError;
+
+      setTasks(tasksData || []);
+      
+      // Initialize columns based on board config
+      const boardColumns = board.config?.columns || [
+        { id: 'todo', name: 'To Do', color: '#6b7280' },
+        { id: 'in_progress', name: 'In Progress', color: '#3b82f6' },
+        { id: 'review', name: 'Review', color: '#f59e0b' },
+        { id: 'done', name: 'Done', color: '#10b981' }
+      ];
+
+      const columnsWithTasks = boardColumns.map(col => ({
+        ...col,
+        tasks: (tasksData || []).filter(task => task.status === col.id)
+      }));
+
+      setColumns(columnsWithTasks);
     } catch (error) {
-      console.error('Error fetching tasks:', error);
+      console.error('Error loading board data:', error);
+      toast({
+        title: "Failed to load board",
+        description: "An error occurred while loading the board data",
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const fetchSprints = async () => {
-    try {
-      // This will be implemented when we add sprint service methods
-      console.log('Fetching sprints for board:', board.id);
-    } catch (error) {
-      console.error('Error fetching sprints:', error);
-    }
+  const subscribeToTasks = () => {
+    const channel = supabase
+      .channel('board-tasks')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tasks',
+          filter: `board_id=eq.${board.id}`
+        },
+        () => {
+          loadBoardData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   };
 
-  const handleDragEnd = useCallback(async (result: DropResult) => {
+  const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
     if (!destination) return;
-    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
 
-    const task = tasks.find(t => t.id === draggableId);
-    if (!task || !user) return;
-
-    // Update task status if moved between columns
-    if (destination.droppableId !== source.droppableId) {
-      const newStatus = destination.droppableId;
-      await handleTaskUpdate(task.id, { status: newStatus });
+    // Same position, no change
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
     }
 
-    // Update task position
-    const newTasks = Array.from(tasks);
-    const [removed] = newTasks.splice(source.index, 1);
-    newTasks.splice(destination.index, 0, removed);
+    const sourceColumn = columns.find(col => col.id === source.droppableId);
+    const destColumn = columns.find(col => col.id === destination.droppableId);
     
-    setTasks(newTasks);
-  }, [tasks, user]);
+    if (!sourceColumn || !destColumn) return;
 
-  const handleTaskCreated = (task: TaskMasterTask) => {
-    setTasks(prev => [...prev, task]);
-    fetchTasks(); // Refresh to get the latest data
-  };
-
-  const handleTaskUpdate = async (taskId: string, updates: Partial<TaskMasterTask>) => {
-    if (!user) return;
+    const draggedTask = sourceColumn.tasks[source.index];
 
     try {
-      const { data, error } = await taskmasterService.updateTask(taskId, updates, user.id);
-      if (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to update task',
-          variant: 'destructive',
-        });
-        return;
-      }
+      // Update task status and position
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          status: destination.droppableId,
+          position: destination.index,
+          updated_at: new Date().toISOString(),
+          updated_by: user?.id
+        })
+        .eq('id', draggableId);
 
-      if (data) {
-        setTasks(prev => prev.map(task => task.id === taskId ? data : task));
-        toast({
-          title: 'Success',
-          description: 'Task updated successfully',
-        });
-      }
+      if (error) throw error;
+
+      // Optimistic update
+      const newColumns = columns.map(col => {
+        if (col.id === source.droppableId) {
+          const newTasks = [...col.tasks];
+          newTasks.splice(source.index, 1);
+          return { ...col, tasks: newTasks };
+        }
+        if (col.id === destination.droppableId) {
+          const newTasks = [...col.tasks];
+          newTasks.splice(destination.index, 0, {
+            ...draggedTask,
+            status: destination.droppableId
+          });
+          return { ...col, tasks: newTasks };
+        }
+        return col;
+      });
+
+      setColumns(newColumns);
+
+      toast({
+        title: "Task moved",
+        description: `Task moved to ${destColumn.name}`,
+      });
     } catch (error) {
-      console.error('Error updating task:', error);
+      console.error('Error moving task:', error);
+      toast({
+        title: "Failed to move task",
+        description: "An error occurred while moving the task",
+        variant: "destructive",
+      });
     }
   };
 
-  const getFilteredTasks = () => {
-    let filtered = tasks;
-
-    // Apply search filter
-    if (searchQuery) {
-      filtered = filtered.filter(task => 
-        task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        task.task_key.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        task.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Apply other filters
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value && value !== 'all') {
-        filtered = filtered.filter(task => {
-          switch (key) {
-            case 'assignee':
-              return task.assignee_id === value;
-            case 'priority':
-              return task.priority === value;
-            case 'type':
-              return task.type === value;
-            case 'sprint':
-              return task.sprint_id === value;
-            default:
-              return true;
-          }
-        });
-      }
-    });
-
-    return filtered;
-  };
-
-  const getTasksByStatus = (status: string) => {
-    return getFilteredTasks().filter(task => task.status === status);
-  };
-
-  const getSwimlaneGroups = () => {
-    const filtered = getFilteredTasks();
-    if (swimlaneType === 'none') return { 'All Tasks': filtered };
-
-    const groups: Record<string, TaskMasterTask[]> = {};
-    
-    filtered.forEach(task => {
-      let groupKey = 'Unassigned';
-      
-      switch (swimlaneType) {
-        case 'assignee':
-          groupKey = task.assignee_id || 'Unassigned';
-          break;
-        case 'priority':
-          groupKey = task.priority || 'No Priority';
-          break;
-        case 'epic':
-          groupKey = task.epic_id || 'No Epic';
-          break;
-      }
-      
-      if (!groups[groupKey]) groups[groupKey] = [];
-      groups[groupKey].push(task);
-    });
-
-    return groups;
+  const handleCreateTask = (columnId: string) => {
+    setSelectedColumnId(columnId);
+    setCreateTaskDialogOpen(true);
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'critical': return 'bg-red-500';
-      case 'high': return 'bg-orange-500';
-      case 'medium': return 'bg-yellow-500';
-      case 'low': return 'bg-green-500';
-      default: return 'bg-gray-500';
+      case 'urgent': return 'text-red-500';
+      case 'high': return 'text-orange-500';
+      case 'medium': return 'text-yellow-500';
+      case 'low': return 'text-green-500';
+      default: return 'text-gray-500';
     }
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'bug': return '🐛';
-      case 'story': return '📖';
-      case 'epic': return '🚀';
-      default: return '✓';
+  const getPriorityIcon = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return <AlertCircle className="h-3 w-3" />;
+      case 'high': return <Flag className="h-3 w-3" />;
+      default: return null;
     }
   };
 
-  const renderTaskCard = (task: TaskMasterTask, index: number) => (
-    <Draggable key={task.id} draggableId={task.id} index={index}>
-      {(provided, snapshot) => (
-        <Card
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...provided.dragHandleProps}
-          className={`mb-3 cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:scale-[1.02] ${
-            snapshot.isDragging ? 'shadow-2xl rotate-2 scale-105 animate-pulse-soft' : ''
-          } ${
-            selectedTasks.has(task.id) ? 'ring-2 ring-primary animate-glow' : ''
-          } interactive-card`}
-          onClick={(e) => {
-            if (e.ctrlKey || e.metaKey) {
-              const newSelected = new Set(selectedTasks);
-              if (newSelected.has(task.id)) {
-                newSelected.delete(task.id);
-              } else {
-                newSelected.add(task.id);
-              }
-              setSelectedTasks(newSelected);
-            } else {
-              setSelectedTask(task);
-            }
-          }}
-        >
-          <CardContent className="p-4">
-            <div className="space-y-3">
-              {/* Task Header */}
-              <div className="flex items-center justify-between animate-fade-in-right">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm animate-bounce-soft">{getTypeIcon(task.type)}</span>
-                  <Badge variant="outline" className="text-xs badge-pulse">
-                    {task.task_key}
-                  </Badge>
-                </div>
-                <div className={`w-2 h-2 rounded-full transition-all duration-300 hover:scale-150 ${getPriorityColor(task.priority)}`} />
-              </div>
-              
-              {/* Task Title */}
-              <h4 className="text-sm font-medium line-clamp-2 animate-fade-in text-shimmer">
-                {task.title}
-              </h4>
-              
-              {/* Task Meta */}
-              <div className="flex flex-wrap gap-2 text-xs stagger-container">
-                {task.assignee_id && (
-                  <Badge variant="secondary" className="bg-blue-50 text-blue-700 animate-scale-in hover:scale-110 transition-transform">
-                    <User className="h-3 w-3 mr-1 icon-bounce" />
-                    Assigned
-                  </Badge>
-                )}
-                {task.due_date && (
-                  <Badge variant="secondary" className="bg-amber-50 text-amber-700 animate-scale-in hover:scale-110 transition-transform">
-                    <Calendar className="h-3 w-3 mr-1 icon-bounce" />
-                    {new Date(task.due_date).toLocaleDateString()}
-                  </Badge>
-                )}
-                {task.story_points && (
-                  <Badge variant="secondary" className="bg-purple-50 text-purple-700 animate-scale-in hover:scale-110 transition-transform">
-                    <Target className="h-3 w-3 mr-1 icon-bounce" />
-                    {task.story_points} SP
-                  </Badge>
-                )}
-                {task.labels && task.labels.length > 0 && (
-                  <Badge variant="secondary" className="bg-green-50 text-green-700 animate-scale-in hover:scale-110 transition-transform">
-                    {task.labels[0]}
-                  </Badge>
-                )}
-              </div>
-
-              {/* Task Indicators */}
-              <div className="flex items-center justify-between text-xs text-muted-foreground animate-fade-in-up">
-                <div className="flex items-center gap-2">
-                  {task.watchers && task.watchers.length > 0 && (
-                    <span className="flex items-center gap-1 hover:scale-110 transition-transform">
-                      <Eye className="h-3 w-3 icon-bounce" />
-                      {task.watchers.length}
-                    </span>
-                  )}
-                  {task.blocked_by && task.blocked_by.length > 0 && (
-                    <span className="text-red-500 animate-shake">🚫</span>
-                  )}
-                </div>
-                {task.estimate_hours && (
-                  <span className="flex items-center gap-1 hover:scale-110 transition-transform">
-                    <Clock className="h-3 w-3 icon-bounce" />
-                    {task.estimate_hours}h
-                  </span>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </Draggable>
-  );
-
-  const renderColumn = (column: any, tasks: TaskMasterTask[]) => {
-    const wipLimit = wipLimits[column.id];
-    const isOverLimit = wipLimit && tasks.length > wipLimit;
-
-    return (
-      <div key={column.id} className="flex-1 min-w-80 animate-fade-in-up" style={{ animationDelay: `${column.order * 0.1}s` }}>
-        <Card className="h-full interactive-card hover:shadow-2xl transition-all duration-500 morphing-border">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2 animate-slide-in-right">
-                {column.name}
-                <Badge 
-                  variant={isOverLimit ? "destructive" : "secondary"}
-                  className={`ml-2 transition-all duration-300 ${
-                    isOverLimit ? 'animate-shake badge-pulse' : 'hover:scale-110'
-                  }`}
-                >
-                  {tasks.length}
-                  {wipLimit && ` / ${wipLimit}`}
-                </Badge>
-              </CardTitle>
-              <Button variant="ghost" size="sm" className="button-hover">
-                <MoreHorizontal className="h-4 w-4 icon-bounce" />
-              </Button>
-            </div>
-            {isOverLimit && (
-              <div className="text-sm text-destructive animate-wiggle">
-                WIP limit exceeded!
-              </div>
-            )}
-          </CardHeader>
-          <Droppable droppableId={column.id}>
-            {(provided, snapshot) => (
-              <CardContent
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                className={`min-h-96 pb-4 transition-all duration-300 ${
-                  snapshot.isDraggingOver ? 'bg-primary/5 scale-[1.02] animate-glow' : ''
-                }`}
-              >
-                <div className="stagger-container">
-                  {tasks.map((task, index) => renderTaskCard(task, index))}
-                </div>
-                {provided.placeholder}
-                <CreateTaskDialog
-                  boardId={board.id}
-                  projectId={project.id}
-                  onTaskCreated={handleTaskCreated}
-                  defaultStatus={column.id}
-                >
-                  <Button 
-                    variant="ghost" 
-                    className="w-full border-2 border-dashed border-gray-300 hover:border-primary/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg button-hover"
-                  >
-                    <Plus className="h-4 w-4 mr-2 icon-bounce" />
-                    Add task
-                  </Button>
-                </CreateTaskDialog>
-              </CardContent>
-            )}
-          </Droppable>
-        </Card>
-      </div>
-    );
+  const getFilteredTasks = (columnTasks: any[]) => {
+    return columnTasks.filter(task => {
+      const statusMatch = filterStatus === 'all' || task.status === filterStatus;
+      const assigneeMatch = filterAssignee === 'all' || 
+        (task.assigned_to && task.assigned_to.includes(filterAssignee));
+      return statusMatch && assigneeMatch;
+    });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 stagger-container">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i} className="animate-pulse animate-fade-in loading-shimmer">
-            <CardHeader>
-              <div className="h-6 bg-gray-200 rounded w-2/3 skeleton" />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {Array.from({ length: 2 }).map((_, j) => (
-                  <div key={j} className="h-24 bg-gray-200 rounded skeleton" />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 animate-page-enter">
+    <div className="space-y-6">
       {/* Board Header */}
-      <div className="flex items-center justify-between p-6 bg-white rounded-lg shadow-sm border glass-morphism animate-slide-in-down">
-        <div className="flex items-center gap-4">
-          <div className="animate-fade-in-right">
-            <h2 className="text-2xl font-bold text-shimmer">{board.name}</h2>
-            <p className="text-muted-foreground animate-fade-in-up">
-              {board.type.charAt(0).toUpperCase() + board.type.slice(1)} Board
-            </p>
-          </div>
-          {board.type === 'scrum' && activeSprint && (
-            <Badge variant="default" className="bg-blue-100 text-blue-800 animate-bounce-soft pulse-ring">
-              Sprint: {activeSprint.name}
-            </Badge>
-          )}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">{board.name}</h2>
+          <p className="text-muted-foreground">{board.description}</p>
         </div>
-        
-        <div className="flex items-center gap-2 animate-fade-in-left stagger-container">
-          <CreateTaskDialog
-            boardId={board.id}
-            projectId={project.id}
-            onTaskCreated={handleTaskCreated}
-          >
-            <Button variant="outline" size="sm" className="button-hover">
-              <Plus className="h-4 w-4 mr-2 icon-bounce" />
-              Create
-            </Button>
-          </CreateTaskDialog>
-          <Button variant="outline" size="sm" className="button-hover">
-            <Settings className="h-4 w-4 icon-bounce" />
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm">
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+          </Button>
+          <Button variant="outline" size="sm">
+            <MoreVertical className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* Filters and Controls */}
-      <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-lg glass-morphism animate-slide-in-up">
-        <div className="flex items-center gap-2 animate-scale-in">
-          <Search className="h-4 w-4 icon-bounce" />
-          <Input
-            placeholder="Search tasks..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-64 input-focus"
-          />
-        </div>
-        
-        <Select value={swimlaneType} onValueChange={(value: any) => setSwimlaneType(value)}>
-          <SelectTrigger className="w-48 input-focus dropdown-enter">
-            <Layout className="h-4 w-4 mr-2 icon-bounce" />
-            <SelectValue placeholder="Swimlanes" />
-          </SelectTrigger>
-          <SelectContent className="dropdown-enter bg-white/95 backdrop-blur-md z-50">
-            <SelectItem value="none">No Swimlanes</SelectItem>
-            <SelectItem value="assignee">By Assignee</SelectItem>
-            <SelectItem value="priority">By Priority</SelectItem>
-            <SelectItem value="epic">By Epic</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select 
-          value={filters.priority || 'all'} 
-          onValueChange={(value) => setFilters(prev => ({ ...prev, priority: value }))}
-        >
-          <SelectTrigger className="w-40 input-focus dropdown-enter">
-            <Flag className="h-4 w-4 mr-2 icon-bounce" />
-            <SelectValue placeholder="Priority" />
-          </SelectTrigger>
-          <SelectContent className="dropdown-enter bg-white/95 backdrop-blur-md z-50">
-            <SelectItem value="all">All Priorities</SelectItem>
-            <SelectItem value="critical">Critical</SelectItem>
-            <SelectItem value="high">High</SelectItem>
-            <SelectItem value="medium">Medium</SelectItem>
-            <SelectItem value="low">Low</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select 
-          value={filters.type || 'all'} 
-          onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}
-        >
-          <SelectTrigger className="w-40 input-focus dropdown-enter">
-            <CheckSquare className="h-4 w-4 mr-2 icon-bounce" />
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent className="dropdown-enter bg-white/95 backdrop-blur-md z-50">
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="task">Task</SelectItem>
-            <SelectItem value="bug">Bug</SelectItem>
-            <SelectItem value="story">Story</SelectItem>
-            <SelectItem value="epic">Epic</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {selectedTasks.size > 0 && (
-          <Badge variant="secondary" className="ml-auto animate-tada badge-pulse">
-            {selectedTasks.size} selected
-          </Badge>
-        )}
+      {/* Board Stats */}
+      <div className="grid grid-cols-4 gap-4">
+        {columns.map(column => (
+          <Card key={column.id}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium">{column.name}</h3>
+                <Badge variant="secondary">{column.tasks.length}</Badge>
+              </div>
+              {column.wipLimit && (
+                <Progress 
+                  value={(column.tasks.length / column.wipLimit) * 100} 
+                  className="h-1 mt-2"
+                />
+              )}
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Board Content */}
+      {/* Kanban Board */}
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="space-y-6">
-          {Object.entries(getSwimlaneGroups()).map(([groupName, groupTasks], groupIndex) => (
-            <div key={groupName} className="space-y-4 animate-fade-in-up" style={{ animationDelay: `${groupIndex * 0.1}s` }}>
-              {swimlaneType !== 'none' && (
-                <div className="flex items-center gap-2 px-4 animate-slide-in-right">
-                  <h3 className="font-semibold text-lg text-gradient">{groupName}</h3>
-                  <Badge variant="outline" className="badge-pulse">{groupTasks.length} tasks</Badge>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {columns.map(column => (
+            <div key={column.id} className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: column.color }}
+                  />
+                  <h3 className="font-medium">{column.name}</h3>
+                  <Badge variant="secondary">{getFilteredTasks(column.tasks).length}</Badge>
                 </div>
-              )}
-              
-              <div className="flex gap-6 overflow-x-auto pb-4">
-                {boardColumns.map(column => 
-                  renderColumn(
-                    column, 
-                    groupTasks.filter(task => task.status === column.id)
-                  )
-                )}
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => handleCreateTask(column.id)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
+
+              <Droppable droppableId={column.id}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`space-y-3 min-h-[200px] p-2 rounded-lg transition-colors ${
+                      snapshot.isDraggingOver ? 'bg-muted/50' : ''
+                    }`}
+                  >
+                    {getFilteredTasks(column.tasks).map((task, index) => (
+                      <Draggable key={task.id} draggableId={task.id} index={index}>
+                        {(provided, snapshot) => (
+                          <Card
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className={`cursor-pointer transition-all hover:shadow-md ${
+                              snapshot.isDragging ? 'shadow-lg rotate-3' : ''
+                            }`}
+                            onClick={() => setSelectedTask(task)}
+                          >
+                            <CardContent className="p-4 space-y-3">
+                              {/* Task Header */}
+                              <div className="flex items-start justify-between gap-2">
+                                <h4 className="font-medium text-sm line-clamp-2">
+                                  {task.title}
+                                </h4>
+                                {getPriorityIcon(task.priority) && (
+                                  <div className={getPriorityColor(task.priority)}>
+                                    {getPriorityIcon(task.priority)}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Task Details */}
+                              {task.description && (
+                                <p className="text-xs text-muted-foreground line-clamp-2">
+                                  {task.description}
+                                </p>
+                              )}
+
+                              {/* Labels */}
+                              {task.labels && task.labels.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {task.labels.slice(0, 2).map((label, idx) => (
+                                    <Badge key={idx} variant="outline" className="text-xs px-1 py-0">
+                                      {label}
+                                    </Badge>
+                                  ))}
+                                  {task.labels.length > 2 && (
+                                    <Badge variant="outline" className="text-xs px-1 py-0">
+                                      +{task.labels.length - 2}
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Progress */}
+                              {task.story_points && (
+                                <div className="space-y-1">
+                                  <div className="flex justify-between text-xs">
+                                    <span>Progress</span>
+                                    <span>{Math.round((task.actual_hours || 0) / (task.estimate_hours || 1) * 100)}%</span>
+                                  </div>
+                                  <Progress 
+                                    value={Math.min((task.actual_hours || 0) / (task.estimate_hours || 1) * 100, 100)} 
+                                    className="h-1"
+                                  />
+                                </div>
+                              )}
+
+                              {/* Footer */}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  {/* Assignee */}
+                                  {task.assigned_to && task.assigned_to.length > 0 && (
+                                    <div className="flex -space-x-1">
+                                      {task.assigned_to.slice(0, 2).map((_, idx) => (
+                                        <Avatar key={idx} className="w-5 h-5 border-2 border-background">
+                                          <AvatarFallback className="text-xs">
+                                            {String.fromCharCode(65 + idx)}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                      ))}
+                                      {task.assigned_to.length > 2 && (
+                                        <div className="w-5 h-5 rounded-full bg-muted border-2 border-background flex items-center justify-center">
+                                          <span className="text-xs">+{task.assigned_to.length - 2}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Due Date */}
+                                  {task.due_date && (
+                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                      <Calendar className="h-3 w-3" />
+                                      {new Date(task.due_date).toLocaleDateString('en-US', { 
+                                        month: 'short', 
+                                        day: 'numeric' 
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  {/* Comments */}
+                                  <MessageSquare className="h-3 w-3" />
+                                  <span>0</span>
+                                  
+                                  {/* Attachments */}
+                                  <Paperclip className="h-3 w-3 ml-1" />
+                                  <span>0</span>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
             </div>
           ))}
         </div>
       </DragDropContext>
 
-      {/* Empty State */}
-      {getFilteredTasks().length === 0 && (
-        <div className="text-center py-16 animate-zoom-in">
-          <CheckSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4 animate-float" />
-          <h3 className="text-xl font-semibold mb-2 animate-fade-in-up">No tasks found</h3>
-          <p className="text-muted-foreground mb-4 animate-fade-in-up">
-            {searchQuery || Object.values(filters).some(v => v && v !== 'all')
-              ? 'Try adjusting your filters or search terms'
-              : 'Create your first task to get started'
-            }
-          </p>
-          <CreateTaskDialog
-            boardId={board.id}
-            projectId={project.id}
-            onTaskCreated={handleTaskCreated}
-          >
-            <Button className="animate-bounce-soft button-hover">
-              <Plus className="h-4 w-4 mr-2 icon-bounce" />
-              Create Task
-            </Button>
-          </CreateTaskDialog>
-        </div>
-      )}
-
-      {/* Task Detail Dialog */}
-      <TaskDetailDialog
-        task={selectedTask}
-        open={!!selectedTask}
-        onOpenChange={(open) => !open && setSelectedTask(undefined)}
-        onTaskUpdate={handleTaskUpdate}
+      {/* Dialogs */}
+      <CreateTaskDialog
         project={project}
         board={board}
+        onTaskCreated={loadBoardData}
       />
+
+      {selectedTask && (
+        <TaskDetailDialog
+          task={selectedTask}
+          project={project}
+          board={board}
+          open={!!selectedTask}
+          onOpenChange={(open) => !open && setSelectedTask(null)}
+          onTaskUpdate={loadBoardData}
+        />
+      )}
     </div>
   );
 };
