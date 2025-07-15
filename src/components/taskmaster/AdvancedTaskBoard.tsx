@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +27,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthContext } from '@/context/AuthContext';
+import type { Project, Board } from '@/types/taskmaster';
 
 // Define types and interfaces
 interface Task {
@@ -45,24 +47,6 @@ interface Task {
   labels?: string[];
 }
 
-interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  status: string;
-  user_id: string;
-}
-
-interface Board {
-  id: string;
-  name: string;
-  type: string;
-  project_id?: string;
-  config: {
-    columns: Column[];
-  };
-}
-
 interface Column {
   id: string;
   name: string;
@@ -78,104 +62,68 @@ interface CreateTaskDialogProps {
   status?: string;
 }
 
-const AdvancedTaskBoard: React.FC = () => {
+interface AdvancedTaskBoardProps {
+  project: Project;
+  board: Board;
+}
+
+const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board }) => {
   // State variables
   const { user } = useAuthContext();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [selectedBoard, setSelectedBoard] = useState<Board | null>(null);
-  const [boards, setBoards] = useState<Board[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
 
-  // Default columns if no board is selected
-  const defaultColumns: Column[] = [
-    { id: 'todo', name: 'To Do', color: '#6b7280' },
-    { id: 'in_progress', name: 'In Progress', color: '#f59e0b' },
-    { id: 'review', name: 'Review', color: '#8b5cf6' },
-    { id: 'done', name: 'Done', color: '#10b981' }
-  ];
-
-  const columns = selectedBoard?.config?.columns || defaultColumns;
-
-  // useEffect hooks and data loading functions
-
-  useEffect(() => {
-    if (user) {
-      loadProjects();
+  // Get columns from board config with proper type handling
+  const getColumns = (): Column[] => {
+    if (!board?.config) {
+      return [
+        { id: 'todo', name: 'To Do', color: '#6b7280' },
+        { id: 'in_progress', name: 'In Progress', color: '#f59e0b' },
+        { id: 'review', name: 'Review', color: '#8b5cf6' },
+        { id: 'done', name: 'Done', color: '#10b981' }
+      ];
     }
-  }, [user]);
 
-  useEffect(() => {
-    if (selectedProject) {
-      loadBoards();
-      loadTasks();
+    // Handle config as Json type
+    const config = typeof board.config === 'string' 
+      ? JSON.parse(board.config) 
+      : board.config;
+
+    if (config && typeof config === 'object' && 'columns' in config) {
+      return config.columns as Column[];
     }
-  }, [selectedProject]);
 
-  useEffect(() => {
-    if (selectedBoard) {
-      loadTasks();
-    }
-  }, [selectedBoard]);
-
-  const loadProjects = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setProjects(data || []);
-      if (data && data.length > 0) {
-        setSelectedProject(data[0]);
-      }
-    } catch (error) {
-      console.error('Error loading projects:', error);
-    }
+    return [
+      { id: 'todo', name: 'To Do', color: '#6b7280' },
+      { id: 'in_progress', name: 'In Progress', color: '#f59e0b' },
+      { id: 'review', name: 'Review', color: '#8b5cf6' },
+      { id: 'done', name: 'Done', color: '#10b981' }
+    ];
   };
 
-  const loadBoards = async () => {
-    if (!selectedProject) return;
+  const columns = getColumns();
 
-    try {
-      const { data, error } = await supabase
-        .from('boards')
-        .select('*')
-        .eq('project_id', selectedProject.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setBoards(data || []);
-      if (data && data.length > 0) {
-        setSelectedBoard(data[0]);
-      }
-    } catch (error) {
-      console.error('Error loading boards:', error);
+  useEffect(() => {
+    if (project && board) {
+      loadTasks();
     }
-  };
+  }, [project, board]);
 
   const loadTasks = async () => {
-    if (!selectedProject) return;
+    if (!project || !board) return;
 
     try {
       setLoading(true);
-      let query = supabase
+      const { data, error } = await supabase
         .from('tasks')
         .select('*')
-        .eq('project_id', selectedProject.id);
-
-      if (selectedBoard) {
-        query = query.eq('board_id', selectedBoard.id);
-      }
-
-      const { data, error } = await query.order('position', { ascending: true });
+        .eq('project_id', project.id)
+        .eq('board_id', board.id)
+        .order('position', { ascending: true });
 
       if (error) throw error;
       setTasks(data || []);
@@ -258,8 +206,8 @@ const AdvancedTaskBoard: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">TaskMaster</h1>
-          <p className="text-muted-foreground">Advanced project and task management</p>
+          <h1 className="text-3xl font-bold">{board.name}</h1>
+          <p className="text-muted-foreground">Project: {project.name}</p>
         </div>
         <div className="flex items-center space-x-3">
           <div className="relative">
@@ -289,55 +237,6 @@ const AdvancedTaskBoard: React.FC = () => {
             New Task
           </Button>
         </div>
-      </div>
-
-      {/* Project and Board Selection */}
-      <div className="flex items-center space-x-4 p-4 bg-muted/50 rounded-lg">
-        <div className="flex items-center space-x-2">
-          <Label>Project:</Label>
-          <Select 
-            value={selectedProject?.id || ''} 
-            onValueChange={(value) => {
-              const project = projects.find(p => p.id === value);
-              setSelectedProject(project || null);
-            }}
-          >
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Select project" />
-            </SelectTrigger>
-            <SelectContent>
-              {projects.map(project => (
-                <SelectItem key={project.id} value={project.id}>
-                  {project.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        {boards.length > 0 && (
-          <div className="flex items-center space-x-2">
-            <Label>Board:</Label>
-            <Select 
-              value={selectedBoard?.id || ''} 
-              onValueChange={(value) => {
-                const board = boards.find(b => b.id === value);
-                setSelectedBoard(board || null);
-              }}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Select board" />
-              </SelectTrigger>
-              <SelectContent>
-                {boards.map(board => (
-                  <SelectItem key={board.id} value={board.id}>
-                    {board.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
       </div>
 
       {/* Board Stats */}
@@ -483,8 +382,8 @@ const AdvancedTaskBoard: React.FC = () => {
         isOpen={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
         onTaskCreated={loadTasks}
-        projectId={selectedProject?.id}
-        boardId={selectedBoard?.id}
+        projectId={project?.id}
+        boardId={board?.id}
       />
     </div>
   );

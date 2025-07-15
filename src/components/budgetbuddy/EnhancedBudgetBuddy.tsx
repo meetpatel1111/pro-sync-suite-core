@@ -1,543 +1,360 @@
+
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Progress } from '@/components/ui/progress';
 import { 
   DollarSign, 
-  Plus, 
   TrendingUp, 
   TrendingDown, 
-  AlertTriangle,
-  PieChart,
-  BarChart3,
-  Calendar,
-  Receipt,
+  PieChart, 
   Target,
   CreditCard,
   Wallet,
-  ArrowUpRight,
-  ArrowDownRight,
-  Search,
-  Filter,
-  Download,
-  Eye,
-  Edit,
-  Trash2
+  AlertTriangle,
+  CheckCircle,
+  Plus,
+  BarChart3,
+  Calendar,
+  Filter
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
-interface Budget {
-  id: string;
-  project_id?: string;
-  total: number;
-  spent: number;
-  updated_at: string;
-}
-
-interface Expense {
-  id: string;
-  amount: number;
-  description: string;
-  category_id?: string;
-  date: string;
-  status: string;
-  currency: string;
-  project_id?: string;
-  receipt_url?: string;
-  user_id: string;
-  created_at: string;
-}
-
-const EnhancedBudgetBuddy = () => {
-  const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [projects, setProjects] = useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
-  const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [newExpense, setNewExpense] = useState({
-    amount: '',
-    description: '',
-    category_id: 'general',
-    project_id: ''
-  });
-  const [newBudget, setNewBudget] = useState({
-    project_id: '',
-    total: ''
-  });
+const EnhancedBudgetBuddy: React.FC = () => {
   const { toast } = useToast();
+  const [selectedPeriod, setSelectedPeriod] = useState('month');
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Load budgets, expenses, and projects
-      const [budgetsRes, expensesRes, projectsRes] = await Promise.all([
-        supabase.from('budgets').select('*').order('updated_at', { ascending: false }),
-        supabase.from('expenses').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('projects').select('*').eq('user_id', user.id)
-      ]);
-
-      setBudgets(budgetsRes.data || []);
-      setExpenses(expensesRes.data || []);
-      setProjects(projectsRes.data || []);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load budget data',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
-    }
+  // Sample data
+  const budgetSummary = {
+    totalBudget: 5000,
+    totalSpent: 3750,
+    remaining: 1250,
+    percentageUsed: 75
   };
 
-  const handleCreateExpense = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  const categories = [
+    { name: 'Housing', budget: 2000, spent: 1950, color: 'bg-blue-500' },
+    { name: 'Food', budget: 800, spent: 620, color: 'bg-emerald-500' },
+    { name: 'Transportation', budget: 400, spent: 380, color: 'bg-yellow-500' },
+    { name: 'Entertainment', budget: 300, spent: 280, color: 'bg-purple-500' },
+    { name: 'Utilities', budget: 300, spent: 290, color: 'bg-red-500' },
+    { name: 'Other', budget: 200, spent: 230, color: 'bg-gray-500' },
+  ];
 
-      const { error } = await supabase
-        .from('expenses')
-        .insert({
-          ...newExpense,
-          amount: parseFloat(newExpense.amount),
-          user_id: user.id,
-          status: 'pending',
-          currency: 'USD',
-          date: new Date().toISOString()
-        });
+  const recentTransactions = [
+    { id: 1, description: 'Grocery Store', amount: -75.50, category: 'Food', date: '2024-01-15', type: 'expense' },
+    { id: 2, description: 'Salary Deposit', amount: 3000, category: 'Income', date: '2024-01-15', type: 'income' },
+    { id: 3, description: 'Gas Station', amount: -45.00, category: 'Transportation', date: '2024-01-14', type: 'expense' },
+    { id: 4, description: 'Netflix Subscription', amount: -15.99, category: 'Entertainment', date: '2024-01-14', type: 'expense' },
+  ];
 
-      if (error) throw error;
+  const monthlyTrends = [
+    { month: 'Jan', income: 4500, expenses: 3750 },
+    { month: 'Feb', income: 4200, expenses: 3900 },
+    { month: 'Mar', income: 4800, expenses: 3600 },
+    { month: 'Apr', income: 4500, expenses: 4100 },
+    { month: 'May', income: 4700, expenses: 3850 },
+  ];
 
-      await loadData();
-      setNewExpense({ amount: '', description: '', category_id: 'general', project_id: '' });
-      setIsExpenseDialogOpen(false);
-      
-      toast({
-        title: 'Success',
-        description: 'Expense created successfully'
-      });
-    } catch (error) {
-      console.error('Error creating expense:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create expense',
-        variant: 'destructive'
-      });
-    }
+  const getStatusColor = (spent: number, budget: number) => {
+    const percentage = (spent / budget) * 100;
+    if (percentage > 90) return 'text-red-600 bg-red-50';
+    if (percentage > 75) return 'text-yellow-600 bg-yellow-50';
+    return 'text-emerald-600 bg-emerald-50';
   };
 
-  const handleCreateBudget = async () => {
-    try {
-      const budgetId = crypto.randomUUID();
-      const { error } = await supabase
-        .from('budgets')
-        .insert({
-          id: budgetId,
-          project_id: newBudget.project_id || null,
-          total: parseFloat(newBudget.total),
-          spent: 0,
-          updated_at: new Date().toISOString()
-        });
-
-      if (error) throw error;
-
-      await loadData();
-      setNewBudget({ project_id: '', total: '' });
-      setIsBudgetDialogOpen(false);
-      
-      toast({
-        title: 'Success',
-        description: 'Budget created successfully'
-      });
-    } catch (error) {
-      console.error('Error creating budget:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create budget',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const totalBudget = budgets.reduce((sum, budget) => sum + budget.total, 0);
-  const totalSpent = budgets.reduce((sum, budget) => sum + budget.spent, 0);
-  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const budgetUtilization = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
-
-  const filteredExpenses = expenses.filter(expense => {
-    const matchesSearch = expense.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || expense.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const getProgressBarColor = (spent: number, budget: number) => {
+    const percentage = (spent / budget) * 100;
+    if (percentage > 90) return 'bg-red-500';
+    if (percentage > 75) return 'bg-yellow-500';
+    return 'bg-emerald-500';
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">BudgetBuddy</h1>
-          <p className="text-muted-foreground">Smart Budget & Expense Management</p>
-        </div>
-        <div className="flex gap-2">
-          <Dialog open={isBudgetDialogOpen} onOpenChange={setIsBudgetDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Target className="h-4 w-4 mr-2" />
-                New Budget
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create Budget</DialogTitle>
-                <DialogDescription>Set up a new budget for a project</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="budget-project">Project</Label>
-                  <Select value={newBudget.project_id} onValueChange={(value) => setNewBudget(prev => ({ ...prev, project_id: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select project" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {projects.map(project => (
-                        <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="budget-total">Total Budget</Label>
-                  <Input
-                    id="budget-total"
-                    type="number"
-                    value={newBudget.total}
-                    onChange={(e) => setNewBudget(prev => ({ ...prev, total: e.target.value }))}
-                    placeholder="0.00"
-                  />
-                </div>
-                <Button onClick={handleCreateBudget} disabled={!newBudget.total}>
-                  Create Budget
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Expense
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Expense</DialogTitle>
-                <DialogDescription>Record a new expense transaction</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="expense-amount">Amount</Label>
-                  <Input
-                    id="expense-amount"
-                    type="number"
-                    value={newExpense.amount}
-                    onChange={(e) => setNewExpense(prev => ({ ...prev, amount: e.target.value }))}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="expense-description">Description</Label>
-                  <Input
-                    id="expense-description"
-                    value={newExpense.description}
-                    onChange={(e) => setNewExpense(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="What was this expense for?"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="expense-category">Category</Label>
-                  <Select value={newExpense.category_id} onValueChange={(value) => setNewExpense(prev => ({ ...prev, category_id: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="general">General</SelectItem>
-                      <SelectItem value="travel">Travel</SelectItem>
-                      <SelectItem value="office">Office Supplies</SelectItem>
-                      <SelectItem value="food">Food & Dining</SelectItem>
-                      <SelectItem value="software">Software</SelectItem>
-                      <SelectItem value="hardware">Hardware</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="expense-project">Project</Label>
-                  <Select value={newExpense.project_id} onValueChange={(value) => setNewExpense(prev => ({ ...prev, project_id: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select project (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {projects.map(project => (
-                        <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button onClick={handleCreateExpense} disabled={!newExpense.amount || !newExpense.description}>
-                  Add Expense
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      {/* Budget Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Budget</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalBudget.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Across all projects</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalSpent.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Budget utilization</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-            <Receipt className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalExpenses.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">{expenses.length} transactions</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Budget Health</CardTitle>
-            {budgetUtilization > 90 ? (
-              <AlertTriangle className="h-4 w-4 text-red-600" />
-            ) : budgetUtilization > 75 ? (
-              <TrendingUp className="h-4 w-4 text-yellow-600" />
-            ) : (
-              <TrendingUp className="h-4 w-4 text-green-600" />
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${
-              budgetUtilization > 90 ? 'text-red-600' : 
-              budgetUtilization > 75 ? 'text-yellow-600' : 'text-green-600'
-            }`}>
-              {budgetUtilization.toFixed(1)}%
+    <div className="space-y-6 animate-fade-in">
+      {/* Enhanced Header with Beautiful Gradient */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-8 text-white shadow-2xl">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
+        
+        {/* Floating Elements */}
+        <div className="absolute -top-16 -right-16 w-40 h-40 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-violet-300/20 rounded-full blur-2xl"></div>
+        
+        <div className="relative z-10">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm border border-white/30 shadow-lg">
+              <Wallet className="h-8 w-8" />
             </div>
-            <p className="text-xs text-muted-foreground">Utilization rate</p>
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight mb-2">BudgetBuddy</h1>
+              <p className="text-xl text-violet-100 leading-relaxed">
+                Smart financial management and expense tracking
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-4 mt-6">
+            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm">
+              <DollarSign className="h-4 w-4 mr-2" />
+              Budget Tracking
+            </Badge>
+            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm">
+              <PieChart className="h-4 w-4 mr-2" />
+              Expense Analysis
+            </Badge>
+            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm">
+              <Target className="h-4 w-4 mr-2" />
+              Financial Goals
+            </Badge>
+          </div>
+        </div>
+      </div>
+
+      {/* Budget Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-emerald-600">Total Budget</p>
+                <p className="text-3xl font-bold text-emerald-800">${budgetSummary.totalBudget.toLocaleString()}</p>
+              </div>
+              <Target className="h-8 w-8 text-emerald-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-600">Total Spent</p>
+                <p className="text-3xl font-bold text-blue-800">${budgetSummary.totalSpent.toLocaleString()}</p>
+              </div>
+              <CreditCard className="h-8 w-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-purple-600">Remaining</p>
+                <p className="text-3xl font-bold text-purple-800">${budgetSummary.remaining.toLocaleString()}</p>
+              </div>
+              <Wallet className="h-8 w-8 text-purple-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-orange-600">Usage</p>
+                <p className="text-3xl font-bold text-orange-800">{budgetSummary.percentageUsed}%</p>
+              </div>
+              <BarChart3 className="h-8 w-8 text-orange-500" />
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Budget Progress */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Budget Allocation & Spending</CardTitle>
-          <CardDescription>Track budget utilization across projects</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {budgets.map((budget) => {
-              const project = projects.find(p => p.id === budget.project_id);
-              const utilization = budget.total > 0 ? (budget.spent / budget.total) * 100 : 0;
-              
-              return (
-                <div key={budget.id} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">{project?.name || 'General Budget'}</p>
-                      <p className="text-sm text-muted-foreground">
-                        ${budget.spent.toLocaleString()} / ${budget.total.toLocaleString()}
-                      </p>
-                    </div>
-                    <Badge className={
-                      utilization > 90 ? 'bg-red-100 text-red-800' :
-                      utilization > 75 ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-green-100 text-green-800'
-                    }>
-                      {utilization.toFixed(1)}%
-                    </Badge>
-                  </div>
-                  <Progress value={utilization} className="h-2" />
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Expenses Management */}
-      <Tabs defaultValue="expenses" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="expenses">Expenses</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
+      {/* Enhanced Tabs Section */}
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-xl">
+          <TabsTrigger value="overview" className="rounded-lg">Overview</TabsTrigger>
+          <TabsTrigger value="categories" className="rounded-lg">Categories</TabsTrigger>
+          <TabsTrigger value="transactions" className="rounded-lg">Transactions</TabsTrigger>
+          <TabsTrigger value="analytics" className="rounded-lg">Analytics</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="expenses" className="space-y-4">
-          {/* Filters */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search expenses..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Budget Progress */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5" />
+                  Budget Progress
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span>Overall Progress</span>
+                      <span>{budgetSummary.percentageUsed}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div 
+                        className={`h-3 rounded-full ${getProgressBarColor(budgetSummary.totalSpent, budgetSummary.totalBudget)}`}
+                        style={{ width: `${budgetSummary.percentageUsed}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-600">Spent</p>
+                      <p className="font-semibold">${budgetSummary.totalSpent.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600">Remaining</p>
+                      <p className="font-semibold">${budgetSummary.remaining.toLocaleString()}</p>
+                    </div>
                   </div>
                 </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full md:w-40">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="h-5 w-5" />
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button className="w-full justify-start bg-emerald-600 hover:bg-emerald-700">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Income
+                </Button>
+                <Button variant="outline" className="w-full justify-start">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Expense
+                </Button>
+                <Button variant="outline" className="w-full justify-start">
+                  <Target className="h-4 w-4 mr-2" />
+                  Set Budget Goal
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="categories" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieChart className="h-5 w-5" />
+                Budget Categories
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {categories.map((category) => {
+                  const percentage = (category.spent / category.budget) * 100;
+                  return (
+                    <div key={category.name} className="p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-4 h-4 rounded-full ${category.color}`} />
+                          <span className="font-medium">{category.name}</span>
+                        </div>
+                        <Badge className={getStatusColor(category.spent, category.budget)}>
+                          {percentage.toFixed(0)}%
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600 mb-1">
+                        <span>${category.spent.toLocaleString()} spent</span>
+                        <span>${category.budget.toLocaleString()} budget</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full ${getProgressBarColor(category.spent, category.budget)}`}
+                          style={{ width: `${Math.min(percentage, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
 
-          {/* Expenses List */}
+        <TabsContent value="transactions" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Recent Expenses</CardTitle>
-              <CardDescription>Track and manage your expense transactions</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Recent Transactions
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="animate-pulse border rounded-lg p-4">
-                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              <div className="space-y-3">
+                {recentTransactions.map((transaction) => (
+                  <div key={transaction.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-full ${transaction.type === 'income' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                        {transaction.type === 'income' ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                      </div>
+                      <div>
+                        <p className="font-medium">{transaction.description}</p>
+                        <p className="text-sm text-gray-600">{transaction.category} • {transaction.date}</p>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              ) : filteredExpenses.length === 0 ? (
-                <div className="text-center py-8">
-                  <Receipt className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No expenses found</h3>
-                  <p className="text-muted-foreground">
-                    {searchTerm || statusFilter !== 'all' 
-                      ? 'Try adjusting your filters' 
-                      : 'Add your first expense to get started'}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {filteredExpenses.slice(0, 10).map((expense) => (
-                    <div key={expense.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-primary/10 rounded-lg">
-                              <Receipt className="h-4 w-4 text-primary" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold">{expense.description}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                {new Date(expense.date).toLocaleDateString()} • {expense.category_id}
-                              </p>
-                            </div>
-                          </div>
+                    <div className={`text-right font-mono font-bold ${transaction.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {transaction.type === 'income' ? '+' : ''}${Math.abs(transaction.amount).toFixed(2)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Monthly Trends
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {monthlyTrends.map((month) => (
+                  <div key={month.month} className="p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-medium text-gray-700">{month.month}</span>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="text-emerald-600">+${month.income.toLocaleString()}</span>
+                        <span className="text-red-600">-${month.expenses.toLocaleString()}</span>
+                        <span className={`font-semibold ${month.income - month.expenses >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          Net: {month.income - month.expenses >= 0 ? '+' : ''}${(month.income - month.expenses).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <div className="text-xs text-gray-600 mb-1">Income</div>
+                        <div className="bg-emerald-200 rounded-full h-2">
+                          <div 
+                            className="bg-emerald-500 h-2 rounded-full" 
+                            style={{ width: `${(month.income / 5000) * 100}%` }}
+                          />
                         </div>
-                        <div className="text-right">
-                          <div className="font-bold text-lg">${expense.amount.toLocaleString()}</div>
-                          <Badge className={getStatusColor(expense.status)}>
-                            {expense.status}
-                          </Badge>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-600 mb-1">Expenses</div>
+                        <div className="bg-red-200 rounded-full h-2">
+                          <div 
+                            className="bg-red-500 h-2 rounded-full" 
+                            style={{ width: `${(month.expenses / 5000) * 100}%` }}
+                          />
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="analytics">
-          <Card>
-            <CardHeader>
-              <CardTitle>Spending Analytics</CardTitle>
-              <CardDescription>Analyze your spending patterns and trends</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Analytics Dashboard</h3>
-                <p className="text-muted-foreground">Advanced analytics features coming soon</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="reports">
-          <Card>
-            <CardHeader>
-              <CardTitle>Financial Reports</CardTitle>
-              <CardDescription>Generate detailed financial reports</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <PieChart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Report Generator</h3>
-                <p className="text-muted-foreground">Custom report generation coming soon</p>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>

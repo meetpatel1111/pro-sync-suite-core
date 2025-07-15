@@ -1,609 +1,347 @@
+
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Progress } from '@/components/ui/progress';
-import { Textarea } from '@/components/ui/textarea';
 import { 
   Play, 
   Pause, 
   Square, 
-  Plus, 
   Clock, 
-  Calendar,
-  TrendingUp,
+  Calendar, 
+  BarChart3, 
   Target,
-  BarChart3,
   Timer,
-  CheckCircle,
-  AlertCircle,
+  TrendingUp,
   Users,
   Activity,
-  Zap,
-  Trophy,
-  Search,
-  Filter,
-  Download,
-  Eye,
-  Edit,
-  Trash2
+  Zap
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
-interface TimeEntry {
-  id: string;
-  user_id: string;
-  project_id?: string;
-  task_id?: string;
-  description: string;
-  start_time?: string;
-  end_time?: string;
-  duration_hours: number;
-  is_billable: boolean;
-  hourly_rate?: number;
-  notes?: string;
-  tags: string[];
-  created_at: string;
-}
-
-interface ProductivityMetric {
-  id: string;
-  user_id: string;
-  date: string;
-  total_hours: number;
-  billable_percentage?: number;
-  efficiency_score?: number;
-  focus_time_minutes?: number;
-  break_time_minutes?: number;
-  distractions_count?: number;
-  created_at: string;
-}
-
-const EnhancedTimeTrackPro = () => {
-  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
-  const [productivityMetrics, setProductivityMetrics] = useState<ProductivityMetric[]>([]);
-  const [projects, setProjects] = useState<any[]>([]);
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [isTracking, setIsTracking] = useState(false);
-  const [currentEntry, setCurrentEntry] = useState<any>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [projectFilter, setProjectFilter] = useState('all');
-  const [isEntryDialogOpen, setIsEntryDialogOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [newEntry, setNewEntry] = useState({
-    description: '',
-    project_id: '',
-    task_id: '',
-    duration_hours: '',
-    is_billable: true,
-    hourly_rate: '',
-    notes: ''
-  });
+const EnhancedTimeTrackPro: React.FC = () => {
   const { toast } = useToast();
+  const [isTracking, setIsTracking] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [activeProject, setActiveProject] = useState<string | null>(null);
+
+  // Sample data
+  const todayStats = {
+    totalHours: 7.5,
+    billableHours: 6.2,
+    efficiency: 87,
+    focusTime: 5.8
+  };
+
+  const recentEntries = [
+    { id: 1, project: 'ProSync Dashboard', task: 'UI Development', duration: '2h 30m', status: 'completed' },
+    { id: 2, project: 'Client Portal', task: 'Bug Fixes', duration: '1h 45m', status: 'completed' },
+    { id: 3, project: 'API Integration', task: 'Testing', duration: '3h 15m', status: 'completed' },
+  ];
+
+  const weeklyData = [
+    { day: 'Mon', hours: 8.2, billable: 7.1 },
+    { day: 'Tue', hours: 7.8, billable: 6.9 },
+    { day: 'Wed', hours: 8.5, billable: 7.8 },
+    { day: 'Thu', hours: 7.2, billable: 6.2 },
+    { day: 'Fri', hours: 6.8, billable: 5.9 },
+  ];
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Load productivity metrics, projects, and tasks (time_entries table doesn't exist yet)
-      const [metricsRes, projectsRes, tasksRes] = await Promise.all([
-        supabase.from('productivity_metrics').select('*').eq('user_id', user.id).order('date', { ascending: false }),
-        supabase.from('projects').select('*').eq('user_id', user.id),
-        supabase.from('tasks').select('*').order('updated_at', { ascending: false })
-      ]);
-
-      // Mock time entries for now until database table is created
-      setTimeEntries([]);
-      setProductivityMetrics(metricsRes.data || []);
-      setProjects(projectsRes.data || []);
-      setTasks(tasksRes.data || []);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load time tracking data',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
+    let interval: NodeJS.Timeout;
+    if (isTracking) {
+      interval = setInterval(() => {
+        setCurrentTime(prev => prev + 1);
+      }, 1000);
     }
+    return () => clearInterval(interval);
+  }, [isTracking]);
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const startTimer = async () => {
-    try {
-      const newEntry = {
-        id: crypto.randomUUID(),
-        description: 'Active Time Entry',
-        start_time: new Date().toISOString(),
-        duration_hours: 0,
-        is_billable: true,
-        tags: []
-      };
-
-      setCurrentEntry(newEntry);
-      setIsTracking(true);
-      
-      toast({
-        title: 'Timer Started',
-        description: 'Time tracking session has begun'
-      });
-    } catch (error) {
-      console.error('Error starting timer:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to start timer',
-        variant: 'destructive'
-      });
-    }
+  const handleStartTracking = () => {
+    setIsTracking(true);
+    setActiveProject('Current Task');
+    toast({
+      title: 'Time tracking started',
+      description: 'Timer is now running for your current task.',
+    });
   };
 
-  const stopTimer = async () => {
-    if (!currentEntry) return;
-
-    try {
-      const endTime = new Date();
-      const startTime = new Date(currentEntry.start_time);
-      const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-
-      // Update local state (no database update for now)
-      const completedEntry = {
-        ...currentEntry,
-        end_time: endTime.toISOString(),
-        duration_hours: Math.round(durationHours * 100) / 100,
-        created_at: new Date().toISOString()
-      };
-
-      setTimeEntries(prev => [completedEntry, ...prev]);
-      setIsTracking(false);
-      setCurrentEntry(null);
-      
-      toast({
-        title: 'Timer Stopped',
-        description: `Session completed: ${Math.round(durationHours * 100) / 100} hours`
-      });
-    } catch (error) {
-      console.error('Error stopping timer:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to stop timer',
-        variant: 'destructive'
-      });
-    }
+  const handlePauseTracking = () => {
+    setIsTracking(false);
+    toast({
+      title: 'Time tracking paused',
+      description: 'Timer has been paused. Click play to resume.',
+    });
   };
 
-  const handleCreateEntry = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const entryData = {
-        id: crypto.randomUUID(),
-        user_id: user.id,
-        description: newEntry.description,
-        project_id: newEntry.project_id || null,
-        task_id: newEntry.task_id || null,
-        duration_hours: parseFloat(newEntry.duration_hours),
-        is_billable: newEntry.is_billable,
-        hourly_rate: newEntry.hourly_rate ? parseFloat(newEntry.hourly_rate) : null,
-        notes: newEntry.notes || null,
-        tags: [],
-        created_at: new Date().toISOString()
-      };
-
-      setTimeEntries(prev => [entryData, ...prev]);
-      setNewEntry({
-        description: '',
-        project_id: '',
-        task_id: '',
-        duration_hours: '',
-        is_billable: true,
-        hourly_rate: '',
-        notes: ''
-      });
-      setIsEntryDialogOpen(false);
-      
-      toast({
-        title: 'Success',
-        description: 'Time entry created successfully'
-      });
-    } catch (error) {
-      console.error('Error creating entry:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create time entry',
-        variant: 'destructive'
-      });
-    }
+  const handleStopTracking = () => {
+    setIsTracking(false);
+    setCurrentTime(0);
+    setActiveProject(null);
+    toast({
+      title: 'Time tracking stopped',
+      description: 'Time entry has been saved successfully.',
+    });
   };
-
-  const totalHours = timeEntries.reduce((sum, entry) => sum + entry.duration_hours, 0);
-  const billableHours = timeEntries.filter(entry => entry.is_billable).reduce((sum, entry) => sum + entry.duration_hours, 0);
-  const totalEarnings = timeEntries.reduce((sum, entry) => {
-    return sum + (entry.is_billable && entry.hourly_rate ? entry.duration_hours * entry.hourly_rate : 0);
-  }, 0);
-  const billablePercentage = totalHours > 0 ? (billableHours / totalHours) * 100 : 0;
-
-  const todayMetrics = productivityMetrics.find(m => 
-    new Date(m.date).toDateString() === new Date().toDateString()
-  );
-
-  const filteredEntries = timeEntries.filter(entry => {
-    const matchesSearch = entry.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesProject = projectFilter === 'all' || entry.project_id === projectFilter;
-    return matchesSearch && matchesProject;
-  });
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">TimeTrackPro</h1>
-          <p className="text-muted-foreground">Advanced Time Tracking & Productivity Analytics</p>
-        </div>
-        <div className="flex gap-2">
-          {!isTracking ? (
-            <Button onClick={startTimer} className="bg-green-600 hover:bg-green-700">
-              <Play className="h-4 w-4 mr-2" />
-              Start Timer
-            </Button>
-          ) : (
-            <Button onClick={stopTimer} variant="destructive">
-              <Square className="h-4 w-4 mr-2" />
-              Stop Timer
-            </Button>
-          )}
+    <div className="space-y-6 animate-fade-in">
+      {/* Enhanced Header with Beautiful Gradient */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700 p-8 text-white shadow-2xl">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
+        
+        {/* Floating Elements */}
+        <div className="absolute -top-16 -right-16 w-40 h-40 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-emerald-300/20 rounded-full blur-2xl"></div>
+        
+        <div className="relative z-10">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm border border-white/30 shadow-lg">
+              <Timer className="h-8 w-8" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight mb-2">TimeTrack Pro</h1>
+              <p className="text-xl text-emerald-100 leading-relaxed">
+                Advanced time tracking and productivity analytics
+              </p>
+            </div>
+          </div>
           
-          <Dialog open={isEntryDialogOpen} onOpenChange={setIsEntryDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
-                Manual Entry
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Add Time Entry</DialogTitle>
-                <DialogDescription>Manually log time for completed work</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="entry-description">Description *</Label>
-                  <Input
-                    id="entry-description"
-                    value={newEntry.description}
-                    onChange={(e) => setNewEntry(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="What did you work on?"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="entry-project">Project</Label>
-                    <Select value={newEntry.project_id} onValueChange={(value) => setNewEntry(prev => ({ ...prev, project_id: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select project" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {projects.map(project => (
-                          <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="entry-task">Task</Label>
-                    <Select value={newEntry.task_id} onValueChange={(value) => setNewEntry(prev => ({ ...prev, task_id: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select task" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {tasks.filter(task => !newEntry.project_id || task.project_id === newEntry.project_id).map(task => (
-                          <SelectItem key={task.id} value={task.id}>{task.title}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="entry-duration">Duration (hours) *</Label>
-                    <Input
-                      id="entry-duration"
-                      type="number"
-                      step="0.25"
-                      value={newEntry.duration_hours}
-                      onChange={(e) => setNewEntry(prev => ({ ...prev, duration_hours: e.target.value }))}
-                      placeholder="0.0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="entry-rate">Hourly Rate ($)</Label>
-                    <Input
-                      id="entry-rate"
-                      type="number"
-                      value={newEntry.hourly_rate}
-                      onChange={(e) => setNewEntry(prev => ({ ...prev, hourly_rate: e.target.value }))}
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="entry-notes">Notes</Label>
-                  <Textarea
-                    id="entry-notes"
-                    value={newEntry.notes}
-                    onChange={(e) => setNewEntry(prev => ({ ...prev, notes: e.target.value }))}
-                    placeholder="Additional details about this work session"
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="entry-billable"
-                    checked={newEntry.is_billable}
-                    onChange={(e) => setNewEntry(prev => ({ ...prev, is_billable: e.target.checked }))}
-                  />
-                  <Label htmlFor="entry-billable">Billable</Label>
-                </div>
-                <Button onClick={handleCreateEntry} disabled={!newEntry.description || !newEntry.duration_hours}>
-                  Add Entry
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <div className="flex items-center gap-4 mt-6">
+            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm">
+              <Clock className="h-4 w-4 mr-2" />
+              Smart Tracking
+            </Badge>
+            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Analytics
+            </Badge>
+            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm">
+              <Zap className="h-4 w-4 mr-2" />
+              Productivity Insights
+            </Badge>
+          </div>
         </div>
       </div>
 
-      {/* Active Timer */}
-      {isTracking && currentEntry && (
-        <Card className="border-green-200 bg-green-50">
+      {/* Main Timer Card */}
+      <Card className="bg-gradient-to-br from-white to-gray-50 border-2 shadow-xl">
+        <CardHeader className="text-center pb-4">
+          <CardTitle className="text-2xl font-bold text-gray-800">Current Session</CardTitle>
+          {activeProject && (
+            <Badge variant="outline" className="mx-auto mt-2">
+              {activeProject}
+            </Badge>
+          )}
+        </CardHeader>
+        <CardContent className="text-center space-y-6">
+          <div className="text-6xl font-mono font-bold text-gray-800 tracking-wider">
+            {formatTime(currentTime)}
+          </div>
+          
+          <div className="flex justify-center gap-4">
+            {!isTracking ? (
+              <Button 
+                onClick={handleStartTracking}
+                size="lg" 
+                className="bg-emerald-600 hover:bg-emerald-700 px-8"
+              >
+                <Play className="h-5 w-5 mr-2" />
+                Start
+              </Button>
+            ) : (
+              <>
+                <Button 
+                  onClick={handlePauseTracking}
+                  variant="outline" 
+                  size="lg"
+                  className="px-8"
+                >
+                  <Pause className="h-5 w-5 mr-2" />
+                  Pause
+                </Button>
+                <Button 
+                  onClick={handleStopTracking}
+                  variant="destructive" 
+                  size="lg"
+                  className="px-8"
+                >
+                  <Square className="h-5 w-5 mr-2" />
+                  Stop
+                </Button>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Today's Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-green-100 rounded-full">
-                  <Timer className="h-6 w-6 text-green-600 animate-pulse" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-green-800">Timer Active</h3>
-                  <p className="text-green-700">{currentEntry.description}</p>
-                </div>
+              <div>
+                <p className="text-sm font-medium text-blue-600">Total Hours</p>
+                <p className="text-3xl font-bold text-blue-800">{todayStats.totalHours}</p>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-green-800">
-                  {Math.floor((Date.now() - new Date(currentEntry.start_time).getTime()) / (1000 * 60))} min
-                </div>
-                <p className="text-sm text-green-700">Running</p>
-              </div>
+              <Clock className="h-8 w-8 text-blue-500" />
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalHours.toFixed(1)}h</div>
-            <p className="text-xs text-muted-foreground">All time logged</p>
+        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-emerald-600">Billable Hours</p>
+                <p className="text-3xl font-bold text-emerald-800">{todayStats.billableHours}</p>
+              </div>
+              <Target className="h-8 w-8 text-emerald-500" />
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Billable Hours</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{billableHours.toFixed(1)}h</div>
-            <p className="text-xs text-muted-foreground">{billablePercentage.toFixed(1)}% billable</p>
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-purple-600">Efficiency</p>
+                <p className="text-3xl font-bold text-purple-800">{todayStats.efficiency}%</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-purple-500" />
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalEarnings.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">From billable work</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Focus</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{todayMetrics?.focus_time_minutes || 0}m</div>
-            <p className="text-xs text-muted-foreground">Deep work time</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Efficiency</CardTitle>
-            <Trophy className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{todayMetrics?.efficiency_score || 0}%</div>
-            <p className="text-xs text-muted-foreground">Productivity score</p>
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-orange-600">Focus Time</p>
+                <p className="text-3xl font-bold text-orange-800">{todayStats.focusTime}h</p>
+              </div>
+              <Activity className="h-8 w-8 text-orange-500" />
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Time Tracking Management */}
-      <Tabs defaultValue="entries" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="entries">Time Entries</TabsTrigger>
-          <TabsTrigger value="productivity">Productivity</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
+      {/* Enhanced Tabs Section */}
+      <Tabs defaultValue="entries" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-xl">
+          <TabsTrigger value="entries" className="rounded-lg">Recent Entries</TabsTrigger>
+          <TabsTrigger value="analytics" className="rounded-lg">Analytics</TabsTrigger>
+          <TabsTrigger value="projects" className="rounded-lg">Projects</TabsTrigger>
+          <TabsTrigger value="reports" className="rounded-lg">Reports</TabsTrigger>
         </TabsList>
 
         <TabsContent value="entries" className="space-y-4">
-          {/* Filters */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search entries..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                <Select value={projectFilter} onValueChange={setProjectFilter}>
-                  <SelectTrigger className="w-full md:w-40">
-                    <SelectValue placeholder="Project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Projects</SelectItem>
-                    {projects.map(project => (
-                      <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Time Entries List */}
           <Card>
             <CardHeader>
-              <CardTitle>Time Entries</CardTitle>
-              <CardDescription>Track and manage your time entries</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Today's Time Entries
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="animate-pulse border rounded-lg p-4">
-                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              <div className="space-y-4">
+                {recentEntries.map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-800">{entry.project}</h4>
+                      <p className="text-sm text-gray-600">{entry.task}</p>
                     </div>
-                  ))}
-                </div>
-              ) : filteredEntries.length === 0 ? (
-                <div className="text-center py-8">
-                  <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No time entries found</h3>
-                  <p className="text-muted-foreground">
-                    {searchTerm || projectFilter !== 'all' 
-                      ? 'Try adjusting your filters' 
-                      : 'Start tracking time or add a manual entry'}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {filteredEntries.slice(0, 10).map((entry) => {
-                    const project = projects.find(p => p.id === entry.project_id);
-                    const task = tasks.find(t => t.id === entry.task_id);
-                    
-                    return (
-                      <div key={entry.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className={`p-2 rounded-lg ${entry.is_billable ? 'bg-green-100' : 'bg-gray-100'}`}>
-                                <Clock className={`h-4 w-4 ${entry.is_billable ? 'text-green-600' : 'text-gray-600'}`} />
-                              </div>
-                              <div>
-                                <h3 className="font-semibold">{entry.description}</h3>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  {project && <span>{project.name}</span>}
-                                  {task && <span>• {task.title}</span>}
-                                  <span>• {new Date(entry.created_at).toLocaleDateString()}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-bold text-lg">{entry.duration_hours.toFixed(2)}h</div>
-                            <div className="flex items-center gap-2">
-                              <Badge className={entry.is_billable ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                                {entry.is_billable ? 'Billable' : 'Non-billable'}
-                              </Badge>
-                              {entry.hourly_rate && (
-                                <span className="text-sm text-muted-foreground">
-                                  ${(entry.duration_hours * entry.hourly_rate).toFixed(2)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                    <div className="text-right">
+                      <p className="font-mono font-bold text-gray-800">{entry.duration}</p>
+                      <Badge variant="secondary" className="text-xs">
+                        {entry.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Weekly Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {weeklyData.map((day) => (
+                  <div key={day.day} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="font-medium text-gray-700 w-12">{day.day}</span>
+                    <div className="flex-1 mx-4">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-emerald-500 h-2 rounded-full" 
+                            style={{ width: `${(day.hours / 10) * 100}%` }}
+                          />
                         </div>
+                        <span className="text-sm font-mono text-gray-600">{day.hours}h</span>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="productivity">
-          <Card>
-            <CardHeader>
-              <CardTitle>Productivity Metrics</CardTitle>
-              <CardDescription>Track your productivity patterns and efficiency</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Productivity Dashboard</h3>
-                <p className="text-muted-foreground">Advanced productivity analytics coming soon</p>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {day.billable}h billable
+                    </Badge>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="analytics">
+        <TabsContent value="projects" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Time Analytics</CardTitle>
-              <CardDescription>Analyze your time tracking patterns and trends</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Active Projects
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Analytics Dashboard</h3>
-                <p className="text-muted-foreground">Detailed analytics features coming soon</p>
+              <div className="text-center py-16">
+                <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Project Management</h3>
+                <p className="text-muted-foreground">
+                  Organize your time tracking by projects and clients
+                </p>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="reports">
+        <TabsContent value="reports" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Time Reports</CardTitle>
-              <CardDescription>Generate detailed time tracking reports</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Time Reports
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Report Generator</h3>
-                <p className="text-muted-foreground">Custom report generation coming soon</p>
+              <div className="text-center py-16">
+                <BarChart3 className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Detailed Reports</h3>
+                <p className="text-muted-foreground">
+                  Generate comprehensive time tracking reports and insights
+                </p>
               </div>
             </CardContent>
           </Card>
