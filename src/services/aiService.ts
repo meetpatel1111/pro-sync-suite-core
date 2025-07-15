@@ -93,14 +93,27 @@ export const aiService = {
     }
   },
 
-  // Generate task suggestions using Gemini
-  async generateTaskSuggestions(userId: string, context: string): Promise<TaskSuggestion[]> {
+  // Enhanced task suggestions with user context
+  async generateTaskSuggestions(userId: string, context: string, userContext?: any): Promise<TaskSuggestion[]> {
     const apiKey = await this.getApiKey(userId);
     if (!apiKey) {
       throw new Error('Google Gemini API key not found. Please add your API key in settings.');
     }
 
     try {
+      let enhancedContext = context;
+      
+      if (userContext) {
+        enhancedContext = `
+User Context:
+- Recent Tasks: ${JSON.stringify(userContext.tasks?.slice(0, 3) || [])}
+- Active Projects: ${JSON.stringify(userContext.projects?.slice(0, 2) || [])}
+- Recent Activities: ${JSON.stringify(userContext.timeEntries?.slice(0, 2) || [])}
+
+Base Context: ${context}
+        `;
+      }
+
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: {
@@ -109,7 +122,7 @@ export const aiService = {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `You are a helpful AI assistant that generates task suggestions for productivity improvement. Generate 3-5 task suggestions based on this context: ${context}. Return your response as a JSON array with the following structure for each task: {"id": "unique_id", "title": "task title", "description": "task description", "priority": "low|medium|high", "category": "category name", "estimatedTime": "time estimate"}. Only return the JSON array, no other text.`
+              text: `You are a helpful AI assistant for ProSync Suite. Generate 3-5 task suggestions based on this context: ${enhancedContext}. Return your response as a JSON array with the following structure for each task: {"id": "unique_id", "title": "task title", "description": "task description", "priority": "low|medium|high", "category": "category name", "estimatedTime": "time estimate"}. Only return the JSON array, no other text.`
             }]
           }],
           generationConfig: {
@@ -132,12 +145,10 @@ export const aiService = {
         throw new Error('No response from Gemini');
       }
 
-      // Try to parse JSON response
       try {
         const suggestions = JSON.parse(content);
         return Array.isArray(suggestions) ? suggestions : [];
       } catch {
-        // Fallback: create suggestions from text response
         return [
           {
             id: '1',
@@ -224,8 +235,11 @@ export const aiService = {
     }
 
     try {
-      // Build conversation history for Gemini
-      let conversationText = 'You are a helpful AI assistant for project management and productivity. Be concise and practical in your responses.\n\n';
+      let conversationText = `You are an AI assistant for ProSync Suite, a comprehensive project management platform with multiple integrated apps including TaskMaster (task management), TimeTrackPro (time tracking), CollabSpace (team communication), PlanBoard (project planning), FileVault (file management), BudgetBuddy (expense tracking), InsightIQ (analytics), ResourceHub (resource management), ClientConnect (client management), RiskRadar (risk management), ServiceCore (service desk), and KnowledgeNest (documentation).
+
+You have access to the user's data across all these apps and can provide personalized, context-aware responses. Be helpful, concise, and actionable in your responses.
+
+`;
       
       conversation.forEach(msg => {
         conversationText += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`;
@@ -248,7 +262,7 @@ export const aiService = {
             temperature: 0.7,
             topK: 1,
             topP: 1,
-            maxOutputTokens: 500,
+            maxOutputTokens: 800,
           }
         }),
       });

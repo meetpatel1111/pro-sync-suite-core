@@ -1,69 +1,78 @@
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { QueryClient } from '@tanstack/react-query';
+import { Toaster } from '@/components/ui/toaster';
+import Dashboard from '@/pages/Dashboard';
+import TaskMaster from '@/pages/TaskMaster';
+import TimeTrackPro from '@/pages/TimeTrackPro';
+import BudgetBuddy from '@/pages/BudgetBuddy';
+import CollabSpace from '@/pages/CollabSpace';
+import FileVault from '@/pages/FileVault';
+import ResourceHub from '@/pages/ResourceHub';
+import ClientConnect from '@/pages/ClientConnect';
+import RiskRadar from '@/pages/RiskRadar';
+import ServiceCore from '@/pages/ServiceCore';
+import KnowledgeNestPage from '@/pages/KnowledgeNestPage';
+import SettingsPage from '@/pages/SettingsPage';
+import { AuthProvider } from '@/context/AuthContext';
+import LandingPage from '@/pages/LandingPage';
+import PricingPage from '@/pages/PricingPage';
+import ContactPage from '@/pages/ContactPage';
+import AboutPage from '@/pages/AboutPage';
+import LegalPage from '@/pages/LegalPage';
+import AccountSettings from '@/components/settings/AccountSettings';
+import AppearanceSettings from '@/components/settings/AppearanceSettings';
+import NotificationSettings from '@/components/settings/NotificationSettings';
+import SecuritySettings from '@/components/settings/SecuritySettings';
+import DataSettings from '@/components/settings/DataSettings';
+import IntegrationsSettings from '@/components/settings/IntegrationsSettings';
+import BillingSettings from '@/components/settings/BillingSettings';
+import TeamSettings from '@/components/settings/TeamSettings';
+import AICommandPalette from '@/components/ai/AICommandPalette';
+import AIMultiAppCommandBar from '@/components/ai/AIMultiAppCommandBar';
+import UniversalAIAssistant from '@/components/ai/UniversalAIAssistant';
+import { AIContextProvider } from '@/components/ai/AIContextManager';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import { IntegrationProvider } from "./context/IntegrationContext";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import TaskMaster from "./pages/TaskMaster";
-import TimeTrackPro from "./pages/TimeTrackPro";
-import BudgetBuddy from "./pages/BudgetBuddy";
-import FileVault from "./pages/FileVault";
-import CollabSpace from "./pages/CollabSpace";
-import ResourceHub from "./pages/ResourceHub";
-import ClientConnect from "./pages/ClientConnect";
-import Integrations from "./pages/Integrations";
-import InsightIQ from "./pages/InsightIQ";
-import RiskRadar from "./pages/RiskRadar";
-import KnowledgeNestPage from "./pages/KnowledgeNestPage";
-import ServiceCorePage from "./pages/ServiceCorePage";
-import NotificationCenter from "./pages/NotificationCenter";
-import AIFeatures from "./pages/AIFeatures";
-import ProfileSettings from "./pages/ProfileSettings";
-import TeamDirectoryPage from "./pages/TeamDirectoryPage";
-import PlanBoardPage from "./pages/PlanBoardPage";
-import SettingsPage from "./pages/SettingsPage";
-
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <IntegrationProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+function App() {
+  return (
+    <QueryClient>
+      <Toaster />
+      <AuthProvider>
+        <AIContextProvider>
+          <Router>
             <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/legal" element={<LegalPage />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/taskmaster" element={<TaskMaster />} />
               <Route path="/timetrackpro" element={<TimeTrackPro />} />
               <Route path="/budgetbuddy" element={<BudgetBuddy />} />
-              <Route path="/filevault" element={<FileVault />} />
               <Route path="/collabspace" element={<CollabSpace />} />
+              <Route path="/filevault" element={<FileVault />} />
               <Route path="/resourcehub" element={<ResourceHub />} />
               <Route path="/clientconnect" element={<ClientConnect />} />
-              <Route path="/integrations" element={<Integrations />} />
-              <Route path="/insightiq" element={<InsightIQ />} />
               <Route path="/riskradar" element={<RiskRadar />} />
+              <Route path="/servicecore" element={<ServiceCore />} />
               <Route path="/knowledgenest" element={<KnowledgeNestPage />} />
-              <Route path="/servicecore" element={<ServiceCorePage />} />
-              <Route path="/notification-center" element={<NotificationCenter />} />
-              <Route path="/ai-features" element={<AIFeatures />} />
-              <Route path="/profile" element={<ProfileSettings />} />
-              <Route path="/team-directory" element={<TeamDirectoryPage />} />
-              <Route path="/planboard" element={<PlanBoardPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/settings/account" element={<AccountSettings />} />
+              <Route path="/settings/appearance" element={<AppearanceSettings />} />
+              <Route path="/settings/notifications" element={<NotificationSettings />} />
+              <Route path="/settings/security" element={<SecuritySettings />} />
+              <Route path="/settings/data" element={<DataSettings />} />
+              <Route path="/settings/integrations" element={<IntegrationsSettings />} />
+              <Route path="/settings/billing" element={<BillingSettings />} />
+              <Route path="/settings/team" element={<TeamSettings />} />
             </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </IntegrationProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+            <UniversalAIAssistant />
+          </Router>
+        </AIContextProvider>
+      </AuthProvider>
+    </QueryClient>
+  );
+}
 
 export default App;
