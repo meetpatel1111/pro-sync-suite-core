@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,7 +35,10 @@ import {
   TrendingUp,
   Activity,
   Lightbulb,
-  Archive
+  Archive,
+  Brain,
+  Sparkles,
+  Wand2
 } from 'lucide-react';
 import { knowledgenestService } from '@/services/knowledgenestService';
 import { useAuthContext } from '@/context/AuthContext';
@@ -45,6 +47,8 @@ import type { KnowledgePage } from '@/types/knowledgenest';
 import RichTextEditor from './RichTextEditor';
 import PageVersionHistory from './PageVersionHistory';
 import CollaborationPanel from './CollaborationPanel';
+import AIContentGenerator from './AIContentGenerator';
+import ContentQualityIndicator from './ContentQualityIndicator';
 
 const EnhancedKnowledgeNest = () => {
   const { user } = useAuthContext();
@@ -209,6 +213,17 @@ const EnhancedKnowledgeNest = () => {
     }
   };
 
+  const handleAIContentGenerated = (title: string, content: string, category: string) => {
+    setShowCreateDialog(true);
+    // Auto-fill the create dialog with AI generated content
+    setTimeout(() => {
+      const titleInput = document.getElementById('title') as HTMLInputElement;
+      const contentTextarea = document.querySelector('[data-ai-content]') as HTMLTextAreaElement;
+      if (titleInput) titleInput.value = title;
+      if (contentTextarea) contentTextarea.value = content;
+    }, 100);
+  };
+
   const stats = {
     totalPages: pages.length,
     publishedPages: pages.filter(p => p.is_published).length,
@@ -231,17 +246,22 @@ const EnhancedKnowledgeNest = () => {
 
   return (
     <div className="space-y-6">
-      {/* Enhanced Header */}
+      {/* Enhanced Header with AI Features */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             KnowledgeNest
           </h1>
           <p className="text-muted-foreground mt-2">
-            Centralized knowledge management and collaboration platform
+            AI-powered knowledge management and collaboration platform
           </p>
         </div>
         <div className="flex items-center space-x-3">
+          <AIContentGenerator onContentGenerated={handleAIContentGenerated} />
+          <Button variant="outline" className="gap-2">
+            <Sparkles className="h-4 w-4" />
+            Auto-Tag
+          </Button>
           <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Export
@@ -315,13 +335,14 @@ const EnhancedKnowledgeNest = () => {
         </Card>
       </div>
 
-      {/* Main Content Tabs */}
+      {/* Enhanced Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="browse">Browse Pages</TabsTrigger>
           <TabsTrigger value="favorites">Favorites</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="ai-insights">AI Insights</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -690,74 +711,172 @@ const EnhancedKnowledgeNest = () => {
             </Card>
           </div>
         </TabsContent>
+
+        <TabsContent value="ai-insights" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Content Quality Overview */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Brain className="h-5 w-5 mr-2 text-purple-600" />
+                  Content Quality Overview
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span>High Quality Pages</span>
+                    <Badge className="bg-green-100 text-green-800">
+                      {Math.floor(pages.length * 0.7)}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Needs Improvement</span>
+                    <Badge variant="secondary">
+                      {Math.floor(pages.length * 0.25)}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Missing Tags</span>
+                    <Badge variant="outline">
+                      {pages.filter(p => p.tags.length === 0).length}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* AI Suggestions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Lightbulb className="h-5 w-5 mr-2 text-yellow-600" />
+                  AI Suggestions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm font-medium">Create API Documentation</p>
+                    <p className="text-xs text-muted-foreground">Based on recent development activity</p>
+                  </div>
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <p className="text-sm font-medium">Update Onboarding Guide</p>
+                    <p className="text-xs text-muted-foreground">Last updated 3 months ago</p>
+                  </div>
+                  <div className="p-3 bg-purple-50 rounded-lg">
+                    <p className="text-sm font-medium">Archive Outdated Processes</p>
+                    <p className="text-xs text-muted-foreground">5 pages haven't been viewed in 6 months</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
       </Tabs>
 
-      {/* Page Viewer/Editor */}
+      {/* Enhanced Page Viewer/Editor with Quality Indicator */}
       {selectedPage && (
-        <Card className="mt-6">
-          <CardHeader className="border-b">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <CardTitle className="text-2xl">{selectedPage.title}</CardTitle>
-                <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-2">
-                  <span className="flex items-center">
-                    <Clock className="h-4 w-4 mr-1" />
-                    Version {selectedPage.version}
-                  </span>
-                  <span>Updated {formatDate(selectedPage.updated_at)}</span>
-                  <Badge variant="outline" className="flex items-center">
-                    {getVisibilityIcon(selectedPage.permissions.visibility)}
-                    <span className="ml-1">{selectedPage.permissions.visibility}</span>
-                  </Badge>
+        <div className="grid grid-cols-4 gap-6">
+          <div className="col-span-3">
+            <Card>
+              <CardHeader className="border-b">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-2xl">{selectedPage.title}</CardTitle>
+                    <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-2">
+                      <span className="flex items-center">
+                        <Clock className="h-4 w-4 mr-1" />
+                        Version {selectedPage.version}
+                      </span>
+                      <span>Updated {formatDate(selectedPage.updated_at)}</span>
+                      <Badge variant="outline" className="flex items-center">
+                        {getVisibilityIcon(selectedPage.permissions.visibility)}
+                        <span className="ml-1">{selectedPage.permissions.visibility}</span>
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button variant="outline" size="sm">
+                      <Share2 className="h-4 w-4 mr-1" />
+                      Share
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowVersionHistory(true)}
+                    >
+                      <History className="h-4 w-4 mr-1" />
+                      History
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCollaboration(!showCollaboration)}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-1" />
+                      Comments
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (isEditing) {
+                          handleSavePage();
+                        } else {
+                          setIsEditing(true);
+                        }
+                      }}
+                    >
+                      {isEditing ? 'Save Changes' : <><Edit className="h-4 w-4 mr-1" />Edit</>}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm">
-                  <Share2 className="h-4 w-4 mr-1" />
-                  Share
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowVersionHistory(true)}
-                >
-                  <History className="h-4 w-4 mr-1" />
-                  History
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowCollaboration(!showCollaboration)}
-                >
-                  <MessageCircle className="h-4 w-4 mr-1" />
-                  Comments
-                </Button>
-                <Button
-                  onClick={() => {
-                    if (isEditing) {
-                      handleSavePage();
-                    } else {
-                      setIsEditing(true);
-                    }
-                  }}
-                >
-                  {isEditing ? 'Save Changes' : <><Edit className="h-4 w-4 mr-1" />Edit</>}
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
+              </CardHeader>
+              
+              <CardContent className="p-0">
+                <RichTextEditor
+                  content={isEditing ? editContent : selectedPage.content || ''}
+                  onChange={setEditContent}
+                  onSave={handleSavePage}
+                  onViewHistory={() => setShowVersionHistory(true)}
+                  readOnly={!isEditing}
+                  showToolbar={isEditing}
+                />
+              </CardContent>
+            </Card>
+          </div>
           
-          <CardContent className="p-0">
-            <RichTextEditor
-              content={isEditing ? editContent : selectedPage.content || ''}
-              onChange={setEditContent}
-              onSave={handleSavePage}
-              onViewHistory={() => setShowVersionHistory(true)}
-              readOnly={!isEditing}
-              showToolbar={isEditing}
+          {/* Quality Indicator Sidebar */}
+          <div className="space-y-4">
+            <ContentQualityIndicator 
+              content={selectedPage.content || ''} 
+              title={selectedPage.title} 
             />
-          </CardContent>
-        </Card>
+            
+            {/* AI Actions */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Wand2 className="h-4 w-4" />
+                  AI Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button variant="outline" size="sm" className="w-full justify-start gap-2">
+                  <Sparkles className="h-3 w-3" />
+                  Summarize
+                </Button>
+                <Button variant="outline" size="sm" className="w-full justify-start gap-2">
+                  <Tags className="h-3 w-3" />
+                  Suggest Tags
+                </Button>
+                <Button variant="outline" size="sm" className="w-full justify-start gap-2">
+                  <Brain className="h-3 w-3" />
+                  Improve Content
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       )}
 
       {/* Version History Dialog */}

@@ -173,12 +173,12 @@ const Sidebar = () => {
   return (
     <>
       <div className={cn(
-        "bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-500 ease-in-out shadow-xl",
+        "bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-500 ease-in-out shadow-xl fixed left-0 top-0 h-screen z-50",
         "backdrop-blur-lg bg-white/95 dark:bg-gray-900/95",
         isCollapsed ? 'w-20' : 'w-72'
       )}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-primary/5 to-transparent">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-primary/5 to-transparent shrink-0">
           {!isCollapsed && (
             <div className="flex items-center gap-2">
               <div className="p-2 bg-gradient-to-r from-primary to-primary/80 rounded-xl shadow-lg">
@@ -207,8 +207,8 @@ const Sidebar = () => {
           </Button>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
+        {/* Navigation - Fixed height with scroll */}
+        <nav className="flex-1 p-4 space-y-6 overflow-y-auto overflow-x-hidden min-h-0">
           {/* Main Apps */}
           <div className="space-y-2">
             <SectionHeader title="Main Apps" section="main" count={mainApps.length} />
@@ -267,7 +267,7 @@ const Sidebar = () => {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-800/50">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-800/50 shrink-0">
           {!isCollapsed ? (
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
@@ -289,16 +289,23 @@ const Sidebar = () => {
         </div>
       </div>
 
+      {/* Spacer for main content */}
+      <div className={cn(
+        "transition-all duration-500 ease-in-out",
+        isCollapsed ? 'w-20' : 'w-72'
+      )} />
+
       <style>{`
         nav::-webkit-scrollbar {
-          width: 4px;
+          width: 6px;
         }
         nav::-webkit-scrollbar-track {
           background: transparent;
+          border-radius: 10px;
         }
         nav::-webkit-scrollbar-thumb {
           background: rgba(156, 163, 175, 0.3);
-          border-radius: 4px;
+          border-radius: 10px;
         }
         nav::-webkit-scrollbar-thumb:hover {
           background: rgba(156, 163, 175, 0.5);
