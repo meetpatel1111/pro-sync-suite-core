@@ -34,22 +34,28 @@ export const useAIAssistant = () => {
     setIsLoading(true);
 
     try {
-      let contextData = {};
+      let contextData: any = {};
       let contextPrompt = '';
 
       if (includeContext) {
         // Get comprehensive user data for context
         contextData = await aiContextService.getComprehensiveUserData(user.id);
         
-        // Build context prompt
+        // Build context prompt with proper type checking
+        const tasks = Array.isArray(contextData.tasks) ? contextData.tasks.slice(0, 5) : [];
+        const projects = Array.isArray(contextData.projects) ? contextData.projects.slice(0, 3) : [];
+        const timeEntries = Array.isArray(contextData.timeEntries) ? contextData.timeEntries.slice(0, 3) : [];
+        const files = Array.isArray(contextData.files) ? contextData.files.slice(0, 3) : [];
+        const expenses = Array.isArray(contextData.expenses) ? contextData.expenses.slice(0, 3) : [];
+
         contextPrompt = `
 Context about the user's current work:
 
-Recent Tasks: ${JSON.stringify(contextData.tasks?.slice(0, 5) || [])}
-Active Projects: ${JSON.stringify(contextData.projects?.slice(0, 3) || [])}
-Recent Time Entries: ${JSON.stringify(contextData.timeEntries?.slice(0, 3) || [])}
-Recent Files: ${JSON.stringify(contextData.files?.slice(0, 3) || [])}
-Recent Expenses: ${JSON.stringify(contextData.expenses?.slice(0, 3) || [])}
+Recent Tasks: ${JSON.stringify(tasks)}
+Active Projects: ${JSON.stringify(projects)}
+Recent Time Entries: ${JSON.stringify(timeEntries)}
+Recent Files: ${JSON.stringify(files)}
+Recent Expenses: ${JSON.stringify(expenses)}
 
 Please provide a helpful response based on this context and the user's question: "${message}"
         `;

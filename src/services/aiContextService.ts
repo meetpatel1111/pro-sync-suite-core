@@ -1,201 +1,259 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { safeQueryTable } from '@/utils/db-helpers';
 
-export interface AIUserContext {
-  id: string;
-  user_id: string;
-  context_type: string;
-  reference_id: string;
-  summary?: string;
-  created_at: string;
-}
-
-export interface AIChatHistory {
-  id: string;
-  user_id: string;
-  message: string;
-  response: string;
-  intent?: string;
-  context_snapshot?: Record<string, any>;
-  timestamp: string;
+interface UserContextData {
+  tasks?: any[];
+  projects?: any[];
+  timeEntries?: any[];
+  files?: any[];
+  expenses?: any[];
+  clients?: any[];
+  messages?: any[];
+  tickets?: any[];
+  risks?: any[];
+  insights?: any[];
 }
 
 export const aiContextService = {
-  // Store user context for AI
-  async storeUserContext(userId: string, contextType: string, referenceId: string, summary?: string) {
-    return await safeQueryTable('ai_user_context', (query) => 
-      query.insert({
-        user_id: userId,
-        context_type: contextType,
-        reference_id: referenceId,
-        summary: summary || null
-      })
-    );
-  },
-
-  // Get user context by type
-  async getUserContext(userId: string, contextType?: string, limit: number = 50) {
-    return await safeQueryTable('ai_user_context', (query) => {
-      let filteredQuery = query
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-        
-      if (contextType) {
-        filteredQuery = filteredQuery.eq('context_type', contextType);
-      }
-      
-      return filteredQuery;
-    });
-  },
-
-  // Store chat interaction
-  async storeChatInteraction(
-    userId: string, 
-    message: string, 
-    response: string, 
-    intent?: string, 
-    contextSnapshot?: Record<string, any>
-  ) {
-    return await safeQueryTable('ai_chat_history', (query) => 
-      query.insert({
-        user_id: userId,
-        message,
-        response,
-        intent: intent || null,
-        context_snapshot: contextSnapshot || null
-      })
-    );
-  },
-
-  // Get chat history
-  async getChatHistory(userId: string, limit: number = 20) {
-    return await safeQueryTable('ai_chat_history', (query) => 
-      query
-        .select('*')
-        .eq('user_id', userId)
-        .order('timestamp', { ascending: false })
-        .limit(limit)
-    );
-  },
-
-  // Get comprehensive user data for AI context
-  async getComprehensiveUserData(userId: string) {
+  // Get comprehensive user data from all apps
+  async getComprehensiveUserData(userId: string): Promise<UserContextData> {
     try {
       const [
         tasksResult,
         projectsResult,
         timeEntriesResult,
-        messagesResult,
         filesResult,
         expensesResult,
-        clientsResult
+        clientsResult,
+        messagesResult,
+        ticketsResult
       ] = await Promise.allSettled([
-        safeQueryTable('tasks', (query) => 
-          query.select('*').or(`created_by.eq.${userId},assignee_id.eq.${userId},assigned_to.cs.{${userId}}`).limit(20)
-        ),
-        safeQueryTable('projects', (query) => 
-          query.select('*').eq('user_id', userId).limit(10)
-        ),
-        safeQueryTable('time_entries', (query) => 
-          query.select('*').eq('user_id', userId).order('date', { ascending: false }).limit(10)
-        ),
-        safeQueryTable('messages', (query) => 
-          query.select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(10)
-        ),
-        safeQueryTable('files', (query) => 
-          query.select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(10)
-        ),
-        safeQueryTable('expenses', (query) => 
-          query.select('*').eq('user_id', userId).order('date', { ascending: false }).limit(10)
-        ),
-        safeQueryTable('clients', (query) => 
-          query.select('*').eq('user_id', userId).limit(10)
-        )
+        // TaskMaster data
+        supabase
+          .from('tasks')
+          .select('*')
+          .or(`created_by.eq.${userId},assignee_id.eq.${userId}`)
+          .order('updated_at', { ascending: false })
+          .limit(10),
+        
+        // Projects data
+        supabase
+          .from('projects')
+          .select('*')
+          .eq('user_id', userId)
+          .order('updated_at', { ascending: false })
+          .limit(5),
+        
+        // TimeTrackPro data
+        supabase
+          .from('time_entries')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(10),
+        
+        // FileVault data
+        supabase
+          .from('files')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(10),
+        
+        // BudgetBuddy data
+        supabase
+          .from('expenses')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(10),
+        
+        // ClientConnect data
+        supabase
+          .from('clients')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(10),
+        
+        // CollabSpace data
+        supabase
+          .from('messages')
+          .select('*')
+          .eq('sender_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(20),
+        
+        // ServiceCore data
+        supabase
+          .from('tickets')
+          .select('*')
+          .or(`submitted_by.eq.${userId},assigned_to.eq.${userId}`)
+          .order('created_at', { ascending: false })
+          .limit(10)
       ]);
 
-      return {
+      const contextData: UserContextData = {
         tasks: tasksResult.status === 'fulfilled' ? tasksResult.value.data || [] : [],
         projects: projectsResult.status === 'fulfilled' ? projectsResult.value.data || [] : [],
         timeEntries: timeEntriesResult.status === 'fulfilled' ? timeEntriesResult.value.data || [] : [],
-        messages: messagesResult.status === 'fulfilled' ? messagesResult.value.data || [] : [],
         files: filesResult.status === 'fulfilled' ? filesResult.value.data || [] : [],
         expenses: expensesResult.status === 'fulfilled' ? expensesResult.value.data || [] : [],
-        clients: clientsResult.status === 'fulfilled' ? clientsResult.value.data || [] : []
+        clients: clientsResult.status === 'fulfilled' ? clientsResult.value.data || [] : [],
+        messages: messagesResult.status === 'fulfilled' ? messagesResult.value.data || [] : [],
+        tickets: ticketsResult.status === 'fulfilled' ? ticketsResult.value.data || [] : []
       };
+
+      return contextData;
     } catch (error) {
-      console.error('Error getting comprehensive user data:', error);
-      throw error;
+      console.error('Error fetching comprehensive user data:', error);
+      return {};
     }
   },
 
-  // Search across all user data
-  async searchUserData(userId: string, searchTerm: string) {
-    const searchResults = {
-      tasks: [],
-      projects: [],
-      files: [],
-      messages: [],
-      clients: []
-    };
-
+  // Store AI chat interactions for context building
+  async storeChatInteraction(
+    userId: string,
+    userMessage: string,
+    aiResponse: string,
+    intent?: string,
+    contextData?: any
+  ) {
     try {
-      // Search tasks
-      const tasksResult = await safeQueryTable('tasks', (query) => 
-        query
-          .select('*')
-          .or(`created_by.eq.${userId},assignee_id.eq.${userId},assigned_to.cs.{${userId}}`)
-          .or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
-          .limit(5)
-      );
-      searchResults.tasks = tasksResult.data || [];
+      await supabase
+        .from('ai_chat_history')
+        .insert({
+          user_id: userId,
+          message: userMessage,
+          response: aiResponse,
+          intent: intent,
+          context_snapshot: contextData || {}
+        });
+    } catch (error) {
+      console.error('Error storing chat interaction:', error);
+    }
+  },
 
-      // Search projects
-      const projectsResult = await safeQueryTable('projects', (query) => 
-        query
+  // Search across user data
+  async searchUserData(userId: string, searchTerm: string) {
+    try {
+      const searchResults = await Promise.allSettled([
+        // Search tasks
+        supabase
+          .from('tasks')
+          .select('*')
+          .or(`created_by.eq.${userId},assignee_id.eq.${userId}`)
+          .ilike('title', `%${searchTerm}%`),
+        
+        // Search files
+        supabase
+          .from('files')
           .select('*')
           .eq('user_id', userId)
-          .or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
-          .limit(5)
-      );
-      searchResults.projects = projectsResult.data || [];
-
-      // Search files
-      const filesResult = await safeQueryTable('files', (query) => 
-        query
+          .ilike('name', `%${searchTerm}%`),
+        
+        // Search messages
+        supabase
+          .from('messages')
           .select('*')
-          .eq('user_id', userId)
-          .or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
-          .limit(5)
-      );
-      searchResults.files = filesResult.data || [];
-
-      // Search messages
-      const messagesResult = await safeQueryTable('messages', (query) => 
-        query
-          .select('*')
-          .eq('user_id', userId)
+          .eq('sender_id', userId)
           .ilike('content', `%${searchTerm}%`)
-          .limit(5)
-      );
-      searchResults.messages = messagesResult.data || [];
+      ]);
 
-      // Search clients
-      const clientsResult = await safeQueryTable('clients', (query) => 
-        query
-          .select('*')
-          .eq('user_id', userId)
-          .or(`name.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%`)
-          .limit(5)
-      );
-      searchResults.clients = clientsResult.data || [];
-
+      return {
+        tasks: searchResults[0].status === 'fulfilled' ? searchResults[0].value.data : [],
+        files: searchResults[1].status === 'fulfilled' ? searchResults[1].value.data : [],
+        messages: searchResults[2].status === 'fulfilled' ? searchResults[2].value.data : []
+      };
     } catch (error) {
       console.error('Error searching user data:', error);
+      return { tasks: [], files: [], messages: [] };
     }
+  },
 
-    return searchResults;
+  // Get user activity summary
+  async getUserActivitySummary(userId: string, days: number = 7) {
+    try {
+      const since = new Date();
+      since.setDate(since.getDate() - days);
+      const sinceISO = since.toISOString();
+
+      const [
+        recentTasks,
+        recentTimeEntries,
+        recentExpenses,
+        recentMessages
+      ] = await Promise.allSettled([
+        supabase
+          .from('tasks')
+          .select('*')
+          .or(`created_by.eq.${userId},assignee_id.eq.${userId}`)
+          .gte('updated_at', sinceISO),
+        
+        supabase
+          .from('time_entries')
+          .select('*')
+          .eq('user_id', userId)
+          .gte('created_at', sinceISO),
+        
+        supabase
+          .from('expenses')
+          .select('*')
+          .eq('user_id', userId)
+          .gte('created_at', sinceISO),
+        
+        supabase
+          .from('messages')
+          .select('*')
+          .eq('sender_id', userId)
+          .gte('created_at', sinceISO)
+      ]);
+
+      return {
+        tasksUpdated: recentTasks.status === 'fulfilled' ? recentTasks.value.data?.length || 0 : 0,
+        hoursLogged: recentTimeEntries.status === 'fulfilled' 
+          ? recentTimeEntries.value.data?.reduce((sum: number, entry: any) => sum + (entry.hours || 0), 0) || 0 
+          : 0,
+        expensesAdded: recentExpenses.status === 'fulfilled' ? recentExpenses.value.data?.length || 0 : 0,
+        messagesSent: recentMessages.status === 'fulfilled' ? recentMessages.value.data?.length || 0 : 0
+      };
+    } catch (error) {
+      console.error('Error getting user activity summary:', error);
+      return { tasksUpdated: 0, hoursLogged: 0, expensesAdded: 0, messagesSent: 0 };
+    }
+  },
+
+  // Get project insights
+  async getProjectInsights(userId: string, projectId?: string) {
+    try {
+      let projectQuery = supabase
+        .from('projects')
+        .select(`
+          *,
+          tasks(count),
+          expenses(sum(amount))
+        `)
+        .eq('user_id', userId);
+
+      if (projectId) {
+        projectQuery = projectQuery.eq('id', projectId);
+      }
+
+      const { data: projects, error } = await projectQuery;
+
+      if (error) throw error;
+
+      return projects?.map(project => ({
+        id: project.id,
+        name: project.name,
+        status: project.status,
+        taskCount: project.tasks?.[0]?.count || 0,
+        totalExpenses: project.expenses?.[0]?.sum || 0,
+        daysActive: Math.floor((new Date().getTime() - new Date(project.created_at).getTime()) / (1000 * 60 * 60 * 24))
+      })) || [];
+    } catch (error) {
+      console.error('Error getting project insights:', error);
+      return [];
+    }
   }
 };

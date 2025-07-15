@@ -108,7 +108,7 @@ const AIFeatures = () => {
                 {/* Core AI Features */}
                 <TabsContent value="core" className="space-y-6 animate-fade-in">
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                    <Card className="col-span-1 lg:col-span-2 shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-l-blue-500">
+                    <Card className="col-span-1 lg:col-span-2 shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-l-blue-500 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-white">
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <Bot className="h-5 w-5 text-primary animate-pulse" />
@@ -121,7 +121,7 @@ const AIFeatures = () => {
                       </CardContent>
                     </Card>
 
-                    <Card className="shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-l-green-500">
+                    <Card className="shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-l-green-500 hover:bg-gradient-to-r hover:from-green-50/50 hover:to-white">
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <Lightbulb className="h-5 w-5 text-green-600 animate-pulse" />
@@ -135,7 +135,7 @@ const AIFeatures = () => {
                     </Card>
 
                     <div className="col-span-full">
-                      <Card className="shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-l-purple-500">
+                      <Card className="shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-l-purple-500 hover:bg-gradient-to-r hover:from-purple-50/50 hover:to-white">
                         <CardHeader>
                           <CardTitle className="flex items-center gap-2">
                             <Sparkles className="h-5 w-5 text-purple-600 animate-pulse" />
@@ -149,7 +149,7 @@ const AIFeatures = () => {
                       </Card>
                     </div>
 
-                    <Card className="shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-l-indigo-500">
+                    <Card className="shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-l-indigo-500 hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-white">
                       <CardContent className="p-6">
                         <AIVoiceAssistant />
                       </CardContent>
@@ -160,19 +160,19 @@ const AIFeatures = () => {
                 {/* Multimedia AI Features */}
                 <TabsContent value="multimedia" className="space-y-6 animate-fade-in">
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                    <Card className="shadow-lg hover:shadow-xl transition-all duration-300">
+                    <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:bg-gradient-to-r hover:from-pink-50/50 hover:to-white">
                       <CardContent className="p-6">
                         <AIImageAnalyzer />
                       </CardContent>
                     </Card>
 
-                    <Card className="shadow-lg hover:shadow-xl transition-all duration-300">
+                    <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:bg-gradient-to-r hover:from-purple-50/50 hover:to-white">
                       <CardContent className="p-6">
                         <AIVideoProcessor />
                       </CardContent>
                     </Card>
 
-                    <Card className="shadow-lg hover:shadow-xl transition-all duration-300">
+                    <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-white">
                       <CardContent className="p-6">
                         <AILanguageTranslator />
                       </CardContent>
@@ -183,13 +183,13 @@ const AIFeatures = () => {
                 {/* Analytics AI Features */}
                 <TabsContent value="analytics" className="space-y-6 animate-fade-in">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <Card className="shadow-lg hover:shadow-xl transition-all duration-300">
+                    <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:bg-gradient-to-r hover:from-cyan-50/50 hover:to-white">
                       <CardContent className="p-6">
                         <AISentimentAnalyzer />
                       </CardContent>
                     </Card>
 
-                    <Card className="shadow-lg hover:shadow-xl transition-all duration-300">
+                    <Card className="shadow-lg hover:shadow-xl transition-all duration-300 hover:bg-gradient-to-r hover:from-teal-50/50 hover:to-white">
                       <CardContent className="p-6">
                         <AIDataMiningTool />
                       </CardContent>
@@ -209,6 +209,16 @@ const AIFeatures = () => {
         }
         .animate-float {
           animation: float 6s ease-in-out infinite;
+        }
+        @keyframes scale-in {
+          0% { transform: scale(0.95); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-scale-in {
+          animation: scale-in 0.3s ease-out;
+        }
+        .hover\\:bg-gradient-to-r:hover {
+          backdrop-filter: blur(2px);
         }
       `}</style>
     </AppLayout>
