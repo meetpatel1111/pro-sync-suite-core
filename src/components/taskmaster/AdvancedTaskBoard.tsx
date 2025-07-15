@@ -4,395 +4,465 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Progress } from '@/components/ui/progress';
-import {
-  Plus, Clock, AlertCircle, User, Calendar, Flag,
-  MessageSquare, Paperclip, Eye, MoreVertical, Filter
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { 
+  Plus, 
+  Calendar, 
+  Clock, 
+  User, 
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Settings,
+  Filter,
+  Search,
+  MoreHorizontal,
+  Flag
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import type { Project, Board } from '@/types/taskmaster';
-import CreateTaskDialog from './CreateTaskDialog';
-import TaskDetailDialog from './TaskDetailDialog';
+import { useAuthContext } from '@/context/AuthContext';
 
-interface AdvancedTaskBoardProps {
-  project: Project;
-  board: Board;
+// Define types and interfaces
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority: string;
+  assignee_id?: string;
+  due_date?: string;
+  project_id?: string;
+  board_id?: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+  story_points?: number;
+  labels?: string[];
+}
+
+interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  status: string;
+  user_id: string;
+}
+
+interface Board {
+  id: string;
+  name: string;
+  type: string;
+  project_id?: string;
+  config: {
+    columns: Column[];
+  };
 }
 
 interface Column {
   id: string;
   name: string;
   color?: string;
-  wipLimit?: number;
-  tasks: any[];
 }
 
-const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board }) => {
+interface CreateTaskDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onTaskCreated: () => Promise<void>;
+  projectId?: string;
+  boardId?: string;
+  status?: string;
+}
+
+const AdvancedTaskBoard: React.FC = () => {
+  // State variables
+  const { user } = useAuthContext();
   const { toast } = useToast();
-  const { user } = useAuth();
-  const [columns, setColumns] = useState<Column[]>([]);
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [createTaskDialogOpen, setCreateTaskDialogOpen] = useState(false);
-  const [selectedColumnId, setSelectedColumnId] = useState<string>('');
-  const [selectedTask, setSelectedTask] = useState<any | null>(null);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterAssignee, setFilterAssignee] = useState<string>('all');
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedBoard, setSelectedBoard] = useState<Board | null>(null);
+  const [boards, setBoards] = useState<Board[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+
+  // Default columns if no board is selected
+  const defaultColumns: Column[] = [
+    { id: 'todo', name: 'To Do', color: '#6b7280' },
+    { id: 'in_progress', name: 'In Progress', color: '#f59e0b' },
+    { id: 'review', name: 'Review', color: '#8b5cf6' },
+    { id: 'done', name: 'Done', color: '#10b981' }
+  ];
+
+  const columns = selectedBoard?.config?.columns || defaultColumns;
+
+  // useEffect hooks and data loading functions
 
   useEffect(() => {
-    if (user && board) {
-      loadBoardData();
-      subscribeToTasks();
+    if (user) {
+      loadProjects();
     }
-  }, [user, board]);
+  }, [user]);
 
-  const loadBoardData = async () => {
-    setIsLoading(true);
+  useEffect(() => {
+    if (selectedProject) {
+      loadBoards();
+      loadTasks();
+    }
+  }, [selectedProject]);
+
+  useEffect(() => {
+    if (selectedBoard) {
+      loadTasks();
+    }
+  }, [selectedBoard]);
+
+  const loadProjects = async () => {
     try {
-      // Load tasks for this board
-      const { data: tasksData, error: tasksError } = await supabase
-        .from('tasks')
+      const { data, error } = await supabase
+        .from('projects')
         .select('*')
-        .eq('board_id', board.id)
-        .order('position', { ascending: true });
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
 
-      if (tasksError) throw tasksError;
-
-      setTasks(tasksData || []);
-      
-      // Initialize columns based on board config
-      const boardColumns = board.config?.columns || [
-        { id: 'todo', name: 'To Do', color: '#6b7280' },
-        { id: 'in_progress', name: 'In Progress', color: '#3b82f6' },
-        { id: 'review', name: 'Review', color: '#f59e0b' },
-        { id: 'done', name: 'Done', color: '#10b981' }
-      ];
-
-      const columnsWithTasks = boardColumns.map(col => ({
-        ...col,
-        tasks: (tasksData || []).filter(task => task.status === col.id)
-      }));
-
-      setColumns(columnsWithTasks);
+      if (error) throw error;
+      setProjects(data || []);
+      if (data && data.length > 0) {
+        setSelectedProject(data[0]);
+      }
     } catch (error) {
-      console.error('Error loading board data:', error);
-      toast({
-        title: "Failed to load board",
-        description: "An error occurred while loading the board data",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+      console.error('Error loading projects:', error);
     }
   };
 
-  const subscribeToTasks = () => {
-    const channel = supabase
-      .channel('board-tasks')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tasks',
-          filter: `board_id=eq.${board.id}`
-        },
-        () => {
-          loadBoardData();
-        }
-      )
-      .subscribe();
+  const loadBoards = async () => {
+    if (!selectedProject) return;
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    try {
+      const { data, error } = await supabase
+        .from('boards')
+        .select('*')
+        .eq('project_id', selectedProject.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setBoards(data || []);
+      if (data && data.length > 0) {
+        setSelectedBoard(data[0]);
+      }
+    } catch (error) {
+      console.error('Error loading boards:', error);
+    }
+  };
+
+  const loadTasks = async () => {
+    if (!selectedProject) return;
+
+    try {
+      setLoading(true);
+      let query = supabase
+        .from('tasks')
+        .select('*')
+        .eq('project_id', selectedProject.id);
+
+      if (selectedBoard) {
+        query = query.eq('board_id', selectedBoard.id);
+      }
+
+      const { data, error } = await query.order('position', { ascending: true });
+
+      if (error) throw error;
+      setTasks(data || []);
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDragEnd = async (result: DropResult) => {
-    const { destination, source, draggableId } = result;
+    if (!result.destination) return;
 
-    if (!destination) return;
-
-    // Same position, no change
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
+    const { source, destination } = result;
+    
+    if (source.droppableId === destination.droppableId && source.index === destination.index) {
       return;
     }
 
-    const sourceColumn = columns.find(col => col.id === source.droppableId);
-    const destColumn = columns.find(col => col.id === destination.droppableId);
-    
-    if (!sourceColumn || !destColumn) return;
-
-    const draggedTask = sourceColumn.tasks[source.index];
+    const taskId = result.draggableId;
+    const newStatus = destination.droppableId;
 
     try {
-      // Update task status and position
       const { error } = await supabase
         .from('tasks')
-        .update({
-          status: destination.droppableId,
-          position: destination.index,
-          updated_at: new Date().toISOString(),
-          updated_by: user?.id
+        .update({ 
+          status: newStatus,
+          position: destination.index 
         })
-        .eq('id', draggableId);
+        .eq('id', taskId);
 
       if (error) throw error;
 
-      // Optimistic update
-      const newColumns = columns.map(col => {
-        if (col.id === source.droppableId) {
-          const newTasks = [...col.tasks];
-          newTasks.splice(source.index, 1);
-          return { ...col, tasks: newTasks };
-        }
-        if (col.id === destination.droppableId) {
-          const newTasks = [...col.tasks];
-          newTasks.splice(destination.index, 0, {
-            ...draggedTask,
-            status: destination.droppableId
-          });
-          return { ...col, tasks: newTasks };
-        }
-        return col;
-      });
-
-      setColumns(newColumns);
+      // Update local state
+      const updatedTasks = tasks.map(task => 
+        task.id === taskId 
+          ? { ...task, status: newStatus, position: destination.index }
+          : task
+      );
+      setTasks(updatedTasks);
 
       toast({
-        title: "Task moved",
-        description: `Task moved to ${destColumn.name}`,
+        title: 'Success',
+        description: 'Task moved successfully'
       });
     } catch (error) {
-      console.error('Error moving task:', error);
+      console.error('Error updating task:', error);
       toast({
-        title: "Failed to move task",
-        description: "An error occurred while moving the task",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to move task',
+        variant: 'destructive'
       });
     }
-  };
-
-  const handleCreateTask = (columnId: string) => {
-    setSelectedColumnId(columnId);
-    setCreateTaskDialogOpen(true);
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'text-red-500';
-      case 'high': return 'text-orange-500';
-      case 'medium': return 'text-yellow-500';
-      case 'low': return 'text-green-500';
-      default: return 'text-gray-500';
+      case 'critical': return 'bg-red-500';
+      case 'high': return 'bg-orange-500';
+      case 'medium': return 'bg-yellow-500';
+      case 'low': return 'bg-green-500';
+      default: return 'bg-gray-500';
     }
   };
 
-  const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return <AlertCircle className="h-3 w-3" />;
-      case 'high': return <Flag className="h-3 w-3" />;
-      default: return null;
-    }
+  const getTasksByStatus = (status: string) => {
+    return tasks.filter(task => task.status === status);
   };
 
-  const getFilteredTasks = (columnTasks: any[]) => {
-    return columnTasks.filter(task => {
-      const statusMatch = filterStatus === 'all' || task.status === filterStatus;
-      const assigneeMatch = filterAssignee === 'all' || 
-        (task.assigned_to && task.assigned_to.includes(filterAssignee));
-      return statusMatch && assigneeMatch;
-    });
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground">Loading tasks...</div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Board Header */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">{board.name}</h2>
-          <p className="text-muted-foreground">{board.description}</p>
+          <h1 className="text-3xl font-bold">TaskMaster</h1>
+          <p className="text-muted-foreground">Advanced project and task management</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-          </Button>
-          <Button variant="outline" size="sm">
-            <MoreVertical className="h-4 w-4" />
+        <div className="flex items-center space-x-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 w-64"
+            />
+          </div>
+          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Status</SelectItem>
+              {columns.map(column => (
+                <SelectItem key={column.id} value={column.id}>
+                  {column.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Task
           </Button>
         </div>
       </div>
 
+      {/* Project and Board Selection */}
+      <div className="flex items-center space-x-4 p-4 bg-muted/50 rounded-lg">
+        <div className="flex items-center space-x-2">
+          <Label>Project:</Label>
+          <Select 
+            value={selectedProject?.id || ''} 
+            onValueChange={(value) => {
+              const project = projects.find(p => p.id === value);
+              setSelectedProject(project || null);
+            }}
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Select project" />
+            </SelectTrigger>
+            <SelectContent>
+              {projects.map(project => (
+                <SelectItem key={project.id} value={project.id}>
+                  {project.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {boards.length > 0 && (
+          <div className="flex items-center space-x-2">
+            <Label>Board:</Label>
+            <Select 
+              value={selectedBoard?.id || ''} 
+              onValueChange={(value) => {
+                const board = boards.find(b => b.id === value);
+                setSelectedBoard(board || null);
+              }}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Select board" />
+              </SelectTrigger>
+              <SelectContent>
+                {boards.map(board => (
+                  <SelectItem key={board.id} value={board.id}>
+                    {board.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+
       {/* Board Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        {columns.map(column => (
-          <Card key={column.id}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium">{column.name}</h3>
-                <Badge variant="secondary">{column.tasks.length}</Badge>
-              </div>
-              {column.wipLimit && (
-                <Progress 
-                  value={(column.tasks.length / column.wipLimit) * 100} 
-                  className="h-1 mt-2"
-                />
-              )}
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {columns.map(column => {
+          const columnTasks = getTasksByStatus(column.id);
+          return (
+            <Card key={column.id}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center">
+                  <div 
+                    className="w-3 h-3 rounded-full mr-2" 
+                    style={{ backgroundColor: column.color }}
+                  />
+                  {column.name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{columnTasks.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  {columnTasks.reduce((acc, task) => acc + (task.story_points || 0), 0)} points
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Kanban Board */}
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {columns.map(column => (
-            <div key={column.id} className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: column.color }}
-                  />
-                  <h3 className="font-medium">{column.name}</h3>
-                  <Badge variant="secondary">{getFilteredTasks(column.tasks).length}</Badge>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => handleCreateTask(column.id)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-
+            <Card key={column.id} className="flex flex-col h-full">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div 
+                      className="w-3 h-3 rounded-full mr-2" 
+                      style={{ backgroundColor: column.color }}
+                    />
+                    {column.name}
+                  </div>
+                  <Badge variant="secondary">
+                    {getTasksByStatus(column.id).length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              
               <Droppable droppableId={column.id}>
                 {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
+                  <CardContent 
                     {...provided.droppableProps}
-                    className={`space-y-3 min-h-[200px] p-2 rounded-lg transition-colors ${
+                    ref={provided.innerRef}
+                    className={`flex-1 space-y-3 min-h-[400px] ${
                       snapshot.isDraggingOver ? 'bg-muted/50' : ''
                     }`}
                   >
-                    {getFilteredTasks(column.tasks).map((task, index) => (
+                    {getTasksByStatus(column.id).map((task, index) => (
                       <Draggable key={task.id} draggableId={task.id} index={index}>
                         {(provided, snapshot) => (
                           <Card
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            className={`cursor-pointer transition-all hover:shadow-md ${
-                              snapshot.isDragging ? 'shadow-lg rotate-3' : ''
+                            className={`cursor-move transition-shadow ${
+                              snapshot.isDragging ? 'shadow-lg' : ''
                             }`}
-                            onClick={() => setSelectedTask(task)}
                           >
-                            <CardContent className="p-4 space-y-3">
-                              {/* Task Header */}
-                              <div className="flex items-start justify-between gap-2">
-                                <h4 className="font-medium text-sm line-clamp-2">
-                                  {task.title}
-                                </h4>
-                                {getPriorityIcon(task.priority) && (
-                                  <div className={getPriorityColor(task.priority)}>
-                                    {getPriorityIcon(task.priority)}
+                            <CardContent className="p-4">
+                              <div className="space-y-3">
+                                <div className="flex items-start justify-between">
+                                  <h4 className="font-medium text-sm line-clamp-2">
+                                    {task.title}
+                                  </h4>
+                                  <div className={`w-2 h-2 rounded-full ${getPriorityColor(task.priority)}`} />
+                                </div>
+                                
+                                {task.description && (
+                                  <p className="text-xs text-muted-foreground line-clamp-2">
+                                    {task.description}
+                                  </p>
+                                )}
+                                
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-2">
+                                    {task.story_points && (
+                                      <Badge variant="outline" className="text-xs">
+                                        {task.story_points} pts
+                                      </Badge>
+                                    )}
+                                    <Badge variant="outline" className="text-xs capitalize">
+                                      {task.priority}
+                                    </Badge>
+                                  </div>
+                                  
+                                  {task.assignee_id && (
+                                    <Avatar className="h-6 w-6">
+                                      <AvatarFallback className="text-xs">
+                                        {task.assignee_id.slice(0, 2).toUpperCase()}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  )}
+                                </div>
+                                
+                                {task.due_date && (
+                                  <div className="flex items-center text-xs text-muted-foreground">
+                                    <Calendar className="h-3 w-3 mr-1" />
+                                    {new Date(task.due_date).toLocaleDateString()}
                                   </div>
                                 )}
-                              </div>
-
-                              {/* Task Details */}
-                              {task.description && (
-                                <p className="text-xs text-muted-foreground line-clamp-2">
-                                  {task.description}
-                                </p>
-                              )}
-
-                              {/* Labels */}
-                              {task.labels && task.labels.length > 0 && (
-                                <div className="flex flex-wrap gap-1">
-                                  {task.labels.slice(0, 2).map((label, idx) => (
-                                    <Badge key={idx} variant="outline" className="text-xs px-1 py-0">
-                                      {label}
-                                    </Badge>
-                                  ))}
-                                  {task.labels.length > 2 && (
-                                    <Badge variant="outline" className="text-xs px-1 py-0">
-                                      +{task.labels.length - 2}
-                                    </Badge>
-                                  )}
-                                </div>
-                              )}
-
-                              {/* Progress */}
-                              {task.story_points && (
-                                <div className="space-y-1">
-                                  <div className="flex justify-between text-xs">
-                                    <span>Progress</span>
-                                    <span>{Math.round((task.actual_hours || 0) / (task.estimate_hours || 1) * 100)}%</span>
+                                
+                                {task.labels && task.labels.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {task.labels.slice(0, 2).map((label, idx) => (
+                                      <Badge key={idx} variant="secondary" className="text-xs">
+                                        {label}
+                                      </Badge>
+                                    ))}
+                                    {task.labels.length > 2 && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        +{task.labels.length - 2}
+                                      </Badge>
+                                    )}
                                   </div>
-                                  <Progress 
-                                    value={Math.min((task.actual_hours || 0) / (task.estimate_hours || 1) * 100, 100)} 
-                                    className="h-1"
-                                  />
-                                </div>
-                              )}
-
-                              {/* Footer */}
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  {/* Assignee */}
-                                  {task.assigned_to && task.assigned_to.length > 0 && (
-                                    <div className="flex -space-x-1">
-                                      {task.assigned_to.slice(0, 2).map((_, idx) => (
-                                        <Avatar key={idx} className="w-5 h-5 border-2 border-background">
-                                          <AvatarFallback className="text-xs">
-                                            {String.fromCharCode(65 + idx)}
-                                          </AvatarFallback>
-                                        </Avatar>
-                                      ))}
-                                      {task.assigned_to.length > 2 && (
-                                        <div className="w-5 h-5 rounded-full bg-muted border-2 border-background flex items-center justify-center">
-                                          <span className="text-xs">+{task.assigned_to.length - 2}</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {/* Due Date */}
-                                  {task.due_date && (
-                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                      <Calendar className="h-3 w-3" />
-                                      {new Date(task.due_date).toLocaleDateString('en-US', { 
-                                        month: 'short', 
-                                        day: 'numeric' 
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  {/* Comments */}
-                                  <MessageSquare className="h-3 w-3" />
-                                  <span>0</span>
-                                  
-                                  {/* Attachments */}
-                                  <Paperclip className="h-3 w-3 ml-1" />
-                                  <span>0</span>
-                                </div>
+                                )}
                               </div>
                             </CardContent>
                           </Card>
@@ -400,32 +470,199 @@ const AdvancedTaskBoard: React.FC<AdvancedTaskBoardProps> = ({ project, board })
                       </Draggable>
                     ))}
                     {provided.placeholder}
-                  </div>
+                  </CardContent>
                 )}
               </Droppable>
-            </div>
+            </Card>
           ))}
         </div>
       </DragDropContext>
 
-      {/* Dialogs */}
+      {/* Create Task Dialog */}
       <CreateTaskDialog
-        project={project}
-        board={board}
-        onTaskCreated={loadBoardData}
+        isOpen={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        onTaskCreated={loadTasks}
+        projectId={selectedProject?.id}
+        boardId={selectedBoard?.id}
       />
-
-      {selectedTask && (
-        <TaskDetailDialog
-          task={selectedTask}
-          project={project}
-          board={board}
-          open={!!selectedTask}
-          onOpenChange={(open) => !open && setSelectedTask(null)}
-          onTaskUpdate={loadBoardData}
-        />
-      )}
     </div>
+  );
+};
+
+// Create Task Dialog Component
+const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
+  isOpen,
+  onClose,
+  onTaskCreated,
+  projectId,
+  boardId,
+  status = 'todo'
+}) => {
+  const { user } = useAuthContext();
+  const { toast } = useToast();
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    priority: 'medium',
+    status: status,
+    story_points: '',
+    due_date: '',
+    labels: ''
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !projectId) return;
+
+    try {
+      const taskData = {
+        title: formData.title,
+        description: formData.description,
+        priority: formData.priority,
+        status: formData.status,
+        project_id: projectId,
+        board_id: boardId,
+        created_by: user.id,
+        story_points: formData.story_points ? parseInt(formData.story_points) : null,
+        due_date: formData.due_date || null,
+        labels: formData.labels ? formData.labels.split(',').map(l => l.trim()) : [],
+        position: 0
+      };
+
+      const { error } = await supabase
+        .from('tasks')
+        .insert(taskData);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Task created successfully'
+      });
+
+      setFormData({
+        title: '',
+        description: '',
+        priority: 'medium',
+        status: status,
+        story_points: '',
+        due_date: '',
+        labels: ''
+      });
+      
+      onClose();
+      await onTaskCreated();
+    } catch (error) {
+      console.error('Error creating task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create task',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Create New Task</DialogTitle>
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Title *</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="priority">Priority</Label>
+              <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="story_points">Story Points</Label>
+              <Input
+                id="story_points"
+                type="number"
+                value={formData.story_points}
+                onChange={(e) => setFormData({ ...formData, story_points: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="due_date">Due Date</Label>
+              <Input
+                id="due_date"
+                type="date"
+                value={formData.due_date}
+                onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todo">To Do</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="review">Review</SelectItem>
+                  <SelectItem value="done">Done</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="labels">Labels (comma-separated)</Label>
+            <Input
+              id="labels"
+              value={formData.labels}
+              onChange={(e) => setFormData({ ...formData, labels: e.target.value })}
+              placeholder="frontend, urgent, bug"
+            />
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit">
+              Create Task
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 
