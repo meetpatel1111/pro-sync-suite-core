@@ -111,7 +111,7 @@ export const aiContextService = {
     }
   },
 
-  // Store AI chat interactions for context building
+  // Store AI chat interactions for context building (using activity_logs as fallback)
   async storeChatInteraction(
     userId: string,
     userMessage: string,
@@ -121,13 +121,18 @@ export const aiContextService = {
   ) {
     try {
       await supabase
-        .from('ai_chat_history')
+        .from('activity_logs')
         .insert({
           user_id: userId,
-          message: userMessage,
-          response: aiResponse,
-          intent: intent,
-          context_snapshot: contextData || {}
+          action: 'ai_chat',
+          resource_type: 'ai_interaction',
+          resource_id: userId, // Using user_id as resource_id for AI interactions
+          metadata: {
+            message: userMessage,
+            response: aiResponse,
+            intent: intent,
+            context_snapshot: contextData || {}
+          }
         });
     } catch (error) {
       console.error('Error storing chat interaction:', error);
@@ -223,16 +228,12 @@ export const aiContextService = {
     }
   },
 
-  // Get project insights
+  // Get project insights with simplified approach
   async getProjectInsights(userId: string, projectId?: string) {
     try {
       let projectQuery = supabase
         .from('projects')
-        .select(`
-          *,
-          tasks(count),
-          expenses(sum(amount))
-        `)
+        .select('*')
         .eq('user_id', userId);
 
       if (projectId) {
@@ -243,14 +244,36 @@ export const aiContextService = {
 
       if (error) throw error;
 
-      return projects?.map(project => ({
-        id: project.id,
-        name: project.name,
-        status: project.status,
-        taskCount: project.tasks?.[0]?.count || 0,
-        totalExpenses: project.expenses?.[0]?.sum || 0,
-        daysActive: Math.floor((new Date().getTime() - new Date(project.created_at).getTime()) / (1000 * 60 * 60 * 24))
-      })) || [];
+      // Get related data for each project
+      const projectsWithInsights = await Promise.all(
+        (projects || []).map(async (project) => {
+          const [tasksResult, expensesResult] = await Promise.allSettled([
+            supabase
+              .from('tasks')
+              .select('*')
+              .eq('project_id', project.id),
+            supabase
+              .from('expenses')
+              .select('amount')
+              .eq('project_id', project.id)
+          ]);
+
+          const tasks = tasksResult.status === 'fulfilled' ? tasksResult.value.data || [] : [];
+          const expenses = expensesResult.status === 'fulfilled' ? expensesResult.value.data || [] : [];
+          const totalExpenses = expenses.reduce((sum, expense) => sum + (parseFloat(expense.amount) || 0), 0);
+
+          return {
+            id: project.id,
+            name: project.name,
+            status: project.status,
+            taskCount: tasks.length,
+            totalExpenses: totalExpenses,
+            daysActive: Math.floor((new Date().getTime() - new Date(project.created_at).getTime()) / (1000 * 60 * 60 * 24))
+          };
+        })
+      );
+
+      return projectsWithInsights;
     } catch (error) {
       console.error('Error getting project insights:', error);
       return [];
