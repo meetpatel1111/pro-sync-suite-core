@@ -27,100 +27,81 @@ export const aiContextService = {
   // Get comprehensive user data from all apps
   async getComprehensiveUserData(userId: string): Promise<UserContextData> {
     try {
-      // TaskMaster data
-      const tasksQuery = supabase
-        .from('tasks')
-        .select('*')
-        .or(`created_by.eq.${userId},assignee_id.eq.${userId}`)
-        .order('updated_at', { ascending: false })
-        .limit(10);
+      const results = await Promise.allSettled([
+        // TaskMaster data
+        supabase
+          .from('tasks')
+          .select('*')
+          .or(`created_by.eq.${userId},assignee_id.eq.${userId}`)
+          .order('updated_at', { ascending: false })
+          .limit(10),
 
-      // Projects data
-      const projectsQuery = supabase
-        .from('projects')
-        .select('*')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false })
-        .limit(5);
+        // Projects data
+        supabase
+          .from('projects')
+          .select('*')
+          .eq('user_id', userId)
+          .order('updated_at', { ascending: false })
+          .limit(5),
 
-      // TimeTrackPro data
-      const timeEntriesQuery = supabase
-        .from('time_entries')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(10);
+        // TimeTrackPro data - using correct column name
+        supabase
+          .from('time_entries')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(10),
 
-      // FileVault data
-      const filesQuery = supabase
-        .from('files')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(10);
+        // FileVault data
+        supabase
+          .from('files')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(10),
 
-      // BudgetBuddy data
-      const expensesQuery = supabase
-        .from('expenses')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(10);
+        // BudgetBuddy data
+        supabase
+          .from('expenses')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(10),
 
-      // ClientConnect data
-      const clientsQuery = supabase
-        .from('clients')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(10);
+        // ClientConnect data
+        supabase
+          .from('clients')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(10),
 
-      // CollabSpace data
-      const messagesQuery = supabase
-        .from('messages')
-        .select('*')
-        .eq('sender_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(20);
+        // CollabSpace data
+        supabase
+          .from('messages')
+          .select('*')
+          .eq('sender_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(20),
 
-      // ServiceCore data
-      const ticketsQuery = supabase
-        .from('tickets')
-        .select('*')
-        .or(`submitted_by.eq.${userId},assigned_to.eq.${userId}`)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      // Execute all queries
-      const [
-        tasksResult,
-        projectsResult,
-        timeEntriesResult,
-        filesResult,
-        expensesResult,
-        clientsResult,
-        messagesResult,
-        ticketsResult
-      ] = await Promise.all([
-        tasksQuery,
-        projectsQuery,
-        timeEntriesQuery,
-        filesQuery,
-        expensesQuery,
-        clientsQuery,
-        messagesQuery,
-        ticketsQuery
+        // ServiceCore data
+        supabase
+          .from('tickets')
+          .select('*')
+          .or(`submitted_by.eq.${userId},assigned_to.eq.${userId}`)
+          .order('created_at', { ascending: false })
+          .limit(10)
       ]);
 
       return {
-        tasks: tasksResult.data || [],
-        projects: projectsResult.data || [],
-        timeEntries: timeEntriesResult.data || [],
-        files: filesResult.data || [],
-        expenses: expensesResult.data || [],
-        clients: clientsResult.data || [],
-        messages: messagesResult.data || [],
-        tickets: ticketsResult.data || []
+        tasks: results[0].status === 'fulfilled' ? results[0].value.data || [] : [],
+        projects: results[1].status === 'fulfilled' ? results[1].value.data || [] : [],
+        timeEntries: results[2].status === 'fulfilled' ? results[2].value.data || [] : [],
+        files: results[3].status === 'fulfilled' ? results[3].value.data || [] : [],
+        expenses: results[4].status === 'fulfilled' ? results[4].value.data || [] : [],
+        clients: results[5].status === 'fulfilled' ? results[5].value.data || [] : [],
+        messages: results[6].status === 'fulfilled' ? results[6].value.data || [] : [],
+        tickets: results[7].status === 'fulfilled' ? results[7].value.data || [] : []
       };
     } catch (error) {
       console.error('Error fetching comprehensive user data:', error);
@@ -159,7 +140,7 @@ export const aiContextService = {
   // Search across user data
   async searchUserData(userId: string, searchTerm: string) {
     try {
-      const [tasksResult, filesResult, messagesResult] = await Promise.all([
+      const results = await Promise.allSettled([
         // Search tasks
         supabase
           .from('tasks')
@@ -183,9 +164,9 @@ export const aiContextService = {
       ]);
 
       return {
-        tasks: tasksResult.data || [],
-        files: filesResult.data || [],
-        messages: messagesResult.data || []
+        tasks: results[0].status === 'fulfilled' ? results[0].value.data || [] : [],
+        files: results[1].status === 'fulfilled' ? results[1].value.data || [] : [],
+        messages: results[2].status === 'fulfilled' ? results[2].value.data || [] : []
       };
     } catch (error) {
       console.error('Error searching user data:', error);
@@ -200,12 +181,7 @@ export const aiContextService = {
       since.setDate(since.getDate() - days);
       const sinceISO = since.toISOString();
 
-      const [
-        recentTasks,
-        recentTimeEntries,
-        recentExpenses,
-        recentMessages
-      ] = await Promise.all([
+      const results = await Promise.allSettled([
         supabase
           .from('tasks')
           .select('*')
@@ -214,7 +190,7 @@ export const aiContextService = {
         
         supabase
           .from('time_entries')
-          .select('hours')
+          .select('*')
           .eq('user_id', userId)
           .gte('created_at', sinceISO),
         
@@ -231,16 +207,19 @@ export const aiContextService = {
           .gte('created_at', sinceISO)
       ]);
 
-      const hoursLogged = (recentTimeEntries.data || []).reduce((sum, entry) => {
-        const hours = parseFloat(entry.hours?.toString() || '0');
-        return sum + (isNaN(hours) ? 0 : hours);
+      // Calculate hours from time entries - check if duration or similar field exists
+      const timeEntries = results[1].status === 'fulfilled' ? results[1].value.data || [] : [];
+      const hoursLogged = timeEntries.reduce((sum: number, entry: any) => {
+        // Use duration field if it exists, otherwise default to 0
+        const duration = parseFloat(entry.duration?.toString() || '0');
+        return sum + (isNaN(duration) ? 0 : duration);
       }, 0);
 
       return {
-        tasksUpdated: recentTasks.data?.length || 0,
+        tasksUpdated: results[0].status === 'fulfilled' ? results[0].value.data?.length || 0 : 0,
         hoursLogged: hoursLogged,
-        expensesAdded: recentExpenses.data?.length || 0,
-        messagesSent: recentMessages.data?.length || 0
+        expensesAdded: results[2].status === 'fulfilled' ? results[2].value.data?.length || 0 : 0,
+        messagesSent: results[3].status === 'fulfilled' ? results[3].value.data?.length || 0 : 0
       };
     } catch (error) {
       console.error('Error getting user activity summary:', error);
@@ -248,7 +227,7 @@ export const aiContextService = {
     }
   },
 
-  // Get project insights with improved error handling
+  // Get project insights with simplified implementation
   async getProjectInsights(userId: string, projectId?: string): Promise<ProjectInsight[]> {
     try {
       let projectQuery = supabase
@@ -271,14 +250,14 @@ export const aiContextService = {
         return [];
       }
 
-      const projectInsights: ProjectInsight[] = [];
+      const insights: ProjectInsight[] = [];
 
       for (const project of projects) {
         try {
-          const [tasksResult, expensesResult] = await Promise.all([
+          const [tasksResult, expensesResult] = await Promise.allSettled([
             supabase
               .from('tasks')
-              .select('*')
+              .select('id')
               .eq('project_id', project.id),
             supabase
               .from('expenses')
@@ -286,10 +265,10 @@ export const aiContextService = {
               .eq('project_id', project.id)
           ]);
 
-          const tasks = tasksResult.data || [];
-          const expenses = expensesResult.data || [];
+          const taskCount = tasksResult.status === 'fulfilled' ? tasksResult.value.data?.length || 0 : 0;
+          const expenses = expensesResult.status === 'fulfilled' ? expensesResult.value.data || [] : [];
           
-          const totalExpenses = expenses.reduce((sum, expense) => {
+          const totalExpenses = expenses.reduce((sum: number, expense: any) => {
             const amount = parseFloat(expense.amount?.toString() || '0');
             return sum + (isNaN(amount) ? 0 : amount);
           }, 0);
@@ -298,28 +277,28 @@ export const aiContextService = {
             (new Date().getTime() - new Date(project.created_at).getTime()) / (1000 * 60 * 60 * 24)
           );
 
-          projectInsights.push({
+          insights.push({
             id: project.id,
             name: project.name,
-            status: project.status,
-            taskCount: tasks.length,
+            status: project.status || 'active',
+            taskCount: taskCount,
             totalExpenses: totalExpenses,
             daysActive: daysActive
           });
         } catch (projectError) {
           console.error(`Error processing project ${project.id}:`, projectError);
-          // Continue with other projects
+          continue;
         }
       }
 
-      return projectInsights;
+      return insights;
     } catch (error) {
       console.error('Error getting project insights:', error);
       return [];
     }
   },
 
-  // Get app-specific insights
+  // Get app-specific insights with simplified logic
   async getAppInsights(userId: string) {
     try {
       const contextData = await this.getComprehensiveUserData(userId);
@@ -327,30 +306,30 @@ export const aiContextService = {
       return {
         taskmaster: {
           totalTasks: contextData.tasks?.length || 0,
-          activeTasks: contextData.tasks?.filter(task => task.status === 'in_progress').length || 0,
-          completedTasks: contextData.tasks?.filter(task => task.status === 'done').length || 0
+          activeTasks: contextData.tasks?.filter((task: any) => task.status === 'in_progress').length || 0,
+          completedTasks: contextData.tasks?.filter((task: any) => task.status === 'done').length || 0
         },
         timetrack: {
           totalEntries: contextData.timeEntries?.length || 0,
-          totalHours: contextData.timeEntries?.reduce((sum, entry) => {
-            const hours = parseFloat(entry.hours?.toString() || '0');
-            return sum + (isNaN(hours) ? 0 : hours);
+          totalHours: contextData.timeEntries?.reduce((sum: number, entry: any) => {
+            const duration = parseFloat(entry.duration?.toString() || '0');
+            return sum + (isNaN(duration) ? 0 : duration);
           }, 0) || 0
         },
         budget: {
           totalExpenses: contextData.expenses?.length || 0,
-          totalAmount: contextData.expenses?.reduce((sum, expense) => {
+          totalAmount: contextData.expenses?.reduce((sum: number, expense: any) => {
             const amount = parseFloat(expense.amount?.toString() || '0');
             return sum + (isNaN(amount) ? 0 : amount);
           }, 0) || 0
         },
         clients: {
           totalClients: contextData.clients?.length || 0,
-          activeClients: contextData.clients?.filter(client => client.status !== 'inactive').length || 0
+          activeClients: contextData.clients?.filter((client: any) => client.status !== 'inactive').length || 0
         },
         collab: {
           totalMessages: contextData.messages?.length || 0,
-          recentActivity: contextData.messages?.filter(msg => {
+          recentActivity: contextData.messages?.filter((msg: any) => {
             const msgDate = new Date(msg.created_at);
             const dayAgo = new Date();
             dayAgo.setDate(dayAgo.getDate() - 1);
@@ -359,7 +338,7 @@ export const aiContextService = {
         },
         filevault: {
           totalFiles: contextData.files?.length || 0,
-          recentUploads: contextData.files?.filter(file => {
+          recentUploads: contextData.files?.filter((file: any) => {
             const fileDate = new Date(file.created_at);
             const weekAgo = new Date();
             weekAgo.setDate(weekAgo.getDate() - 7);
@@ -368,8 +347,8 @@ export const aiContextService = {
         },
         servicecore: {
           totalTickets: contextData.tickets?.length || 0,
-          openTickets: contextData.tickets?.filter(ticket => ticket.status === 'open').length || 0,
-          resolvedTickets: contextData.tickets?.filter(ticket => ticket.status === 'resolved').length || 0
+          openTickets: contextData.tickets?.filter((ticket: any) => ticket.status === 'open').length || 0,
+          resolvedTickets: contextData.tickets?.filter((ticket: any) => ticket.status === 'resolved').length || 0
         }
       };
     } catch (error) {
