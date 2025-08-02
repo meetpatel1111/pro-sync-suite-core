@@ -3,7 +3,7 @@ import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
-import { Index as Dashboard } from '@/pages/Index';
+import Index from '@/pages/Index';
 import TaskMaster from '@/pages/TaskMaster';
 import TimeTrackPro from '@/pages/TimeTrackPro';
 import BudgetBuddy from '@/pages/BudgetBuddy';
@@ -30,8 +30,8 @@ function App() {
         <AIContextProvider>
           <Router>
             <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/" element={<Index />} />
+              <Route path="/dashboard" element={<Index />} />
               <Route path="/taskmaster" element={<TaskMaster />} />
               <Route path="/timetrackpro" element={<TimeTrackPro />} />
               <Route path="/budgetbuddy" element={<BudgetBuddy />} />

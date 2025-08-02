@@ -246,7 +246,7 @@ export const aiContextService = {
 
       // Get related data for each project
       const projectsWithInsights = await Promise.all(
-        (projects || []).map(async (project) => {
+        (projects || []).map(async (project: any) => {
           const [tasksResult, expensesResult] = await Promise.allSettled([
             supabase
               .from('tasks')
@@ -260,7 +260,7 @@ export const aiContextService = {
 
           const tasks = tasksResult.status === 'fulfilled' ? tasksResult.value.data || [] : [];
           const expenses = expensesResult.status === 'fulfilled' ? expensesResult.value.data || [] : [];
-          const totalExpenses = expenses.reduce((sum, expense) => sum + (parseFloat(expense.amount) || 0), 0);
+          const totalExpenses = expenses.reduce((sum: number, expense: any) => sum + (parseFloat(expense.amount?.toString() || '0') || 0), 0);
 
           return {
             id: project.id,
