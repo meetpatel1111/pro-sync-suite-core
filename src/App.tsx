@@ -17,6 +17,7 @@ import KnowledgeNestPage from '@/pages/KnowledgeNestPage';
 import SettingsPage from '@/pages/SettingsPage';
 import AIFeatures from '@/pages/AIFeatures';
 import { AuthProvider } from '@/context/AuthContext';
+import { IntegrationProvider } from '@/context/IntegrationContext';
 import UniversalAIAssistant from '@/components/ai/UniversalAIAssistant';
 import { AIContextProvider } from '@/components/ai/AIContextManager';
 
@@ -27,27 +28,29 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <Toaster />
       <AuthProvider>
-        <AIContextProvider>
-          <Router>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/dashboard" element={<Index />} />
-              <Route path="/taskmaster" element={<TaskMaster />} />
-              <Route path="/timetrackpro" element={<TimeTrackPro />} />
-              <Route path="/budgetbuddy" element={<BudgetBuddy />} />
-              <Route path="/collabspace" element={<CollabSpace />} />
-              <Route path="/filevault" element={<FileVault />} />
-              <Route path="/resourcehub" element={<ResourceHub />} />
-              <Route path="/clientconnect" element={<ClientConnect />} />
-              <Route path="/riskradar" element={<RiskRadar />} />
-              <Route path="/servicecore" element={<ServiceCore />} />
-              <Route path="/knowledgenest" element={<KnowledgeNestPage />} />
-              <Route path="/ai-features" element={<AIFeatures />} />
-              <Route path="/settings" element={<SettingsPage />} />
-            </Routes>
-            <UniversalAIAssistant />
-          </Router>
-        </AIContextProvider>
+        <IntegrationProvider>
+          <AIContextProvider>
+            <Router>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/dashboard" element={<Index />} />
+                <Route path="/taskmaster" element={<TaskMaster />} />
+                <Route path="/timetrackpro" element={<TimeTrackPro />} />
+                <Route path="/budgetbuddy" element={<BudgetBuddy />} />
+                <Route path="/collabspace" element={<CollabSpace />} />
+                <Route path="/filevault" element={<FileVault />} />
+                <Route path="/resourcehub" element={<ResourceHub />} />
+                <Route path="/clientconnect" element={<ClientConnect />} />
+                <Route path="/riskradar" element={<RiskRadar />} />
+                <Route path="/servicecore" element={<ServiceCore />} />
+                <Route path="/knowledgenest" element={<KnowledgeNestPage />} />
+                <Route path="/ai-features" element={<AIFeatures />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Routes>
+              <UniversalAIAssistant />
+            </Router>
+          </AIContextProvider>
+        </IntegrationProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
