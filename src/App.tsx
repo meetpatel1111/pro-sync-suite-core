@@ -16,6 +16,10 @@ import ServiceCore from '@/pages/ServiceCore';
 import KnowledgeNestPage from '@/pages/KnowledgeNestPage';
 import SettingsPage from '@/pages/SettingsPage';
 import AIFeatures from '@/pages/AIFeatures';
+import PlanBoardPage from '@/pages/PlanBoardPage';
+import TeamDirectoryPage from '@/pages/TeamDirectoryPage';
+import Notifications from '@/pages/Notifications';
+import ProfileSettings from '@/pages/ProfileSettings';
 import { AuthProvider } from '@/context/AuthContext';
 import { IntegrationProvider } from '@/context/IntegrationContext';
 import UniversalAIAssistant from '@/components/ai/UniversalAIAssistant';
@@ -46,6 +50,10 @@ function App() {
                 <Route path="/knowledgenest" element={<KnowledgeNestPage />} />
                 <Route path="/ai-features" element={<AIFeatures />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/planboard" element={<PlanBoardPage />} />
+                <Route path="/team-directory" element={<TeamDirectoryPage />} />
+                <Route path="/notification-center" element={<Notifications />} />
+                <Route path="/profile" element={<ProfileSettings />} />
               </Routes>
               <UniversalAIAssistant />
             </Router>
