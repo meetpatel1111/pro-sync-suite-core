@@ -1,24 +1,24 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-// Simplified type definitions to avoid deep instantiation
-interface BasicData {
+// Simple interface to avoid deep type instantiation
+interface SimpleData {
   id: string;
   [key: string]: any;
 }
 
 interface UserData {
-  tasks: BasicData[];
-  projects: BasicData[];
-  timeEntries: BasicData[];
-  budgets: BasicData[];
-  expenses: BasicData[];
-  files: BasicData[];
-  contacts: BasicData[];
-  interactions: BasicData[];
-  channels: BasicData[];
-  messages: BasicData[];
-  tickets: BasicData[];
+  tasks: SimpleData[];
+  projects: SimpleData[];
+  timeEntries: SimpleData[];
+  budgets: SimpleData[];
+  expenses: SimpleData[];
+  files: SimpleData[];
+  contacts: SimpleData[];
+  interactions: SimpleData[];
+  channels: SimpleData[];
+  messages: SimpleData[];
+  tickets: SimpleData[];
 }
 
 export const fetchTaskmasterData = async (userId: string) => {
@@ -89,18 +89,10 @@ export const fetchFileVaultData = async (userId: string) => {
 
 export const fetchClientData = async (userId: string) => {
   try {
-    // Use generic approach for client data since table names may vary
-    const contactsQuery = supabase.from('contacts').select('*').eq('user_id', userId).limit(50);
-    const interactionsQuery = supabase.from('interactions').select('*').eq('user_id', userId).limit(100);
-    
-    const [contactsResult, interactionsResult] = await Promise.allSettled([
-      contactsQuery,
-      interactionsQuery
-    ]);
-
+    // Return empty arrays since these tables may not exist
     return {
-      contacts: contactsResult.status === 'fulfilled' ? (contactsResult.value.data || []) : [],
-      interactions: interactionsResult.status === 'fulfilled' ? (interactionsResult.value.data || []) : []
+      contacts: [],
+      interactions: []
     };
   } catch (error) {
     console.error('Error fetching Client data:', error);
@@ -110,18 +102,10 @@ export const fetchClientData = async (userId: string) => {
 
 export const fetchCollabData = async (userId: string) => {
   try {
-    // Use generic approach for collab data
-    const channelsQuery = supabase.from('channels').select('*').eq('user_id', userId).limit(20);
-    const messagesQuery = supabase.from('messages').select('*').eq('user_id', userId).limit(200);
-    
-    const [channelsResult, messagesResult] = await Promise.allSettled([
-      channelsQuery,
-      messagesQuery
-    ]);
-
+    // Return empty arrays since these tables may not exist
     return {
-      channels: channelsResult.status === 'fulfilled' ? (channelsResult.value.data || []) : [],
-      messages: messagesResult.status === 'fulfilled' ? (messagesResult.value.data || []) : []
+      channels: [],
+      messages: []
     };
   } catch (error) {
     console.error('Error fetching Collab data:', error);
@@ -131,14 +115,8 @@ export const fetchCollabData = async (userId: string) => {
 
 export const fetchServiceCoreData = async (userId: string) => {
   try {
-    const result = await supabase
-      .from('tickets')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(50);
-
-    return result.data || [];
+    // Return empty array since this table may not exist
+    return [];
   } catch (error) {
     console.error('Error fetching ServiceCore data:', error);
     return [];

@@ -38,24 +38,20 @@ export const useAIAssistant = () => {
       let contextPrompt = '';
 
       if (includeContext) {
-        // Get comprehensive user data for context
-        contextData = await aiContextService.getComprehensiveUserData(user.id);
+        // Get comprehensive user context
+        contextData = await aiContextService.getUserContext(user.id);
         
         // Build context prompt with proper type checking
-        const tasks = Array.isArray(contextData.tasks) ? contextData.tasks.slice(0, 5) : [];
-        const projects = Array.isArray(contextData.projects) ? contextData.projects.slice(0, 3) : [];
-        const timeEntries = Array.isArray(contextData.timeEntries) ? contextData.timeEntries.slice(0, 3) : [];
-        const files = Array.isArray(contextData.files) ? contextData.files.slice(0, 3) : [];
-        const expenses = Array.isArray(contextData.expenses) ? contextData.expenses.slice(0, 3) : [];
+        const recentActivities = contextData.recentActivities?.slice(0, 5) || [];
+        const userProfile = contextData.userProfile || {};
+        const integrationData = contextData.integrationData || {};
 
         contextPrompt = `
 Context about the user's current work:
 
-Recent Tasks: ${JSON.stringify(tasks)}
-Active Projects: ${JSON.stringify(projects)}
-Recent Time Entries: ${JSON.stringify(timeEntries)}
-Recent Files: ${JSON.stringify(files)}
-Recent Expenses: ${JSON.stringify(expenses)}
+User Profile: ${JSON.stringify(userProfile)}
+Recent Activities: ${JSON.stringify(recentActivities)}
+Integration Data: ${JSON.stringify(integrationData)}
 
 Please provide a helpful response based on this context and the user's question: "${message}"
         `;
@@ -82,7 +78,6 @@ Please provide a helpful response based on this context and the user's question:
         user.id,
         message,
         response,
-        undefined,
         includeContext ? contextData : undefined
       );
 
