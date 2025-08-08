@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
-import { dbService } from '@/services/dbService';
+import { fetchComprehensiveUserData } from '@/utils/dataFetchers';
 
 interface AIContextData {
   userProfile: any;
@@ -41,43 +41,46 @@ export const AIContextProvider: React.FC<AIContextProviderProps> = ({ children }
   });
 
   const refreshContext = async () => {
-    if (!user) return;
+    if (!user?.id) return;
 
     setContextData(prev => ({ ...prev, contextLoading: true }));
 
     try {
-      // Fetch user context data from multiple sources
-      const [
-        profileResult,
-        tasksResult,
-        projectsResult,
-        filesResult
-      ] = await Promise.allSettled([
-        dbService.getUserProfile(user.id),
-        dbService.getTasks(user.id, { status: 'in_progress' }),
-        dbService.getProjects(user.id),
-        dbService.getFiles(user.id)
-      ]);
+      console.log('Refreshing AI context for user:', user.id);
+      
+      // Fetch comprehensive user data
+      const userData = await fetchComprehensiveUserData(user.id);
 
       setContextData(prev => ({
         ...prev,
-        userProfile: profileResult.status === 'fulfilled' ? profileResult.value.data : null,
-        recentTasks: tasksResult.status === 'fulfilled' ? (tasksResult.value.data || []).slice(0, 10) : [],
-        projectSummary: projectsResult.status === 'fulfilled' ? (projectsResult.value.data || []).slice(0, 5) : [],
-        recentFiles: filesResult.status === 'fulfilled' ? (filesResult.value.data || []).slice(0, 5) : [],
+        userProfile: { id: user.id, email: user.email },
+        recentTasks: (userData.tasks || []).slice(0, 10),
+        projectSummary: (userData.projects || []).slice(0, 5),
+        recentFiles: (userData.files || []).slice(0, 5),
+        recentMessages: (userData.messages || []).slice(0, 5),
         contextLoading: false
       }));
+
+      console.log('AI context refreshed successfully');
     } catch (error) {
       console.error('Error refreshing AI context:', error);
-      setContextData(prev => ({ ...prev, contextLoading: false }));
+      setContextData(prev => ({ 
+        ...prev, 
+        contextLoading: false,
+        userProfile: { id: user.id, email: user.email },
+        recentTasks: [],
+        recentMessages: [],
+        recentFiles: [],
+        projectSummary: []
+      }));
     }
   };
 
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
       refreshContext();
     }
-  }, [user]);
+  }, [user?.id]);
 
   const value: AIContextData = {
     ...contextData,

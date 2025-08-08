@@ -1,28 +1,33 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-// Simple interface to avoid deep type instantiation
-interface SimpleData {
+// Simplified interfaces to avoid deep type instantiation
+interface BasicItem {
   id: string;
+  user_id?: string;
+  created_at?: string;
+  updated_at?: string;
   [key: string]: any;
 }
 
 interface UserData {
-  tasks: SimpleData[];
-  projects: SimpleData[];
-  timeEntries: SimpleData[];
-  budgets: SimpleData[];
-  expenses: SimpleData[];
-  files: SimpleData[];
-  contacts: SimpleData[];
-  interactions: SimpleData[];
-  channels: SimpleData[];
-  messages: SimpleData[];
-  tickets: SimpleData[];
+  tasks: BasicItem[];
+  projects: BasicItem[];
+  timeEntries: BasicItem[];
+  budgets: BasicItem[];
+  expenses: BasicItem[];
+  files: BasicItem[];
+  contacts: BasicItem[];
+  interactions: BasicItem[];
+  channels: BasicItem[];
+  messages: BasicItem[];
+  tickets: BasicItem[];
 }
 
-export const fetchTaskmasterData = async (userId: string) => {
+export const fetchTaskmasterData = async (userId: string): Promise<{ tasks: BasicItem[]; projects: BasicItem[] }> => {
   try {
+    console.log('Fetching Taskmaster data for user:', userId);
+
     const [tasksResult, projectsResult] = await Promise.allSettled([
       supabase.from('tasks').select('*').eq('user_id', userId).limit(50),
       supabase.from('projects').select('*').eq('user_id', userId).limit(20)
@@ -38,8 +43,10 @@ export const fetchTaskmasterData = async (userId: string) => {
   }
 };
 
-export const fetchTimeTrackData = async (userId: string) => {
+export const fetchTimeTrackData = async (userId: string): Promise<BasicItem[]> => {
   try {
+    console.log('Fetching TimeTrack data for user:', userId);
+
     const result = await supabase
       .from('work_sessions')
       .select('*')
@@ -54,8 +61,10 @@ export const fetchTimeTrackData = async (userId: string) => {
   }
 };
 
-export const fetchBudgetData = async (userId: string) => {
+export const fetchBudgetData = async (userId: string): Promise<{ budgets: BasicItem[]; expenses: BasicItem[] }> => {
   try {
+    console.log('Fetching Budget data for user:', userId);
+
     const [budgetsResult, expensesResult] = await Promise.allSettled([
       supabase.from('budgets').select('*').eq('user_id', userId).limit(20),
       supabase.from('expenses').select('*').eq('user_id', userId).limit(100)
@@ -71,8 +80,10 @@ export const fetchBudgetData = async (userId: string) => {
   }
 };
 
-export const fetchFileVaultData = async (userId: string) => {
+export const fetchFileVaultData = async (userId: string): Promise<BasicItem[]> => {
   try {
+    console.log('Fetching FileVault data for user:', userId);
+
     const result = await supabase
       .from('files')
       .select('*')
@@ -87,9 +98,10 @@ export const fetchFileVaultData = async (userId: string) => {
   }
 };
 
-export const fetchClientData = async (userId: string) => {
+export const fetchClientData = async (userId: string): Promise<{ contacts: BasicItem[]; interactions: BasicItem[] }> => {
   try {
-    // Return empty arrays since these tables may not exist
+    console.log('Fetching Client data for user:', userId);
+    // Return empty arrays for now as these tables may not exist
     return {
       contacts: [],
       interactions: []
@@ -100,9 +112,10 @@ export const fetchClientData = async (userId: string) => {
   }
 };
 
-export const fetchCollabData = async (userId: string) => {
+export const fetchCollabData = async (userId: string): Promise<{ channels: BasicItem[]; messages: BasicItem[] }> => {
   try {
-    // Return empty arrays since these tables may not exist
+    console.log('Fetching Collab data for user:', userId);
+    // Return empty arrays for now as these tables may not exist
     return {
       channels: [],
       messages: []
@@ -113,9 +126,10 @@ export const fetchCollabData = async (userId: string) => {
   }
 };
 
-export const fetchServiceCoreData = async (userId: string) => {
+export const fetchServiceCoreData = async (userId: string): Promise<BasicItem[]> => {
   try {
-    // Return empty array since this table may not exist
+    console.log('Fetching ServiceCore data for user:', userId);
+    // Return empty array for now as this table may not exist
     return [];
   } catch (error) {
     console.error('Error fetching ServiceCore data:', error);
