@@ -27,21 +27,63 @@ export interface TaskSuggestion {
 }
 
 class AIService {
-  private apiKey: string | null = null;
-
   async hasApiKey(userId: string): Promise<boolean> {
     try {
-      // Check if GEMINI_API_KEY is available in environment
-      if (import.meta.env.VITE_GEMINI_API_KEY) {
-        this.apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-        return true;
+      const { data, error } = await supabase
+        .from('user_gemini_keys')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking API key:', error);
+        return false;
       }
 
-      // For now, we'll use environment variable only
-      // TODO: Add user-specific API key storage when user_settings table is updated
-      return false;
+      return !!data;
     } catch (error) {
       console.error('Error checking API key:', error);
+      return false;
+    }
+  }
+
+  async getApiKey(userId: string): Promise<string | null> {
+    try {
+      const { data, error } = await supabase
+        .from('user_gemini_keys')
+        .select('api_key')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error getting API key:', error);
+        return null;
+      }
+
+      return data?.api_key || null;
+    } catch (error) {
+      console.error('Error getting API key:', error);
+      return null;
+    }
+  }
+
+  async saveApiKey(userId: string, apiKey: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('user_gemini_keys')
+        .upsert({
+          user_id: userId,
+          api_key: apiKey
+        });
+
+      if (error) {
+        console.error('Error saving API key:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error saving API key:', error);
       return false;
     }
   }
@@ -50,10 +92,9 @@ class AIService {
     try {
       console.log('Sending chat message:', { userId, message });
 
-      // Check if we have an API key
-      const hasKey = await this.hasApiKey(userId);
-      if (!hasKey || !this.apiKey) {
-        throw new Error('Google Gemini API key not configured. Please add your API key in environment variables.');
+      const apiKey = await this.getApiKey(userId);
+      if (!apiKey) {
+        throw new Error('Google Gemini API key not configured. Please add your API key in settings.');
       }
 
       // Mock response for now - replace with actual Gemini API call
@@ -68,7 +109,7 @@ class AIService {
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      return `${randomResponse}\n\nNote: This is a demo response. To get real AI insights, please ensure your Gemini API key is properly configured.`;
+      return `${randomResponse}\n\nNote: This is a demo response. Your API key is properly configured and stored securely.`;
 
     } catch (error) {
       console.error('Error sending chat message:', error);
@@ -152,7 +193,7 @@ class AIService {
     try {
       const hasKey = await this.hasApiKey(userId);
       if (!hasKey) {
-        return "API key not configured. Please add your Gemini API key in environment variables.";
+        return "API key not configured. Please add your Gemini API key in settings.";
       }
 
       // Mock insights
@@ -164,25 +205,7 @@ class AIService {
   }
 
   async setApiKey(userId: string, apiKey: string): Promise<void> {
-    try {
-      // For now, we'll store in memory only
-      // TODO: Add proper database storage when user_settings table is updated
-      this.apiKey = apiKey;
-      console.log('API key set in memory (temporary storage)');
-    } catch (error) {
-      console.error('Error setting API key:', error);
-      throw error;
-    }
-  }
-
-  async saveApiKey(userId: string, apiKey: string): Promise<boolean> {
-    try {
-      await this.setApiKey(userId, apiKey);
-      return true;
-    } catch (error) {
-      console.error('Error saving API key:', error);
-      return false;
-    }
+    await this.saveApiKey(userId, apiKey);
   }
 }
 

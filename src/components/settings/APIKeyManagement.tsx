@@ -161,7 +161,7 @@ const APIKeyManagement: React.FC = () => {
                   Security Notice
                 </p>
                 <p className="text-amber-700 dark:text-amber-300 mt-1">
-                  Your API key is encrypted and stored securely. It's only used to make requests to Google Gemini on your behalf. 
+                  Your API key is encrypted and stored securely in your personal database. It's only used to make requests to Google Gemini on your behalf. 
                   You can revoke access anytime by removing the key from your Google AI Studio account.
                 </p>
               </div>
