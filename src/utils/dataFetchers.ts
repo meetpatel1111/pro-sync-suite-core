@@ -1,8 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-// Simplified interfaces to avoid deep type instantiation
-interface BasicItem {
+// Simple interface to avoid deep type instantiation
+interface SimpleItem {
   id: string;
   user_id?: string;
   created_at?: string;
@@ -11,20 +11,20 @@ interface BasicItem {
 }
 
 interface UserData {
-  tasks: BasicItem[];
-  projects: BasicItem[];
-  timeEntries: BasicItem[];
-  budgets: BasicItem[];
-  expenses: BasicItem[];
-  files: BasicItem[];
-  contacts: BasicItem[];
-  interactions: BasicItem[];
-  channels: BasicItem[];
-  messages: BasicItem[];
-  tickets: BasicItem[];
+  tasks: SimpleItem[];
+  projects: SimpleItem[];
+  timeEntries: SimpleItem[];
+  budgets: SimpleItem[];
+  expenses: SimpleItem[];
+  files: SimpleItem[];
+  contacts: SimpleItem[];
+  interactions: SimpleItem[];
+  channels: SimpleItem[];
+  messages: SimpleItem[];
+  tickets: SimpleItem[];
 }
 
-export const fetchTaskmasterData = async (userId: string): Promise<{ tasks: BasicItem[]; projects: BasicItem[] }> => {
+export const fetchTaskmasterData = async (userId: string): Promise<{ tasks: SimpleItem[]; projects: SimpleItem[] }> => {
   try {
     console.log('Fetching Taskmaster data for user:', userId);
 
@@ -34,8 +34,10 @@ export const fetchTaskmasterData = async (userId: string): Promise<{ tasks: Basi
     ]);
 
     return {
-      tasks: tasksResult.status === 'fulfilled' ? (tasksResult.value.data || []) : [],
-      projects: projectsResult.status === 'fulfilled' ? (projectsResult.value.data || []) : []
+      tasks: tasksResult.status === 'fulfilled' && tasksResult.value.data ? 
+        tasksResult.value.data.map(item => ({ ...item })) : [],
+      projects: projectsResult.status === 'fulfilled' && projectsResult.value.data ? 
+        projectsResult.value.data.map(item => ({ ...item })) : []
     };
   } catch (error) {
     console.error('Error fetching Taskmaster data:', error);
@@ -43,7 +45,7 @@ export const fetchTaskmasterData = async (userId: string): Promise<{ tasks: Basi
   }
 };
 
-export const fetchTimeTrackData = async (userId: string): Promise<BasicItem[]> => {
+export const fetchTimeTrackData = async (userId: string): Promise<SimpleItem[]> => {
   try {
     console.log('Fetching TimeTrack data for user:', userId);
 
@@ -54,14 +56,14 @@ export const fetchTimeTrackData = async (userId: string): Promise<BasicItem[]> =
       .order('created_at', { ascending: false })
       .limit(50);
 
-    return result.data || [];
+    return result.data ? result.data.map(item => ({ ...item })) : [];
   } catch (error) {
     console.error('Error fetching TimeTrack data:', error);
     return [];
   }
 };
 
-export const fetchBudgetData = async (userId: string): Promise<{ budgets: BasicItem[]; expenses: BasicItem[] }> => {
+export const fetchBudgetData = async (userId: string): Promise<{ budgets: SimpleItem[]; expenses: SimpleItem[] }> => {
   try {
     console.log('Fetching Budget data for user:', userId);
 
@@ -71,8 +73,10 @@ export const fetchBudgetData = async (userId: string): Promise<{ budgets: BasicI
     ]);
 
     return {
-      budgets: budgetsResult.status === 'fulfilled' ? (budgetsResult.value.data || []) : [],
-      expenses: expensesResult.status === 'fulfilled' ? (expensesResult.value.data || []) : []
+      budgets: budgetsResult.status === 'fulfilled' && budgetsResult.value.data ? 
+        budgetsResult.value.data.map(item => ({ ...item })) : [],
+      expenses: expensesResult.status === 'fulfilled' && expensesResult.value.data ? 
+        expensesResult.value.data.map(item => ({ ...item })) : []
     };
   } catch (error) {
     console.error('Error fetching Budget data:', error);
@@ -80,7 +84,7 @@ export const fetchBudgetData = async (userId: string): Promise<{ budgets: BasicI
   }
 };
 
-export const fetchFileVaultData = async (userId: string): Promise<BasicItem[]> => {
+export const fetchFileVaultData = async (userId: string): Promise<SimpleItem[]> => {
   try {
     console.log('Fetching FileVault data for user:', userId);
 
@@ -91,14 +95,14 @@ export const fetchFileVaultData = async (userId: string): Promise<BasicItem[]> =
       .order('created_at', { ascending: false })
       .limit(50);
 
-    return result.data || [];
+    return result.data ? result.data.map(item => ({ ...item })) : [];
   } catch (error) {
     console.error('Error fetching FileVault data:', error);
     return [];
   }
 };
 
-export const fetchClientData = async (userId: string): Promise<{ contacts: BasicItem[]; interactions: BasicItem[] }> => {
+export const fetchClientData = async (userId: string): Promise<{ contacts: SimpleItem[]; interactions: SimpleItem[] }> => {
   try {
     console.log('Fetching Client data for user:', userId);
     // Return empty arrays for now as these tables may not exist
@@ -112,7 +116,7 @@ export const fetchClientData = async (userId: string): Promise<{ contacts: Basic
   }
 };
 
-export const fetchCollabData = async (userId: string): Promise<{ channels: BasicItem[]; messages: BasicItem[] }> => {
+export const fetchCollabData = async (userId: string): Promise<{ channels: SimpleItem[]; messages: SimpleItem[] }> => {
   try {
     console.log('Fetching Collab data for user:', userId);
     // Return empty arrays for now as these tables may not exist
@@ -126,7 +130,7 @@ export const fetchCollabData = async (userId: string): Promise<{ channels: Basic
   }
 };
 
-export const fetchServiceCoreData = async (userId: string): Promise<BasicItem[]> => {
+export const fetchServiceCoreData = async (userId: string): Promise<SimpleItem[]> => {
   try {
     console.log('Fetching ServiceCore data for user:', userId);
     // Return empty array for now as this table may not exist
