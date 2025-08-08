@@ -43,7 +43,7 @@ class AIContextService {
 
       // Get user profile
       const { data: profile } = await supabase
-        .from('profiles')
+        .from('user_profiles')
         .select('*')
         .eq('id', userId)
         .single();
@@ -127,8 +127,7 @@ class AIContextService {
       const { data: tasks } = await supabase
         .from('tasks')
         .select('*')
-        .eq('project_id', projectId)
-        .eq('user_id', userId);
+        .eq('project_id', projectId);
 
       return {
         project: project || {},
