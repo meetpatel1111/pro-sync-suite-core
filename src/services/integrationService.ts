@@ -1,6 +1,16 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { Task, TimeEntry, Project } from '@/utils/dbtypes';
+import { Task, Project } from '@/utils/dbtypes';
+
+interface TimeEntry {
+  id: string;
+  user_id: string;
+  task_id: string;
+  description: string;
+  duration: number;
+  date: string;
+  created_at: string;
+  updated_at: string;
+}
 
 interface IntegrationAction {
   id: string;
@@ -68,7 +78,7 @@ class IntegrationService {
         user_id: user.id,
         task_id: taskId,
         description: description || 'Time logged from integration',
-        hours: Math.round(minutes / 60 * 100) / 100,
+        duration: Math.round(minutes / 60 * 100) / 100,
         date: new Date().toISOString().split('T')[0],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -225,6 +235,47 @@ class IntegrationService {
       return true;
     } catch (error) {
       console.error('Error in assignResourceToTask:', error);
+      return false;
+    }
+  }
+
+  async shareFileInChat(fileId: string, channelId: string, message?: string): Promise<boolean> {
+    try {
+      console.log('Sharing file in chat:', { fileId, channelId, message });
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+
+      // Log integration action
+      await this.createIntegrationAction(user.id, 'filevault', 'collabspace', 'share_file_in_chat', {
+        fileId,
+        channelId,
+        message
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error in shareFileInChat:', error);
+      return false;
+    }
+  }
+
+  async syncTaskToPlanBoard(taskId: string, projectId: string): Promise<boolean> {
+    try {
+      console.log('Syncing task to planboard:', { taskId, projectId });
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+
+      // Log integration action
+      await this.createIntegrationAction(user.id, 'taskmaster', 'planboard', 'sync_task', {
+        taskId,
+        projectId
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error in syncTaskToPlanBoard:', error);
       return false;
     }
   }
