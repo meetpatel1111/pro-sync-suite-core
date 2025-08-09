@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,14 +19,13 @@ import {
   Clock,
   Target,
   GitBranch,
-  AlertCircle,
   CheckCircle,
   Copy,
   Edit
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { integrationDatabaseService, AutomationWorkflow } from '@/services/integrationDatabaseService';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthContext } from '@/context/AuthContext';
 
 interface WorkflowStep {
   id: string;
@@ -46,8 +44,9 @@ interface Workflow {
 }
 
 const AutomationWorkflowBuilder: React.FC = () => {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const { toast } = useToast();
+  
   const [workflow, setWorkflow] = useState<Workflow>({
     name: '',
     description: '',
@@ -59,7 +58,6 @@ const AutomationWorkflowBuilder: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
 
-  // All ProSync Suite apps
   const apps = [
     'TaskMaster', 'TimeTrackPro', 'CollabSpace', 'PlanBoard', 
     'FileVault', 'BudgetBuddy', 'InsightIQ', 'ResourceHub', 
@@ -227,6 +225,51 @@ const AutomationWorkflowBuilder: React.FC = () => {
     }
   };
 
+  const testWorkflow = async () => {
+    if (!user || !workflow.name) {
+      toast({
+        title: 'Error',
+        description: 'Please create a workflow first',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      toast({
+        title: 'Testing Workflow',
+        description: 'Running workflow test...'
+      });
+
+      // Simulate workflow execution
+      await integrationDatabaseService.executeWorkflow('test', {
+        workflow: workflow,
+        testMode: true
+      });
+
+      toast({
+        title: 'Test Completed',
+        description: 'Workflow executed successfully in test mode'
+      });
+    } catch (error) {
+      console.error('Error testing workflow:', error);
+      toast({
+        title: 'Test Failed',
+        description: 'Workflow test encountered an error',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const getStepIcon = (type: string) => {
+    switch (type) {
+      case 'trigger': return <Zap className="h-4 w-4 text-blue-500" />;
+      case 'condition': return <GitBranch className="h-4 w-4 text-yellow-500" />;
+      case 'action': return <Target className="h-4 w-4 text-green-500" />;
+      default: return <Settings className="h-4 w-4" />;
+    }
+  };
+
   const loadWorkflowForEditing = (savedWorkflow: AutomationWorkflow) => {
     const steps: WorkflowStep[] = [];
     
@@ -316,15 +359,6 @@ const AutomationWorkflowBuilder: React.FC = () => {
         description: 'Failed to update workflow',
         variant: 'destructive'
       });
-    }
-  };
-
-  const getStepIcon = (type: string) => {
-    switch (type) {
-      case 'trigger': return <Zap className="h-4 w-4 text-blue-500" />;
-      case 'condition': return <GitBranch className="h-4 w-4 text-yellow-500" />;
-      case 'action': return <Target className="h-4 w-4 text-green-500" />;
-      default: return <Settings className="h-4 w-4" />;
     }
   };
 
@@ -548,7 +582,7 @@ const AutomationWorkflowBuilder: React.FC = () => {
                 <Save className="mr-2 h-4 w-4" />
                 {isBuilding ? 'Saving...' : 'Save Workflow'}
               </Button>
-              <Button variant="outline">
+              <Button variant="outline" onClick={testWorkflow}>
                 <Play className="mr-2 h-4 w-4" />
                 Test Workflow
               </Button>

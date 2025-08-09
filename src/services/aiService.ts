@@ -97,19 +97,50 @@ class AIService {
         throw new Error('Google Gemini API key not configured. Please add your API key in settings.');
       }
 
-      // Mock response for now - replace with actual Gemini API call
-      const responses = [
-        "I understand you're asking about your work data. Let me help you with that.",
-        "Based on your recent activities, I can provide some insights.",
-        "I've analyzed your data and here's what I found.",
-        "Let me help you with your ProSync Suite management."
-      ];
+      // Make actual API call to Google Gemini
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `You are an AI assistant for ProSync Suite, a comprehensive business productivity platform. 
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+Context: The user is asking about their work data and productivity. You have access to their recent tasks, projects, time entries, and other business data.
 
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      return `${randomResponse}\n\nNote: This is a demo response. Your API key is properly configured and stored securely.`;
+User message: ${message}
+
+Please provide a helpful, professional response focused on productivity and business management. Keep responses concise and actionable.`
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 1024,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        console.error('Gemini API error:', error);
+        throw new Error('Failed to get response from AI service. Please check your API key.');
+      }
+
+      const data = await response.json();
+      
+      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+        return data.candidates[0].content.parts[0].text;
+      } else {
+        throw new Error('Invalid response from AI service');
+      }
 
     } catch (error) {
       console.error('Error sending chat message:', error);
@@ -128,27 +159,96 @@ class AIService {
         return [];
       }
 
-      // Mock insights for now
-      const mockInsights: ProductivityInsight[] = [
+      const apiKey = await this.getApiKey(userId);
+      if (!apiKey) return [];
+
+      // Get user data for context
+      const { data: tasks } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', userId)
+        .limit(10);
+
+      const { data: projects } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', userId)
+        .limit(5);
+
+      const contextData = {
+        tasks: tasks || [],
+        projects: projects || [],
+        currentDate: new Date().toISOString()
+      };
+
+      // Generate insights using Gemini
+      const prompt = `Based on this user's productivity data: ${JSON.stringify(contextData)}
+
+Analyze their work patterns and provide 3-5 specific productivity insights. Each insight should be actionable and focused on improving their workflow.
+
+Respond in JSON format with this structure:
+{
+  "insights": [
+    {
+      "type": "tip|warning|achievement",
+      "title": "Insight title",
+      "description": "Detailed description",
+      "actionable": true,
+      "priority": "high|medium|low"
+    }
+  ]
+}`;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: prompt }]
+          }],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 2048,
+          }
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const responseText = data.candidates[0].content.parts[0].text;
+        
+        try {
+          const parsedResponse = JSON.parse(responseText);
+          return parsedResponse.insights.map((insight: any, index: number) => ({
+            id: `insight_${index + 1}`,
+            ...insight
+          }));
+        } catch (parseError) {
+          console.error('Error parsing AI response:', parseError);
+        }
+      }
+
+      // Fallback to mock insights
+      return [
         {
           id: '1',
           type: 'tip',
           title: 'Task Completion Rate',
-          description: 'You have completed 75% of your tasks this week. Consider breaking down larger tasks for better progress tracking.',
+          description: 'You have been consistently completing tasks. Consider breaking down larger tasks for better progress tracking.',
           actionable: true,
           priority: 'medium'
         },
         {
           id: '2',
           type: 'achievement',
-          title: 'Time Management',
-          description: 'Great job! You\'ve been consistent with your time tracking for 5 days straight.',
+          title: 'Project Progress',
+          description: 'Excellent progress on your current projects! Keep up the momentum.',
           actionable: false,
           priority: 'low'
         }
       ];
-
-      return mockInsights;
     } catch (error) {
       console.error('Error generating insights:', error);
       return [];
@@ -162,27 +262,76 @@ class AIService {
         return [];
       }
 
-      // Mock suggestions for now
-      const mockSuggestions: TaskSuggestion[] = [
+      const apiKey = await this.getApiKey(userId);
+      if (!apiKey) return [];
+
+      const prompt = `Based on this context: ${context}
+
+Generate 3-5 specific, actionable task suggestions for improving productivity. Each task should be practical and achievable.
+
+Respond in JSON format:
+{
+  "suggestions": [
+    {
+      "title": "Task title",
+      "description": "Task description",
+      "priority": "high|medium|low",
+      "category": "Category name",
+      "estimatedTime": "Time estimate"
+    }
+  ]
+}`;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: prompt }]
+          }],
+          generationConfig: {
+            temperature: 0.5,
+            maxOutputTokens: 1024,
+          }
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const responseText = data.candidates[0].content.parts[0].text;
+        
+        try {
+          const parsedResponse = JSON.parse(responseText);
+          return parsedResponse.suggestions.map((suggestion: any, index: number) => ({
+            id: `suggestion_${index + 1}`,
+            ...suggestion
+          }));
+        } catch (parseError) {
+          console.error('Error parsing AI response:', parseError);
+        }
+      }
+
+      // Fallback suggestions
+      return [
         {
           id: '1',
-          title: 'Review pending project tasks',
-          description: 'Check and update the status of tasks that haven\'t been updated in the last 3 days.',
+          title: 'Review pending tasks',
+          description: 'Check and update the status of tasks that haven\'t been updated recently.',
           priority: 'high',
-          category: 'Project Management',
-          estimatedTime: '30 minutes'
+          category: 'Task Management',
+          estimatedTime: '15 minutes'
         },
         {
           id: '2',
-          title: 'Schedule team check-in',
-          description: 'Plan a brief meeting to align on current project priorities and blockers.',
+          title: 'Plan tomorrow\'s priorities',
+          description: 'Identify the top 3 tasks to focus on tomorrow.',
           priority: 'medium',
-          category: 'Communication',
-          estimatedTime: '1 hour'
+          category: 'Planning',
+          estimatedTime: '10 minutes'
         }
       ];
-
-      return mockSuggestions;
     } catch (error) {
       console.error('Error generating task suggestions:', error);
       return [];
@@ -196,11 +345,38 @@ class AIService {
         return "API key not configured. Please add your Gemini API key in settings.";
       }
 
-      // Mock insights
-      return "Based on your data, you have good productivity trends. Consider focusing on completing pending tasks.";
+      const apiKey = await this.getApiKey(userId);
+      if (!apiKey) return "API key not found.";
+
+      const prompt = `Analyze this productivity data and provide insights: ${JSON.stringify(data)}
+
+Provide a concise analysis focusing on trends, patterns, and actionable recommendations for improving productivity.`;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: prompt }]
+          }],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 512,
+          }
+        })
+      });
+
+      if (response.ok) {
+        const responseData = await response.json();
+        return responseData.candidates[0].content.parts[0].text;
+      } else {
+        throw new Error('Failed to generate insights');
+      }
     } catch (error) {
       console.error('Error generating insights:', error);
-      return "Unable to generate insights at this time.";
+      return "Unable to generate insights at this time. Please check your API key configuration.";
     }
   }
 
