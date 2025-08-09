@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,7 +66,8 @@ const IntegrationTemplates: React.FC = () => {
       rating: 4.8,
       downloads: 1240,
       is_public: true,
-      is_verified: true
+      is_verified: true,
+      created_at: new Date().toISOString()
     },
     {
       id: 'time-budget-sync',
@@ -84,7 +84,8 @@ const IntegrationTemplates: React.FC = () => {
       rating: 4.6,
       downloads: 890,
       is_public: true,
-      is_verified: true
+      is_verified: true,
+      created_at: new Date().toISOString()
     },
     {
       id: 'file-share-notification',
@@ -101,7 +102,8 @@ const IntegrationTemplates: React.FC = () => {
       rating: 4.7,
       downloads: 650,
       is_public: true,
-      is_verified: true
+      is_verified: true,
+      created_at: new Date().toISOString()
     },
     {
       id: 'project-milestone-alert',
@@ -121,7 +123,8 @@ const IntegrationTemplates: React.FC = () => {
       rating: 4.9,
       downloads: 420,
       is_public: true,
-      is_verified: true
+      is_verified: true,
+      created_at: new Date().toISOString()
     },
     {
       id: 'resource-overallocation',
@@ -141,7 +144,8 @@ const IntegrationTemplates: React.FC = () => {
       rating: 4.5,
       downloads: 320,
       is_public: true,
-      is_verified: true
+      is_verified: true,
+      created_at: new Date().toISOString()
     },
     {
       id: 'client-update-automation',
@@ -161,7 +165,8 @@ const IntegrationTemplates: React.FC = () => {
       rating: 4.8,
       downloads: 580,
       is_public: true,
-      is_verified: true
+      is_verified: true,
+      created_at: new Date().toISOString()
     },
     {
       id: 'risk-assessment-workflow',
@@ -181,7 +186,8 @@ const IntegrationTemplates: React.FC = () => {
       rating: 4.6,
       downloads: 280,
       is_public: true,
-      is_verified: true
+      is_verified: true,
+      created_at: new Date().toISOString()
     },
     {
       id: 'productivity-analytics',
@@ -201,7 +207,8 @@ const IntegrationTemplates: React.FC = () => {
       rating: 4.7,
       downloads: 760,
       is_public: true,
-      is_verified: true
+      is_verified: true,
+      created_at: new Date().toISOString()
     }
   ];
 
@@ -235,7 +242,7 @@ const IntegrationTemplates: React.FC = () => {
       filtered = filtered.filter(template =>
         template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        template.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+        (template.tags && template.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
       );
     }
 
@@ -245,7 +252,7 @@ const IntegrationTemplates: React.FC = () => {
 
     if (selectedDifficulty !== 'all') {
       filtered = filtered.filter(template => 
-        template.difficulty.toLowerCase() === selectedDifficulty.toLowerCase()
+        template.difficulty && template.difficulty.toLowerCase() === selectedDifficulty.toLowerCase()
       );
     }
 
@@ -287,7 +294,8 @@ const IntegrationTemplates: React.FC = () => {
     }
   };
 
-  const getDifficultyColor = (difficulty: string) => {
+  const getDifficultyColor = (difficulty?: string) => {
+    if (!difficulty) return 'bg-gray-100 text-gray-800';
     switch (difficulty.toLowerCase()) {
       case 'beginner': return 'bg-green-100 text-green-800';
       case 'intermediate': return 'bg-yellow-100 text-yellow-800';
@@ -367,7 +375,7 @@ const IntegrationTemplates: React.FC = () => {
                 <div className="flex items-center gap-2">
                   {getCategoryIcon(template.category)}
                   <Badge variant="outline" className={getDifficultyColor(template.difficulty)}>
-                    {template.difficulty}
+                    {template.difficulty || 'Beginner'}
                   </Badge>
                 </div>
                 {template.is_verified && (
@@ -384,30 +392,32 @@ const IntegrationTemplates: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-1">
-                {template.apps.slice(0, 3).map((app) => (
+                {template.apps && template.apps.slice(0, 3).map((app) => (
                   <Badge key={app} variant="outline" className="text-xs">
                     {app}
                   </Badge>
                 ))}
-                {template.apps.length > 3 && (
+                {template.apps && template.apps.length > 3 && (
                   <Badge variant="outline" className="text-xs">
                     +{template.apps.length - 3}
                   </Badge>
                 )}
               </div>
               
-              <div className="flex flex-wrap gap-1">
-                {template.tags.slice(0, 3).map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
+              {template.tags && template.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {template.tags.slice(0, 3).map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
 
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                  <span>{template.rating}</span>
+                  <span>{template.rating || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Download className="h-3 w-3" />

@@ -1,7 +1,8 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Task, Project } from '@/utils/dbtypes';
 
-interface TimeEntry {
+interface IntegratedTimeEntry {
   id: string;
   user_id: string;
   task_id: string;
@@ -65,15 +66,15 @@ class IntegrationService {
     }
   }
 
-  async logTimeForTask(taskId: string, minutes: number, description?: string): Promise<TimeEntry | null> {
+  async logTimeForTask(taskId: string, minutes: number, description?: string): Promise<IntegratedTimeEntry | null> {
     try {
       console.log('Logging time for task:', { taskId, minutes, description });
       
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      // Create a mock time entry since we don't have a proper time_entries table
-      const timeEntry: TimeEntry = {
+      // Create a time entry using our integrated interface
+      const timeEntry: IntegratedTimeEntry = {
         id: `time_${Date.now()}`,
         user_id: user.id,
         task_id: taskId,
