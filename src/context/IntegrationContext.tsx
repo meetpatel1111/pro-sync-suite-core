@@ -1,14 +1,25 @@
 
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { integrationService } from '@/services/integrationService';
-import { Task, TimeEntry, Project } from '@/utils/dbtypes';
+import { Task, Project } from '@/utils/dbtypes';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthContext } from '@/context/AuthContext';
 
+interface IntegratedTimeEntry {
+  id: string;
+  user_id: string;
+  task_id: string;
+  description: string;
+  duration: number;
+  date: string;
+  created_at: string;
+  updated_at: string;
+}
+
 interface IntegrationContextType {
   createTaskFromNote: (title: string, description: string, projectId?: string, dueDate?: string, assigneeId?: string) => Promise<Task | null>;
-  logTimeForTask: (taskId: string, minutes: number, description?: string) => Promise<TimeEntry | null>;
+  logTimeForTask: (taskId: string, minutes: number, description?: string) => Promise<IntegratedTimeEntry | null>;
   checkProjectMilestones: () => Promise<{ project: Project, tasksDue: Task[] }[]>;
   linkDocumentToTask: (taskId: string, documentUrl: string, documentName: string) => Promise<boolean>;
   shareFileWithUser: (fileId: string, userId: string, accessLevel?: 'view' | 'download') => Promise<boolean>;

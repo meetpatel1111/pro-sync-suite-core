@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface AutomationWorkflow {
@@ -10,6 +11,7 @@ export interface AutomationWorkflow {
   conditions_config?: any[];
   is_active: boolean;
   execution_count: number;
+  last_executed_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -50,47 +52,25 @@ export interface IntegrationHealthStatus {
 class IntegrationDatabaseService {
   async createAutomationWorkflow(workflow: Omit<AutomationWorkflow, 'id' | 'created_at' | 'updated_at'>): Promise<AutomationWorkflow> {
     try {
-      // First, create a simple workflow entry in user_settings as a placeholder
-      const workflowData = {
-        user_id: workflow.user_id,
-        theme: 'light', // Default values for existing columns
-        language: 'en',
-        timezone: 'UTC',
-        // Store workflow data in a custom field or use JSONB if available
-        workflow_name: workflow.name,
-        workflow_description: workflow.description,
-        workflow_config: JSON.stringify({
-          trigger: workflow.trigger_config,
-          actions: workflow.actions_config,
-          conditions: workflow.conditions_config,
-          is_active: workflow.is_active,
-          execution_count: workflow.execution_count
-        })
-      };
-
-      // For now, store in user_settings with a unique approach
       const { data, error } = await supabase
-        .from('user_settings')
-        .insert(workflowData)
+        .from('automation_workflows')
+        .insert({
+          user_id: workflow.user_id,
+          name: workflow.name,
+          description: workflow.description,
+          trigger_config: workflow.trigger_config,
+          actions_config: workflow.actions_config,
+          conditions_config: workflow.conditions_config || [],
+          is_active: workflow.is_active,
+          execution_count: workflow.execution_count,
+          last_executed_at: workflow.last_executed_at
+        })
         .select()
         .single();
 
       if (error) throw error;
 
-      // Return formatted workflow
-      return {
-        id: data.id,
-        user_id: data.user_id,
-        name: workflow.name,
-        description: workflow.description,
-        trigger_config: workflow.trigger_config,
-        actions_config: workflow.actions_config,
-        conditions_config: workflow.conditions_config,
-        is_active: workflow.is_active,
-        execution_count: workflow.execution_count,
-        created_at: data.created_at,
-        updated_at: data.updated_at
-      };
+      return data;
     } catch (error) {
       console.error('Error creating automation workflow:', error);
       throw error;
@@ -99,39 +79,15 @@ class IntegrationDatabaseService {
 
   async getAutomationWorkflows(userId: string): Promise<AutomationWorkflow[]> {
     try {
-      // For demo purposes, return mock data
-      const mockWorkflows: AutomationWorkflow[] = [
-        {
-          id: '1',
-          user_id: userId,
-          name: 'Task Assignment Automation',
-          description: 'Automatically assign tasks based on team workload',
-          trigger_config: { app: 'TaskMaster', event: 'task_created' },
-          actions_config: [{ app: 'TaskMaster', action: 'assign_task', config: { strategy: 'least_busy' } }],
-          conditions_config: [{ field: 'priority', operator: 'equals', value: 'high' }],
-          is_active: true,
-          execution_count: 5,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: '2',
-          user_id: userId,
-          name: 'Budget Alert Workflow',
-          description: 'Send alerts when project budget exceeds threshold',
-          trigger_config: { app: 'BudgetBuddy', event: 'budget_exceeded' },
-          actions_config: [
-            { app: 'CollabSpace', action: 'send_message', config: { channel: 'general' } },
-            { app: 'ClientConnect', action: 'send_email', config: { template: 'budget_alert' } }
-          ],
-          is_active: false,
-          execution_count: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ];
+      const { data, error } = await supabase
+        .from('automation_workflows')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
 
-      return mockWorkflows;
+      if (error) throw error;
+
+      return data || [];
     } catch (error) {
       console.error('Error getting automation workflows:', error);
       return [];
@@ -140,9 +96,15 @@ class IntegrationDatabaseService {
 
   async updateAutomationWorkflow(id: string, updates: Partial<AutomationWorkflow>): Promise<void> {
     try {
-      console.log('Updating workflow:', id, updates);
-      // For demo purposes, just log the update
-      // In a real implementation, this would update the database
+      const { error } = await supabase
+        .from('automation_workflows')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error updating automation workflow:', error);
       throw error;
@@ -151,9 +113,12 @@ class IntegrationDatabaseService {
 
   async deleteAutomationWorkflow(id: string): Promise<void> {
     try {
-      console.log('Deleting workflow:', id);
-      // For demo purposes, just log the deletion
-      // In a real implementation, this would delete from database
+      const { error } = await supabase
+        .from('automation_workflows')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error deleting automation workflow:', error);
       throw error;
@@ -161,100 +126,33 @@ class IntegrationDatabaseService {
   }
 
   async getIntegrationTemplates(): Promise<IntegrationTemplate[]> {
-    const mockTemplates: IntegrationTemplate[] = [
-      {
-        id: '1',
-        name: 'Task to Time Entry',
-        description: 'Automatically create time entries when tasks are completed',
-        category: 'Productivity',
-        source_app: 'TaskMaster',
-        target_app: 'TimeTrackPro',
-        config: {
-          trigger: 'task_completed',
-          mapping: { task_title: 'entry_description', task_time: 'duration' }
-        },
-        downloads: 150,
-        is_featured: true,
-        created_at: new Date().toISOString()
-      },
-      {
-        id: '2',
-        name: 'Budget Alert System',
-        description: 'Send notifications when budget thresholds are exceeded',
-        category: 'Finance',
-        source_app: 'BudgetBuddy',
-        target_app: 'CollabSpace',
-        config: {
-          trigger: 'budget_threshold',
-          threshold: 80,
-          action: 'send_notification'
-        },
-        downloads: 89,
-        is_featured: false,
-        created_at: new Date().toISOString()
-      },
-      {
-        id: '3',
-        name: 'Client Meeting Sync',
-        description: 'Sync client meetings with project timelines',
-        category: 'CRM',
-        source_app: 'ClientConnect',
-        target_app: 'PlanBoard',
-        config: {
-          trigger: 'meeting_scheduled',
-          mapping: { meeting_date: 'milestone_date', client_id: 'project_client' }
-        },
-        downloads: 45,
-        is_featured: true,
-        created_at: new Date().toISOString()
-      }
-    ];
+    try {
+      const { data, error } = await supabase
+        .from('integration_templates')
+        .select('*')
+        .eq('is_public', true)
+        .order('downloads', { ascending: false });
 
-    return mockTemplates;
+      if (error) throw error;
+
+      return data || [];
+    } catch (error) {
+      console.error('Error getting integration templates:', error);
+      return [];
+    }
   }
 
   async getIntegrationHealth(userId: string): Promise<IntegrationHealthStatus[]> {
     try {
-      // Mock health status data with proper typing
-      const mockHealthData: IntegrationHealthStatus[] = [
-        {
-          id: '1',
-          user_id: userId,
-          service_name: 'TaskMaster',
-          status: 'healthy' as const,
-          response_time: 150,
-          uptime_percentage: 99.9,
-          last_checked_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: '2',
-          user_id: userId,
-          service_name: 'TimeTrackPro',
-          status: 'warning' as const,
-          response_time: 450,
-          uptime_percentage: 97.5,
-          error_details: 'Elevated response times detected',
-          last_checked_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: '3',
-          user_id: userId,
-          service_name: 'CollabSpace',
-          status: 'error' as const,
-          response_time: 0,
-          uptime_percentage: 85.2,
-          error_details: 'Service temporarily unavailable',
-          last_checked_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ];
+      const { data, error } = await supabase
+        .from('integration_health_status')
+        .select('*')
+        .eq('user_id', userId)
+        .order('last_checked_at', { ascending: false });
 
-      return mockHealthData;
+      if (error) throw error;
+
+      return data || [];
     } catch (error) {
       console.error('Error getting integration health:', error);
       return [];
@@ -263,32 +161,35 @@ class IntegrationDatabaseService {
 
   async createIntegrationHealthStatus(status: Omit<IntegrationHealthStatus, 'id' | 'created_at' | 'updated_at'>): Promise<IntegrationHealthStatus> {
     try {
-      // Return mock data if database creation fails
-      return {
-        id: `mock-${Date.now()}`,
-        ...status,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      const { data, error } = await supabase
+        .from('integration_health_status')
+        .insert(status)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return data;
     } catch (error) {
       console.error('Error creating integration health status:', error);
-      // Return mock data if database creation fails
-      return {
-        id: `mock-${Date.now()}`,
-        ...status,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      throw error;
     }
   }
 
   async updateIntegrationHealthStatus(id: string, updates: Partial<IntegrationHealthStatus>): Promise<void> {
     try {
-      console.log('Updating health status:', id, updates);
-      // For demo purposes, continue without throwing
+      const { error } = await supabase
+        .from('integration_health_status')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error updating integration health status:', error);
-      // For demo purposes, continue without throwing
+      throw error;
     }
   }
 
@@ -319,8 +220,12 @@ class IntegrationDatabaseService {
 
       if (error) throw error;
 
-      // For now, just log the download increment since we don't have RPC
-      console.log('Template installed and download count incremented for:', templateId);
+      // Increment download count
+      await supabase
+        .from('integration_templates')
+        .update({ downloads: supabase.sql`downloads + 1` })
+        .eq('id', templateId);
+
     } catch (error) {
       console.error('Error installing template:', error);
       throw error;
@@ -331,20 +236,92 @@ class IntegrationDatabaseService {
     try {
       console.log('Executing workflow:', workflowId, 'with data:', triggerData);
       
-      // Simulate workflow execution
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // In a real implementation, this would:
-      // 1. Get the workflow configuration
-      // 2. Check conditions
-      // 3. Execute actions
-      // 4. Log results
-      // 5. Update execution count
-      
+      // Get workflow from database
+      const { data: workflow, error } = await supabase
+        .from('automation_workflows')
+        .select('*')
+        .eq('id', workflowId)
+        .single();
+
+      if (error || !workflow) {
+        console.error('Workflow not found:', error);
+        return false;
+      }
+
+      // Check if workflow is active
+      if (!workflow.is_active) {
+        console.log('Workflow is not active');
+        return false;
+      }
+
+      // Execute workflow actions
+      const actions = workflow.actions_config as any[];
+      for (const action of actions) {
+        await this.executeAction(action, triggerData);
+      }
+
+      // Update execution count
+      await supabase
+        .from('automation_workflows')
+        .update({ 
+          execution_count: workflow.execution_count + 1,
+          last_executed_at: new Date().toISOString()
+        })
+        .eq('id', workflowId);
+
       return true;
     } catch (error) {
       console.error('Error executing workflow:', error);
       return false;
+    }
+  }
+
+  private async executeAction(action: any, triggerData: any): Promise<void> {
+    console.log('Executing action:', action, 'with trigger data:', triggerData);
+    
+    // Execute different types of actions based on app and action type
+    const { app, action: actionType, config } = action;
+
+    switch (app) {
+      case 'TaskMaster':
+        if (actionType === 'create_task') {
+          await supabase.from('tasks').insert({
+            title: config.title || 'Automated Task',
+            description: config.description || 'Task created by automation',
+            status: 'todo',
+            priority: config.priority || 'medium',
+            created_by: triggerData.user_id
+          });
+        }
+        break;
+
+      case 'CollabSpace':
+        if (actionType === 'send_notification') {
+          await supabase.from('notifications').insert({
+            user_id: triggerData.user_id,
+            title: config.title || 'Automation Notification',
+            message: config.message || 'Workflow executed successfully',
+            type: 'info'
+          });
+        }
+        break;
+
+      case 'TimeTrackPro':
+        if (actionType === 'log_time') {
+          await supabase.from('time_entries').insert({
+            user_id: triggerData.user_id,
+            task_id: triggerData.task_id,
+            description: config.description || 'Automated time entry',
+            time_spent: config.hours || 1,
+            date: new Date().toISOString().split('T')[0],
+            start_time: new Date().toISOString(),
+            manual: false
+          });
+        }
+        break;
+
+      default:
+        console.log('Unknown app for action:', app);
     }
   }
 }

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Task } from '@/utils/dbtypes';
@@ -178,7 +177,11 @@ const TaskDetailWithIntegrations: React.FC<TaskDetailWithIntegrationsProps> = ({
         </CardContent>
       </Card>
       
-      <TaskIntegrations task={task} />
+      <TaskIntegrations 
+        taskId={task.id}
+        taskTitle={task.title}
+        projectId={task.project_id}
+      />
     </div>
   );
 };
