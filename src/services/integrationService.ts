@@ -1,374 +1,258 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Task, Project } from '@/utils/dbtypes';
+import { integrationDatabaseService } from './integrationDatabaseService';
 
-interface IntegratedTimeEntry {
+export interface IntegratedTimeEntry {
   id: string;
   user_id: string;
   task_id: string;
   description: string;
-  duration: number;
+  time_spent: number;
   date: string;
+  manual: boolean;
+  project: string;
   created_at: string;
   updated_at: string;
 }
 
-interface IntegrationAction {
+export interface IntegrationAction {
   id: string;
   user_id: string;
   source_app: string;
   target_app: string;
   action_type: string;
+  trigger_condition: string | null;
   config: any;
-  status: 'pending' | 'completed' | 'failed';
+  enabled: boolean;
   created_at: string;
+  status: 'active' | 'inactive' | 'error';
 }
 
 class IntegrationService {
-  async createTaskFromNote(title: string, description: string, projectId?: string, dueDate?: string, assigneeId?: string): Promise<Task | null> {
+  // Real-time task to time tracking integration
+  async startTimeTracking(userId: string, taskId: string): Promise<IntegratedTimeEntry | null> {
     try {
-      console.log('Creating task from note:', { title, description, projectId, dueDate, assigneeId });
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-
-      const taskData = {
-        title,
-        description,
-        status: 'todo' as const,
-        priority: 'medium' as const,
-        created_by: user.id,
-        project_id: projectId,
-        due_date: dueDate,
-        assignee_id: assigneeId,
-      };
-
-      const { data, error } = await supabase
+      // Get task details
+      const { data: task } = await supabase
         .from('tasks')
-        .insert(taskData)
-        .select()
+        .select('title, project_id, projects(name)')
+        .eq('id', taskId)
         .single();
 
-      if (error) {
-        console.error('Error creating task:', error);
-        return null;
-      }
+      if (!task) throw new Error('Task not found');
 
-      // Log integration action in database
-      await this.createIntegrationAction(user.id, 'note', 'taskmaster', 'create_task', { taskId: data.id });
-
-      return data;
-    } catch (error) {
-      console.error('Error in createTaskFromNote:', error);
-      return null;
-    }
-  }
-
-  async logTimeForTask(taskId: string, minutes: number, description?: string): Promise<IntegratedTimeEntry | null> {
-    try {
-      console.log('Logging time for task:', { taskId, minutes, description });
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-
-      // Create actual time entry in the database
-      const timeEntryData = {
-        user_id: user.id,
+      const timeEntry = {
+        user_id: userId,
         task_id: taskId,
-        description: description || 'Time logged from integration',
-        time_spent: Math.round(minutes / 60 * 100) / 100, // Convert minutes to hours
+        description: `Started tracking: ${task.title}`,
+        time_spent: 0,
         date: new Date().toISOString().split('T')[0],
-        start_time: new Date().toISOString(),
-        manual: true,
+        manual: false,
+        project: (task.projects as any)?.name || 'Unknown Project'
       };
 
       const { data, error } = await supabase
         .from('time_entries')
-        .insert(timeEntryData)
+        .insert(timeEntry)
         .select()
         .single();
 
-      if (error) {
-        console.error('Error creating time entry:', error);
-        return null;
-      }
+      if (error) throw error;
 
-      // Log integration action
-      await this.createIntegrationAction(user.id, 'taskmaster', 'timetrackpro', 'log_time', { 
-        taskId, 
-        minutes, 
-        timeEntryId: data.id 
-      });
-
-      // Return in IntegratedTimeEntry format
       return {
         id: data.id,
         user_id: data.user_id,
-        task_id: data.task_id || taskId,
+        task_id: data.task_id || '',
         description: data.description,
-        duration: data.time_spent,
-        date: data.date,
-        created_at: data.created_at,
-        updated_at: data.updated_at
+        time_spent: data.time_spent,
+        date: data.date || '',
+        manual: data.manual || false,
+        project: data.project,
+        created_at: data.created_at || new Date().toISOString(),
+        updated_at: data.updated_at || new Date().toISOString()
       };
     } catch (error) {
-      console.error('Error in logTimeForTask:', error);
+      console.error('Error starting time tracking:', error);
       return null;
     }
   }
 
-  async checkProjectMilestones(): Promise<{ project: Project, tasksDue: Task[] }[]> {
+  async stopTimeTracking(userId: string, timeEntryId: string, minutes: number): Promise<boolean> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
-      console.log('Checking project milestones for user:', user.id);
-
-      // Get actual projects from database
-      const { data: projects, error: projectsError } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (projectsError) {
-        console.error('Error fetching projects:', projectsError);
-        return [];
-      }
-
-      if (!projects) return [];
-
-      const milestones = [];
-
-      for (const project of projects) {
-        // Get tasks due within the next 7 days
-        const nextWeek = new Date();
-        nextWeek.setDate(nextWeek.getDate() + 7);
-
-        const { data: tasksDue, error: tasksError } = await supabase
-          .from('tasks')
-          .select('*')
-          .eq('project_id', project.id)
-          .lte('due_date', nextWeek.toISOString())
-          .neq('status', 'done');
-
-        if (tasksError) {
-          console.error('Error fetching tasks:', tasksError);
-          continue;
-        }
-
-        if (tasksDue && tasksDue.length > 0) {
-          milestones.push({
-            project,
-            tasksDue
-          });
-        }
-      }
-
-      return milestones;
-    } catch (error) {
-      console.error('Error checking milestones:', error);
-      return [];
-    }
-  }
-
-  async linkDocumentToTask(taskId: string, documentUrl: string, documentName: string): Promise<boolean> {
-    try {
-      console.log('Linking document to task:', { taskId, documentUrl, documentName });
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return false;
-
-      // Update task with document link in database
       const { error } = await supabase
-        .from('tasks')
-        .update({
-          description: `Document linked: [${documentName}](${documentUrl})`,
-          updated_at: new Date().toISOString()
+        .from('time_entries')
+        .update({ 
+          time_spent: minutes,
+          description: `Completed time tracking: ${minutes} minutes`
         })
-        .eq('id', taskId)
-        .eq('created_by', user.id);
+        .eq('id', timeEntryId)
+        .eq('user_id', userId);
 
-      if (error) {
-        console.error('Error linking document:', error);
-        return false;
-      }
-
-      // Log integration action
-      await this.createIntegrationAction(user.id, 'filevault', 'taskmaster', 'link_document', {
-        taskId,
-        documentUrl,
-        documentName
-      });
-
-      return true;
+      return !error;
     } catch (error) {
-      console.error('Error in linkDocumentToTask:', error);
+      console.error('Error stopping time tracking:', error);
       return false;
     }
   }
 
-  async shareFileWithUser(fileId: string, userId: string, accessLevel: 'view' | 'download' = 'view'): Promise<boolean> {
+  // Task management integration
+  async createLinkedTask(userId: string, projectId: string, title: string, description: string, sourceApp: string): Promise<any> {
     try {
-      console.log('Sharing file with user:', { fileId, userId, accessLevel });
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return false;
-
-      // Create actual file permission in database
-      const { error } = await supabase
-        .from('file_permissions')
+      const { data, error } = await supabase
+        .from('tasks')
         .insert({
-          file_id: fileId,
-          user_id: userId,
-          permission: accessLevel,
-          granted_by: user.id
-        });
-
-      if (error) {
-        console.error('Error sharing file:', error);
-        return false;
-      }
-
-      // Log integration action
-      await this.createIntegrationAction(user.id, 'filevault', 'resourcehub', 'share_file', {
-        fileId,
-        sharedWithUserId: userId,
-        accessLevel
-      });
-
-      return true;
-    } catch (error) {
-      console.error('Error in shareFileWithUser:', error);
-      return false;
-    }
-  }
-
-  async assignResourceToTask(taskId: string, resourceId: string): Promise<boolean> {
-    try {
-      console.log('Assigning resource to task:', { taskId, resourceId });
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return false;
-
-      // Update task with assigned resource in database
-      const { error } = await supabase
-        .from('tasks')
-        .update({
-          assignee_id: resourceId,
-          updated_at: new Date().toISOString()
+          title,
+          description: `${description}\n\nCreated from: ${sourceApp}`,
+          status: 'todo',
+          priority: 'medium',
+          created_by: userId,
+          project_id: projectId
         })
-        .eq('id', taskId);
+        .select()
+        .single();
 
-      if (error) {
-        console.error('Error assigning resource:', error);
-        return false;
-      }
+      if (error) throw error;
 
       // Log integration action
-      await this.createIntegrationAction(user.id, 'resourcehub', 'taskmaster', 'assign_resource', {
-        taskId,
-        resourceId
+      await this.logIntegrationAction(userId, sourceApp, 'TaskMaster', 'create_task', {
+        task_id: data.id,
+        title,
+        description
       });
 
-      return true;
+      return data;
     } catch (error) {
-      console.error('Error in assignResourceToTask:', error);
-      return false;
+      console.error('Error creating linked task:', error);
+      return null;
     }
   }
 
-  async shareFileInChat(fileId: string, channelId: string, message?: string): Promise<boolean> {
+  // File sharing integration
+  async shareFileInChat(userId: string, fileId: string, chatId: string): Promise<boolean> {
     try {
-      console.log('Sharing file in chat:', { fileId, channelId, message });
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return false;
+      // Get file details
+      const { data: file } = await supabase
+        .from('files')
+        .select('name, storage_path')
+        .eq('id', fileId)
+        .single();
 
-      // Create actual chat message with file attachment
+      if (!file) return false;
+
+      // Create a message in the chat with file attachment
       const { error } = await supabase
         .from('messages')
         .insert({
-          sender_id: user.id,
-          content: message || `File shared: ${fileId}`,
-          channel_id: channelId,
-          file_url: fileId, // Assuming fileId contains file reference
-          message_type: 'file'
+          sender_id: userId,
+          chat_id: chatId,
+          content: `Shared file: ${file.name}`,
+          message_type: 'file',
+          file_url: file.storage_path
         });
 
-      if (error) {
-        console.error('Error sharing file in chat:', error);
-        return false;
-      }
+      if (error) throw error;
 
-      // Log integration action
-      await this.createIntegrationAction(user.id, 'filevault', 'collabspace', 'share_file_in_chat', {
-        fileId,
-        channelId,
-        message
+      await this.logIntegrationAction(userId, 'FileVault', 'CollabSpace', 'share_file', {
+        file_id: fileId,
+        chat_id: chatId,
+        file_name: file.name
       });
 
       return true;
     } catch (error) {
-      console.error('Error in shareFileInChat:', error);
+      console.error('Error sharing file in chat:', error);
       return false;
     }
   }
 
-  async syncTaskToPlanBoard(taskId: string, projectId: string): Promise<boolean> {
+  // Cross-app project monitoring
+  async syncProjectData(userId: string, projectId: string): Promise<boolean> {
     try {
-      console.log('Syncing task to planboard:', { taskId, projectId });
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return false;
-
-      // Get task details
-      const { data: task, error: taskError } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('id', taskId)
+      // Get project with tasks and time entries
+      const { data: project } = await supabase
+        .from('projects')
+        .select(`
+          *,
+          tasks(*),
+          time_entries(*)
+        `)
+        .eq('id', projectId)
         .single();
 
-      if (taskError || !task) {
-        console.error('Error fetching task:', taskError);
-        return false;
-      }
+      if (!project) return false;
 
-      // Create milestone or update project timeline
-      const { error } = await supabase
-        .from('project_milestones')
-        .insert({
-          project_id: projectId,
-          title: task.title,
-          description: task.description,
-          due_date: task.due_date,
-          task_id: taskId,
-          created_by: user.id
-        });
+      // Calculate project metrics
+      const tasks = project.tasks || [];
+      const completedTasks = tasks.filter((t: any) => t.status === 'completed').length;
+      const totalHours = (project.time_entries || []).reduce((sum: number, entry: any) => sum + (entry.time_spent || 0), 0);
 
-      if (error) {
-        console.error('Error creating milestone:', error);
-        return false;
-      }
-
-      // Log integration action
-      await this.createIntegrationAction(user.id, 'taskmaster', 'planboard', 'sync_task', {
-        taskId,
-        projectId
-      });
+      // Update project with calculated metrics
+      await supabase
+        .from('projects')
+        .update({
+          description: `${project.description || ''}\n\nMetrics - Completed: ${completedTasks}/${tasks.length} tasks, Total Hours: ${Math.round(totalHours / 60)}h`
+        })
+        .eq('id', projectId);
 
       return true;
     } catch (error) {
-      console.error('Error in syncTaskToPlanBoard:', error);
+      console.error('Error syncing project data:', error);
       return false;
     }
   }
 
-  async createIntegrationAction(userId: string, sourceApp: string, targetApp: string, actionType: string, config: any = {}): Promise<boolean> {
+  // PlanBoard integration
+  async syncTaskToPlanBoard(userId: string, taskId: string, boardId: string): Promise<boolean> {
     try {
-      console.log('Creating integration action:', { userId, sourceApp, targetApp, actionType, config });
-      
-      // Store actual integration action in database
+      // Update task with board assignment
       const { error } = await supabase
+        .from('tasks')
+        .update({ board_id: boardId })
+        .eq('id', taskId)
+        .eq('created_by', userId);
+
+      if (error) throw error;
+
+      await this.logIntegrationAction(userId, 'TaskMaster', 'PlanBoard', 'sync_task', {
+        task_id: taskId,
+        board_id: boardId
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error syncing task to PlanBoard:', error);
+      return false;
+    }
+  }
+
+  // Resource allocation integration
+  async allocateResourceToTask(userId: string, taskId: string, resourceId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('task_resources')
+        .insert({
+          task_id: taskId,
+          resource_id: resourceId
+        });
+
+      if (error) throw error;
+
+      await this.logIntegrationAction(userId, 'ResourceHub', 'TaskMaster', 'allocate_resource', {
+        task_id: taskId,
+        resource_id: resourceId
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error allocating resource:', error);
+      return false;
+    }
+  }
+
+  // Integration monitoring and logging
+  async logIntegrationAction(userId: string, sourceApp: string, targetApp: string, actionType: string, config: any): Promise<void> {
+    try {
+      await supabase
         .from('integration_actions')
         .insert({
           user_id: userId,
@@ -379,184 +263,38 @@ class IntegrationService {
           enabled: true,
           execution_count: 1,
           success_count: 1,
-          last_executed_at: new Date().toISOString()
+          error_count: 0
         });
-
-      if (error) {
-        console.error('Error creating integration action:', error);
-        return false;
-      }
-
-      return true;
     } catch (error) {
-      console.error('Error creating integration action:', error);
-      return false;
+      console.error('Error logging integration action:', error);
     }
   }
 
-  async getUserIntegrationActions(userId: string): Promise<IntegrationAction[]> {
+  async getIntegrationActions(userId: string): Promise<IntegrationAction[]> {
     try {
-      // Get real integration actions from database
       const { data, error } = await supabase
         .from('integration_actions')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching integration actions:', error);
-        return [];
-      }
+      if (error) throw error;
 
-      return data || [];
+      return (data || []).map(action => ({
+        id: action.id,
+        user_id: action.user_id,
+        source_app: action.source_app,
+        target_app: action.target_app,
+        action_type: action.action_type,
+        trigger_condition: action.trigger_condition,
+        config: action.config,
+        enabled: action.enabled || false,
+        created_at: action.created_at,
+        status: 'active' as const
+      }));
     } catch (error) {
-      console.error('Error getting user integration actions:', error);
+      console.error('Error getting integration actions:', error);
       return [];
-    }
-  }
-
-  async getLiveProjectData(projectId: string): Promise<any> {
-    try {
-      // Get real project data from database
-      const { data: project, error: projectError } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('id', projectId)
-        .single();
-
-      if (projectError) {
-        console.error('Error fetching project:', projectError);
-        return { project: {}, tasks: [], lastUpdated: new Date().toISOString() };
-      }
-
-      const { data: tasks, error: tasksError } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('project_id', projectId);
-
-      if (tasksError) {
-        console.error('Error fetching tasks:', tasksError);
-      }
-
-      return {
-        project: project || {},
-        tasks: tasks || [],
-        lastUpdated: new Date().toISOString()
-      };
-    } catch (error) {
-      console.error('Error getting live project data:', error);
-      return { project: {}, tasks: [], lastUpdated: new Date().toISOString() };
-    }
-  }
-
-  subscribeToProjectChanges(projectId: string, callback: (payload: any) => void): any {
-    console.log('Subscribing to project changes:', projectId);
-    
-    const channel = supabase
-      .channel(`project_${projectId}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'tasks',
-        filter: `project_id=eq.${projectId}`
-      }, callback)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'projects',
-        filter: `id=eq.${projectId}`
-      }, callback)
-      .subscribe();
-
-    return channel;
-  }
-
-  async triggerAutomation(eventType: string, sourceData: any): Promise<boolean> {
-    try {
-      console.log('Triggering automation:', { eventType, sourceData });
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return false;
-
-      // Get matching automation workflows from database
-      const { data: workflows, error } = await supabase
-        .from('automation_workflows')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_active', true);
-
-      if (error) {
-        console.error('Error fetching workflows:', error);
-        return false;
-      }
-
-      let executed = false;
-      
-      // Execute matching workflows
-      for (const workflow of workflows || []) {
-        try {
-          // Check if workflow trigger matches
-          const triggerConfig = workflow.trigger_config as any;
-          if (triggerConfig && triggerConfig.event === eventType) {
-            // Execute workflow actions
-            const actionsConfig = workflow.actions_config as any[];
-            
-            for (const action of actionsConfig || []) {
-              await this.executeWorkflowAction(action, sourceData);
-            }
-            
-            // Update execution count
-            await supabase
-              .from('automation_workflows')
-              .update({ 
-                execution_count: workflow.execution_count + 1,
-                last_executed_at: new Date().toISOString()
-              })
-              .eq('id', workflow.id);
-              
-            executed = true;
-          }
-        } catch (actionError) {
-          console.error('Error executing workflow action:', actionError);
-        }
-      }
-
-      return executed;
-    } catch (error) {
-      console.error('Error triggering automation:', error);
-      return false;
-    }
-  }
-
-  private async executeWorkflowAction(action: any, sourceData: any): Promise<void> {
-    const { app, action: actionType, config } = action;
-    
-    console.log('Executing workflow action:', { app, actionType, config, sourceData });
-
-    switch (app) {
-      case 'TimeTrackPro':
-        if (actionType === 'log_time' && sourceData.task_id) {
-          await this.logTimeForTask(sourceData.task_id, config.minutes || 30);
-        }
-        break;
-      case 'CollabSpace':
-        if (actionType === 'send_notification') {
-          // Create notification in database
-          await supabase.from('notifications').insert({
-            user_id: sourceData.user_id,
-            title: config.title || 'Automation Triggered',
-            message: config.message || 'An automation workflow has been executed',
-            type: 'info'
-          });
-        }
-        break;
-      case 'PlanBoard':
-        if (actionType === 'sync_task' && sourceData.task_id) {
-          await this.syncTaskToPlanBoard(sourceData.task_id, sourceData.project_id);
-        }
-        break;
-      default:
-        console.log('Unknown app for workflow action:', app);
     }
   }
 }
