@@ -110,7 +110,7 @@ const AutomationWorkflowBuilder: React.FC = () => {
 
     try {
       setLoading(true);
-      const workflows = await integrationDatabaseService.getAutomationWorkflows(user.id);
+      const workflows = await integrationDatabaseService.getUserAutomationWorkflows(user.id);
       setSavedWorkflows(workflows);
     } catch (error) {
       console.error('Error loading workflows:', error);
@@ -197,7 +197,8 @@ const AutomationWorkflowBuilder: React.FC = () => {
         actions_config: actions,
         conditions_config: conditions,
         is_active: workflow.enabled,
-        execution_count: 0
+        execution_count: 0,
+        last_executed_at: null
       });
 
       toast({
@@ -242,10 +243,7 @@ const AutomationWorkflowBuilder: React.FC = () => {
       });
 
       // Simulate workflow execution
-      await integrationDatabaseService.executeWorkflow('test', {
-        workflow: workflow,
-        testMode: true
-      });
+      await integrationDatabaseService.executeWorkflow('test');
 
       toast({
         title: 'Test Completed',
@@ -284,7 +282,7 @@ const AutomationWorkflowBuilder: React.FC = () => {
     
     // Add conditions
     if (savedWorkflow.conditions_config) {
-      savedWorkflow.conditions_config.forEach((condition, index) => {
+      savedWorkflow.conditions_config.forEach((condition: any, index: number) => {
         steps.push({
           id: `condition_${Date.now()}_${index}`,
           type: 'condition',

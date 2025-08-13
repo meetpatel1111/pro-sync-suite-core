@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { integrationService } from '@/services/integrationService';
-import { Task, Project } from '@/utils/dbtypes';
+import type { Task, Project, TimeEntry } from '@/utils/dbtypes';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthContext } from '@/context/AuthContext';
@@ -19,7 +19,7 @@ interface IntegratedTimeEntry {
 
 interface IntegrationContextType {
   createTaskFromNote: (title: string, description: string, projectId?: string, dueDate?: string, assigneeId?: string) => Promise<Task | null>;
-  logTimeForTask: (taskId: string, minutes: number, description?: string) => Promise<IntegratedTimeEntry | null>;
+  logTimeForTask: (taskId: string, minutes: number, description?: string) => Promise<TimeEntry>;
   checkProjectMilestones: () => Promise<{ project: Project, tasksDue: Task[] }[]>;
   linkDocumentToTask: (taskId: string, documentUrl: string, documentName: string) => Promise<boolean>;
   shareFileWithUser: (fileId: string, userId: string, accessLevel?: 'view' | 'download') => Promise<boolean>;
@@ -51,7 +51,7 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return;
 
     const fetchIntegrationActions = async () => {
-      const actions = await integrationService.getUserIntegrationActions(user.id);
+      const actions = await integrationService.getIntegrationActions(user.id);
       setIntegrationActions(actions);
     };
 
@@ -151,7 +151,7 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
   const refreshIntegrations = async () => {
     await checkMilestones();
     if (user) {
-      const actions = await integrationService.getUserIntegrationActions(user.id);
+      const actions = await integrationService.getIntegrationActions(user.id);
       setIntegrationActions(actions);
     }
     toast({
@@ -161,9 +161,32 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  // Wrapper functions to match expected return types
+  const logTimeForTaskWrapper = async (taskId: string, minutes: number, description?: string): Promise<TimeEntry> => {
+    const result = await integrationService.logTimeForTask(taskId, minutes, description);
+    if (!result) {
+      throw new Error('Failed to log time for task');
+    }
+    
+    // Convert IntegratedTimeEntry to TimeEntry format
+    return {
+      id: result.id,
+      user_id: result.user_id,
+      task_id: result.task_id,
+      description: result.description,
+      start_time: result.created_at,
+      time_spent: result.time_spent,
+      date: result.date,
+      manual: result.manual,
+      project: result.project,
+      created_at: result.created_at,
+      updated_at: result.updated_at
+    };
+  };
+
   const value: IntegrationContextType = {
     createTaskFromNote: integrationService.createTaskFromNote,
-    logTimeForTask: integrationService.logTimeForTask,
+    logTimeForTask: logTimeForTaskWrapper,
     checkProjectMilestones: integrationService.checkProjectMilestones,
     linkDocumentToTask: integrationService.linkDocumentToTask,
     shareFileWithUser: integrationService.shareFileWithUser,

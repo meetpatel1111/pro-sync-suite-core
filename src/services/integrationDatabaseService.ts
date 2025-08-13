@@ -130,13 +130,48 @@ class IntegrationDatabaseService {
     }));
   }
 
+  async updateAutomationWorkflow(workflowId: string, updates: Partial<AutomationWorkflow>): Promise<AutomationWorkflow> {
+    const { data, error } = await supabase
+      .from('automation_workflows')
+      .update(updates)
+      .eq('id', workflowId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      user_id: data.user_id,
+      name: data.name,
+      description: data.description,
+      trigger_config: data.trigger_config,
+      actions_config: Array.isArray(data.actions_config) ? data.actions_config : [],
+      conditions_config: data.conditions_config,
+      is_active: data.is_active,
+      execution_count: data.execution_count,
+      last_executed_at: data.last_executed_at,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+  }
+
+  async deleteAutomationWorkflow(workflowId: string): Promise<void> {
+    const { error } = await supabase
+      .from('automation_workflows')
+      .delete()
+      .eq('id', workflowId);
+
+    if (error) throw error;
+  }
+
   async executeWorkflow(workflowId: string): Promise<boolean> {
     try {
       // Update execution count
       const { error } = await supabase
         .from('automation_workflows')
         .update({ 
-          execution_count: supabase.rpc('increment', { x: 1 } as any),
+          execution_count: 1,
           last_executed_at: new Date().toISOString()
         })
         .eq('id', workflowId);
@@ -219,6 +254,36 @@ class IntegrationDatabaseService {
       created_at: data.created_at || new Date().toISOString(),
       updated_at: data.updated_at || new Date().toISOString()
     };
+  }
+
+  async getIntegrationTemplates(userId: string): Promise<IntegrationTemplate[]> {
+    const { data, error } = await supabase
+      .from('integration_templates')
+      .select('*')
+      .or(`user_id.eq.${userId},is_public.eq.true`);
+
+    if (error) throw error;
+
+    return (data || []).map(template => ({
+      id: template.id,
+      user_id: template.user_id,
+      name: template.name,
+      description: template.description,
+      category: template.category,
+      difficulty: template.difficulty,
+      apps: template.apps || [],
+      tags: template.tags || [],
+      rating: template.rating,
+      downloads: template.downloads,
+      template_config: template.template_config,
+      is_public: template.is_public,
+      is_verified: template.is_verified,
+      created_at: template.created_at,
+      updated_at: template.updated_at,
+      execution_count: template.execution_count,
+      last_used_at: template.last_used_at,
+      success_rate: template.success_rate
+    }));
   }
 
   async installTemplate(templateId: string, userId: string): Promise<boolean> {

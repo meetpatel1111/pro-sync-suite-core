@@ -26,18 +26,6 @@ const IntegrationHealthChecker: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
 
-  // Mock integrations for demonstration
-  const mockIntegrations = [
-    { service_name: 'TaskMaster API', expected_response_time: 150 },
-    { service_name: 'CollabSpace Webhooks', expected_response_time: 200 },
-    { service_name: 'FileVault Storage', expected_response_time: 300 },
-    { service_name: 'TimeTrackPro Sync', expected_response_time: 100 },
-    { service_name: 'BudgetBuddy Connect', expected_response_time: 180 },
-    { service_name: 'PlanBoard Events', expected_response_time: 120 },
-    { service_name: 'ResourceHub API', expected_response_time: 160 },
-    { service_name: 'ClientConnect Portal', expected_response_time: 250 }
-  ];
-
   useEffect(() => {
     if (user) {
       loadHealthStatuses();
@@ -51,46 +39,59 @@ const IntegrationHealthChecker: React.FC = () => {
       setLoading(true);
       const data = await integrationDatabaseService.getIntegrationHealth(user.id);
       
-      // If no health data exists, create mock data
+      // If no health data exists, create sample data
       if (data.length === 0) {
-        await createMockHealthData();
+        await createSampleHealthData();
       } else {
         setHealthStatuses(data);
       }
     } catch (error) {
       console.error('Error loading health statuses:', error);
-      // Fallback to creating mock data
-      await createMockHealthData();
+      // Fallback to creating sample data
+      await createSampleHealthData();
     } finally {
       setLoading(false);
     }
   };
 
-  const createMockHealthData = async () => {
+  const createSampleHealthData = async () => {
     if (!user) return;
 
-    const mockStatuses: IntegrationHealthStatus[] = [];
+    const sampleServices = [
+      { service_name: 'TaskMaster API', expected_response_time: 150 },
+      { service_name: 'CollabSpace Webhooks', expected_response_time: 200 },
+      { service_name: 'FileVault Storage', expected_response_time: 300 },
+      { service_name: 'TimeTrackPro Sync', expected_response_time: 100 },
+      { service_name: 'BudgetBuddy Connect', expected_response_time: 180 },
+      { service_name: 'PlanBoard Events', expected_response_time: 120 },
+      { service_name: 'ResourceHub API', expected_response_time: 160 },
+      { service_name: 'ClientConnect Portal', expected_response_time: 250 }
+    ];
+
+    const sampleStatuses: IntegrationHealthStatus[] = [];
     
-    for (const integration of mockIntegrations) {
-      const status = generateRandomStatus(integration);
+    for (const service of sampleServices) {
+      const status = generateRandomStatus(service);
       try {
         const created = await integrationDatabaseService.createIntegrationHealthStatus({
           user_id: user.id,
-          service_name: integration.service_name,
+          integration_id: null,
+          service_name: service.service_name,
           status: status.status,
           response_time: status.response_time,
           uptime_percentage: status.uptime_percentage,
           error_details: status.error_details,
           last_checked_at: new Date().toISOString()
         });
-        mockStatuses.push(created);
+        sampleStatuses.push(created);
       } catch (error) {
-        console.error('Error creating mock health status:', error);
-        // Create a local mock status if database creation fails
-        mockStatuses.push({
-          id: `mock-${Math.random()}`,
+        console.error('Error creating sample health status:', error);
+        // Create a local sample status if database creation fails
+        sampleStatuses.push({
+          id: `sample-${Math.random()}`,
           user_id: user.id,
-          service_name: integration.service_name,
+          integration_id: null,
+          service_name: service.service_name,
           ...status,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -98,10 +99,10 @@ const IntegrationHealthChecker: React.FC = () => {
       }
     }
     
-    setHealthStatuses(mockStatuses);
+    setHealthStatuses(sampleStatuses);
   };
 
-  const generateRandomStatus = (integration: { service_name: string; expected_response_time: number }) => {
+  const generateRandomStatus = (service: { service_name: string; expected_response_time: number }) => {
     const rand = Math.random();
     const isHealthy = rand > 0.15; // 85% chance of being healthy
     const hasWarning = !isHealthy && rand > 0.05; // 10% chance of warning
@@ -109,22 +110,22 @@ const IntegrationHealthChecker: React.FC = () => {
     let status: 'healthy' | 'warning' | 'error';
     let response_time: number;
     let uptime_percentage: number;
-    let error_details: any = null;
+    let error_details: string | null = null;
 
     if (isHealthy) {
       status = 'healthy';
-      response_time = integration.expected_response_time + Math.floor(Math.random() * 50) - 25;
+      response_time = service.expected_response_time + Math.floor(Math.random() * 50) - 25;
       uptime_percentage = 98 + Math.random() * 2;
     } else if (hasWarning) {
       status = 'warning';
-      response_time = integration.expected_response_time * (1.5 + Math.random() * 0.5);
+      response_time = service.expected_response_time * (1.5 + Math.random() * 0.5);
       uptime_percentage = 90 + Math.random() * 8;
-      error_details = { message: 'Slow response times detected' };
+      error_details = 'Slow response times detected';
     } else {
       status = 'error';
       response_time = 0;
       uptime_percentage = 85 + Math.random() * 10;
-      error_details = { message: 'Connection timeout', code: 'TIMEOUT' };
+      error_details = 'Connection timeout';
     }
 
     return {
@@ -145,8 +146,8 @@ const IntegrationHealthChecker: React.FC = () => {
       // Simulate health checks with random results
       const updatedStatuses = await Promise.all(
         healthStatuses.map(async (status) => {
-          const integration = mockIntegrations.find(i => i.service_name === status.service_name);
-          const newStatus = generateRandomStatus(integration || { service_name: status.service_name, expected_response_time: 200 });
+          const service = { service_name: status.service_name, expected_response_time: 200 };
+          const newStatus = generateRandomStatus(service);
           
           try {
             await integrationDatabaseService.updateIntegrationHealthStatus(status.id, {
@@ -363,9 +364,7 @@ const IntegrationHealthChecker: React.FC = () => {
                 <div className="p-3 bg-red-50 border border-red-200 rounded-md">
                   <div className="text-sm font-medium text-red-800">Error Details</div>
                   <div className="text-sm text-red-600 mt-1">
-                    {typeof status.error_details === 'object' 
-                      ? status.error_details.message || JSON.stringify(status.error_details)
-                      : status.error_details}
+                    {status.error_details}
                   </div>
                 </div>
               )}

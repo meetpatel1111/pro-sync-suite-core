@@ -1,28 +1,22 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
-  FileText, 
   Download, 
-  Star, 
   Search, 
+  Star, 
+  Play, 
   Filter,
-  Zap,
+  CheckCircle,
   Clock,
+  Zap,
   Users,
-  Briefcase,
-  BarChart3,
-  Shield,
-  Workflow,
-  Settings,
-  Database,
-  Mail,
-  MessageSquare,
-  Calendar,
-  FileBox
+  FileText,
+  TrendingUp
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { integrationDatabaseService, IntegrationTemplate } from '@/services/integrationDatabaseService';
@@ -33,188 +27,252 @@ const IntegrationTemplates: React.FC = () => {
   const { toast } = useToast();
   const [templates, setTemplates] = useState<IntegrationTemplate[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<IntegrationTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
-  const [loading, setLoading] = useState(true);
 
-  const categories = [
-    { id: 'all', name: 'All Categories', icon: <Workflow className="h-4 w-4" /> },
-    { id: 'task-management', name: 'Task Management', icon: <Briefcase className="h-4 w-4" /> },
-    { id: 'communication', name: 'Communication', icon: <MessageSquare className="h-4 w-4" /> },
-    { id: 'file-management', name: 'File Management', icon: <FileBox className="h-4 w-4" /> },
-    { id: 'analytics', name: 'Analytics', icon: <BarChart3 className="h-4 w-4" /> },
-    { id: 'automation', name: 'Automation', icon: <Zap className="h-4 w-4" /> },
-    { id: 'productivity', name: 'Productivity', icon: <Clock className="h-4 w-4" /> },
-    { id: 'collaboration', name: 'Collaboration', icon: <Users className="h-4 w-4" /> },
-    { id: 'security', name: 'Security', icon: <Shield className="h-4 w-4" /> }
-  ];
-
+  // Predefined templates with all required properties
   const predefinedTemplates: IntegrationTemplate[] = [
     {
-      id: 'task-to-slack',
-      name: 'Task to Slack Notifications',
-      description: 'Automatically send Slack notifications when tasks are created, updated, or completed',
-      category: 'communication',
+      id: 'template-1',
+      user_id: null,
+      name: 'Task-to-Time Tracking',
+      description: 'Automatically start time tracking when a task status changes to "In Progress"',
+      category: 'Productivity',
       difficulty: 'Beginner',
-      apps: ['TaskMaster', 'CollabSpace'],
-      tags: ['notifications', 'slack', 'real-time'],
+      apps: ['TaskMaster', 'TimeTrackPro'],
+      tags: ['automation', 'time-tracking', 'productivity'],
       template_config: {
-        trigger: { app: 'TaskMaster', event: 'task_updated' },
-        actions: [{ app: 'CollabSpace', action: 'send_notification' }]
+        trigger: {
+          app: 'TaskMaster',
+          event: 'task_status_changed'
+        },
+        actions: [{
+          app: 'TimeTrackPro',
+          action: 'start_timer'
+        }]
       },
       rating: 4.8,
-      downloads: 1240,
+      downloads: 1250,
       is_public: true,
       is_verified: true,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      execution_count: 0,
+      last_used_at: null,
+      success_rate: 98.5
     },
     {
-      id: 'time-budget-sync',
-      name: 'Time Tracking to Budget Sync',
-      description: 'Automatically update project budgets when time is logged',
-      category: 'task-management',
+      id: 'template-2',
+      user_id: null,
+      name: 'Smart File Organization',
+      description: 'Automatically organize uploaded files based on project and file type',
+      category: 'File Management',
       difficulty: 'Intermediate',
-      apps: ['TimeTrackPro', 'BudgetBuddy'],
-      tags: ['budget', 'time-tracking', 'automation'],
+      apps: ['FileVault', 'TaskMaster'],
+      tags: ['files', 'organization', 'automation'],
       template_config: {
-        trigger: { app: 'TimeTrackPro', event: 'time_logged' },
-        actions: [{ app: 'BudgetBuddy', action: 'update_expenses' }]
+        trigger: {
+          app: 'FileVault',
+          event: 'file_uploaded'
+        },
+        actions: [{
+          app: 'FileVault',
+          action: 'organize_by_project'
+        }]
       },
       rating: 4.6,
       downloads: 890,
       is_public: true,
       is_verified: true,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      execution_count: 0,
+      last_used_at: null,
+      success_rate: 95.2
     },
     {
-      id: 'file-share-notification',
-      name: 'File Share Notifications',
-      description: 'Notify team members when files are shared or updated',
-      category: 'file-management',
+      id: 'template-3',
+      user_id: null,
+      name: 'Team Notification Hub',
+      description: 'Send team notifications when important project milestones are reached',
+      category: 'Communication',
       difficulty: 'Beginner',
-      apps: ['FileVault', 'CollabSpace'],
-      tags: ['files', 'sharing', 'notifications'],
+      apps: ['PlanBoard', 'CollabSpace'],
+      tags: ['notifications', 'milestones', 'team'],
       template_config: {
-        trigger: { app: 'FileVault', event: 'file_shared' },
-        actions: [{ app: 'CollabSpace', action: 'notify_team' }]
-      },
-      rating: 4.7,
-      downloads: 650,
-      is_public: true,
-      is_verified: true,
-      created_at: new Date().toISOString()
-    },
-    {
-      id: 'project-milestone-alert',
-      name: 'Project Milestone Alerts',
-      description: 'Send alerts when project milestones are reached or approaching',
-      category: 'analytics',
-      difficulty: 'Advanced',
-      apps: ['PlanBoard', 'InsightIQ', 'CollabSpace'],
-      tags: ['milestones', 'alerts', 'project-management'],
-      template_config: {
-        trigger: { app: 'PlanBoard', event: 'milestone_approaching' },
-        actions: [
-          { app: 'InsightIQ', action: 'generate_report' },
-          { app: 'CollabSpace', action: 'send_alert' }
-        ]
+        trigger: {
+          app: 'PlanBoard',
+          event: 'milestone_reached'
+        },
+        actions: [{
+          app: 'CollabSpace',
+          action: 'send_team_notification'
+        }]
       },
       rating: 4.9,
+      downloads: 1560,
+      is_public: true,
+      is_verified: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      execution_count: 0,
+      last_used_at: null,
+      success_rate: 99.1
+    },
+    {
+      id: 'template-4',
+      user_id: null,
+      name: 'Budget Alert System',
+      description: 'Get notified when project budgets exceed thresholds',
+      category: 'Finance',
+      difficulty: 'Intermediate',
+      apps: ['BudgetBuddy', 'CollabSpace'],
+      tags: ['budget', 'alerts', 'finance'],
+      template_config: {
+        trigger: {
+          app: 'BudgetBuddy',
+          event: 'budget_threshold_exceeded'
+        },
+        actions: [{
+          app: 'CollabSpace',
+          action: 'send_alert'
+        }]
+      },
+      rating: 4.7,
+      downloads: 670,
+      is_public: true,
+      is_verified: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      execution_count: 0,
+      last_used_at: null,
+      success_rate: 97.3
+    },
+    {
+      id: 'template-5',
+      user_id: null,
+      name: 'Client Follow-up Automation',
+      description: 'Automatically schedule follow-up tasks after client meetings',
+      category: 'CRM',
+      difficulty: 'Advanced',
+      apps: ['ClientConnect', 'TaskMaster'],
+      tags: ['crm', 'follow-up', 'automation'],
+      template_config: {
+        trigger: {
+          app: 'ClientConnect',
+          event: 'meeting_completed'
+        },
+        actions: [{
+          app: 'TaskMaster',
+          action: 'create_follow_up_task'
+        }]
+      },
+      rating: 4.5,
       downloads: 420,
       is_public: true,
       is_verified: true,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      execution_count: 0,
+      last_used_at: null,
+      success_rate: 94.8
     },
     {
-      id: 'resource-overallocation',
-      name: 'Resource Overallocation Warning',
-      description: 'Alert when team members are overallocated across projects',
-      category: 'productivity',
+      id: 'template-6',
+      user_id: null,
+      name: 'Daily Report Generator',
+      description: 'Generate and send daily productivity reports automatically',
+      category: 'Analytics',
+      difficulty: 'Advanced',
+      apps: ['InsightIQ', 'CollabSpace', 'TimeTrackPro'],
+      tags: ['reports', 'analytics', 'productivity'],
+      template_config: {
+        trigger: {
+          app: 'InsightIQ',
+          event: 'daily_report_scheduled',
+          cron: '0 9 * * *'
+        },
+        actions: [{
+          app: 'InsightIQ',
+          action: 'generate_productivity_report'
+        }]
+      },
+      rating: 4.4,
+      downloads: 780,
+      is_public: true,
+      is_verified: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      execution_count: 0,
+      last_used_at: null,
+      success_rate: 96.7
+    },
+    {
+      id: 'template-7',
+      user_id: null,
+      name: 'Resource Allocation Assistant',
+      description: 'Automatically assign resources when new projects are created',
+      category: 'Resource Management',
       difficulty: 'Intermediate',
-      apps: ['ResourceHub', 'CollabSpace', 'InsightIQ'],
-      tags: ['resources', 'capacity', 'warnings'],
+      apps: ['PlanBoard', 'ResourceHub'],
+      tags: ['resources', 'allocation', 'projects'],
       template_config: {
-        trigger: { app: 'ResourceHub', event: 'capacity_exceeded' },
-        actions: [
-          { app: 'CollabSpace', action: 'notify_managers' },
-          { app: 'InsightIQ', action: 'create_dashboard_alert' }
-        ]
-      },
-      rating: 4.5,
-      downloads: 320,
-      is_public: true,
-      is_verified: true,
-      created_at: new Date().toISOString()
-    },
-    {
-      id: 'client-update-automation',
-      name: 'Automated Client Updates',
-      description: 'Send weekly project updates to clients automatically',
-      category: 'collaboration',
-      difficulty: 'Advanced',
-      apps: ['ClientConnect', 'InsightIQ', 'PlanBoard'],
-      tags: ['client-communication', 'reporting', 'automation'],
-      template_config: {
-        trigger: { app: 'PlanBoard', event: 'weekly_schedule', cron: '0 9 * * 1' },
-        actions: [
-          { app: 'InsightIQ', action: 'generate_client_report' },
-          { app: 'ClientConnect', action: 'send_update_email' }
-        ]
-      },
-      rating: 4.8,
-      downloads: 580,
-      is_public: true,
-      is_verified: true,
-      created_at: new Date().toISOString()
-    },
-    {
-      id: 'risk-assessment-workflow',
-      name: 'Automated Risk Assessment',
-      description: 'Automatically assess and track project risks',
-      category: 'security',
-      difficulty: 'Advanced',
-      apps: ['RiskRadar', 'TaskMaster', 'CollabSpace'],
-      tags: ['risk-management', 'assessment', 'monitoring'],
-      template_config: {
-        trigger: { app: 'TaskMaster', event: 'task_overdue' },
-        actions: [
-          { app: 'RiskRadar', action: 'create_risk_assessment' },
-          { app: 'CollabSpace', action: 'notify_stakeholders' }
-        ]
+        trigger: {
+          app: 'PlanBoard',
+          event: 'project_created'
+        },
+        actions: [{
+          app: 'ResourceHub',
+          action: 'auto_assign_resources'
+        }]
       },
       rating: 4.6,
-      downloads: 280,
+      downloads: 550,
       is_public: true,
       is_verified: true,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      execution_count: 0,
+      last_used_at: null,
+      success_rate: 93.4
     },
     {
-      id: 'productivity-analytics',
-      name: 'Daily Productivity Reports',
-      description: 'Generate daily productivity reports combining time and task data',
-      category: 'analytics',
-      difficulty: 'Intermediate',
-      apps: ['TimeTrackPro', 'TaskMaster', 'InsightIQ'],
-      tags: ['productivity', 'analytics', 'reporting'],
+      id: 'template-8',
+      user_id: null,
+      name: 'Weekly Team Sync',
+      description: 'Schedule and manage weekly team synchronization meetings',
+      category: 'Team Management',
+      difficulty: 'Beginner',
+      apps: ['CollabSpace', 'ClientConnect'],
+      tags: ['meetings', 'sync', 'team'],
       template_config: {
-        trigger: { app: 'TimeTrackPro', event: 'daily_schedule', cron: '0 18 * * *' },
-        actions: [
-          { app: 'InsightIQ', action: 'generate_productivity_report' },
-          { app: 'CollabSpace', action: 'share_daily_summary' }
-        ]
+        trigger: {
+          app: 'CollabSpace',
+          event: 'weekly_sync_scheduled',
+          cron: '0 10 * * 1'
+        },
+        actions: [{
+          app: 'ClientConnect',
+          action: 'schedule_team_meeting'
+        }]
       },
-      rating: 4.7,
-      downloads: 760,
+      rating: 4.3,
+      downloads: 340,
       is_public: true,
       is_verified: true,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      execution_count: 0,
+      last_used_at: null,
+      success_rate: 91.2
     }
   ];
 
   useEffect(() => {
     loadTemplates();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     filterTemplates();
@@ -223,13 +281,19 @@ const IntegrationTemplates: React.FC = () => {
   const loadTemplates = async () => {
     try {
       setLoading(true);
-      // Combine predefined templates with database templates
-      const dbTemplates = await integrationDatabaseService.getIntegrationTemplates();
-      const allTemplates = [...predefinedTemplates, ...dbTemplates];
+      
+      let userTemplates: IntegrationTemplate[] = [];
+      if (user) {
+        userTemplates = await integrationDatabaseService.getIntegrationTemplates(user.id);
+      }
+      
+      // Combine predefined templates with user templates
+      const allTemplates = [...predefinedTemplates, ...userTemplates];
       setTemplates(allTemplates);
     } catch (error) {
       console.error('Error loading templates:', error);
-      setTemplates(predefinedTemplates); // Fallback to predefined
+      // Use predefined templates as fallback
+      setTemplates(predefinedTemplates);
     } finally {
       setLoading(false);
     }
@@ -239,10 +303,10 @@ const IntegrationTemplates: React.FC = () => {
     let filtered = templates;
 
     if (searchTerm) {
-      filtered = filtered.filter(template =>
+      filtered = filtered.filter(template => 
         template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (template.tags && template.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
+        template.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        template.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -251,15 +315,13 @@ const IntegrationTemplates: React.FC = () => {
     }
 
     if (selectedDifficulty !== 'all') {
-      filtered = filtered.filter(template => 
-        template.difficulty && template.difficulty.toLowerCase() === selectedDifficulty.toLowerCase()
-      );
+      filtered = filtered.filter(template => template.difficulty === selectedDifficulty);
     }
 
     setFilteredTemplates(filtered);
   };
 
-  const installTemplate = async (template: IntegrationTemplate) => {
+  const installTemplate = async (templateId: string) => {
     if (!user) {
       toast({
         title: 'Authentication Required',
@@ -270,44 +332,44 @@ const IntegrationTemplates: React.FC = () => {
     }
 
     try {
-      await integrationDatabaseService.installTemplate(template.id, user.id);
-      toast({
-        title: 'Template Installed',
-        description: `${template.name} has been installed successfully`
-      });
+      const success = await integrationDatabaseService.installTemplate(templateId, user.id);
       
-      // Update local state to reflect download count
-      setTemplates(prev => 
-        prev.map(t => 
-          t.id === template.id 
-            ? { ...t, downloads: t.downloads + 1 }
-            : t
-        )
-      );
+      if (success) {
+        toast({
+          title: 'Template Installed',
+          description: 'Template has been installed successfully'
+        });
+        
+        // Update download count locally
+        setTemplates(prev => prev.map(template => 
+          template.id === templateId 
+            ? { ...template, downloads: (template.downloads || 0) + 1 }
+            : template
+        ));
+      } else {
+        throw new Error('Installation failed');
+      }
     } catch (error) {
       console.error('Error installing template:', error);
       toast({
         title: 'Installation Failed',
-        description: 'Failed to install template. Please try again.',
+        description: 'Failed to install template',
         variant: 'destructive'
       });
     }
   };
 
-  const getDifficultyColor = (difficulty?: string) => {
-    if (!difficulty) return 'bg-gray-100 text-gray-800';
-    switch (difficulty.toLowerCase()) {
-      case 'beginner': return 'bg-green-100 text-green-800';
-      case 'intermediate': return 'bg-yellow-100 text-yellow-800';
-      case 'advanced': return 'bg-red-100 text-red-800';
+  const getDifficultyColor = (difficulty: string | null) => {
+    switch (difficulty) {
+      case 'Beginner': return 'bg-green-100 text-green-800';
+      case 'Intermediate': return 'bg-yellow-100 text-yellow-800';
+      case 'Advanced': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getCategoryIcon = (category: string) => {
-    const categoryObj = categories.find(c => c.id === category);
-    return categoryObj?.icon || <Workflow className="h-4 w-4" />;
-  };
+  const categories = Array.from(new Set(templates.map(t => t.category)));
+  const difficulties = Array.from(new Set(templates.map(t => t.difficulty).filter(Boolean)));
 
   if (loading) {
     return (
@@ -323,115 +385,138 @@ const IntegrationTemplates: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold">Integration Templates</h2>
           <p className="text-muted-foreground">
-            Pre-built automation templates to jumpstart your workflows
+            Pre-built automation templates to get you started quickly
           </p>
         </div>
-        <Button>
-          <FileText className="mr-2 h-4 w-4" />
-          Create Template
-        </Button>
       </div>
 
-      {/* Search and Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             placeholder="Search templates..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-9"
           />
         </div>
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          className="px-3 py-2 border border-input rounded-md bg-background"
-        >
-          {categories.map(category => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={selectedDifficulty}
-          onChange={(e) => setSelectedDifficulty(e.target.value)}
-          className="px-3 py-2 border border-input rounded-md bg-background"
-        >
-          <option value="all">All Difficulties</option>
-          <option value="beginner">Beginner</option>
-          <option value="intermediate">Intermediate</option>
-          <option value="advanced">Advanced</option>
-        </select>
+        
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.map(category => (
+              <SelectItem key={category} value={category}>{category}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Difficulty" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Levels</SelectItem>
+            {difficulties.map(difficulty => (
+              <SelectItem key={difficulty} value={difficulty!}>{difficulty}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Templates Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTemplates.map((template) => (
-          <Card key={template.id} className="hover:shadow-lg transition-shadow">
+          <Card key={template.id} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {getCategoryIcon(template.category)}
-                  <Badge variant="outline" className={getDifficultyColor(template.difficulty)}>
-                    {template.difficulty || 'Beginner'}
-                  </Badge>
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="text-lg">{template.name}</CardTitle>
+                  <CardDescription className="text-sm mt-1">
+                    {template.description}
+                  </CardDescription>
                 </div>
                 {template.is_verified && (
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                    <Shield className="h-3 w-3 mr-1" />
-                    Verified
-                  </Badge>
+                  <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0" />
                 )}
               </div>
-              <CardTitle className="text-lg">{template.name}</CardTitle>
-              <CardDescription className="line-clamp-2">
-                {template.description}
-              </CardDescription>
             </CardHeader>
+            
             <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-1">
-                {template.apps && template.apps.slice(0, 3).map((app) => (
-                  <Badge key={app} variant="outline" className="text-xs">
-                    {app}
-                  </Badge>
-                ))}
-                {template.apps && template.apps.length > 3 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{template.apps.length - 3}
-                  </Badge>
-                )}
-              </div>
-              
-              {template.tags && template.tags.length > 0 && (
+              {/* Apps */}
+              <div>
+                <div className="text-sm font-medium mb-2">Connected Apps</div>
                 <div className="flex flex-wrap gap-1">
-                  {template.tags.slice(0, 3).map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
+                  {template.apps.map((app, index) => (
+                    <Badge key={index} variant="outline" className="text-xs">
+                      {app}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <div className="text-sm font-medium mb-2">Tags</div>
+                <div className="flex flex-wrap gap-1">
+                  {template.tags.map((tag, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
                       {tag}
                     </Badge>
                   ))}
                 </div>
-              )}
+              </div>
 
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                  <span>{template.rating || 'N/A'}</span>
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div>
+                  <div className="flex items-center justify-center gap-1">
+                    <Star className="h-3 w-3 text-yellow-500" />
+                    <span className="text-sm font-medium">{template.rating?.toFixed(1) || 'N/A'}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">Rating</div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Download className="h-3 w-3" />
-                  <span>{template.downloads}</span>
+                <div>
+                  <div className="flex items-center justify-center gap-1">
+                    <Download className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-sm font-medium">{template.downloads || 0}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">Downloads</div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-center gap-1">
+                    <TrendingUp className="h-3 w-3 text-green-500" />
+                    <span className="text-sm font-medium">{template.success_rate?.toFixed(1) || 'N/A'}%</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">Success</div>
                 </div>
               </div>
 
-              <Button 
-                className="w-full" 
-                onClick={() => installTemplate(template)}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Install Template
-              </Button>
+              {/* Category and Difficulty */}
+              <div className="flex items-center justify-between">
+                <Badge variant="outline">{template.category}</Badge>
+                <Badge className={getDifficultyColor(template.difficulty)}>
+                  {template.difficulty}
+                </Badge>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => installTemplate(template.id)}
+                  className="flex-1"
+                  size="sm"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Install
+                </Button>
+                <Button variant="outline" size="sm">
+                  <Play className="h-4 w-4" />
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -442,7 +527,7 @@ const IntegrationTemplates: React.FC = () => {
           <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-xl font-semibold mb-2">No Templates Found</h3>
           <p className="text-muted-foreground">
-            Try adjusting your search criteria or create a new template
+            Try adjusting your search criteria or filters
           </p>
         </div>
       )}

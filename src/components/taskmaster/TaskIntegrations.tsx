@@ -3,354 +3,413 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { 
-  Link2, 
   Clock, 
   FileText, 
   Users, 
-  MessageSquare, 
-  Calendar,
-  Plus,
-  ExternalLink
+  Calendar, 
+  Link,
+  Play,
+  Pause,
+  CheckCircle,
+  AlertCircle,
+  Settings
 } from 'lucide-react';
-import { integrationService } from '@/services/integrationService';
 import { useToast } from '@/hooks/use-toast';
+import { integrationService } from '@/services/integrationService';
+import { useAuthContext } from '@/context/AuthContext';
+import type { Task } from '@/utils/dbtypes';
 
 interface TaskIntegrationsProps {
-  taskId: string;
-  taskTitle: string;
-  projectId?: string;
+  task: Task;
+  onUpdate: () => void;
 }
 
-const TaskIntegrations: React.FC<TaskIntegrationsProps> = ({ 
-  taskId, 
-  taskTitle, 
-  projectId 
-}) => {
-  const [timeMinutes, setTimeMinutes] = useState<string>('');
-  const [timeDescription, setTimeDescription] = useState<string>('');
-  const [fileUrl, setFileUrl] = useState<string>('');
-  const [fileName, setFileName] = useState<string>('');
-  const [chatMessage, setChatMessage] = useState<string>('');
-  const [loading, setLoading] = useState<string>('');
-  
+const TaskIntegrations: React.FC<TaskIntegrationsProps> = ({ task, onUpdate }) => {
+  const { user } = useAuthContext();
   const { toast } = useToast();
+  
+  const [timeLogMinutes, setTimeLogMinutes] = useState('');
+  const [timeDescription, setTimeDescription] = useState('');
+  const [documentUrl, setDocumentUrl] = useState('');
+  const [documentName, setDocumentName] = useState('');
+  const [selectedBoard, setSelectedBoard] = useState('');
+  const [isLoggingTime, setIsLoggingTime] = useState(false);
+  const [isLinkingDocument, setIsLinkingDocument] = useState(false);
+  const [isSyncingBoard, setIsSyncingBoard] = useState(false);
 
   const handleLogTime = async () => {
-    const minutes = parseInt(timeMinutes);
+    if (!user || !timeLogMinutes) return;
+
+    const minutes = parseInt(timeLogMinutes);
     if (isNaN(minutes) || minutes <= 0) {
       toast({
-        title: 'Invalid Time',
+        title: 'Invalid Input',
         description: 'Please enter a valid number of minutes',
         variant: 'destructive'
       });
       return;
     }
 
-    setLoading('time');
+    setIsLoggingTime(true);
     try {
-      const timeEntry = await integrationService.logTimeForTask(
-        taskId, 
+      const result = await integrationService.logTimeForTask(
+        task.id, 
         minutes, 
-        timeDescription || `Time logged for: ${taskTitle}`
+        timeDescription || `Time logged for: ${task.title}`
       );
 
-      if (timeEntry) {
+      if (result) {
         toast({
           title: 'Time Logged',
-          description: `${minutes} minutes logged successfully`
+          description: `${minutes} minutes logged for "${task.title}"`
         });
-        setTimeMinutes('');
+        setTimeLogMinutes('');
         setTimeDescription('');
+        onUpdate();
       } else {
         throw new Error('Failed to log time');
       }
     } catch (error) {
+      console.error('Error logging time:', error);
       toast({
         title: 'Error',
-        description: 'Failed to log time entry',
+        description: 'Failed to log time for task',
         variant: 'destructive'
       });
     } finally {
-      setLoading('');
+      setIsLoggingTime(false);
     }
   };
 
   const handleLinkDocument = async () => {
-    if (!fileUrl || !fileName) {
+    if (!user || !documentUrl || !documentName) {
       toast({
         title: 'Missing Information',
-        description: 'Please provide both file URL and name',
+        description: 'Please provide both document URL and name',
         variant: 'destructive'
       });
       return;
     }
 
-    setLoading('document');
+    setIsLinkingDocument(true);
     try {
-      const success = await integrationService.linkDocumentToTask(taskId, fileUrl, fileName);
-      
+      const success = await integrationService.linkDocumentToTask(
+        task.id,
+        documentUrl,
+        documentName
+      );
+
       if (success) {
         toast({
           title: 'Document Linked',
-          description: `${fileName} has been linked to this task`
+          description: `"${documentName}" has been linked to this task`
         });
-        setFileUrl('');
-        setFileName('');
+        setDocumentUrl('');
+        setDocumentName('');
+        onUpdate();
       } else {
         throw new Error('Failed to link document');
       }
     } catch (error) {
+      console.error('Error linking document:', error);
       toast({
         title: 'Error',
-        description: 'Failed to link document',
+        description: 'Failed to link document to task',
         variant: 'destructive'
       });
     } finally {
-      setLoading('');
+      setIsLinkingDocument(false);
     }
   };
 
-  const handleShareInChat = async () => {
-    if (!chatMessage.trim()) {
+  const handleSyncToBoard = async () => {
+    if (!user || !selectedBoard) {
       toast({
-        title: 'Missing Message',
-        description: 'Please enter a message to share',
+        title: 'No Board Selected',
+        description: 'Please select a board to sync to',
         variant: 'destructive'
       });
       return;
     }
 
-    setLoading('chat');
+    setIsSyncingBoard(true);
     try {
-      const success = await integrationService.shareFileInChat(
-        'task-file-id', 
-        'general-channel', 
-        chatMessage
+      const success = await integrationService.syncTaskToPlanBoard(
+        user.id,
+        task.id,
+        selectedBoard
       );
-      
+
       if (success) {
         toast({
-          title: 'Shared in Chat',
-          description: 'Task has been shared in the team chat'
+          title: 'Task Synced',
+          description: 'Task has been synced to PlanBoard'
         });
-        setChatMessage('');
+        setSelectedBoard('');
+        onUpdate();
+      } else {
+        throw new Error('Failed to sync task');
       }
     } catch (error) {
+      console.error('Error syncing task:', error);
       toast({
         title: 'Error',
-        description: 'Failed to share in chat',
+        description: 'Failed to sync task to board',
         variant: 'destructive'
       });
     } finally {
-      setLoading('');
+      setIsSyncingBoard(false);
     }
   };
 
-  const handleSyncToPlanBoard = async () => {
-    if (!projectId) {
-      toast({
-        title: 'No Project',
-        description: 'This task must be associated with a project to sync',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    setLoading('planboard');
-    try {
-      const success = await integrationService.syncTaskToPlanBoard(taskId, projectId);
-      
-      if (success) {
-        toast({
-          title: 'Synced to PlanBoard',
-          description: 'Task has been synced to project timeline'
-        });
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to sync to PlanBoard',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading('');
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <Link2 className="h-5 w-5" />
-        <h3 className="text-lg font-semibold">Task Integrations</h3>
-      </div>
-
-      {/* Time Tracking Integration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Log Time Entry
-          </CardTitle>
-          <CardDescription>
-            Automatically create a time entry in TimeTrackPro for this task
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+  const integrationCards = [
+    {
+      title: 'Time Tracking',
+      description: 'Log time spent on this task',
+      icon: <Clock className="h-5 w-5 text-blue-600" />,
+      status: 'available',
+      content: (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-sm font-medium">Minutes</label>
+              <Label htmlFor="time-minutes">Minutes</Label>
               <Input
+                id="time-minutes"
                 type="number"
                 placeholder="60"
-                value={timeMinutes}
-                onChange={(e) => setTimeMinutes(e.target.value)}
+                value={timeLogMinutes}
+                onChange={(e) => setTimeLogMinutes(e.target.value)}
+                min="1"
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Description (Optional)</label>
+              <Label htmlFor="time-description">Description (Optional)</Label>
               <Input
-                placeholder="Working on feature implementation"
+                id="time-description"
+                placeholder="Working on features..."
                 value={timeDescription}
                 onChange={(e) => setTimeDescription(e.target.value)}
               />
             </div>
           </div>
           <Button 
-            onClick={handleLogTime}
-            disabled={loading === 'time'}
+            onClick={handleLogTime} 
+            disabled={isLoggingTime || !timeLogMinutes}
             className="w-full"
           >
-            {loading === 'time' ? 'Logging...' : 'Log Time Entry'}
+            <Clock className="mr-2 h-4 w-4" />
+            {isLoggingTime ? 'Logging...' : 'Log Time'}
           </Button>
-        </CardContent>
-      </Card>
-
-      {/* Document Integration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Link Document
-          </CardTitle>
-          <CardDescription>
-            Link a document from FileVault to this task
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Document URL</label>
-              <Input
-                placeholder="https://filevault.com/document/123"
-                value={fileUrl}
-                onChange={(e) => setFileUrl(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Document Name</label>
-              <Input
-                placeholder="Requirements Document.pdf"
-                value={fileName}
-                onChange={(e) => setFileName(e.target.value)}
-              />
-            </div>
-          </div>
-          <Button 
-            onClick={handleLinkDocument}
-            disabled={loading === 'document'}
-            className="w-full"
-          >
-            {loading === 'document' ? 'Linking...' : 'Link Document'}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Chat Integration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Share in Team Chat
-          </CardTitle>
-          <CardDescription>
-            Share this task in CollabSpace team chat with a message
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        </div>
+      )
+    },
+    {
+      title: 'Document Linking',
+      description: 'Link documents from KnowledgeNest',
+      icon: <FileText className="h-5 w-5 text-green-600" />,
+      status: 'available',
+      content: (
+        <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium">Message</label>
+            <Label htmlFor="doc-name">Document Name</Label>
             <Input
-              placeholder="Need help with this task - any ideas?"
-              value={chatMessage}
-              onChange={(e) => setChatMessage(e.target.value)}
+              id="doc-name"
+              placeholder="Requirements Document"
+              value={documentName}
+              onChange={(e) => setDocumentName(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="doc-url">Document URL</Label>
+            <Input
+              id="doc-url"
+              placeholder="https://..."
+              value={documentUrl}
+              onChange={(e) => setDocumentUrl(e.target.value)}
             />
           </div>
           <Button 
-            onClick={handleShareInChat}
-            disabled={loading === 'chat'}
+            onClick={handleLinkDocument}
+            disabled={isLinkingDocument || !documentUrl || !documentName}
             className="w-full"
           >
-            {loading === 'chat' ? 'Sharing...' : 'Share in Chat'}
+            <Link className="mr-2 h-4 w-4" />
+            {isLinkingDocument ? 'Linking...' : 'Link Document'}
           </Button>
-        </CardContent>
-      </Card>
-
-      {/* PlanBoard Integration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Sync to PlanBoard
-          </CardTitle>
-          <CardDescription>
-            Add this task to the project timeline in PlanBoard
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        </div>
+      )
+    },
+    {
+      title: 'PlanBoard Sync',
+      description: 'Sync task to project boards',
+      icon: <Calendar className="h-5 w-5 text-purple-600" />,
+      status: 'available',
+      content: (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="board-select">Select Board</Label>
+            <Select value={selectedBoard} onValueChange={setSelectedBoard}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose board..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="board-1">Main Project Board</SelectItem>
+                <SelectItem value="board-2">Sprint Planning</SelectItem>
+                <SelectItem value="board-3">Bug Tracking</SelectItem>
+                <SelectItem value="board-4">Feature Development</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Button 
-            onClick={handleSyncToPlanBoard}
-            disabled={loading === 'planboard' || !projectId}
+            onClick={handleSyncToBoard}
+            disabled={isSyncingBoard || !selectedBoard}
             className="w-full"
           >
-            {loading === 'planboard' ? 'Syncing...' : 'Sync to Timeline'}
+            <Calendar className="mr-2 h-4 w-4" />
+            {isSyncingBoard ? 'Syncing...' : 'Sync to Board'}
           </Button>
-          {!projectId && (
-            <p className="text-sm text-muted-foreground mt-2">
-              Task must be associated with a project to sync to timeline
-            </p>
-          )}
-        </CardContent>
-      </Card>
+        </div>
+      )
+    },
+    {
+      title: 'Team Collaboration',
+      description: 'Share task in team channels',
+      icon: <Users className="h-5 w-5 text-orange-600" />,
+      status: 'coming_soon',
+      content: (
+        <div className="text-center py-4">
+          <div className="text-sm text-muted-foreground">
+            Coming soon! Share tasks directly in team channels and get instant feedback.
+          </div>
+        </div>
+      )
+    }
+  ];
 
-      {/* Available Integrations */}
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'available':
+        return <Badge variant="default" className="text-xs">Available</Badge>;
+      case 'connected':
+        return <Badge variant="default" className="text-xs bg-green-100 text-green-800">Connected</Badge>;
+      case 'coming_soon':
+        return <Badge variant="secondary" className="text-xs">Coming Soon</Badge>;
+      default:
+        return <Badge variant="outline" className="text-xs">Unknown</Badge>;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Task Integrations</h3>
+          <p className="text-sm text-muted-foreground">
+            Connect this task with other apps for enhanced productivity
+          </p>
+        </div>
+        <Button variant="outline" size="sm">
+          <Settings className="mr-2 h-4 w-4" />
+          Manage
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {integrationCards.map((integration, index) => (
+          <Card key={index} className={integration.status === 'coming_soon' ? 'opacity-60' : ''}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {integration.icon}
+                  <div>
+                    <CardTitle className="text-base">{integration.title}</CardTitle>
+                    <CardDescription className="text-sm">
+                      {integration.description}
+                    </CardDescription>
+                  </div>
+                </div>
+                {getStatusBadge(integration.status)}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {integration.content}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Available Integrations</CardTitle>
+          <CardTitle className="text-base">Quick Actions</CardTitle>
           <CardDescription>
-            Connected apps that can integrate with this task
+            Commonly used integration actions for this task
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-2">
-            <Badge variant="secondary" className="justify-center">
-              <Clock className="h-3 w-3 mr-1" />
-              TimeTrackPro
-            </Badge>
-            <Badge variant="secondary" className="justify-center">
-              <FileText className="h-3 w-3 mr-1" />
-              FileVault
-            </Badge>
-            <Badge variant="secondary" className="justify-center">
-              <MessageSquare className="h-3 w-3 mr-1" />
-              CollabSpace
-            </Badge>
-            <Badge variant="secondary" className="justify-center">
-              <Calendar className="h-3 w-3 mr-1" />
-              PlanBoard
-            </Badge>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm">
+              <Play className="mr-2 h-4 w-4" />
+              Start Timer
+            </Button>
+            <Button variant="outline" size="sm">
+              <FileText className="mr-2 h-4 w-4" />
+              Create Note
+            </Button>
+            <Button variant="outline" size="sm">
+              <Users className="mr-2 h-4 w-4" />
+              Notify Team
+            </Button>
+            <Button variant="outline" size="sm">
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Mark Complete
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Integration Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Integration Status</CardTitle>
+          <CardDescription>
+            Current status of connected integrations
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span className="text-sm">TimeTrackPro</span>
+              </div>
+              <Badge variant="default" className="text-xs bg-green-100 text-green-800">
+                Connected
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span className="text-sm">KnowledgeNest</span>
+              </div>
+              <Badge variant="default" className="text-xs bg-green-100 text-green-800">
+                Connected
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <span className="text-sm">PlanBoard</span>
+              </div>
+              <Badge variant="secondary" className="text-xs">
+                Partial
+              </Badge>
+            </div>
           </div>
         </CardContent>
       </Card>
