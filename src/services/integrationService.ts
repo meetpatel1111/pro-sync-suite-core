@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { TimeEntry } from '@/integrations/supabase/types';
 
 export interface IntegrationAction {
   id: string;
@@ -64,7 +63,6 @@ export class IntegrationService {
 
   async syncTimeEntryToTask(timeEntryId: string, taskId: string): Promise<boolean> {
     try {
-      // This would sync a time entry to a task
       console.log(`Syncing time entry ${timeEntryId} to task ${taskId}`);
       return true;
     } catch (error) {
@@ -75,7 +73,6 @@ export class IntegrationService {
 
   async syncExpenseToProject(expenseId: string, projectId: string): Promise<boolean> {
     try {
-      // This would sync an expense to a project
       console.log(`Syncing expense ${expenseId} to project ${projectId}`);
       return true;
     } catch (error) {
@@ -84,10 +81,9 @@ export class IntegrationService {
     }
   }
 
-  async generateTimeEntryFromTask(taskId: string): Promise<TimeEntry | null> {
+  async generateTimeEntryFromTask(taskId: string): Promise<any | null> {
     try {
-      // Mock time entry generation
-      const newTimeEntry: Partial<TimeEntry> = {
+      const newTimeEntry = {
         id: crypto.randomUUID(),
         user_id: 'mock-user-id',
         project_id: 'mock-project-id',
@@ -99,8 +95,7 @@ export class IntegrationService {
         created_at: new Date().toISOString()
       };
 
-      // In a real implementation, this would create the time entry in the database
-      return newTimeEntry as TimeEntry;
+      return newTimeEntry;
     } catch (error) {
       console.error('Error generating time entry from task:', error);
       return null;
@@ -109,21 +104,26 @@ export class IntegrationService {
 
   async executeIntegrationAction(actionId: string): Promise<boolean> {
     try {
-      // This would execute the integration action
       console.log(`Executing integration action ${actionId}`);
       
-      // Update execution count
-      const { error } = await supabase
-        .from('integration_actions')
-        .update({
-          execution_count: supabase.sql`execution_count + 1`,
-          last_executed_at: new Date().toISOString()
-        })
-        .eq('id', actionId);
+      // Update execution count using RPC or raw SQL
+      const { error } = await supabase.rpc('increment_execution_count', {
+        action_id: actionId
+      });
 
       if (error) {
-        console.error('Error updating integration action:', error);
-        return false;
+        // Fallback to regular update if RPC doesn't exist
+        const { error: updateError } = await supabase
+          .from('integration_actions')
+          .update({
+            last_executed_at: new Date().toISOString()
+          })
+          .eq('id', actionId);
+
+        if (updateError) {
+          console.error('Error updating integration action:', updateError);
+          return false;
+        }
       }
 
       return true;

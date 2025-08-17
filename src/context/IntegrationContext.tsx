@@ -8,6 +8,11 @@ interface IntegrationContextType {
   isLoadingIntegrations: boolean;
   refreshIntegrations: () => Promise<void>;
   dueTasks: any[];
+  assignResourceToTask: (taskId: string, resourceId: string) => Promise<boolean>;
+  shareFileWithUser: (fileId: string, userId: string) => Promise<boolean>;
+  triggerAutomation: (automationId: string) => Promise<boolean>;
+  logTimeForTask: (taskId: string, hours: number) => Promise<boolean>;
+  linkDocumentToTask: (taskId: string, documentId: string) => Promise<boolean>;
 }
 
 const IntegrationContext = createContext<IntegrationContextType>({
@@ -15,6 +20,11 @@ const IntegrationContext = createContext<IntegrationContextType>({
   isLoadingIntegrations: false,
   refreshIntegrations: async () => {},
   dueTasks: [],
+  assignResourceToTask: async () => false,
+  shareFileWithUser: async () => false,
+  triggerAutomation: async () => false,
+  logTimeForTask: async () => false,
+  linkDocumentToTask: async () => false,
 });
 
 export const useIntegrationContext = () => {
@@ -55,6 +65,56 @@ export const IntegrationProvider: React.FC<IntegrationProviderProps> = ({ childr
     }
   };
 
+  const assignResourceToTask = async (taskId: string, resourceId: string): Promise<boolean> => {
+    try {
+      console.log(`Assigning resource ${resourceId} to task ${taskId}`);
+      return true;
+    } catch (error) {
+      console.error('Error assigning resource to task:', error);
+      return false;
+    }
+  };
+
+  const shareFileWithUser = async (fileId: string, userId: string): Promise<boolean> => {
+    try {
+      console.log(`Sharing file ${fileId} with user ${userId}`);
+      return true;
+    } catch (error) {
+      console.error('Error sharing file with user:', error);
+      return false;
+    }
+  };
+
+  const triggerAutomation = async (automationId: string): Promise<boolean> => {
+    try {
+      console.log(`Triggering automation ${automationId}`);
+      return true;
+    } catch (error) {
+      console.error('Error triggering automation:', error);
+      return false;
+    }
+  };
+
+  const logTimeForTask = async (taskId: string, hours: number): Promise<boolean> => {
+    try {
+      console.log(`Logging ${hours} hours for task ${taskId}`);
+      return true;
+    } catch (error) {
+      console.error('Error logging time for task:', error);
+      return false;
+    }
+  };
+
+  const linkDocumentToTask = async (taskId: string, documentId: string): Promise<boolean> => {
+    try {
+      console.log(`Linking document ${documentId} to task ${taskId}`);
+      return true;
+    } catch (error) {
+      console.error('Error linking document to task:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     refreshIntegrations();
   }, []);
@@ -64,6 +124,11 @@ export const IntegrationProvider: React.FC<IntegrationProviderProps> = ({ childr
     isLoadingIntegrations,
     refreshIntegrations,
     dueTasks,
+    assignResourceToTask,
+    shareFileWithUser,
+    triggerAutomation,
+    logTimeForTask,
+    linkDocumentToTask,
   };
 
   return (

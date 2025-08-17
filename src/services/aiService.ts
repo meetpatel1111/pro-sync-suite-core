@@ -73,6 +73,28 @@ export class AIService {
     }
   }
 
+  async sendChatMessage(userId: string, message: string, conversationHistory?: ChatMessage[]): Promise<string> {
+    try {
+      // Mock implementation - in real app this would use the stored API key to call Gemini
+      console.log('Sending chat message:', message);
+      return `AI response to: ${message}`;
+    } catch (error) {
+      console.error('Error sending chat message:', error);
+      throw error;
+    }
+  }
+
+  async chatWithAI(message: string, context?: any): Promise<string> {
+    try {
+      // Mock implementation - in real app this would use AI
+      console.log('Chat with AI:', message, context);
+      return `AI response to: ${message}`;
+    } catch (error) {
+      console.error('Error in chat with AI:', error);
+      throw error;
+    }
+  }
+
   async generateTaskSuggestions(context: any): Promise<TaskSuggestion[]> {
     // Mock implementation - in real app this would use AI
     return [
@@ -109,6 +131,10 @@ export class AIService {
         actionable: false
       }
     ];
+  }
+
+  async generateProductivityInsights(userId: string): Promise<ProductivityInsight[]> {
+    return this.getProductivityInsights(userId);
   }
 
   async generateContent(prompt: string, context?: any): Promise<string> {
