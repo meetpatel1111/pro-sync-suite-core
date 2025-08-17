@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { integrationService } from '@/services/integrationService';
+import integrationService from '@/services/integrationService';
 import { IntegrationAction } from '@/utils/dbtypes';
 
 interface IntegrationContextType {
@@ -23,6 +23,9 @@ export const useIntegrationContext = (): IntegrationContextType => {
   return context;
 };
 
+// Export alias for backward compatibility
+export const useIntegration = useIntegrationContext;
+
 interface IntegrationProviderProps {
   children: ReactNode;
 }
@@ -36,7 +39,7 @@ export const IntegrationProvider: React.FC<IntegrationProviderProps> = ({ childr
   const refreshIntegrations = async () => {
     setIsLoading(true);
     try {
-      const data = await integrationService.getIntegrationActions();
+      const data = await integrationService.getIntegrationActions('current-user');
       setIntegrations(data);
       setIntegrationActions(data);
     } catch (error) {
