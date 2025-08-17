@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface IntegrationAction {
@@ -106,24 +105,18 @@ export class IntegrationService {
     try {
       console.log(`Executing integration action ${actionId}`);
       
-      // Update execution count using RPC or raw SQL
-      const { error } = await supabase.rpc('increment_execution_count', {
-        action_id: actionId
-      });
+      // Update execution count using regular update since RPC might not exist
+      const { error } = await supabase
+        .from('integration_actions')
+        .update({
+          last_executed_at: new Date().toISOString(),
+          execution_count: supabase.raw('execution_count + 1')
+        })
+        .eq('id', actionId);
 
       if (error) {
-        // Fallback to regular update if RPC doesn't exist
-        const { error: updateError } = await supabase
-          .from('integration_actions')
-          .update({
-            last_executed_at: new Date().toISOString()
-          })
-          .eq('id', actionId);
-
-        if (updateError) {
-          console.error('Error updating integration action:', updateError);
-          return false;
-        }
+        console.error('Error updating integration action:', error);
+        return false;
       }
 
       return true;

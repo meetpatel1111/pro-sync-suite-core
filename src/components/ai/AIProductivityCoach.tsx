@@ -32,10 +32,10 @@ const AIProductivityCoach: React.FC = () => {
       const response = await aiService.generateProductivityInsights(user.id);
       
       const processedInsights: ProductivityInsight[] = response.map(insight => ({
-        type: insight.type === 'tip' ? 'improvement' : insight.type === 'achievement' ? 'achievement' : 'warning',
+        type: insight.type === 'achievement' ? 'achievement' : insight.type === 'warning' ? 'warning' : 'improvement',
         title: insight.title,
         description: insight.description,
-        score: Math.floor(Math.random() * 40) + 60, // Generate score based on insight priority
+        score: Math.floor(Math.random() * 40) + 60,
         actionable: insight.actionable
       }));
 
