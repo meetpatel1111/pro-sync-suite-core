@@ -178,8 +178,7 @@ const TaskDetailWithIntegrations: React.FC<TaskDetailWithIntegrationsProps> = ({
       </Card>
       
       <TaskIntegrations 
-        taskId={task.id}
-        taskTitle={task.title}
+        task={task}
         projectId={task.project_id}
       />
     </div>

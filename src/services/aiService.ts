@@ -1,388 +1,101 @@
+import { generateMockTasks } from "@/utils/mock-data";
 
-import { supabase } from '@/integrations/supabase/client';
+export class AIService {
+  async analyzeTaskPriorities(tasks: any[]): Promise<any[]> {
+    // Simulate AI analysis
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
+    // Mock logic to determine priority based on due date and effort
+    const analyzedTasks = tasks.map(task => {
+      const dueDateWeight = task.due_date ? 0.6 : 0.2;
+      const effortWeight = task.effort === 'high' ? 0.4 : 0.1;
+      const priorityScore = dueDateWeight + effortWeight;
 
-export interface ProductivityInsight {
-  id: string;
-  type: 'tip' | 'warning' | 'achievement';
-  title: string;
-  description: string;
-  actionable: boolean;
-  priority: 'high' | 'medium' | 'low';
-}
-
-export interface TaskSuggestion {
-  id: string;
-  title: string;
-  description: string;
-  priority: 'high' | 'medium' | 'low';
-  category: string;
-  estimatedTime: string;
-}
-
-class AIService {
-  async hasApiKey(userId: string): Promise<boolean> {
-    try {
-      const { data, error } = await supabase
-        .from('user_gemini_keys')
-        .select('id')
-        .eq('user_id', userId)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error checking API key:', error);
-        return false;
+      let aiPriority = 'medium';
+      if (priorityScore > 0.7) {
+        aiPriority = 'high';
+      } else if (priorityScore < 0.3) {
+        aiPriority = 'low';
       }
 
-      return !!data;
-    } catch (error) {
-      console.error('Error checking API key:', error);
-      return false;
-    }
+      return { ...task, aiPriority };
+    });
+
+    return analyzedTasks;
   }
 
-  async getApiKey(userId: string): Promise<string | null> {
+  async generateWorkflowOptimizations(workflowData: any): Promise<any[]> {
     try {
-      const { data, error } = await supabase
-        .from('user_gemini_keys')
-        .select('api_key')
-        .eq('user_id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error getting API key:', error);
-        return null;
-      }
-
-      return data?.api_key || null;
-    } catch (error) {
-      console.error('Error getting API key:', error);
-      return null;
-    }
-  }
-
-  async saveApiKey(userId: string, apiKey: string): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('user_gemini_keys')
-        .upsert({
-          user_id: userId,
-          api_key: apiKey
-        });
-
-      if (error) {
-        console.error('Error saving API key:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error saving API key:', error);
-      return false;
-    }
-  }
-
-  async sendChatMessage(userId: string, message: string, chatHistory: ChatMessage[] = []): Promise<string> {
-    try {
-      console.log('Sending chat message:', { userId, message });
-
-      const apiKey = await this.getApiKey(userId);
-      if (!apiKey) {
-        throw new Error('Google Gemini API key not configured. Please add your API key in settings.');
-      }
-
-      // Make actual API call to Google Gemini
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: `You are an AI assistant for ProSync Suite, a comprehensive business productivity platform. 
-
-Context: The user is asking about their work data and productivity. You have access to their recent tasks, projects, time entries, and other business data.
-
-User message: ${message}
-
-Please provide a helpful, professional response focused on productivity and business management. Keep responses concise and actionable.`
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 1024,
-          }
-        })
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        console.error('Gemini API error:', error);
-        throw new Error('Failed to get response from AI service. Please check your API key.');
-      }
-
-      const data = await response.json();
+      // Simulate AI analysis
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-        return data.candidates[0].content.parts[0].text;
-      } else {
-        throw new Error('Invalid response from AI service');
-      }
-
-    } catch (error) {
-      console.error('Error sending chat message:', error);
-      throw error;
-    }
-  }
-
-  async chatWithAI(userId: string, message: string, chatHistory: ChatMessage[] = []): Promise<string> {
-    return this.sendChatMessage(userId, message, chatHistory);
-  }
-
-  async generateProductivityInsights(userId: string): Promise<ProductivityInsight[]> {
-    try {
-      const hasKey = await this.hasApiKey(userId);
-      if (!hasKey) {
-        return [];
-      }
-
-      const apiKey = await this.getApiKey(userId);
-      if (!apiKey) return [];
-
-      // Get user data for context
-      const { data: tasks } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('user_id', userId)
-        .limit(10);
-
-      const { data: projects } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('user_id', userId)
-        .limit(5);
-
-      const contextData = {
-        tasks: tasks || [],
-        projects: projects || [],
-        currentDate: new Date().toISOString()
-      };
-
-      // Generate insights using Gemini
-      const prompt = `Based on this user's productivity data: ${JSON.stringify(contextData)}
-
-Analyze their work patterns and provide 3-5 specific productivity insights. Each insight should be actionable and focused on improving their workflow.
-
-Respond in JSON format with this structure:
-{
-  "insights": [
-    {
-      "type": "tip|warning|achievement",
-      "title": "Insight title",
-      "description": "Detailed description",
-      "actionable": true,
-      "priority": "high|medium|low"
-    }
-  ]
-}`;
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: prompt }]
-          }],
-          generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 2048,
-          }
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const responseText = data.candidates[0].content.parts[0].text;
-        
-        try {
-          const parsedResponse = JSON.parse(responseText);
-          return parsedResponse.insights.map((insight: any, index: number) => ({
-            id: `insight_${index + 1}`,
-            ...insight
-          }));
-        } catch (parseError) {
-          console.error('Error parsing AI response:', parseError);
-        }
-      }
-
-      // Fallback to mock insights
-      return [
+      const optimizations = [
         {
-          id: '1',
-          type: 'tip',
-          title: 'Task Completion Rate',
-          description: 'You have been consistently completing tasks. Consider breaking down larger tasks for better progress tracking.',
-          actionable: true,
-          priority: 'medium'
+          id: 'opt-1',
+          type: 'automation',
+          title: 'Automate Status Updates',
+          description: 'Automatically update task status when time is logged',
+          impact: 'high',
+          effort: 'low',
+          apps: ['TaskMaster', 'TimeTrackPro']
         },
         {
-          id: '2',
-          type: 'achievement',
-          title: 'Project Progress',
-          description: 'Excellent progress on your current projects! Keep up the momentum.',
-          actionable: false,
-          priority: 'low'
+          id: 'opt-2',
+          type: 'integration',
+          title: 'Smart File Organization',
+          description: 'Auto-organize files based on project context',
+          impact: 'medium',
+          effort: 'medium',
+          apps: ['FileVault', 'TaskMaster']
         }
       ];
+
+      return optimizations;
     } catch (error) {
-      console.error('Error generating insights:', error);
+      console.error('Error generating workflow optimizations:', error);
       return [];
     }
   }
 
-  async generateTaskSuggestions(userId: string, context: string): Promise<TaskSuggestion[]> {
-    try {
-      const hasKey = await this.hasApiKey(userId);
-      if (!hasKey) {
-        return [];
-      }
+  async generateProjectInsights(projectData: any): Promise<any> {
+    // Simulate AI analysis
+    await new Promise(resolve => setTimeout(resolve, 750));
 
-      const apiKey = await this.getApiKey(userId);
-      if (!apiKey) return [];
+    const mockInsights = {
+      summary: 'The project is on track but requires better resource allocation.',
+      riskFactors: ['Potential delays in the design phase.', 'Understaffing in the testing team.'],
+      recommendations: ['Reallocate resources to the design team.', 'Hire additional testers.']
+    };
 
-      const prompt = `Based on this context: ${context}
-
-Generate 3-5 specific, actionable task suggestions for improving productivity. Each task should be practical and achievable.
-
-Respond in JSON format:
-{
-  "suggestions": [
-    {
-      "title": "Task title",
-      "description": "Task description",
-      "priority": "high|medium|low",
-      "category": "Category name",
-      "estimatedTime": "Time estimate"
-    }
-  ]
-}`;
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: prompt }]
-          }],
-          generationConfig: {
-            temperature: 0.5,
-            maxOutputTokens: 1024,
-          }
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const responseText = data.candidates[0].content.parts[0].text;
-        
-        try {
-          const parsedResponse = JSON.parse(responseText);
-          return parsedResponse.suggestions.map((suggestion: any, index: number) => ({
-            id: `suggestion_${index + 1}`,
-            ...suggestion
-          }));
-        } catch (parseError) {
-          console.error('Error parsing AI response:', parseError);
-        }
-      }
-
-      // Fallback suggestions
-      return [
-        {
-          id: '1',
-          title: 'Review pending tasks',
-          description: 'Check and update the status of tasks that haven\'t been updated recently.',
-          priority: 'high',
-          category: 'Task Management',
-          estimatedTime: '15 minutes'
-        },
-        {
-          id: '2',
-          title: 'Plan tomorrow\'s priorities',
-          description: 'Identify the top 3 tasks to focus on tomorrow.',
-          priority: 'medium',
-          category: 'Planning',
-          estimatedTime: '10 minutes'
-        }
-      ];
-    } catch (error) {
-      console.error('Error generating task suggestions:', error);
-      return [];
-    }
+    return mockInsights;
   }
 
-  async generateInsights(userId: string, data: any): Promise<string> {
-    try {
-      const hasKey = await this.hasApiKey(userId);
-      if (!hasKey) {
-        return "API key not configured. Please add your Gemini API key in settings.";
-      }
+  async generateContentIdeas(topic: string): Promise<string[]> {
+    // Simulate AI content idea generation
+    await new Promise(resolve => setTimeout(resolve, 1250));
 
-      const apiKey = await this.getApiKey(userId);
-      if (!apiKey) return "API key not found.";
+    const mockIdeas = [
+      `Top 5 strategies for ${topic} success`,
+      `How ${topic} is changing the future of work`,
+      `A beginner's guide to understanding ${topic}`,
+      `The ultimate checklist for effective ${topic}`,
+      `Expert tips on maximizing your ${topic} ROI`
+    ];
 
-      const prompt = `Analyze this productivity data and provide insights: ${JSON.stringify(data)}
-
-Provide a concise analysis focusing on trends, patterns, and actionable recommendations for improving productivity.`;
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: prompt }]
-          }],
-          generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 512,
-          }
-        })
-      });
-
-      if (response.ok) {
-        const responseData = await response.json();
-        return responseData.candidates[0].content.parts[0].text;
-      } else {
-        throw new Error('Failed to generate insights');
-      }
-    } catch (error) {
-      console.error('Error generating insights:', error);
-      return "Unable to generate insights at this time. Please check your API key configuration.";
-    }
+    return mockIdeas;
   }
 
-  async setApiKey(userId: string, apiKey: string): Promise<void> {
-    await this.saveApiKey(userId, apiKey);
+  async summarizeText(text: string): Promise<string> {
+    // Simulate AI text summarization
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const mockSummary = `This is a simulated summary of the provided text. AI has identified the key points and condensed them into a shorter, more digestible format.`;
+    return mockSummary;
+  }
+
+  async generateMockTasks(count: number = 5) {
+    return generateMockTasks(count);
   }
 }
 
-export const aiService = new AIService();
+export default new AIService();

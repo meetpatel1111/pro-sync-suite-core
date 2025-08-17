@@ -23,6 +23,9 @@ import TeamDirectoryPage from '@/pages/TeamDirectoryPage';
 import Notifications from '@/pages/Notifications';
 import ProfileSettings from '@/pages/ProfileSettings';
 import Integrations from '@/pages/Integrations';
+import Terms from '@/pages/Terms';
+import Privacy from '@/pages/Privacy';
+import About from '@/pages/About';
 import { AuthProvider } from '@/context/AuthContext';
 import { IntegrationProvider } from '@/context/IntegrationContext';
 import UniversalAIAssistant from '@/components/ai/UniversalAIAssistant';
@@ -69,6 +72,9 @@ function App() {
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/profile" element={<ProfileSettings />} />
                   <Route path="/integrations" element={<Integrations />} />
+                  <Route path="/terms" element={<Terms />} />
+                  <Route path="/privacy" element={<Privacy />} />
+                  <Route path="/about" element={<About />} />
                 </Routes>
                 <UniversalAIAssistant />
               </Router>
