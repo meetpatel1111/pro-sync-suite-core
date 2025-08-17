@@ -28,6 +28,7 @@ type TimeEntry = {
   notes: string;
   tags: string[];
   manual: boolean;
+  // Ensure these exist to satisfy type errors seen elsewhere
   start_time: string;
   created_at: string;
 };
@@ -47,11 +48,11 @@ const integrationService = {
       date: timeData.date || now.toISOString(),
       billable: typeof timeData.billable === 'boolean' ? timeData.billable : false,
       hourly_rate: timeData.hourly_rate || 0,
-      project: timeData.project || '',
+      project: (timeData as any).project || '',
       notes: timeData.notes || '',
       tags: timeData.tags || [],
       manual: typeof timeData.manual === 'boolean' ? timeData.manual : true,
-      start_time: timeData.start_time || now.toISOString(),
+      start_time: (timeData as any).start_time || now.toISOString(),
       created_at: now.toISOString(),
     };
     console.log('[integrationService.logTimeForTask] Created TimeEntry:', entry);
@@ -89,15 +90,6 @@ const integrationService = {
     console.log('[integrationService.getIntegrationActions] for', userId);
     return actionsStore.filter(a => a.user_id === userId || true);
   },
-
-  async executeAction(actionId: string, params?: any): Promise<void> {
-    console.log('[integrationService.executeAction]', { actionId, params });
-    // Mock execution
-  },
 };
 
-// Named export for compatibility
-export { integrationService };
-
-// Default export
 export default integrationService;

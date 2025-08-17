@@ -1,115 +1,3 @@
-
-export interface UserProfile {
-  id: string;
-  user_id: string;
-  name: string;
-  email: string;
-  avatar_url: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Project {
-  id: string;
-  created_at: string;
-  name: string;
-  description: string;
-  status: string;
-  user_id: string;
-}
-
-export interface Task {
-  id: string;
-  created_at: string;
-  title: string;
-  description: string;
-  due_date: string | null;
-  status: string;
-  priority: string;
-  project_id: string | null;
-  user_id: string;
-  assigned_to?: string | string[];
-  assignee?: string;
-  project?: string;
-  start_date?: string;
-  created_by?: string;
-}
-
-export interface TimeEntry {
-  id: string;
-  created_at: string;
-  description: string;
-  time_spent: number;
-  date: string;
-  project_id: string | null;
-  user_id: string;
-  start_time?: string;
-  end_time?: string;
-  duration?: number;
-  task_id?: string;
-  project?: string;
-  billable?: boolean;
-  hourly_rate?: number;
-  tags?: string[];
-  notes?: string;
-  manual?: boolean;
-}
-
-export interface Client {
-  id: string;
-  created_at: string;
-  name: string;
-  email: string;
-  phone: string;
-  company: string;
-  user_id: string;
-}
-
-export interface Contact {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  company: string;
-  user_id: string;
-  created_at: string;
-}
-
-export interface Notification {
-  id: string;
-  created_at: string;
-  title: string;
-  message: string;
-  type: string;
-  related_to: string;
-  user_id: string;
-}
-
-export interface IntegrationAction {
-  id: string;
-  name: string;
-  description: string;
-  type: string;
-  enabled: boolean;
-  source_app: string;
-  target_app: string;
-  trigger_event: string;
-  action_config: any;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-}
-
-export interface FileObject {
-  id: string;
-  created_at: string;
-  name: string;
-  path: string;
-  size: number;
-  type: string;
-  user_id: string;
-}
-
 export interface Dashboard {
   id: string;
   title: string;
@@ -129,65 +17,284 @@ export interface Widget {
   created_at: string;
 }
 
-export interface Expense {
+export interface Project {
   id: string;
-  amount: number;
-  date: string;
-  description: string;
-  category_id?: string;
-  status?: string;
-  receipt_url?: string;
-  currency?: string;
-  project_id?: string;
+  name: string;
+  description?: string;
   user_id: string;
+  created_at: string;
+}
+
+export interface TimeEntry {
+  id: string;
+  task_id?: string;
+  user_id: string;
+  project_id?: string;
+  start_time: string;
+  end_time?: string;
+  duration?: number;
+  description?: string;
+  created_at: string;
+  time_spent: number;
+  date: string;
+  manual: boolean;
+  project: string;
+  billable?: boolean;
+  hourly_rate?: number;
+  tags?: string[];
+  notes?: string;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority: string;
+  start_date?: string;
+  due_date?: string;
+  assigned_to?: string[];
+  project_id?: string;
+  created_by?: string;
+  parent_task_id?: string;
+  reviewer_id?: string;
+  recurrence_rule?: string;
+  visibility?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface GeneralSetting {
+  id: string;
+  user_id: string;
+  setting_key: string;
+  setting_value: string;
+  scope: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AppearanceSetting {
+  id: string;
+  user_id: string;
+  theme: string;
+  primary_color: string;
+  font_size: string;
+  sidebar_collapsed: boolean;
+  animations_enabled: boolean;
+  ui_density: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NotificationSetting {
+  id: string;
+  user_id: string;
+  app: string;
+  setting_key: string;
+  enabled: boolean;
+  delivery_method: 'email' | 'push' | 'in-app';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SecuritySetting {
+  id: string;
+  user_id: string;
+  setting_key: string;
+  setting_value: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DataSetting {
+  id: string;
+  user_id: string;
+  data_type: string;
+  linked_services: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+// Enhanced Notification interface
+export interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'success' | 'error';
+  related_to?: string;
+  related_id?: string;
+  read: boolean;
+  created_at: string;
+}
+
+// Additional missing types
+export interface BudgetMessage {
+  id: string;
+  budget_id: string;
+  sender_id: string;
+  parent_id?: string;
+  content: string;
   created_at: string;
 }
 
 export interface Message {
   id: string;
-  content: string;
-  user_id: string;
   channel_id?: string;
+  user_id?: string;
+  parent_id?: string;
+  content?: string;
   type: string;
+  file_url?: string;
+  username?: string;
+  name?: string;
+  channel_name?: string;
+  reactions?: Record<string, any>;
+  mentions?: Record<string, any>;
+  is_pinned?: boolean;
+  edited_at?: string;
+  read_by?: Record<string, any>;
+  scheduled_for?: string;
   created_at: string;
   updated_at: string;
-  is_pinned: boolean;
-  reactions?: Record<string, string[]>;
-  username?: string;
 }
 
-export interface BudgetMessage {
+export interface Expense {
   id: string;
+  amount: number;
+  date: string;
+  project_id?: string;
+  user_id: string;
+  description: string;
+  category_id?: string;
+  status?: string;
+  receipt_url?: string;
+  currency?: string;
+  created_at: string;
+}
+
+export interface Budget {
+  id: string;
+  project_id?: string;
+  total?: number;
+  spent?: number;
+  updated_at?: string;
+}
+
+export interface Contact {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  role?: string;
+  emergency_contact?: boolean;
+  notes?: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface Client {
+  id: string;
+  user_id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  created_at: string;
+}
+
+export interface ClientNote {
+  id: string;
+  client_id: string;
+  user_id: string;
   content: string;
-  sender_id: string;
-  budget_id: string;
   created_at: string;
 }
 
 export interface Channel {
   id: string;
   name: string;
+  type: string;
+  about?: string;
   description?: string;
-  is_private: boolean;
-  created_by: string;
+  created_by?: string;
   created_at: string;
+  updated_at: string;
 }
 
 export interface ChannelMember {
   id: string;
-  channel_id: string;
-  user_id: string;
-  role: string;
+  channel_id?: string;
+  user_id?: string;
   joined_at: string;
 }
+
+export interface Resource {
+  id: string;
+  name: string;
+  role: string;
+  utilization?: number;
+  user_id?: string;
+  allocation?: number;
+  current_project_id?: string;
+  availability?: string;
+  avatar_url?: string;
+  skills?: string[];
+  schedule?: Record<string, any>;
+  allocation_history?: Record<string, any>;
+  utilization_history?: Record<string, any>;
+  created_at: string;
+}
+
+export interface ResourceSkill {
+  id: string;
+  resource_id?: string;
+  user_id?: string;
+  skill: string;
+  created_at: string;
+}
+
+export interface WorkSession {
+  id: string;
+  user_id: string;
+  project_id?: string;
+  task_id?: string;
+  start_time: string;
+  end_time?: string;
+  duration_seconds?: number;
+  is_active?: boolean;
+  description?: string;
+  created_at: string;
+}
+
+export interface Timesheet {
+  id: string;
+  user_id: string;
+  start_date: string;
+  end_date: string;
+  total_hours: number;
+  billable_hours: number;
+  non_billable_hours: number;
+  submitted_at?: string;
+  approved_at?: string;
+  approved_by?: string;
+  status: string;
+  notes?: string;
+  created_at: string;
+}
+
+export type GeneralSettingKey = 'language' | 'timezone';
 
 export interface DirectMessage {
   id: string;
   user1_id: string;
   user2_id: string;
   last_message?: string;
-  last_message_at?: string;
+  last_message_at: string;
   created_at: string;
+  updated_at: string;
 }
 
 export interface GroupMessage {
@@ -195,43 +302,87 @@ export interface GroupMessage {
   name: string;
   created_by: string;
   created_at: string;
+  updated_at: string;
 }
 
-export interface Resource {
+export interface GroupMessageMember {
+  id: string;
+  group_id: string;
+  user_id: string;
+  joined_at: string;
+}
+
+export interface MessageFile {
+  id: string;
+  message_id: string;
+  file_url: string;
+  file_name: string;
+  file_type: string;
+  file_size?: number;
+  uploaded_at: string;
+}
+
+export interface PinnedMessage {
+  id: string;
+  message_id: string;
+  channel_id?: string;
+  pinned_by: string;
+  pinned_at: string;
+}
+
+export interface TaskMention {
+  id: string;
+  message_id: string;
+  task_id: string;
+  mentioned_at: string;
+}
+
+export interface MessageSearch {
+  id: string;
+  message_id: string;
+  search_content: string;
+  created_at: string;
+}
+
+// Enhanced Message interface with new fields
+export interface Message {
+  id: string;
+  channel_id?: string;
+  user_id?: string;
+  parent_id?: string;
+  content?: string;
+  type: string;
+  file_url?: string;
+  username?: string;
+  name?: string;
+  channel_name?: string;
+  reactions?: Record<string, any>;
+  mentions?: Record<string, any>;
+  is_pinned?: boolean;
+  edited_at?: string;
+  read_by?: Record<string, any>;
+  scheduled_for?: string;
+  created_at: string;
+  updated_at: string;
+  // New fields
+  direct_message_id?: string;
+  group_message_id?: string;
+  reply_to_id?: string;
+  thread_count?: number;
+  is_system_message?: boolean;
+}
+
+// Enhanced Channel interface with new fields
+export interface Channel {
   id: string;
   name: string;
-  role: string;
-  availability?: string;
-  utilization?: number;
-  allocation?: number;
-  user_id?: string;
-  created_at: string;
-}
-
-export interface ResourceSkill {
-  id: string;
-  resource_id: string;
-  skill: string;
-  user_id?: string;
-  created_at: string;
-}
-
-export interface WorkSession {
-  id: string;
-  user_id: string;
-  start_time: string;
-  end_time?: string;
+  type: string;
+  about?: string;
   description?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  // New fields
   project_id?: string;
-  created_at: string;
-}
-
-export interface Timesheet {
-  id: string;
-  user_id: string;
-  week_start: string;
-  week_end: string;
-  total_hours: number;
-  status: string;
-  created_at: string;
+  auto_created?: boolean;
 }

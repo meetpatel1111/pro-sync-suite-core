@@ -1,4 +1,13 @@
 
+/**
+ * Centralized AI service with consistent exports and lightweight mocks.
+ * Exports:
+ *  - class AIService
+ *  - named instance: aiService
+ *  - default export: aiService
+ *  - types: ChatMessage, ProductivityInsight, TaskSuggestion
+ */
+
 import { generateMockTasks } from "@/utils/mock-data";
 
 // Types used across AI components
@@ -23,68 +32,38 @@ export interface TaskSuggestion {
   title: string;
   description: string;
   priority: "low" | "medium" | "high";
-  estimatedTime?: string;
-  category?: string;
 }
 
 export class AIService {
+  // Basic key check: looks for user-scoped key in localStorage or ENV
   async hasApiKey(userId: string): Promise<boolean> {
     const localKey = typeof window !== "undefined" ? localStorage.getItem(`ai_api_key_${userId}`) || localStorage.getItem("ai_api_key") : null;
+    // We also allow Vite env keys if present
     const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (import.meta as any).env?.VITE_OPENAI_API_KEY;
     return Boolean(localKey || envKey);
   }
 
-  async saveApiKey(userId: string, apiKey: string): Promise<void> {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(`ai_api_key_${userId}`, apiKey);
-    }
-  }
-
+  // Overloads to satisfy different call sites
+  async sendChatMessage(userId: string, prompt: string): Promise<string>;
+  async sendChatMessage(userId: string, prompt: string, messages: ChatMessage[]): Promise<string>;
+  async sendChatMessage(userId: string, prompt: string, messages: ChatMessage[], system?: string, options?: any): Promise<string>;
   async sendChatMessage(userId: string, prompt: string, messages: ChatMessage[] = [], _system?: string, _options?: any): Promise<string> {
     console.log("[AIService.sendChatMessage] userId:", userId, "prompt:", prompt?.slice(0, 80), "messagesCount:", messages?.length || 0);
+    // Simulated latency
     await new Promise((r) => setTimeout(r, 400));
+    // Lightweight mock response
     return `AI Response: ${prompt?.slice(0, 180)}...`;
   }
 
+  // Simple chat wrapper used by AIChatWidget
   async chatWithAI(userId: string, content: string, messages: ChatMessage[]): Promise<string> {
     const prompt = `Continue the conversation. User said: ${content}`;
     return this.sendChatMessage(userId, prompt, messages);
   }
 
-  async generateTaskSuggestions(userId: string, context: string): Promise<TaskSuggestion[]> {
-    console.log("[AIService.generateTaskSuggestions] userId:", userId, "context:", context);
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    return [
-      {
-        id: "task-1",
-        title: "Review project requirements",
-        description: "Analyze and review current project requirements for clarity",
-        priority: "high",
-        estimatedTime: "2 hours",
-        category: "Planning"
-      },
-      {
-        id: "task-2", 
-        title: "Update documentation",
-        description: "Update project documentation with recent changes",
-        priority: "medium",
-        estimatedTime: "1 hour",
-        category: "Documentation"
-      },
-      {
-        id: "task-3",
-        title: "Code review",
-        description: "Review pending code changes from team members",
-        priority: "high",
-        estimatedTime: "3 hours", 
-        category: "Development"
-      }
-    ];
-  }
-
   async analyzeTaskPriorities(tasks: any[]): Promise<any[]> {
     await new Promise((resolve) => setTimeout(resolve, 300));
-    return tasks.map((task) => {
+    const analyzedTasks = tasks.map((task) => {
       const dueDateWeight = task.due_date ? 0.6 : 0.2;
       const effortWeight = task.effort === "high" ? 0.4 : 0.1;
       const priorityScore = dueDateWeight + effortWeight;
@@ -95,39 +74,92 @@ export class AIService {
 
       return { ...task, aiPriority };
     });
+    return analyzedTasks;
   }
 
   async generateWorkflowOptimizations(_workflowData: any): Promise<any[]> {
     await new Promise((resolve) => setTimeout(resolve, 400));
-    return [];
+    return [
+      {
+        id: "opt-1",
+        type: "automation",
+        title: "Automate Status Updates",
+        description: "Automatically update task status when time is logged",
+        impact: "high",
+        effort: "low",
+        apps: ["TaskMaster", "TimeTrackPro"],
+      },
+      {
+        id: "opt-2",
+        type: "integration",
+        title: "Smart File Organization",
+        description: "Auto-organize files based on project context",
+        impact: "medium",
+        effort: "medium",
+        apps: ["FileVault", "TaskMaster"],
+      },
+    ];
   }
 
   async generateProjectInsights(_projectData: any): Promise<any> {
     await new Promise((resolve) => setTimeout(resolve, 300));
     return {
-      summary: "No project data available.",
-      riskFactors: [],
-      recommendations: [],
+      summary: "The project is on track but requires better resource allocation.",
+      riskFactors: ["Potential delays in the design phase.", "Understaffing in the testing team."],
+      recommendations: ["Reallocate resources to the design team.", "Hire additional testers."],
     };
   }
 
   async generateContentIdeas(topic: string): Promise<string[]> {
     await new Promise((resolve) => setTimeout(resolve, 300));
-    return [];
+    return [
+      `Top 5 strategies for ${topic} success`,
+      `How ${topic} is changing the future of work`,
+      `A beginner's guide to understanding ${topic}`,
+      `The ultimate checklist for effective ${topic}`,
+      `Expert tips on maximizing your ${topic} ROI`,
+    ];
   }
 
   async summarizeText(_text: string): Promise<string> {
     await new Promise((resolve) => setTimeout(resolve, 300));
-    return "No text provided for summarization.";
+    return "This is a simulated summary of the provided text. AI has identified the key points and condensed them into a shorter, more digestible format.";
+  }
+
+  async generateMockTasks(count: number = 5) {
+    return generateMockTasks(count);
   }
 
   async generateProductivityInsights(userId: string): Promise<ProductivityInsight[]> {
     console.log("[AIService.generateProductivityInsights] userId:", userId);
     await new Promise((resolve) => setTimeout(resolve, 350));
-    return [];
+    return [
+      {
+        id: "ins-1",
+        type: "tip",
+        title: "Batch similar tasks",
+        description: "Group similar tasks to reduce context switching and improve focus.",
+        actionable: true,
+      },
+      {
+        id: "ins-2",
+        type: "achievement",
+        title: "Great task completion streak",
+        description: "You've maintained a strong completion streak this week, keep it up!",
+        actionable: false,
+      },
+      {
+        id: "ins-3",
+        type: "warning",
+        title: "Upcoming deadlines",
+        description: "You have multiple tasks due in the next 48 hours. Consider prioritizing.",
+        actionable: true,
+      },
+    ];
   }
 }
 
 const aiService = new AIService();
 export { aiService };
 export default aiService;
+
