@@ -1,10 +1,10 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { integrationService, IntegrationAction } from '@/services/integrationService';
+import { integrationService, Integration } from '@/services/integrationService';
 import { useToast } from '@/hooks/use-toast';
 
 interface IntegrationContextType {
-  integrationActions: IntegrationAction[];
+  integrationActions: Integration[];
   isLoadingIntegrations: boolean;
   refreshIntegrations: () => Promise<void>;
   dueTasks: any[];
@@ -43,7 +43,7 @@ interface IntegrationProviderProps {
 }
 
 export const IntegrationProvider: React.FC<IntegrationProviderProps> = ({ children }) => {
-  const [integrationActions, setIntegrationActions] = useState<IntegrationAction[]>([]);
+  const [integrationActions, setIntegrationActions] = useState<Integration[]>([]);
   const [isLoadingIntegrations, setIsLoadingIntegrations] = useState(false);
   const [dueTasks, setDueTasks] = useState<any[]>([]);
   const { toast } = useToast();
@@ -51,8 +51,11 @@ export const IntegrationProvider: React.FC<IntegrationProviderProps> = ({ childr
   const refreshIntegrations = async () => {
     setIsLoadingIntegrations(true);
     try {
-      const actions = await integrationService.getIntegrationActions();
-      setIntegrationActions(actions);
+      const { data: user } = await integrationService.supabase.auth.getUser();
+      if (user.user) {
+        const actions = await integrationService.getIntegrations(user.user.id);
+        setIntegrationActions(actions);
+      }
     } catch (error) {
       console.error('Error refreshing integrations:', error);
       toast({

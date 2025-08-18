@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -11,12 +11,9 @@ import {
   Shield, 
   ShieldAlert,
   ShieldCheck,
-  PieChart,
-  BarChart3,
   Clock,
   ChevronDown,
   Search,
-  Sparkles,
   Target,
   Zap
 } from 'lucide-react';
@@ -27,6 +24,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import RiskRadarChart from '@/components/RiskRadarChart';
 import RiskTable from '@/components/RiskTable';
+import RiskDialog from '@/components/RiskDialog';
+import { riskService } from '@/services/riskService';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +35,35 @@ import {
 
 const RiskRadar = () => {
   const navigate = useNavigate();
+  const [analytics, setAnalytics] = useState({
+    totalRisks: 0,
+    highRisks: 0,
+    mediumRisks: 0,
+    lowRisks: 0,
+    byCategory: {} as Record<string, number>,
+    byStatus: {} as Record<string, number>
+  });
+  const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    loadAnalytics();
+  }, [refreshKey]);
+
+  const loadAnalytics = async () => {
+    try {
+      const data = await riskService.getRiskAnalytics();
+      setAnalytics(data);
+    } catch (error) {
+      console.error('Error loading analytics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
   
   return (
     <AppLayout>
@@ -91,10 +119,7 @@ const RiskRadar = () => {
               <Filter className="h-4 w-4 mr-2" />
               Filter
             </Button>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              New Risk
-            </Button>
+            <RiskDialog onSave={handleRefresh} />
           </div>
         </div>
         
@@ -102,16 +127,16 @@ const RiskRadar = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card className="p-4">
             <div className="flex items-center mb-3">
-              <div className="p-2 rounded-full bg-amber-100 mr-3">
-                <AlertTriangle className="h-5 w-5 text-amber-700" />
+              <div className="p-2 rounded-full bg-blue-100 mr-3">
+                <AlertTriangle className="h-5 w-5 text-blue-700" />
               </div>
               <div>
                 <p className="text-sm font-medium">Total Risks</p>
-                <h3 className="text-2xl font-bold">24</h3>
+                <h3 className="text-2xl font-bold">{analytics.totalRisks}</h3>
               </div>
             </div>
-            <Progress value={65} className="h-1 bg-amber-100" />
-            <p className="text-xs text-muted-foreground mt-2">65% have mitigation plans</p>
+            <Progress value={analytics.totalRisks > 0 ? 100 : 0} className="h-1 bg-blue-100" />
+            <p className="text-xs text-muted-foreground mt-2">Active risk assessments</p>
           </Card>
           
           <Card className="p-4">
@@ -121,11 +146,14 @@ const RiskRadar = () => {
               </div>
               <div>
                 <p className="text-sm font-medium">High Priority</p>
-                <h3 className="text-2xl font-bold">8</h3>
+                <h3 className="text-2xl font-bold">{analytics.highRisks}</h3>
               </div>
             </div>
-            <Progress value={75} className="h-1 bg-red-100" />
-            <p className="text-xs text-muted-foreground mt-2">75% actively monitored</p>
+            <Progress 
+              value={analytics.totalRisks > 0 ? (analytics.highRisks / analytics.totalRisks) * 100 : 0} 
+              className="h-1 bg-red-100" 
+            />
+            <p className="text-xs text-muted-foreground mt-2">Require immediate attention</p>
           </Card>
           
           <Card className="p-4">
@@ -135,11 +163,14 @@ const RiskRadar = () => {
               </div>
               <div>
                 <p className="text-sm font-medium">Medium Priority</p>
-                <h3 className="text-2xl font-bold">10</h3>
+                <h3 className="text-2xl font-bold">{analytics.mediumRisks}</h3>
               </div>
             </div>
-            <Progress value={60} className="h-1 bg-amber-100" />
-            <p className="text-xs text-muted-foreground mt-2">60% have mitigation plans</p>
+            <Progress 
+              value={analytics.totalRisks > 0 ? (analytics.mediumRisks / analytics.totalRisks) * 100 : 0} 
+              className="h-1 bg-amber-100" 
+            />
+            <p className="text-xs text-muted-foreground mt-2">Monitored regularly</p>
           </Card>
           
           <Card className="p-4">
@@ -148,12 +179,15 @@ const RiskRadar = () => {
                 <ShieldCheck className="h-5 w-5 text-green-700" />
               </div>
               <div>
-                <p className="text-sm font-medium">Resolved</p>
-                <h3 className="text-2xl font-bold">14</h3>
+                <p className="text-sm font-medium">Low Priority</p>
+                <h3 className="text-2xl font-bold">{analytics.lowRisks}</h3>
               </div>
             </div>
-            <Progress value={100} className="h-1 bg-green-100" />
-            <p className="text-xs text-muted-foreground mt-2">In the last 30 days</p>
+            <Progress 
+              value={analytics.totalRisks > 0 ? (analytics.lowRisks / analytics.totalRisks) * 100 : 0} 
+              className="h-1 bg-green-100" 
+            />
+            <p className="text-xs text-muted-foreground mt-2">Under control</p>
           </Card>
         </div>
         
@@ -167,20 +201,9 @@ const RiskRadar = () => {
                   <Clock className="h-4 w-4 mr-2" />
                   Last 30 Days
                 </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      Project Alpha
-                      <ChevronDown className="ml-2 h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem>All Projects</DropdownMenuItem>
-                    <DropdownMenuItem>Project Alpha</DropdownMenuItem>
-                    <DropdownMenuItem>Project Beta</DropdownMenuItem>
-                    <DropdownMenuItem>Project Gamma</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button variant="outline" size="sm" onClick={handleRefresh}>
+                  Refresh
+                </Button>
               </div>
             </div>
             
@@ -193,14 +216,14 @@ const RiskRadar = () => {
               
               <TabsContent value="matrix" className="space-y-4">
                 <div className="h-[300px]">
-                  <RiskRadarChart />
+                  <RiskRadarChart key={refreshKey} />
                 </div>
               </TabsContent>
               
               <TabsContent value="trends" className="space-y-4">
                 <div className="h-[300px] flex items-center justify-center">
                   <div className="text-center">
-                    <BarChart3 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                     <h3 className="text-lg font-medium mb-2">Risk Trends</h3>
                     <p className="text-muted-foreground max-w-md mb-4">
                       Track how risks evolve over time with detailed trend analysis.
@@ -212,7 +235,7 @@ const RiskRadar = () => {
               <TabsContent value="categories" className="space-y-4">
                 <div className="h-[300px] flex items-center justify-center">
                   <div className="text-center">
-                    <PieChart className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                     <h3 className="text-lg font-medium mb-2">Risk Categories</h3>
                     <p className="text-muted-foreground max-w-md mb-4">
                       Visualize distribution of risks across different categories.
@@ -227,54 +250,36 @@ const RiskRadar = () => {
             <h3 className="font-medium mb-4">Risk Categories</h3>
             
             <div className="space-y-4">
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm">Technical</span>
-                  <span className="text-sm font-medium">9 risks</span>
+              {Object.entries(analytics.byCategory).map(([category, count]) => (
+                <div key={category}>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm capitalize">{category}</span>
+                    <span className="text-sm font-medium">{count} risks</span>
+                  </div>
+                  <Progress 
+                    value={analytics.totalRisks > 0 ? (count / analytics.totalRisks * 100) : 0} 
+                    className="h-2" 
+                  />
                 </div>
-                <Progress value={38} className="h-2 bg-red-100" />
-                <p className="text-xs text-muted-foreground mt-1">3 high, 4 medium, 2 low</p>
-              </div>
+              ))}
               
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm">Schedule</span>
-                  <span className="text-sm font-medium">6 risks</span>
+              {Object.keys(analytics.byCategory).length === 0 && (
+                <div className="text-center py-4">
+                  <p className="text-sm text-muted-foreground">No risk categories yet</p>
                 </div>
-                <Progress value={25} className="h-2 bg-amber-100" />
-                <p className="text-xs text-muted-foreground mt-1">2 high, 3 medium, 1 low</p>
-              </div>
-              
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm">Resource</span>
-                  <span className="text-sm font-medium">5 risks</span>
-                </div>
-                <Progress value={21} className="h-2 bg-amber-100" />
-                <p className="text-xs text-muted-foreground mt-1">1 high, 2 medium, 2 low</p>
-              </div>
-              
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm">Financial</span>
-                  <span className="text-sm font-medium">4 risks</span>
-                </div>
-                <Progress value={16} className="h-2 bg-emerald-100" />
-                <p className="text-xs text-muted-foreground mt-1">0 high, 1 medium, 3 low</p>
-              </div>
+              )}
             </div>
             
             <div className="mt-6 pt-4 border-t">
-              <h4 className="text-sm font-medium mb-2">Risk Alerts</h4>
+              <h4 className="text-sm font-medium mb-2">Risk Status</h4>
               
-              <div className="space-y-3">
-                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-sm text-red-800">3 high priority risks require immediate attention</p>
-                </div>
-                
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
-                  <p className="text-sm text-amber-800">5 risks have passed their review date</p>
-                </div>
+              <div className="space-y-2">
+                {Object.entries(analytics.byStatus).map(([status, count]) => (
+                  <div key={status} className="flex justify-between text-sm">
+                    <span className="capitalize">{status}</span>
+                    <span className="font-medium">{count}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </Card>
@@ -303,7 +308,7 @@ const RiskRadar = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     <DropdownMenuItem>All</DropdownMenuItem>
-                    <DropdownMenuItem>Open</DropdownMenuItem>
+                    <DropdownMenuItem>Active</DropdownMenuItem>
                     <DropdownMenuItem>Mitigated</DropdownMenuItem>
                     <DropdownMenuItem>Closed</DropdownMenuItem>
                   </DropdownMenuContent>
@@ -311,7 +316,7 @@ const RiskRadar = () => {
               </div>
             </div>
             
-            <RiskTable />
+            <RiskTable key={refreshKey} onRefresh={handleRefresh} />
           </Card>
         </div>
       </div>

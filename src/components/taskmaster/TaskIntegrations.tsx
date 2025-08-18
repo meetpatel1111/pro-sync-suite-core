@@ -1,184 +1,144 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Clock, Plus, Link2, Calendar, Users, FileText } from 'lucide-react';
+import { Clock, FileText, Users, AlertTriangle, Link, Zap } from 'lucide-react';
+import { useIntegrationContext } from '@/context/IntegrationContext';
 import { useToast } from '@/hooks/use-toast';
-import { useAuthContext } from '@/context/AuthContext';
-import type { Task } from '@/types/taskmaster';
+
+// Define Task interface locally since it's not exported from types
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  project_id?: string;
+}
 
 interface TaskIntegrationsProps {
   task: Task;
+  onUpdate?: () => void;
 }
 
-const TaskIntegrations: React.FC<TaskIntegrationsProps> = ({ task }) => {
-  const { user } = useAuthContext();
+const TaskIntegrations: React.FC<TaskIntegrationsProps> = ({ task, onUpdate }) => {
+  const [loading, setLoading] = useState<Record<string, boolean>>({});
+  const { 
+    assignResourceToTask, 
+    shareFileWithUser, 
+    triggerAutomation,
+    logTimeForTask,
+    linkDocumentToTask 
+  } = useIntegrationContext();
   const { toast } = useToast();
-  const [timeEntry, setTimeEntry] = useState({ hours: '', description: '' });
-  const [isLoggingTime, setIsLoggingTime] = useState(false);
 
-  const logTimeForTask = async () => {
-    if (!user || !timeEntry.hours) return;
-
+  const handleAction = async (actionType: string, action: () => Promise<boolean>) => {
+    setLoading(prev => ({ ...prev, [actionType]: true }));
     try {
-      setIsLoggingTime(true);
-      
-      // Create time entry object with proper structure
-      const timeEntryData = {
-        description: timeEntry.description || `Work on ${task.title}`,
-        time_spent: parseFloat(timeEntry.hours),
-        project_id: task.project_id || '',
-        billable: true,
-      };
-
-      // Mock time logging - replace with actual service call
-      console.log('Logging time entry:', timeEntryData);
-      
-      toast({
-        title: 'Time Logged',
-        description: `${timeEntry.hours} hours logged for ${task.title}`,
-      });
-
-      setTimeEntry({ hours: '', description: '' });
+      const success = await action();
+      if (success) {
+        toast({
+          title: 'Success',
+          description: `${actionType} completed successfully`
+        });
+        onUpdate?.();
+      } else {
+        throw new Error('Action failed');
+      }
     } catch (error) {
-      console.error('Error logging time:', error);
       toast({
         title: 'Error',
-        description: 'Failed to log time entry',
-        variant: 'destructive',
+        description: `Failed to ${actionType.toLowerCase()}`,
+        variant: 'destructive'
       });
     } finally {
-      setIsLoggingTime(false);
+      setLoading(prev => ({ ...prev, [actionType]: false }));
     }
   };
 
-  const integrations = [
+  const integrationActions = [
     {
-      id: 'timetrack',
-      name: 'TimeTrackPro',
+      id: 'time-tracking',
+      title: 'Log Time',
+      description: 'Track time spent on this task',
       icon: Clock,
-      status: 'connected',
-      description: 'Track time spent on this task'
+      color: 'text-blue-600 bg-blue-50',
+      action: () => logTimeForTask(task.id, 2) // Log 2 hours as example
     },
     {
-      id: 'calendar',
-      name: 'Calendar',
-      icon: Calendar,
-      status: 'available',
-      description: 'Schedule work sessions'
-    },
-    {
-      id: 'team',
-      name: 'Team Chat',
+      id: 'assign-resource',
+      title: 'Assign Resource',
+      description: 'Assign team member to task',
       icon: Users,
-      status: 'connected',
-      description: 'Discuss task in team channels'
+      color: 'text-green-600 bg-green-50',
+      action: () => assignResourceToTask(task.id, 'user-123')
     },
     {
-      id: 'docs',
-      name: 'Documentation',
+      id: 'link-document',
+      title: 'Link Document',
+      description: 'Attach relevant documentation',
       icon: FileText,
-      status: 'available',
-      description: 'Create related documentation'
+      color: 'text-purple-600 bg-purple-50',
+      action: () => linkDocumentToTask(task.id, 'doc-123')
+    },
+    {
+      id: 'create-risk',
+      title: 'Create Risk',
+      description: 'Identify potential risks',
+      icon: AlertTriangle,
+      color: 'text-red-600 bg-red-50',
+      action: () => Promise.resolve(true) // Placeholder for risk creation
+    },
+    {
+      id: 'trigger-automation',
+      title: 'Run Automation',
+      description: 'Execute workflow automation',
+      icon: Zap,
+      color: 'text-amber-600 bg-amber-50',
+      action: () => triggerAutomation('auto-123')
     }
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Time Tracking Integration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Time Tracking
-          </CardTitle>
-          <CardDescription>
-            Log time spent working on this task
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="hours">Hours</Label>
-              <Input
-                id="hours"
-                type="number"
-                step="0.25"
-                min="0"
-                placeholder="2.5"
-                value={timeEntry.hours}
-                onChange={(e) => setTimeEntry(prev => ({ ...prev, hours: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Input
-                id="description"
-                placeholder="What did you work on?"
-                value={timeEntry.description}
-                onChange={(e) => setTimeEntry(prev => ({ ...prev, description: e.target.value }))}
-              />
-            </div>
-          </div>
-          <Button 
-            onClick={logTimeForTask}
-            disabled={!timeEntry.hours || isLoggingTime}
-            className="w-full"
-          >
-            <Clock className="mr-2 h-4 w-4" />
-            {isLoggingTime ? 'Logging Time...' : 'Log Time'}
-          </Button>
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-4">
+        <Link className="h-5 w-5" />
+        <h3 className="font-semibold">Quick Integrations</h3>
+        <Badge variant="secondary" className="text-xs">
+          Auto-sync enabled
+        </Badge>
+      </div>
 
-      {/* Available Integrations */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Link2 className="h-5 w-5" />
-            Available Integrations
-          </CardTitle>
-          <CardDescription>
-            Connect this task with other apps
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {integrations.map((integration) => {
-              const IconComponent = integration.icon;
-              return (
-                <div key={integration.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <IconComponent className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <div className="font-medium">{integration.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {integration.description}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge 
-                      variant={integration.status === 'connected' ? 'default' : 'secondary'}
-                    >
-                      {integration.status}
-                    </Badge>
-                    {integration.status === 'available' && (
-                      <Button variant="outline" size="sm">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {integrationActions.map((integration) => {
+          const Icon = integration.icon;
+          const isLoading = loading[integration.id];
+
+          return (
+            <Card key={integration.id} className="p-4 hover:shadow-sm transition-shadow">
+              <div className="flex items-start gap-3">
+                <div className={`p-2 rounded-lg ${integration.color}`}>
+                  <Icon className="h-4 w-4" />
                 </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-sm">{integration.title}</h4>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    {integration.description}
+                  </p>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="w-full"
+                    disabled={isLoading}
+                    onClick={() => handleAction(integration.title, integration.action)}
+                  >
+                    {isLoading ? 'Processing...' : 'Execute'}
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 };

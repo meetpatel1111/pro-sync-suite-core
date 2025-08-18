@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ScatterChart,
   Scatter,
@@ -9,60 +9,65 @@ import {
   Tooltip,
   ResponsiveContainer,
   ZAxis,
-  Legend,
   Cell
 } from 'recharts';
-
-// Sample risk data
-const risks = [
-  { id: 1, name: 'Server Outage', probability: 2, impact: 5, category: 'Technical', count: 1 },
-  { id: 2, name: 'Data Breach', probability: 1, impact: 5, category: 'Technical', count: 1 },
-  { id: 3, name: 'API Integration Delay', probability: 4, impact: 3, category: 'Technical', count: 1 },
-  { id: 4, name: 'Resource Shortage', probability: 3, impact: 3, category: 'Resource', count: 1 },
-  { id: 5, name: 'Scope Creep', probability: 4, impact: 4, category: 'Schedule', count: 1 },
-  { id: 6, name: 'Budget Overrun', probability: 3, impact: 4, category: 'Financial', count: 1 },
-  { id: 7, name: 'Vendor Delays', probability: 3, impact: 2, category: 'Schedule', count: 1 },
-  { id: 8, name: 'Compliance Issues', probability: 2, impact: 4, category: 'Technical', count: 1 },
-  { id: 9, name: 'Staff Turnover', probability: 3, impact: 3, category: 'Resource', count: 1 },
-  { id: 10, name: 'Technology Change', probability: 2, impact: 3, category: 'Technical', count: 1 },
-];
-
-// Get color based on probability and impact
-const getRiskColor = (probability: number, impact: number) => {
-  const riskScore = probability * impact;
-  if (riskScore >= 15) return '#ef4444'; // High risk - red
-  if (riskScore >= 8) return '#f59e0b';  // Medium risk - amber
-  return '#10b981';                      // Low risk - green
-};
-
-// Get size based on priority
-const getRiskSize = (probability: number, impact: number) => {
-  const riskScore = probability * impact;
-  if (riskScore >= 15) return 1000;  // High risk
-  if (riskScore >= 8) return 800;    // Medium risk
-  return 600;                        // Low risk
-};
+import { Risk, riskService } from '@/services/riskService';
 
 const RiskRadarChart = () => {
+  const [risks, setRisks] = useState<Risk[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadRisks();
+  }, []);
+
+  const loadRisks = async () => {
+    try {
+      const data = await riskService.getRisks();
+      setRisks(data);
+    } catch (error) {
+      console.error('Error loading risks:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Transform risks for chart display
+  const chartData = risks.map(risk => ({
+    id: risk.id,
+    name: risk.title,
+    probability: risk.probability * 5, // Scale to 1-5
+    impact: risk.impact * 5, // Scale to 1-5
+    category: risk.category,
+    count: 1,
+    riskScore: risk.risk_score
+  }));
+
+  // Get color based on risk score
+  const getRiskColor = (riskScore: number) => {
+    if (riskScore >= 0.7) return '#ef4444'; // High risk - red
+    if (riskScore >= 0.3) return '#f59e0b';  // Medium risk - amber
+    return '#10b981';                        // Low risk - green
+  };
+
   // Custom tooltip component
   const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
-      const riskScore = data.probability * data.impact;
       
       let riskLevel;
-      if (riskScore >= 15) riskLevel = 'High';
-      else if (riskScore >= 8) riskLevel = 'Medium';
+      if (data.riskScore >= 0.7) riskLevel = 'High';
+      else if (data.riskScore >= 0.3) riskLevel = 'Medium';
       else riskLevel = 'Low';
       
       return (
         <div className="bg-background p-3 shadow-sm border rounded-md">
           <p className="font-medium">{data.name}</p>
           <p className="text-sm text-muted-foreground">Category: {data.category}</p>
-          <p className="text-sm text-muted-foreground">Probability: {data.probability}/5</p>
-          <p className="text-sm text-muted-foreground">Impact: {data.impact}/5</p>
+          <p className="text-sm text-muted-foreground">Probability: {Math.round(data.probability * 20)}%</p>
+          <p className="text-sm text-muted-foreground">Impact: {Math.round(data.impact * 20)}%</p>
           <p className="text-sm font-medium mt-1">
-            Risk Level: <span style={{ color: getRiskColor(data.probability, data.impact) }}>{riskLevel}</span>
+            Risk Level: <span style={{ color: getRiskColor(data.riskScore) }}>{riskLevel}</span>
           </p>
         </div>
       );
@@ -70,6 +75,28 @@ const RiskRadarChart = () => {
     
     return null;
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[300px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-sm text-muted-foreground mt-2">Loading risks...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (risks.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-[300px]">
+        <div className="text-center">
+          <p className="text-lg font-medium">No risks found</p>
+          <p className="text-sm text-muted-foreground">Create your first risk to see the risk matrix</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -101,15 +128,14 @@ const RiskRadarChart = () => {
         <ZAxis 
           type="number" 
           dataKey="count" 
-          range={[600, 1000]} 
+          range={[400, 800]} 
         />
         <Tooltip cursor={{ strokeDasharray: '3 3' }} content={<CustomTooltip />} />
-        <Legend />
-        <Scatter name="Risks" data={risks}>
-          {risks.map((entry, index) => (
+        <Scatter name="Risks" data={chartData}>
+          {chartData.map((entry, index) => (
             <Cell 
               key={`cell-${index}`} 
-              fill={getRiskColor(entry.probability, entry.impact)} 
+              fill={getRiskColor(entry.riskScore)} 
             />
           ))}
         </Scatter>

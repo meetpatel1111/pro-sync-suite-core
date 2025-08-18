@@ -19,6 +19,8 @@ export interface Integration {
 }
 
 class IntegrationService {
+  supabase = supabase;
+
   async createIntegration(integration: Omit<Integration, 'id' | 'created_at' | 'execution_count' | 'success_count' | 'error_count'>): Promise<Integration> {
     const { data, error } = await supabase
       .from('integration_actions')
@@ -64,31 +66,48 @@ class IntegrationService {
 
   async executeIntegration(id: string): Promise<void> {
     try {
-      // Update execution count
-      const { error } = await supabase
+      // Get current data first
+      const { data: currentData, error: fetchError } = await supabase
+        .from('integration_actions')
+        .select('execution_count, success_count')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Update execution count and timestamp
+      const { error: updateError } = await supabase
         .from('integration_actions')
         .update({
-          execution_count: supabase.rpc('increment', { table_name: 'integration_actions', column_name: 'execution_count', id }),
+          execution_count: (currentData?.execution_count || 0) + 1,
           last_executed_at: new Date().toISOString()
         })
         .eq('id', id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
       // Update success count
-      await supabase
+      const { error: successError } = await supabase
         .from('integration_actions')
         .update({
-          success_count: supabase.rpc('increment', { table_name: 'integration_actions', column_name: 'success_count', id })
+          success_count: (currentData?.success_count || 0) + 1
         })
         .eq('id', id);
 
+      if (successError) throw successError;
+
     } catch (error) {
-      // Update error count
+      // Update error count on failure
+      const { data: currentData } = await supabase
+        .from('integration_actions')
+        .select('error_count')
+        .eq('id', id)
+        .single();
+
       await supabase
         .from('integration_actions')
         .update({
-          error_count: supabase.rpc('increment', { table_name: 'integration_actions', column_name: 'error_count', id }),
+          error_count: (currentData?.error_count || 0) + 1,
           last_error_message: error instanceof Error ? error.message : 'Unknown error'
         })
         .eq('id', id);

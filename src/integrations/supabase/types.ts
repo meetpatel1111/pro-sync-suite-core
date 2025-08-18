@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
@@ -4729,9 +4729,9 @@ export type Database = {
       }
       create_budget_notification: {
         Args: {
-          p_user_id: string
-          p_project_name: string
           p_percentage: number
+          p_project_name: string
+          p_user_id: string
         }
         Returns: undefined
       }
@@ -4748,7 +4748,7 @@ export type Database = {
         Returns: undefined
       }
       create_time_reminder_notification: {
-        Args: { p_user_id: string; p_message: string }
+        Args: { p_message: string; p_user_id: string }
         Returns: undefined
       }
       create_user_profiles_table: {
@@ -4765,17 +4765,17 @@ export type Database = {
       }
       update_app_health_metric: {
         Args: {
-          p_user_id: string
           p_app_name: string
-          p_status: string
-          p_response_time_ms: number
-          p_uptime_percentage: number
           p_error_rate: number
+          p_response_time_ms: number
+          p_status: string
+          p_uptime_percentage: number
+          p_user_id: string
         }
         Returns: undefined
       }
       user_has_role: {
-        Args: { user_id: string; required_role: string }
+        Args: { required_role: string; user_id: string }
         Returns: boolean
       }
     }
