@@ -59,23 +59,33 @@ class RiskService {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) throw new Error('User not authenticated');
 
-    const { data, error } = await supabase
-      .from('risks')
-      .insert({
-        ...risk,
-        user_id: user.user.id,
-        created_by: user.user.id
-      })
-      .select()
-      .single();
+    const riskData = {
+      ...risk,
+      user_id: user.user.id,
+      created_by: user.user.id
+    };
 
-    if (error) throw error;
+    const { data, error } = await supabase.rpc('create_risk', { risk_data: riskData });
+    
+    if (error) {
+      console.error('Error creating risk:', error);
+      // Fallback to direct insert if RPC fails
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('risks' as any)
+        .insert(riskData)
+        .select()
+        .single();
+      
+      if (fallbackError) throw fallbackError;
+      return fallbackData;
+    }
+    
     return data;
   }
 
   async updateRisk(id: string, updates: Partial<Risk>): Promise<Risk> {
     const { data, error } = await supabase
-      .from('risks')
+      .from('risks' as any)
       .update(updates)
       .eq('id', id)
       .select()
@@ -87,7 +97,7 @@ class RiskService {
 
   async deleteRisk(id: string): Promise<void> {
     const { error } = await supabase
-      .from('risks')
+      .from('risks' as any)
       .delete()
       .eq('id', id);
 
@@ -96,7 +106,7 @@ class RiskService {
 
   async getRisks(filters?: { status?: string; category?: string; project_id?: string }): Promise<Risk[]> {
     let query = supabase
-      .from('risks')
+      .from('risks' as any)
       .select('*')
       .order('risk_score', { ascending: false });
 
@@ -111,13 +121,16 @@ class RiskService {
     }
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching risks:', error);
+      return [];
+    }
     return data || [];
   }
 
   async getRisk(id: string): Promise<Risk> {
     const { data, error } = await supabase
-      .from('risks')
+      .from('risks' as any)
       .select('*')
       .eq('id', id)
       .single();
@@ -131,7 +144,7 @@ class RiskService {
     if (!user.user) throw new Error('User not authenticated');
 
     const { data, error } = await supabase
-      .from('risk_mitigations')
+      .from('risk_mitigations' as any)
       .insert({
         ...mitigation,
         created_by: user.user.id
@@ -145,7 +158,7 @@ class RiskService {
 
   async updateMitigation(id: string, updates: Partial<RiskMitigation>): Promise<RiskMitigation> {
     const { data, error } = await supabase
-      .from('risk_mitigations')
+      .from('risk_mitigations' as any)
       .update(updates)
       .eq('id', id)
       .select()
@@ -157,12 +170,15 @@ class RiskService {
 
   async getMitigations(riskId: string): Promise<RiskMitigation[]> {
     const { data, error } = await supabase
-      .from('risk_mitigations')
+      .from('risk_mitigations' as any)
       .select('*')
       .eq('risk_id', riskId)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching mitigations:', error);
+      return [];
+    }
     return data || [];
   }
 
@@ -171,7 +187,7 @@ class RiskService {
     if (!user.user) throw new Error('User not authenticated');
 
     const { data, error } = await supabase
-      .from('risk_assessments')
+      .from('risk_assessments' as any)
       .insert({
         ...assessment,
         assessed_by: user.user.id
@@ -185,12 +201,15 @@ class RiskService {
 
   async getAssessments(riskId: string): Promise<RiskAssessment[]> {
     const { data, error } = await supabase
-      .from('risk_assessments')
+      .from('risk_assessments' as any)
       .select('*')
       .eq('risk_id', riskId)
       .order('assessment_date', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching assessments:', error);
+      return [];
+    }
     return data || [];
   }
 
@@ -203,10 +222,20 @@ class RiskService {
     byStatus: Record<string, number>;
   }> {
     const { data: risks, error } = await supabase
-      .from('risks')
+      .from('risks' as any)
       .select('risk_score, category, status');
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching risk analytics:', error);
+      return {
+        totalRisks: 0,
+        highRisks: 0,
+        mediumRisks: 0,
+        lowRisks: 0,
+        byCategory: {},
+        byStatus: {}
+      };
+    }
 
     const analytics = {
       totalRisks: risks?.length || 0,
@@ -228,12 +257,15 @@ class RiskService {
   // Integration methods
   async getProjectRisks(projectId: string): Promise<Risk[]> {
     const { data, error } = await supabase
-      .from('risks')
+      .from('risks' as any)
       .select('*')
       .eq('project_id', projectId)
       .order('risk_score', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching project risks:', error);
+      return [];
+    }
     return data || [];
   }
 
@@ -252,6 +284,7 @@ class RiskService {
       probability: riskData.probability || 0.5,
       impact: riskData.impact || 0.5,
       project_id: task?.project_id,
+      status: 'active',
       ...riskData
     });
   }

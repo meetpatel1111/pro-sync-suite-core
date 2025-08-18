@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -8,46 +8,32 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, MoreHorizontal, AlertTriangle, ShieldAlert, Calendar, Edit, Trash2, Plus } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Risk, RiskMitigation, riskService } from '@/services/riskService';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Edit, 
+  Trash2, 
+  AlertTriangle, 
+  Shield, 
+  ShieldAlert,
+  ShieldCheck,
+  Plus
+} from 'lucide-react';
+import { Risk, riskService } from '@/services/riskService';
+import RiskDialog from '@/components/RiskDialog';
+import RiskMitigationDialog from '@/components/RiskMitigationDialog';
 import { useToast } from '@/hooks/use-toast';
-import RiskDialog from './RiskDialog';
-import RiskMitigationDialog from './RiskMitigationDialog';
 
 interface RiskTableProps {
-  onRefresh?: () => void;
+  onRefresh: () => void;
 }
 
 const RiskTable: React.FC<RiskTableProps> = ({ onRefresh }) => {
   const [risks, setRisks] = useState<Risk[]>([]);
-  const [mitigations, setMitigations] = useState<Record<string, RiskMitigation[]>>({});
   const [loading, setLoading] = useState(true);
-  const [deleteRisk, setDeleteRisk] = useState<Risk | null>(null);
-  const [editRisk, setEditRisk] = useState<Risk | null>(null);
-  const [mitigationDialog, setMitigationDialog] = useState<{
-    open: boolean;
-    riskId: string;
-    mitigation?: RiskMitigation;
-  }>({ open: false, riskId: '' });
+  const [selectedRisk, setSelectedRisk] = useState<Risk | undefined>();
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [mitigationDialogOpen, setMitigationDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -56,15 +42,8 @@ const RiskTable: React.FC<RiskTableProps> = ({ onRefresh }) => {
 
   const loadData = async () => {
     try {
-      const risksData = await riskService.getRisks();
-      setRisks(risksData);
-      
-      // Load mitigations for each risk
-      const mitigationsData: Record<string, RiskMitigation[]> = {};
-      for (const risk of risksData) {
-        mitigationsData[risk.id] = await riskService.getMitigations(risk.id);
-      }
-      setMitigations(mitigationsData);
+      const data = await riskService.getRisks();
+      setRisks(data);
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -77,55 +56,68 @@ const RiskTable: React.FC<RiskTableProps> = ({ onRefresh }) => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteRisk) return;
-    
+  const handleDelete = async (id: string) => {
     try {
-      await riskService.deleteRisk(deleteRisk.id);
+      await riskService.deleteRisk(id);
       toast({
         title: 'Success',
         description: 'Risk deleted successfully'
       });
       loadData();
-      onRefresh?.();
+      onRefresh();
     } catch (error) {
+      console.error('Error deleting risk:', error);
       toast({
         title: 'Error',
         description: 'Failed to delete risk',
         variant: 'destructive'
       });
-    } finally {
-      setDeleteRisk(null);
     }
   };
 
-  // Calculate risk level
+  const handleEdit = (risk: Risk) => {
+    setSelectedRisk(risk);
+    setEditDialogOpen(true);
+  };
+
+  const handleAddMitigation = (risk: Risk) => {
+    setSelectedRisk(risk);
+    setMitigationDialogOpen(true);
+  };
+
+  const handleDialogSave = () => {
+    loadData();
+    onRefresh();
+    setEditDialogOpen(false);
+    setMitigationDialogOpen(false);
+    setSelectedRisk(undefined);
+  };
+
+  const getRiskIcon = (riskScore: number) => {
+    if (riskScore >= 0.7) return <ShieldAlert className="h-4 w-4 text-red-600" />;
+    if (riskScore >= 0.3) return <Shield className="h-4 w-4 text-amber-600" />;
+    return <ShieldCheck className="h-4 w-4 text-green-600" />;
+  };
+
   const getRiskLevel = (riskScore: number) => {
-    if (riskScore >= 0.7) return { label: 'High', color: 'bg-red-500' };
-    if (riskScore >= 0.3) return { label: 'Medium', color: 'bg-amber-500' };
-    return { label: 'Low', color: 'bg-emerald-500' };
+    if (riskScore >= 0.7) return { label: 'High', color: 'bg-red-100 text-red-800' };
+    if (riskScore >= 0.3) return { label: 'Medium', color: 'bg-amber-100 text-amber-800' };
+    return { label: 'Low', color: 'bg-green-100 text-green-800' };
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'text-amber-500 border-amber-200 bg-amber-50';
-      case 'mitigated': return 'text-emerald-500 border-emerald-200 bg-emerald-50';
-      case 'monitoring': return 'text-blue-500 border-blue-200 bg-blue-50';
-      case 'closed': return 'text-gray-500 border-gray-200 bg-gray-50';
-      default: return 'text-amber-500 border-amber-200 bg-amber-50';
+      case 'active': return 'bg-red-100 text-red-800';
+      case 'mitigated': return 'bg-blue-100 text-blue-800';
+      case 'monitoring': return 'bg-amber-100 text-amber-800';
+      case 'closed': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
-  };
-  
-  // Format date
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Not set';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
+      <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
@@ -137,39 +129,40 @@ const RiskTable: React.FC<RiskTableProps> = ({ onRefresh }) => {
         <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
         <h3 className="text-lg font-medium mb-2">No risks found</h3>
         <p className="text-muted-foreground mb-4">
-          Start by creating your first risk assessment.
+          Start by creating your first risk assessment
         </p>
-        <RiskDialog onSave={loadData} />
       </div>
     );
   }
-  
+
   return (
     <>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[300px]">Risk</TableHead>
+            <TableHead>Risk</TableHead>
             <TableHead>Category</TableHead>
-            <TableHead>Level</TableHead>
+            <TableHead>Risk Level</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Mitigations</TableHead>
-            <TableHead>Due Date</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>Score</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {risks.map((risk) => {
             const riskLevel = getRiskLevel(risk.risk_score);
-            const riskMitigations = mitigations[risk.id] || [];
-            
             return (
               <TableRow key={risk.id}>
                 <TableCell>
-                  <div>
-                    <div className="font-medium">{risk.title}</div>
-                    <div className="text-sm text-muted-foreground line-clamp-2">
-                      {risk.description || 'No description'}
+                  <div className="flex items-center gap-2">
+                    {getRiskIcon(risk.risk_score)}
+                    <div>
+                      <div className="font-medium">{risk.title}</div>
+                      {risk.description && (
+                        <div className="text-sm text-muted-foreground truncate max-w-[200px]">
+                          {risk.description}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </TableCell>
@@ -179,70 +172,46 @@ const RiskTable: React.FC<RiskTableProps> = ({ onRefresh }) => {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge className={riskLevel.color}>{riskLevel.label}</Badge>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Score: {Math.round(risk.risk_score * 100) / 100}
-                  </div>
+                  <Badge className={riskLevel.color}>
+                    {riskLevel.label}
+                  </Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline" className={`capitalize ${getStatusColor(risk.status)}`}>
+                  <Badge className={getStatusColor(risk.status)}>
                     {risk.status}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">{riskMitigations.length} actions</span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setMitigationDialog({ open: true, riskId: risk.id })}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
+                  <div className="font-mono text-sm">
+                    {Math.round(risk.risk_score * 100) / 100}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    P: {Math.round(risk.probability * 100)}% | I: {Math.round(risk.impact * 100)}%
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span className="text-sm">{formatDate(risk.due_date)}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
+                  <div className="flex items-center gap-2">
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setEditRisk(risk)}
+                      onClick={() => handleEdit(risk)}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setEditRisk(risk)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit Risk
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => setMitigationDialog({ open: true, riskId: risk.id })}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Mitigation
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          onClick={() => setDeleteRisk(risk)}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete Risk
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleAddMitigation(risk)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(risk.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -251,48 +220,32 @@ const RiskTable: React.FC<RiskTableProps> = ({ onRefresh }) => {
         </TableBody>
       </Table>
 
-      {/* Edit Risk Dialog */}
-      {editRisk && (
-        <RiskDialog
-          risk={editRisk}
-          onSave={() => {
-            loadData();
-            onRefresh?.();
-            setEditRisk(null);
-          }}
-          trigger={null}
-        />
+      {selectedRisk && (
+        <>
+          <RiskDialog
+            risk={selectedRisk}
+            onSave={handleDialogSave}
+            trigger={<div />}
+          />
+          
+          <RiskMitigationDialog
+            riskId={selectedRisk.id}
+            open={mitigationDialogOpen}
+            onOpenChange={setMitigationDialogOpen}
+            onSave={handleDialogSave}
+          />
+        </>
       )}
 
-      {/* Mitigation Dialog */}
-      <RiskMitigationDialog
-        riskId={mitigationDialog.riskId}
-        mitigation={mitigationDialog.mitigation}
-        open={mitigationDialog.open}
-        onOpenChange={(open) => setMitigationDialog(prev => ({ ...prev, open }))}
-        onSave={() => {
-          loadData();
-          onRefresh?.();
-        }}
-      />
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteRisk} onOpenChange={() => setDeleteRisk(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Risk</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{deleteRisk?.title}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {editDialogOpen && (
+        <div className="fixed inset-0 z-50">
+          <RiskDialog
+            risk={selectedRisk}
+            onSave={handleDialogSave}
+            trigger={<div />}
+          />
+        </div>
+      )}
     </>
   );
 };
