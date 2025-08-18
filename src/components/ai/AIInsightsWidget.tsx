@@ -1,65 +1,91 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Brain, TrendingUp, AlertTriangle, Lightbulb, Zap, RefreshCw } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  Brain, 
+  Lightbulb, 
+  Target,
+  Zap,
+  BarChart,
+  Users,
+  Clock,
+  AlertCircle
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { aiService } from '@/services/aiService';
-import { useAuthContext } from '@/context/AuthContext';
 
-interface Insight {
+interface AIInsight {
   id: string;
+  type: 'productivity' | 'performance' | 'suggestion' | 'alert';
   title: string;
   description: string;
-  type: 'positive' | 'negative' | 'neutral';
-  relevance: number;
+  impact: 'high' | 'medium' | 'low';
+  actionable: boolean;
+  category: string;
+  confidence: number;
+  created_at: string;
 }
 
 const AIInsightsWidget: React.FC = () => {
-  const { user } = useAuthContext();
   const { toast } = useToast();
-  const [insights, setInsights] = useState<Insight[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [insights, setInsights] = useState<AIInsight[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      loadInsights();
-    }
-  }, [user]);
+    generateInsights();
+  }, []);
 
-  const loadInsights = async () => {
+  const generateInsights = async () => {
     setLoading(true);
     try {
-      // Mock implementation - in real app this would use AI
-      const newInsights: Insight[] = [
+      // Simulate AI insights generation
+      const mockInsights: AIInsight[] = [
         {
           id: '1',
-          title: 'Task Prioritization',
-          description: 'Prioritize tasks based on urgency and impact',
-          type: 'positive',
-          relevance: 0.85
+          type: 'productivity',
+          title: 'Team Productivity Increase',
+          description: 'Your team completed 23% more tasks this week compared to last week',
+          impact: 'high',
+          actionable: false,
+          category: 'Performance',
+          confidence: 92,
+          created_at: new Date().toISOString()
         },
         {
           id: '2',
-          title: 'Time Management',
-          description: 'Allocate specific time blocks for focused work',
-          type: 'neutral',
-          relevance: 0.70
+          type: 'suggestion',
+          title: 'Optimize Meeting Schedule',
+          description: 'Consider scheduling fewer meetings on Tuesdays to improve focus time',
+          impact: 'medium',
+          actionable: true,
+          category: 'Time Management',
+          confidence: 78,
+          created_at: new Date().toISOString()
         },
         {
           id: '3',
-          title: 'Meeting Efficiency',
-          description: 'Reduce unnecessary meetings and streamline discussions',
-          type: 'negative',
-          relevance: 0.92
+          type: 'alert',
+          title: 'High Priority Tasks Backlog',
+          description: '5 high-priority tasks have been pending for more than 3 days',
+          impact: 'high',
+          actionable: true,
+          category: 'Task Management',
+          confidence: 95,
+          created_at: new Date().toISOString()
         }
       ];
-      setInsights(newInsights);
+
+      setInsights(mockInsights);
     } catch (error) {
+      console.error('Error generating insights:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load AI insights',
-        variant: 'destructive'
+        description: 'Failed to generate AI insights',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -68,63 +94,92 @@ const AIInsightsWidget: React.FC = () => {
 
   const getInsightIcon = (type: string) => {
     switch (type) {
-      case 'positive':
+      case 'productivity':
         return <TrendingUp className="h-4 w-4 text-green-500" />;
-      case 'negative':
-        return <AlertTriangle className="h-4 w-4 text-red-500" />;
-      default:
+      case 'performance':
+        return <BarChart className="h-4 w-4 text-blue-500" />;
+      case 'suggestion':
         return <Lightbulb className="h-4 w-4 text-yellow-500" />;
+      case 'alert':
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return <Brain className="h-4 w-4 text-purple-500" />;
     }
   };
 
-  const refreshInsights = async () => {
-    if (user) {
-      toast({
-        title: 'Refreshing Insights',
-        description: 'AI is analyzing your recent activity...',
-      });
-      await loadInsights();
+  const getImpactColor = (impact: string) => {
+    switch (impact) {
+      case 'high': return 'destructive';
+      case 'medium': return 'secondary';
+      case 'low': return 'outline';
+      default: return 'default';
     }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-purple-500" />
-            AI-Powered Insights
-          </div>
-          <Button variant="outline" size="sm" onClick={refreshInsights} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
+        <CardTitle className="flex items-center gap-2">
+          <Brain className="h-5 w-5" />
+          AI Insights
         </CardTitle>
         <CardDescription>
-          Personalized insights to boost your productivity
+          Intelligent recommendations and analytics
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {loading ? (
-          <div className="text-center py-4">Loading insights...</div>
-        ) : (
-          <div className="space-y-3">
-            {insights.map((insight) => (
-              <div key={insight.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-                {getInsightIcon(insight.type)}
-                <div className="flex-1">
+        <div className="flex items-center justify-between">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={generateInsights}
+            disabled={loading}
+          >
+            <Zap className="mr-2 h-4 w-4" />
+            {loading ? 'Generating...' : 'Refresh Insights'}
+          </Button>
+        </div>
+
+        <div className="space-y-3">
+          {insights.map((insight) => (
+            <div key={insight.id} className="p-3 border rounded-lg space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  {getInsightIcon(insight.type)}
                   <h4 className="font-medium text-sm">{insight.title}</h4>
-                  <p className="text-xs text-muted-foreground">{insight.description}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <Badge variant="secondary" className="text-xs">
-                      Relevance: {Math.round(insight.relevance * 100)}%
-                    </Badge>
-                    <Button variant="outline" size="xs">
-                      Take Action
-                    </Button>
-                  </div>
                 </div>
+                <Badge variant={getImpactColor(insight.impact)} size="sm">
+                  {insight.impact}
+                </Badge>
               </div>
-            ))}
+              
+              <p className="text-sm text-muted-foreground">
+                {insight.description}
+              </p>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    Confidence: {insight.confidence}%
+                  </span>
+                  <Progress value={insight.confidence} className="w-16 h-1" />
+                </div>
+                
+                {insight.actionable && (
+                  <Button variant="ghost" size="sm">
+                    Take Action
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {insights.length === 0 && !loading && (
+          <div className="text-center py-8 text-muted-foreground">
+            <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No insights available</p>
+            <p className="text-sm">Generate insights to see recommendations</p>
           </div>
         )}
       </CardContent>

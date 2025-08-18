@@ -4,20 +4,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Activity, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
-import { appHealthService, AppHealthMetric } from '@/services/appMonitoringService';
+import { appMonitoringService, AppHealthMetric } from '@/services/appMonitoringService';
+import { useAuthContext } from '@/context/AuthContext';
 
 const AppHealthWidget: React.FC = () => {
+  const { user } = useAuthContext();
   const [healthMetrics, setHealthMetrics] = useState<AppHealthMetric[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadHealthMetrics();
-  }, []);
+    if (user) {
+      loadHealthMetrics();
+    }
+  }, [user]);
 
   const loadHealthMetrics = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
-      const metrics = await appHealthService.getHealthMetrics();
+      const metrics = await appMonitoringService.getHealthMetrics(user.id);
       setHealthMetrics(metrics);
     } catch (error) {
       console.error('Error loading health metrics:', error);
