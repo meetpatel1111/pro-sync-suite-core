@@ -30,6 +30,8 @@ interface RiskDialogProps {
   trigger?: React.ReactNode;
 }
 
+type RiskStatus = 'active' | 'mitigated' | 'closed' | 'monitoring';
+
 const RiskDialog: React.FC<RiskDialogProps> = ({ risk, onSave, trigger }) => {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -38,7 +40,7 @@ const RiskDialog: React.FC<RiskDialogProps> = ({ risk, onSave, trigger }) => {
     category: 'technical',
     probability: 0.5,
     impact: 0.5,
-    status: 'active' as const,
+    status: 'active' as RiskStatus,
     mitigation_plan: '',
     tags: [] as string[],
     affected_areas: [] as string[],
@@ -58,7 +60,7 @@ const RiskDialog: React.FC<RiskDialogProps> = ({ risk, onSave, trigger }) => {
         category: risk.category,
         probability: risk.probability,
         impact: risk.impact,
-        status: risk.status,
+        status: risk.status as RiskStatus,
         mitigation_plan: risk.mitigation_plan || '',
         tags: risk.tags || [],
         affected_areas: risk.affected_areas || [],
@@ -111,6 +113,7 @@ const RiskDialog: React.FC<RiskDialogProps> = ({ risk, onSave, trigger }) => {
         });
       }
     } catch (error) {
+      console.error('Error saving risk:', error);
       toast({
         title: 'Error',
         description: 'Failed to save risk',
@@ -223,7 +226,7 @@ const RiskDialog: React.FC<RiskDialogProps> = ({ risk, onSave, trigger }) => {
             
             <div>
               <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value: any) => setFormData(prev => ({ ...prev, status: value }))}>
+              <Select value={formData.status} onValueChange={(value: RiskStatus) => setFormData(prev => ({ ...prev, status: value }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

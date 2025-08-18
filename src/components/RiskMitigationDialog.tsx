@@ -29,6 +29,8 @@ interface RiskMitigationDialogProps {
   onSave: () => void;
 }
 
+type MitigationStatus = 'planned' | 'in-progress' | 'completed' | 'cancelled';
+
 const RiskMitigationDialog: React.FC<RiskMitigationDialogProps> = ({
   riskId,
   mitigation,
@@ -38,7 +40,7 @@ const RiskMitigationDialog: React.FC<RiskMitigationDialogProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     action: '',
-    status: 'planned' as const,
+    status: 'planned' as MitigationStatus,
     progress: 0,
     due_date: '',
     cost: 0,
@@ -51,7 +53,7 @@ const RiskMitigationDialog: React.FC<RiskMitigationDialogProps> = ({
     if (mitigation) {
       setFormData({
         action: mitigation.action,
-        status: mitigation.status,
+        status: mitigation.status as MitigationStatus,
         progress: mitigation.progress,
         due_date: mitigation.due_date || '',
         cost: mitigation.cost || 0,
@@ -100,6 +102,7 @@ const RiskMitigationDialog: React.FC<RiskMitigationDialogProps> = ({
       onSave();
       onOpenChange(false);
     } catch (error) {
+      console.error('Error saving mitigation:', error);
       toast({
         title: 'Error',
         description: 'Failed to save mitigation',
@@ -134,7 +137,7 @@ const RiskMitigationDialog: React.FC<RiskMitigationDialogProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value: any) => setFormData(prev => ({ ...prev, status: value }))}>
+              <Select value={formData.status} onValueChange={(value: MitigationStatus) => setFormData(prev => ({ ...prev, status: value }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

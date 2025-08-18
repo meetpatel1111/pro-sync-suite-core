@@ -1,90 +1,119 @@
+
 import React, { useState } from 'react';
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { aiService } from "@/services/aiService";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { MessageCircle, Send, X } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-}
+const AIChatWidget = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([
+    { role: 'assistant', content: 'Hello! How can I help you with risk management today?' }
+  ]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-const AIChatWidget: React.FC = () => {
-  const [inputMessage, setInputMessage] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const handleSend = async () => {
+    if (!input.trim()) return;
 
-  const sendMessage = async () => {
-    if (!inputMessage.trim()) return;
-
-    const userMessage = inputMessage.trim();
-    setInputMessage('');
+    const userMessage = input.trim();
+    setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-    setIsLoading(true);
+    setLoading(true);
 
     try {
-      // Fixed: Using correct number of arguments
-      const response = await aiService.generateResponse(userMessage, 'sports');
-      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+      // Simulate AI response for now
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const aiResponse = `I understand you're asking about "${userMessage}". Here are some risk management insights:
+
+1. Identify potential risks early in the process
+2. Assess probability and impact systematically  
+3. Develop mitigation strategies
+4. Monitor and review regularly
+
+Would you like me to help you create a specific risk assessment?`;
+
+      setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
     } catch (error) {
-      console.error('Error sending message:', error);
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: 'Sorry, I encountered an error. Please try again.' 
-      }]);
+      toast({
+        title: 'Error',
+        description: 'Failed to get AI response',
+        variant: 'destructive'
+      });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
+  if (!isOpen) {
+    return (
+      <Button
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-4 right-4 rounded-full h-12 w-12 shadow-lg"
+        size="icon"
+      >
+        <MessageCircle className="h-6 w-6" />
+      </Button>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-grow">
-        <ScrollArea className="h-full">
-          <div className="flex flex-col gap-4 p-4">
-            {messages.map((message, index) => (
-              <div key={index} className={`flex items-start gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}>
-                {message.role === 'assistant' && (
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src="/ai-avatar.png" alt="AI Avatar" />
-                    <AvatarFallback>AI</AvatarFallback>
-                  </Avatar>
-                )}
-                <div className={`rounded-md p-3 w-fit max-w-[80%] ${message.role === 'user' ? 'bg-secondary text-secondary-foreground' : 'bg-muted'}`}>
-                  <p className="text-sm">{message.content}</p>
-                </div>
-              </div>
-            ))}
-            {isLoading && (
-              <div className="flex items-start gap-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="/ai-avatar.png" alt="AI Avatar" />
-                  <AvatarFallback>AI</AvatarFallback>
-                </Avatar>
-                <div className="rounded-md p-3 bg-muted">
-                  <p className="text-sm">Thinking...</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+    <Card className="fixed bottom-4 right-4 w-80 h-96 flex flex-col shadow-lg">
+      <div className="flex items-center justify-between p-4 border-b">
+        <h3 className="font-semibold">AI Risk Assistant</h3>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsOpen(false)}
+        >
+          <X className="h-4 w-4" />
+        </Button>
       </div>
-      <div className="border-t p-4">
-        <div className="flex items-center gap-2">
+      
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((message, index) => (
+          <div
+            key={index}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-[80%] p-3 rounded-lg text-sm ${
+                message.role === 'user'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted'
+              }`}
+            >
+              {message.content}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-muted p-3 rounded-lg text-sm">
+              Thinking...
+            </div>
+          </div>
+        )}
+      </div>
+      
+      <div className="p-4 border-t">
+        <div className="flex gap-2">
           <Input
-            type="text"
-            placeholder="Type your message..."
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask about risk management..."
+            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+            disabled={loading}
           />
-          <Button onClick={sendMessage} disabled={isLoading}>
-            {isLoading ? 'Sending...' : 'Send'}
+          <Button onClick={handleSend} disabled={loading || !input.trim()}>
+            <Send className="h-4 w-4" />
           </Button>
         </div>
       </div>
-    </div>
+    </Card>
   );
 };
 
