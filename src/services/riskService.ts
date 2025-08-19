@@ -1,86 +1,37 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
-export interface Risk {
-  id: string;
-  user_id: string;
-  title: string;
-  description?: string;
-  category: string;
-  probability: number;
-  impact: number;
-  status: 'active' | 'mitigated' | 'closed' | 'monitoring';
-  risk_score: number;
-  project_id?: string;
-  task_id?: string;
-  created_by: string;
-  created_at?: string;
-  updated_at?: string;
-  mitigation_plan?: string;
-  tags?: string[];
-  affected_areas?: string[];
-  likelihood_description?: string;
-  impact_description?: string;
-  cost_impact?: number;
-  time_impact_days?: number;
-}
+export type Risk = Database['public']['Tables']['risks']['Row'];
+export type RiskInsert = Database['public']['Tables']['risks']['Insert'];
+export type RiskMitigation = Database['public']['Tables']['risk_mitigations']['Row'];
+export type RiskMitigationInsert = Database['public']['Tables']['risk_mitigations']['Insert'];
 
-export interface RiskMitigation {
-  id: string;
-  risk_id: string;
-  action: string;
-  responsible_party?: string;
-  due_date?: string;
-  status: 'planned' | 'in_progress' | 'completed';
-  cost?: number;
-  effectiveness_rating?: number;
-  created_at?: string;
-  updated_at?: string;
-}
+export type RiskStatus = 'active' | 'mitigated' | 'closed' | 'monitoring';
+export type MitigationStatus = 'planned' | 'in_progress' | 'completed';
 
-export interface RiskAssessment {
-  id: string;
-  risk_id: string;
-  assessed_by: string;
-  assessment_date: string;
-  probability: number;
-  impact: number;
-  risk_score: number;
-  notes?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export class RiskService {
-  async createRisk(risk: Omit<Risk, 'id' | 'user_id' | 'created_by' | 'created_at' | 'updated_at'>): Promise<Risk> {
+class RiskService {
+  async createRisk(riskData: Omit<RiskInsert, 'id' | 'created_at' | 'updated_at'>) {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('User not authenticated');
-
-      const riskScore = risk.probability * risk.impact;
-
+      const riskScore = riskData.probability * riskData.impact;
+      
       const { data, error } = await supabase
         .from('risks')
         .insert({
-          user_id: user.user.id,
-          created_by: user.user.id,
-          risk_score: riskScore,
-          tags: risk.tags || [],
-          affected_areas: risk.affected_areas || [],
-          ...risk
+          ...riskData,
+          risk_score: riskScore
         })
         .select()
         .single();
 
-      if (error) throw error;
-      return data as Risk;
+      return { data, error };
     } catch (error) {
       console.error('Error creating risk:', error);
-      throw error;
+      return { data: null, error };
     }
   }
 
-  async getRisk(id: string): Promise<Risk | null> {
+  async getRisk(id: string) {
     try {
       const { data, error } = await supabase
         .from('risks')
@@ -88,26 +39,38 @@ export class RiskService {
         .eq('id', id)
         .single();
 
-      if (error) throw error;
-      return data as Risk;
+      return { data, error };
     } catch (error) {
-      console.error('Error getting risk:', error);
-      return null;
+      console.error('Error fetching risk:', error);
+      return { data: null, error };
     }
   }
 
-  async updateRisk(id: string, updates: Partial<Risk>): Promise<Risk> {
+  async getRisks(userId?: string) {
     try {
-      let updateData = { ...updates };
+      let query = supabase
+        .from('risks')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data, error } = await query;
+      return { data: data || [], error };
+    } catch (error) {
+      console.error('Error fetching risks:', error);
+      return { data: [], error };
+    }
+  }
+
+  async updateRisk(id: string, updates: Partial<Omit<RiskInsert, 'id' | 'created_at' | 'updated_at'>>) {
+    try {
+      const updateData: any = { ...updates };
       
-      // Calculate risk_score if probability or impact changed
-      if (updates.probability !== undefined || updates.impact !== undefined) {
-        const current = await this.getRisk(id);
-        if (current) {
-          const probability = updates.probability ?? current.probability;
-          const impact = updates.impact ?? current.impact;
-          updateData.risk_score = probability * impact;
-        }
+      if (updates.probability !== undefined && updates.impact !== undefined) {
+        updateData.risk_score = updates.probability * updates.impact;
       }
 
       const { data, error } = await supabase
@@ -117,113 +80,70 @@ export class RiskService {
         .select()
         .single();
 
-      if (error) throw error;
-      return data as Risk;
+      return { data, error };
     } catch (error) {
       console.error('Error updating risk:', error);
-      throw error;
+      return { data: null, error };
     }
   }
 
-  async deleteRisk(id: string): Promise<void> {
+  async deleteRisk(id: string) {
     try {
       const { error } = await supabase
         .from('risks')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      return { error };
     } catch (error) {
       console.error('Error deleting risk:', error);
-      throw error;
+      return { error };
     }
   }
 
-  async getUserRisks(userId: string): Promise<Risk[]> {
+  async createMitigation(mitigationData: Omit<RiskMitigationInsert, 'id' | 'created_at' | 'updated_at'>) {
     try {
       const { data, error } = await supabase
-        .from('risks')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .from('risk_mitigations')
+        .insert(mitigationData)
+        .select()
+        .single();
 
-      if (error) throw error;
-      return (data as Risk[]) || [];
-    } catch (error) {
-      console.error('Error getting user risks:', error);
-      return [];
-    }
-  }
-
-  async getProjectRisks(projectId: string): Promise<Risk[]> {
-    try {
-      const { data, error } = await supabase
-        .from('risks')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('risk_score', { ascending: false });
-
-      if (error) throw error;
-      return (data as Risk[]) || [];
-    } catch (error) {
-      console.error('Error getting project risks:', error);
-      return [];
-    }
-  }
-
-  async createMitigation(mitigation: Omit<RiskMitigation, 'id' | 'created_at' | 'updated_at'>): Promise<RiskMitigation> {
-    try {
-      // For now, return a mock object since risk_mitigations table may not exist
-      const mockMitigation: RiskMitigation = {
-        id: 'mock-id',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        ...mitigation
-      };
-      return mockMitigation;
+      return { data, error };
     } catch (error) {
       console.error('Error creating mitigation:', error);
-      throw error;
+      return { data: null, error };
     }
   }
 
-  async getMitigations(riskId: string): Promise<RiskMitigation[]> {
+  async updateMitigation(id: string, updates: Partial<Omit<RiskMitigationInsert, 'id' | 'created_at' | 'updated_at'>>) {
     try {
-      // Return empty array for now
-      return [];
+      const { data, error } = await supabase
+        .from('risk_mitigations')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      return { data, error };
     } catch (error) {
-      console.error('Error getting mitigations:', error);
-      return [];
+      console.error('Error updating mitigation:', error);
+      return { data: null, error };
     }
   }
 
-  async createAssessment(assessment: Omit<RiskAssessment, 'id' | 'assessed_by' | 'created_at' | 'updated_at'>): Promise<RiskAssessment> {
+  async getMitigationsByRisk(riskId: string) {
     try {
-      // For now, return a mock object since risk_assessments table may not exist
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('User not authenticated');
+      const { data, error } = await supabase
+        .from('risk_mitigations')
+        .select('*')
+        .eq('risk_id', riskId)
+        .order('created_at', { ascending: false });
 
-      const mockAssessment: RiskAssessment = {
-        id: 'mock-id',
-        assessed_by: user.user.id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        ...assessment
-      };
-      return mockAssessment;
+      return { data: data || [], error };
     } catch (error) {
-      console.error('Error creating assessment:', error);
-      throw error;
-    }
-  }
-
-  async getAssessments(riskId: string): Promise<RiskAssessment[]> {
-    try {
-      // Return empty array for now
-      return [];
-    } catch (error) {
-      console.error('Error getting assessments:', error);
-      return [];
+      console.error('Error fetching mitigations:', error);
+      return { data: [], error };
     }
   }
 }
