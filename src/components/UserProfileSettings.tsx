@@ -42,7 +42,7 @@ interface AccountSettings {
 const UserProfileSettings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user, profile: authProfile, signOut } = useAuthContext();
+  const { user, profile: authProfile, signOut, refreshProfile } = useAuthContext();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -108,17 +108,14 @@ const UserProfileSettings = () => {
           email: user.email
         });
       } else if (data) {
-        // Ensure data is handled as a single object, not an array
-        const profileData = Array.isArray(data) ? data[0] : data;
-        
         setProfile({
-          id: profileData.id,
-          full_name: profileData.full_name || '',
-          avatar_url: profileData.avatar_url,
-          bio: profileData.bio,
-          job_title: profileData.job_title,
-          phone: profileData.phone,
-          location: profileData.location,
+          id: data.id,
+          full_name: data.full_name || '',
+          avatar_url: data.avatar_url,
+          bio: data.bio,
+          job_title: data.job_title,
+          phone: data.phone,
+          location: data.location,
           email: user.email
         });
       }
@@ -155,7 +152,8 @@ const UserProfileSettings = () => {
         description: "Your profile has been updated successfully",
       });
       
-      fetchUserProfile();
+      // Refresh the profile in auth context
+      await refreshProfile();
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
