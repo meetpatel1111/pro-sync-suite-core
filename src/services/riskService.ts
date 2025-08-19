@@ -60,10 +60,15 @@ class RiskService {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('User not authenticated');
 
+      const riskScore = risk.probability * risk.impact;
+
       const riskData = {
         ...risk,
         user_id: user.user.id,
         created_by: user.user.id,
+        risk_score: riskScore,
+        tags: risk.tags || [],
+        affected_areas: risk.affected_areas || []
       };
 
       const { data, error } = await supabase
@@ -82,9 +87,21 @@ class RiskService {
 
   async updateRisk(id: string, updates: Partial<Risk>): Promise<Risk> {
     try {
+      let updateData = { ...updates };
+      
+      // Calculate risk_score if probability or impact changed
+      if (updates.probability !== undefined || updates.impact !== undefined) {
+        const current = await this.getRisk(id);
+        if (current) {
+          const probability = updates.probability ?? current.probability;
+          const impact = updates.impact ?? current.impact;
+          updateData.risk_score = probability * impact;
+        }
+      }
+
       const { data, error } = await supabase
         .from('risks')
-        .update(updates)
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
@@ -222,11 +239,14 @@ class RiskService {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('User not authenticated');
 
+      const riskScore = assessment.probability * assessment.impact;
+
       const { data, error } = await supabase
         .from('risk_assessments')
         .insert({
           ...assessment,
-          assessed_by: user.user.id
+          assessed_by: user.user.id,
+          risk_score: riskScore
         })
         .select()
         .single();

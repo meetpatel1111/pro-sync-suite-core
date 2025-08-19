@@ -38,25 +38,39 @@ const TaskComment: React.FC<TaskCommentProps> = ({ taskId }) => {
 
   const fetchComments = async () => {
     try {
-      const { data, error } = await supabase
+      // First, get comments
+      const { data: commentsData, error: commentsError } = await supabase
         .from('task_comments')
-        .select(`
-          *,
-          user_profiles(full_name, avatar_url)
-        `)
+        .select('*')
         .eq('task_id', taskId)
         .order('created_at', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching comments:', error);
+      if (commentsError) {
+        console.error('Error fetching comments:', commentsError);
         setComments([]);
-      } else {
-        // Handle case where user_profiles might not be joined properly
-        const commentsWithProfiles = (data || []).map(comment => ({
+        return;
+      }
+
+      // Then get user profiles for each comment
+      if (commentsData && commentsData.length > 0) {
+        const userIds = [...new Set(commentsData.map(comment => comment.user_id))];
+        const { data: profilesData } = await supabase
+          .from('user_profiles')
+          .select('id, full_name, avatar_url')
+          .in('id', userIds);
+
+        // Combine comments with profiles
+        const commentsWithProfiles = commentsData.map(comment => ({
           ...comment,
-          user_profiles: comment.user_profiles || { full_name: 'Unknown User', avatar_url: null }
+          user_profiles: profilesData?.find(profile => profile.id === comment.user_id) || {
+            full_name: 'Unknown User',
+            avatar_url: null
+          }
         }));
+
         setComments(commentsWithProfiles);
+      } else {
+        setComments([]);
       }
     } catch (error) {
       console.error('Error in fetchComments:', error);
