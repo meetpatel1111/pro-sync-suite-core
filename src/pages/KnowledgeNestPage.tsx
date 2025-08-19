@@ -1,7 +1,7 @@
 
 import React from 'react';
-import AppLayout from '@/components/AppLayout';
-import { EnhancedKnowledgeNest } from '@/components/knowledgenest/EnhancedKnowledgeNest';
+import { AppLayout } from '@/components/AppLayout';
+import EnhancedKnowledgeNest from '@/components/knowledgenest/EnhancedKnowledgeNest';
 
 const KnowledgeNestPage = () => {
   return (
