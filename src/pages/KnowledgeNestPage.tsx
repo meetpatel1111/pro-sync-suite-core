@@ -1,12 +1,13 @@
 
 import React from 'react';
-import EnhancedKnowledgeNest from '@/components/knowledgenest/EnhancedKnowledgeNest';
+import AppLayout from '@/components/AppLayout';
+import { EnhancedKnowledgeNest } from '@/components/knowledgenest/EnhancedKnowledgeNest';
 
-const KnowledgeNestPage: React.FC = () => {
+const KnowledgeNestPage = () => {
   return (
-    <div className="container mx-auto px-4 py-8">
+    <AppLayout>
       <EnhancedKnowledgeNest />
-    </div>
+    </AppLayout>
   );
 };
 

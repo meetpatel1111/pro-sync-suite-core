@@ -1,12 +1,13 @@
 
 import React from 'react';
-import EnhancedServiceCore from '@/components/servicecore/EnhancedServiceCore';
+import AppLayout from '@/components/AppLayout';
+import { EnhancedServiceCore } from '@/components/servicecore/EnhancedServiceCore';
 
 const ServiceCore = () => {
   return (
-    <div className="container mx-auto px-4 py-8">
+    <AppLayout>
       <EnhancedServiceCore />
-    </div>
+    </AppLayout>
   );
 };
 

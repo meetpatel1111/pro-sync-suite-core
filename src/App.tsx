@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -26,7 +26,7 @@ import Integrations from '@/pages/Integrations';
 import Terms from '@/pages/Terms';
 import Privacy from '@/pages/Privacy';
 import About from '@/pages/About';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider, useAuthContext } from '@/context/AuthContext';
 import { IntegrationProvider } from '@/context/IntegrationContext';
 import UniversalAIAssistant from '@/components/ai/UniversalAIAssistant';
 import { AIContextProvider } from '@/components/ai/AIContextManager';
@@ -41,6 +41,81 @@ const queryClient = new QueryClient({
   },
 });
 
+// Protected Route Component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuthContext();
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+// Public Route Component (redirects to dashboard if logged in)
+const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuthContext();
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+function AppRoutes() {
+  return (
+    <Routes>
+      {/* Public routes */}
+      <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/about" element={<About />} />
+      
+      {/* Protected routes */}
+      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<Navigate to="/" replace />} />
+      <Route path="/taskmaster" element={<ProtectedRoute><TaskMaster /></ProtectedRoute>} />
+      <Route path="/timetrackpro" element={<ProtectedRoute><TimeTrackPro /></ProtectedRoute>} />
+      <Route path="/budgetbuddy" element={<ProtectedRoute><BudgetBuddy /></ProtectedRoute>} />
+      <Route path="/collabspace" element={<ProtectedRoute><CollabSpace /></ProtectedRoute>} />
+      <Route path="/filevault" element={<ProtectedRoute><FileVault /></ProtectedRoute>} />
+      <Route path="/resourcehub" element={<ProtectedRoute><ResourceHub /></ProtectedRoute>} />
+      <Route path="/clientconnect" element={<ProtectedRoute><ClientConnect /></ProtectedRoute>} />
+      <Route path="/riskradar" element={<ProtectedRoute><RiskRadar /></ProtectedRoute>} />
+      <Route path="/servicecore" element={<ProtectedRoute><ServiceCore /></ProtectedRoute>} />
+      <Route path="/knowledgenest" element={<ProtectedRoute><KnowledgeNestPage /></ProtectedRoute>} />
+      <Route path="/ai-features" element={<ProtectedRoute><AIFeatures /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+      <Route path="/planboard" element={<ProtectedRoute><PlanBoardPage /></ProtectedRoute>} />
+      <Route path="/team-directory" element={<ProtectedRoute><TeamDirectoryPage /></ProtectedRoute>} />
+      <Route path="/notification-center" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+      <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
+      <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
+      
+      {/* Catch all route - redirect to auth if not logged in, dashboard if logged in */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -50,32 +125,7 @@ function App() {
           <IntegrationProvider>
             <AIContextProvider>
               <Router>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/dashboard" element={<Index />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/taskmaster" element={<TaskMaster />} />
-                  <Route path="/timetrackpro" element={<TimeTrackPro />} />
-                  <Route path="/budgetbuddy" element={<BudgetBuddy />} />
-                  <Route path="/collabspace" element={<CollabSpace />} />
-                  <Route path="/filevault" element={<FileVault />} />
-                  <Route path="/resourcehub" element={<ResourceHub />} />
-                  <Route path="/clientconnect" element={<ClientConnect />} />
-                  <Route path="/riskradar" element={<RiskRadar />} />
-                  <Route path="/servicecore" element={<ServiceCore />} />
-                  <Route path="/knowledgenest" element={<KnowledgeNestPage />} />
-                  <Route path="/ai-features" element={<AIFeatures />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/planboard" element={<PlanBoardPage />} />
-                  <Route path="/team-directory" element={<TeamDirectoryPage />} />
-                  <Route path="/notification-center" element={<Notifications />} />
-                  <Route path="/notifications" element={<Notifications />} />
-                  <Route path="/profile" element={<ProfileSettings />} />
-                  <Route path="/integrations" element={<Integrations />} />
-                  <Route path="/terms" element={<Terms />} />
-                  <Route path="/privacy" element={<Privacy />} />
-                  <Route path="/about" element={<About />} />
-                </Routes>
+                <AppRoutes />
                 <UniversalAIAssistant />
               </Router>
             </AIContextProvider>
