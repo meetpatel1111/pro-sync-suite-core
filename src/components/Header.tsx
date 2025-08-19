@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Bell, Search, Settings, User, LogOut, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,16 +27,9 @@ const Header = () => {
   const { unreadCount } = useNotifications();
 
   const handleSignOut = async () => {
-    try {
-      await signOut();
+    const success = await signOut();
+    if (success) {
       navigate('/auth');
-    } catch (error) {
-      console.error('Sign out failed:', error);
-      toast({
-        title: "Error",
-        description: "Failed to sign out. Please try again.",
-        variant: "destructive"
-      });
     }
   };
 
