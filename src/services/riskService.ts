@@ -58,22 +58,23 @@ class RiskService {
   async createRisk(risk: Omit<Risk, 'id' | 'created_at' | 'updated_at' | 'risk_score' | 'level'>): Promise<Risk> {
     try {
       const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('User not authenticated');
+      if (!user?.user) throw new Error('User not authenticated');
 
       const riskData = {
         ...risk,
         created_by: user.user.id,
-        user_id: risk.user_id || user.user.id,
+        user_id: (risk as any).user_id || user.user.id,
       };
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('risks')
         .insert(riskData)
-        .select()
-        .single();
+        .select('*')
+        .maybeSingle();
 
       if (error) throw error;
-      return data;
+      if (!data) throw new Error('No data returned when creating risk');
+      return data as Risk;
     } catch (error) {
       console.error('Error creating risk:', error);
       throw error;
@@ -82,15 +83,16 @@ class RiskService {
 
   async updateRisk(id: string, updates: Partial<Risk>): Promise<Risk> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('risks')
         .update(updates)
         .eq('id', id)
-        .select()
-        .single();
+        .select('*')
+        .maybeSingle();
 
       if (error) throw error;
-      return data;
+      if (!data) throw new Error('Risk not found for update');
+      return data as Risk;
     } catch (error) {
       console.error('Error updating risk:', error);
       throw error;
@@ -99,7 +101,7 @@ class RiskService {
 
   async deleteRisk(id: string): Promise<void> {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('risks')
         .delete()
         .eq('id', id);
@@ -113,7 +115,7 @@ class RiskService {
 
   async getRisks(filters?: { status?: string; category?: string; project_id?: string }): Promise<Risk[]> {
     try {
-      let query = supabase
+      let query = (supabase as any)
         .from('risks')
         .select('*')
         .order('risk_score', { ascending: false });
@@ -129,13 +131,11 @@ class RiskService {
       }
 
       const { data, error } = await query;
-      
       if (error) {
         console.error('Error fetching risks:', error);
         return [];
       }
-      
-      return data || [];
+      return (data || []) as Risk[];
     } catch (error) {
       console.error('Error in getRisks:', error);
       return [];
@@ -144,14 +144,14 @@ class RiskService {
 
   async getRisk(id: string): Promise<Risk | null> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('risks')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      return data;
+      return (data as Risk) || null;
     } catch (error) {
       console.error('Error fetching risk:', error);
       return null;
@@ -160,7 +160,7 @@ class RiskService {
 
   async getProjectRisks(projectId: string): Promise<Risk[]> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('risks')
         .select('*')
         .eq('project_id', projectId)
@@ -170,8 +170,7 @@ class RiskService {
         console.error('Error fetching project risks:', error);
         return [];
       }
-      
-      return data || [];
+      return (data || []) as Risk[];
     } catch (error) {
       console.error('Error in getProjectRisks:', error);
       return [];
@@ -181,7 +180,7 @@ class RiskService {
   async createRiskFromTask(taskId: string, riskData: Partial<Risk>): Promise<Risk> {
     try {
       const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('User not authenticated');
+      if (!user?.user) throw new Error('User not authenticated');
 
       const risk = {
         ...riskData,
@@ -192,7 +191,7 @@ class RiskService {
         category: riskData.category || 'technical',
         probability: riskData.probability || 3,
         impact: riskData.impact || 3,
-        status: riskData.status || 'active' as const,
+        status: (riskData.status as Risk['status']) || 'active',
       };
 
       return this.createRisk(risk as Omit<Risk, 'id' | 'created_at' | 'updated_at' | 'risk_score' | 'level'>);
@@ -205,32 +204,33 @@ class RiskService {
   async getRiskAnalytics(): Promise<any> {
     try {
       const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('User not authenticated');
+      if (!user?.user) throw new Error('User not authenticated');
 
-      const { data: risks, error } = await supabase
+      const { data: risks, error } = await (supabase as any)
         .from('risks')
         .select('*')
         .eq('user_id', user.user.id);
 
       if (error) throw error;
 
+      const list = (risks as any[]) || [];
       const analytics = {
-        total: risks?.length || 0,
+        total: list.length,
         byStatus: {
-          active: risks?.filter(r => r.status === 'active').length || 0,
-          mitigated: risks?.filter(r => r.status === 'mitigated').length || 0,
-          closed: risks?.filter(r => r.status === 'closed').length || 0,
-          monitoring: risks?.filter(r => r.status === 'monitoring').length || 0,
+          active: list.filter(r => r.status === 'active').length,
+          mitigated: list.filter(r => r.status === 'mitigated').length,
+          closed: list.filter(r => r.status === 'closed').length,
+          monitoring: list.filter(r => r.status === 'monitoring').length,
         },
         byLevel: {
-          low: risks?.filter(r => r.level === 'low').length || 0,
-          medium: risks?.filter(r => r.level === 'medium').length || 0,
-          high: risks?.filter(r => r.level === 'high').length || 0,
+          low: list.filter(r => r.level === 'low').length,
+          medium: list.filter(r => r.level === 'medium').length,
+          high: list.filter(r => r.level === 'high').length,
         },
-        byCategory: risks?.reduce((acc: any, risk) => {
+        byCategory: list.reduce((acc: any, risk: any) => {
           acc[risk.category] = (acc[risk.category] || 0) + 1;
           return acc;
-        }, {}) || {},
+        }, {}),
       };
 
       return analytics;
@@ -248,19 +248,20 @@ class RiskService {
   async createMitigation(mitigation: Omit<RiskMitigation, 'id' | 'created_at' | 'updated_at'>): Promise<RiskMitigation> {
     try {
       const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('User not authenticated');
+      if (!user?.user) throw new Error('User not authenticated');
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('risk_mitigations')
         .insert({
           ...mitigation,
           created_by: user.user.id
         })
-        .select()
-        .single();
+        .select('*')
+        .maybeSingle();
 
       if (error) throw error;
-      return data;
+      if (!data) throw new Error('No data returned when creating mitigation');
+      return data as RiskMitigation;
     } catch (error) {
       console.error('Error creating mitigation:', error);
       throw error;
@@ -269,15 +270,16 @@ class RiskService {
 
   async updateMitigation(id: string, updates: Partial<RiskMitigation>): Promise<RiskMitigation> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('risk_mitigations')
         .update(updates)
         .eq('id', id)
-        .select()
-        .single();
+        .select('*')
+        .maybeSingle();
 
       if (error) throw error;
-      return data;
+      if (!data) throw new Error('Mitigation not found for update');
+      return data as RiskMitigation;
     } catch (error) {
       console.error('Error updating mitigation:', error);
       throw error;
@@ -286,7 +288,7 @@ class RiskService {
 
   async getMitigations(riskId: string): Promise<RiskMitigation[]> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('risk_mitigations')
         .select('*')
         .eq('risk_id', riskId)
@@ -296,8 +298,7 @@ class RiskService {
         console.error('Error fetching mitigations:', error);
         return [];
       }
-      
-      return data || [];
+      return (data || []) as RiskMitigation[];
     } catch (error) {
       console.error('Error in getMitigations:', error);
       return [];
@@ -307,19 +308,20 @@ class RiskService {
   async createAssessment(assessment: Omit<RiskAssessment, 'id' | 'created_at'>): Promise<RiskAssessment> {
     try {
       const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('User not authenticated');
+      if (!user?.user) throw new Error('User not authenticated');
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('risk_assessments')
         .insert({
           ...assessment,
           assessed_by: user.user.id
         })
-        .select()
-        .single();
+        .select('*')
+        .maybeSingle();
 
       if (error) throw error;
-      return data;
+      if (!data) throw new Error('No data returned when creating assessment');
+      return data as RiskAssessment;
     } catch (error) {
       console.error('Error creating assessment:', error);
       throw error;
@@ -328,7 +330,7 @@ class RiskService {
 
   async getAssessments(riskId: string): Promise<RiskAssessment[]> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('risk_assessments')
         .select('*')
         .eq('risk_id', riskId)
@@ -338,8 +340,7 @@ class RiskService {
         console.error('Error fetching assessments:', error);
         return [];
       }
-      
-      return data || [];
+      return (data || []) as RiskAssessment[];
     } catch (error) {
       console.error('Error in getAssessments:', error);
       return [];

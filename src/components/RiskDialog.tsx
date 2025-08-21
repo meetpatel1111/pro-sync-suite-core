@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -82,12 +81,6 @@ const RiskDialog: React.FC<RiskDialogProps> = ({ risk, onSave, trigger }) => {
 
     setLoading(true);
     try {
-      const { data: user } = await riskService.createRisk({
-        ...formData,
-        user_id: '',
-        created_by: ''
-      } as any);
-
       if (risk) {
         await riskService.updateRisk(risk.id, formData);
         toast({
@@ -95,11 +88,8 @@ const RiskDialog: React.FC<RiskDialogProps> = ({ risk, onSave, trigger }) => {
           description: 'Risk updated successfully'
         });
       } else {
-        await riskService.createRisk({
-          ...formData,
-          user_id: '',
-          created_by: ''
-        } as any);
+        // riskService will attach created_by and user_id internally
+        await riskService.createRisk(formData as any);
         toast({
           title: 'Success',
           description: 'Risk created successfully'

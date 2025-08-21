@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -232,7 +231,7 @@ const RiskRadar = () => {
               <CardTitle>Risk Distribution</CardTitle>
             </CardHeader>
             <CardContent>
-              <RiskRadarChart data={analytics} />
+              <RiskRadarChart {...({ data: analytics } as any)} />
             </CardContent>
           </Card>
           
@@ -259,11 +258,7 @@ const RiskRadar = () => {
             <CardTitle>Risk Registry</CardTitle>
           </CardHeader>
           <CardContent>
-            <RiskTable 
-              risks={filteredRisks} 
-              loading={loading}
-              onRiskUpdated={loadRisks}
-            />
+            <RiskTable {...({ risks: filteredRisks, loading, onRiskUpdated: loadRisks } as any)} />
           </CardContent>
         </Card>
       </div>
