@@ -55,12 +55,11 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
     }
   };
 
-  const handleTaskCreated = (task: TaskMasterTask) => {
-    setTasks(prev => [...prev, task]);
+  const handleTaskCreated = () => {
     fetchTasks(); // Refresh to get the latest data
     toast({
       title: 'Success',
-      description: `Task ${task.task_key} created successfully`,
+      description: 'Task created successfully',
     });
   };
 
@@ -90,10 +89,8 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
     }
   };
 
-  const handleBoardUpdate = async (updates: Partial<Board>) => {
+  const handleBoardUpdated = async () => {
     try {
-      console.log('Updating board with:', updates);
-      // TODO: Implement board update in taskmasterService
       toast({
         title: 'Success',
         description: 'Board configuration updated',
@@ -154,7 +151,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
           
           <BoardConfigDialog 
             board={board} 
-            onBoardUpdate={handleBoardUpdate}
+            onBoardUpdated={handleBoardUpdated}
             trigger={
               <Button variant="outline" className="button-hover">
                 <Settings className="h-4 w-4 mr-2 icon-bounce" />
