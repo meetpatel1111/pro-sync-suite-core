@@ -152,12 +152,16 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ project, board }) => {
             </Button>
           </CreateTaskDialog>
           
-          <BoardConfigDialog board={board} onBoardUpdate={handleBoardUpdate}>
-            <Button variant="outline" className="button-hover">
-              <Settings className="h-4 w-4 mr-2 icon-bounce" />
-              Configure
-            </Button>
-          </BoardConfigDialog>
+          <BoardConfigDialog 
+            board={board} 
+            onBoardUpdate={handleBoardUpdate}
+            trigger={
+              <Button variant="outline" className="button-hover">
+                <Settings className="h-4 w-4 mr-2 icon-bounce" />
+                Configure
+              </Button>
+            }
+          />
         </div>
       </div>
 

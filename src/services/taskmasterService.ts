@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Task, Project, Board, BoardColumn, Sprint } from '@/types/taskmaster';
 
@@ -104,9 +103,18 @@ class TaskMasterService {
 
   async createBoard(board: Omit<Board, 'id' | 'created_at' | 'updated_at'>) {
     try {
+      const boardData = {
+        ...board,
+        config: board.config as any, // Cast to Json type
+        wip_limits: board.wip_limits as any,
+        swimlane_config: board.swimlane_config as any,
+        filters: board.filters as any,
+        permissions: board.permissions as any,
+      };
+
       const { data, error } = await supabase
         .from('boards')
-        .insert(board)
+        .insert(boardData)
         .select()
         .single();
 
@@ -286,7 +294,7 @@ class TaskMasterService {
         .eq('task_id', taskId)
         .order('created_at', { ascending: false });
 
-      return { data: data || [], error };
+      return { data: (data || []) as TaskFile[], error };
     } catch (error) {
       console.error('Error fetching task files:', error);
       return { data: [], error };
@@ -316,13 +324,13 @@ class TaskMasterService {
 
   async getTaskTags(projectId: string): Promise<{ data: TaskTag[]; error: any }> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('task_tags')
         .select('*')
         .eq('project_id', projectId)
         .order('name', { ascending: true });
 
-      return { data: data || [], error };
+      return { data: (data || []) as TaskTag[], error };
     } catch (error) {
       console.error('Error fetching task tags:', error);
       return { data: [], error };
@@ -367,12 +375,12 @@ class TaskMasterService {
 
   async getTaskDependencies(taskId: string): Promise<{ data: TaskDependency[]; error: any }> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('task_dependencies')
         .select('*')
         .eq('task_id', taskId);
 
-      return { data: data || [], error };
+      return { data: (data || []) as TaskDependency[], error };
     } catch (error) {
       console.error('Error fetching task dependencies:', error);
       return { data: [], error };
@@ -384,13 +392,13 @@ class TaskMasterService {
     try {
       const { data: maxPosition } = await supabase
         .from('task_checklists')
-        .select('position')
+        .select('id')
         .eq('task_id', taskId)
-        .order('position', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      const position = (maxPosition?.position || 0) + 1;
+      const position = maxPosition ? 1 : 0;
 
       const { data, error } = await supabase
         .from('task_checklists')
@@ -429,13 +437,13 @@ class TaskMasterService {
 
   async getTaskChecklists(taskId: string): Promise<{ data: TaskChecklist[]; error: any }> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('task_checklists')
         .select('*')
         .eq('task_id', taskId)
-        .order('position', { ascending: true });
+        .order('created_at', { ascending: true });
 
-      return { data: data || [], error };
+      return { data: (data || []) as TaskChecklist[], error };
     } catch (error) {
       console.error('Error fetching task checklists:', error);
       return { data: [], error };

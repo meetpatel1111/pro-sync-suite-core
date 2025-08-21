@@ -36,7 +36,7 @@ class SprintService {
         .eq('board_id', boardId)
         .order('created_at', { ascending: false });
 
-      return { data: data || [], error };
+      return { data: (data || []) as Sprint[], error };
     } catch (error) {
       console.error('Error fetching sprints:', error);
       return { data: [], error };
@@ -55,7 +55,7 @@ class SprintService {
         .select()
         .single();
 
-      return { data, error };
+      return { data: data as Sprint, error };
     } catch (error) {
       console.error('Error creating sprint:', error);
       return { data: null, error };
@@ -71,7 +71,7 @@ class SprintService {
         .select()
         .single();
 
-      return { data, error };
+      return { data: data as Sprint, error };
     } catch (error) {
       console.error('Error updating sprint:', error);
       return { data: null, error };
