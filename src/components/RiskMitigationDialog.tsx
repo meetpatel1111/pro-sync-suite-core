@@ -17,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
 import { RiskMitigation, riskService } from '@/services/riskService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -29,7 +28,7 @@ interface RiskMitigationDialogProps {
   onSave: () => void;
 }
 
-type MitigationStatus = 'planned' | 'in-progress' | 'completed' | 'cancelled';
+type MitigationStatus = 'planned' | 'in_progress' | 'completed' | 'cancelled';
 
 const RiskMitigationDialog: React.FC<RiskMitigationDialogProps> = ({
   riskId,
@@ -39,12 +38,14 @@ const RiskMitigationDialog: React.FC<RiskMitigationDialogProps> = ({
   onSave
 }) => {
   const [formData, setFormData] = useState({
-    action: '',
+    title: '',
+    description: '',
+    action_type: 'reduce' as 'prevent' | 'reduce' | 'transfer' | 'accept',
     status: 'planned' as MitigationStatus,
-    progress: 0,
     due_date: '',
     cost: 0,
-    notes: ''
+    effectiveness_rating: 3,
+    assigned_to: ''
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -52,30 +53,34 @@ const RiskMitigationDialog: React.FC<RiskMitigationDialogProps> = ({
   useEffect(() => {
     if (mitigation) {
       setFormData({
-        action: mitigation.action,
+        title: mitigation.title,
+        description: mitigation.description || '',
+        action_type: mitigation.action_type,
         status: mitigation.status as MitigationStatus,
-        progress: mitigation.progress,
         due_date: mitigation.due_date || '',
         cost: mitigation.cost || 0,
-        notes: mitigation.notes || ''
+        effectiveness_rating: mitigation.effectiveness_rating || 3,
+        assigned_to: mitigation.assigned_to || ''
       });
     } else {
       setFormData({
-        action: '',
+        title: '',
+        description: '',
+        action_type: 'reduce',
         status: 'planned',
-        progress: 0,
         due_date: '',
         cost: 0,
-        notes: ''
+        effectiveness_rating: 3,
+        assigned_to: ''
       });
     }
   }, [mitigation]);
 
   const handleSave = async () => {
-    if (!formData.action.trim()) {
+    if (!formData.title.trim()) {
       toast({
         title: 'Error',
-        description: 'Mitigation action is required',
+        description: 'Mitigation title is required',
         variant: 'destructive'
       });
       return;
@@ -92,7 +97,8 @@ const RiskMitigationDialog: React.FC<RiskMitigationDialogProps> = ({
       } else {
         await riskService.createMitigation({
           risk_id: riskId,
-          ...formData
+          ...formData,
+          created_by: ''
         });
         toast({
           title: 'Success',
@@ -124,17 +130,42 @@ const RiskMitigationDialog: React.FC<RiskMitigationDialogProps> = ({
         
         <div className="space-y-4">
           <div>
-            <Label htmlFor="action">Mitigation Action *</Label>
+            <Label htmlFor="title">Mitigation Title *</Label>
+            <Input
+              id="title"
+              value={formData.title}
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="Enter mitigation title"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="description">Description</Label>
             <Textarea
-              id="action"
-              value={formData.action}
-              onChange={(e) => setFormData(prev => ({ ...prev, action: e.target.value }))}
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               placeholder="Describe the mitigation action"
               rows={3}
             />
           </div>
           
           <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="action_type">Action Type</Label>
+              <Select value={formData.action_type} onValueChange={(value: 'prevent' | 'reduce' | 'transfer' | 'accept') => setFormData(prev => ({ ...prev, action_type: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="prevent">Prevent</SelectItem>
+                  <SelectItem value="reduce">Reduce</SelectItem>
+                  <SelectItem value="transfer">Transfer</SelectItem>
+                  <SelectItem value="accept">Accept</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <Label htmlFor="status">Status</Label>
               <Select value={formData.status} onValueChange={(value: MitigationStatus) => setFormData(prev => ({ ...prev, status: value }))}>
@@ -143,56 +174,57 @@ const RiskMitigationDialog: React.FC<RiskMitigationDialogProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="planned">Planned</SelectItem>
-                  <SelectItem value="in-progress">In Progress</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
+          </div>
+          
+          <div>
+            <Label htmlFor="due_date">Due Date</Label>
+            <Input
+              id="due_date"
+              type="date"
+              value={formData.due_date}
+              onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="assigned_to">Assigned To (User ID)</Label>
+            <Input
+              id="assigned_to"
+              value={formData.assigned_to}
+              onChange={(e) => setFormData(prev => ({ ...prev, assigned_to: e.target.value }))}
+              placeholder="Enter user ID"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="due_date">Due Date</Label>
+              <Label htmlFor="cost">Estimated Cost ($)</Label>
               <Input
-                id="due_date"
-                type="date"
-                value={formData.due_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))}
+                id="cost"
+                type="number"
+                value={formData.cost}
+                onChange={(e) => setFormData(prev => ({ ...prev, cost: parseFloat(e.target.value) || 0 }))}
+                placeholder="0"
               />
             </div>
-          </div>
-          
-          <div>
-            <Label>Progress: {formData.progress}%</Label>
-            <Slider
-              value={[formData.progress]}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, progress: value[0] }))}
-              max={100}
-              min={0}
-              step={5}
-              className="mt-2"
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="cost">Estimated Cost ($)</Label>
-            <Input
-              id="cost"
-              type="number"
-              value={formData.cost}
-              onChange={(e) => setFormData(prev => ({ ...prev, cost: parseFloat(e.target.value) || 0 }))}
-              placeholder="0"
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="Additional notes"
-              rows={2}
-            />
+
+            <div>
+              <Label htmlFor="effectiveness">Effectiveness (1-5)</Label>
+              <Input
+                id="effectiveness"
+                type="number"
+                min="1"
+                max="5"
+                value={formData.effectiveness_rating}
+                onChange={(e) => setFormData(prev => ({ ...prev, effectiveness_rating: parseInt(e.target.value) || 3 }))}
+              />
+            </div>
           </div>
           
           <div className="flex justify-end gap-2 pt-4 border-t">

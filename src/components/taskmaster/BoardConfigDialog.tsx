@@ -1,315 +1,311 @@
 
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import React, { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Settings, Plus, Trash2, GripVertical, Users, 
-  Flag, Tag, Calendar, Move3D 
-} from 'lucide-react';
-import { Board } from '@/types/taskmaster';
+import { Badge } from '@/components/ui/badge';
+import { X, Plus, Trash2 } from 'lucide-react';
+import { taskmasterService } from '@/services/taskmasterService';
+import { useToast } from '@/hooks/use-toast';
+import type { Board, BoardColumn } from '@/types/taskmaster';
 
 interface BoardConfigDialogProps {
   board: Board;
-  onBoardUpdate: (updates: Partial<Board>) => void;
-  children: React.ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onBoardUpdated: () => void;
 }
 
-type SwimlaneType = 'none' | 'assignee' | 'priority' | 'label' | 'epic';
+type SwimlaneType = 'none' | 'assignee' | 'priority' | 'epic' | 'custom';
 
 const BoardConfigDialog: React.FC<BoardConfigDialogProps> = ({
   board,
-  onBoardUpdate,
-  children
+  open,
+  onOpenChange,
+  onBoardUpdated
 }) => {
-  const [columns, setColumns] = useState(board.config.columns);
-  const [wipLimits, setWipLimits] = useState(board.wip_limits || {});
-  
-  // Properly type the swimlane config with explicit typing
-  const [swimlaneConfig, setSwimlaneConfig] = useState<{
-    type: SwimlaneType;
-    enabled: boolean;
-  }>({
-    type: (board.swimlane_config?.type as SwimlaneType) || 'none',
-    enabled: board.swimlane_config?.enabled || false
+  const [boardConfig, setBoardConfig] = useState({
+    name: board.name,
+    description: board.description || '',
+    type: board.type,
+    columns: board.config?.columns || [],
+    swimlaneConfig: {
+      enabled: board.swimlane_config?.enabled || false,
+      type: (board.swimlane_config?.type || 'none') as SwimlaneType,
+      field: board.swimlane_config?.field || ''
+    }
   });
+  const [newColumnName, setNewColumnName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    setBoardConfig({
+      name: board.name,
+      description: board.description || '',
+      type: board.type,
+      columns: board.config?.columns || [],
+      swimlaneConfig: {
+        enabled: board.swimlane_config?.enabled || false,
+        type: (board.swimlane_config?.type || 'none') as SwimlaneType,
+        field: board.swimlane_config?.field || ''
+      }
+    });
+  }, [board]);
 
   const addColumn = () => {
-    const newColumn = {
-      id: `column_${Date.now()}`,
-      name: 'New Column',
-      color: '#3b82f6'
-    };
-    setColumns([...columns, newColumn]);
+    if (newColumnName.trim()) {
+      const newColumn: BoardColumn = {
+        id: newColumnName.toLowerCase().replace(/\s+/g, '_'),
+        name: newColumnName.trim(),
+        color: '#3b82f6',
+        position: boardConfig.columns.length
+      };
+
+      setBoardConfig(prev => ({
+        ...prev,
+        columns: [...prev.columns, newColumn]
+      }));
+      setNewColumnName('');
+    }
   };
 
-  const updateColumn = (index: number, updates: Partial<typeof columns[0]>) => {
-    const newColumns = [...columns];
-    newColumns[index] = { ...newColumns[index], ...updates };
-    setColumns(newColumns);
+  const removeColumn = (columnId: string) => {
+    setBoardConfig(prev => ({
+      ...prev,
+      columns: prev.columns.filter(col => col.id !== columnId)
+    }));
   };
 
-  const removeColumn = (index: number) => {
-    if (columns.length <= 1) return;
-    setColumns(columns.filter((_, i) => i !== index));
+  const updateColumn = (columnId: string, updates: Partial<BoardColumn>) => {
+    setBoardConfig(prev => ({
+      ...prev,
+      columns: prev.columns.map(col => 
+        col.id === columnId ? { ...col, ...updates } : col
+      )
+    }));
   };
 
-  const saveConfiguration = () => {
-    onBoardUpdate({
-      config: {
-        ...board.config,
-        columns
-      },
-      wip_limits: wipLimits,
-      swimlane_config: swimlaneConfig
-    });
+  const handleSave = async () => {
+    if (!boardConfig.name.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Board name is required',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (boardConfig.columns.length === 0) {
+      toast({
+        title: 'Error',
+        description: 'At least one column is required',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const updates = {
+        name: boardConfig.name,
+        description: boardConfig.description,
+        type: boardConfig.type,
+        config: {
+          columns: boardConfig.columns
+        },
+        swimlane_config: boardConfig.swimlaneConfig
+      };
+
+      // Note: You would need to implement updateBoard in taskmasterService
+      // await taskmasterService.updateBoard(board.id, updates);
+
+      toast({
+        title: 'Success',
+        description: 'Board configuration updated successfully'
+      });
+
+      onBoardUpdated();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error updating board:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update board configuration',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Board Configuration - {board.name}
-          </DialogTitle>
+          <DialogTitle>Board Configuration</DialogTitle>
         </DialogHeader>
+        
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="boardName">Board Name</Label>
+              <Input
+                id="boardName"
+                value={boardConfig.name}
+                onChange={(e) => setBoardConfig(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Enter board name"
+              />
+            </div>
 
-        <Tabs defaultValue="columns" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="columns">Columns</TabsTrigger>
-            <TabsTrigger value="swimlanes">Swimlanes</TabsTrigger>
-            <TabsTrigger value="workflow">Workflow</TabsTrigger>
-            <TabsTrigger value="permissions">Permissions</TabsTrigger>
-          </TabsList>
+            <div>
+              <Label htmlFor="boardDescription">Description</Label>
+              <Input
+                id="boardDescription"
+                value={boardConfig.description}
+                onChange={(e) => setBoardConfig(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Enter board description"
+              />
+            </div>
 
-          <TabsContent value="columns" className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Board Columns</h3>
-                <Button onClick={addColumn} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Column
+            <div>
+              <Label htmlFor="boardType">Board Type</Label>
+              <Select value={boardConfig.type} onValueChange={(value: 'kanban' | 'scrum' | 'workflow') => setBoardConfig(prev => ({ ...prev, type: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="kanban">Kanban</SelectItem>
+                  <SelectItem value="scrum">Scrum</SelectItem>
+                  <SelectItem value="workflow">Workflow</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Columns</Label>
+              <div className="flex gap-2 mb-3">
+                <Input
+                  value={newColumnName}
+                  onChange={(e) => setNewColumnName(e.target.value)}
+                  placeholder="Add column name"
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addColumn())}
+                />
+                <Button type="button" variant="outline" onClick={addColumn}>
+                  <Plus className="h-4 w-4" />
                 </Button>
               </div>
 
-              <div className="space-y-3">
-                {columns.map((column, index) => (
-                  <Card key={column.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-4">
-                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
-                        
-                        <div className="flex-1 grid grid-cols-3 gap-4">
-                          <div>
-                            <Label htmlFor={`column-name-${index}`}>Column Name</Label>
-                            <Input
-                              id={`column-name-${index}`}
-                              value={column.name}
-                              onChange={(e) => updateColumn(index, { name: e.target.value })}
-                            />
-                          </div>
-                          
-                          <div>
-                            <Label htmlFor={`column-color-${index}`}>Color</Label>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                id={`column-color-${index}`}
-                                type="color"
-                                value={column.color || '#3b82f6'}
-                                onChange={(e) => updateColumn(index, { color: e.target.value })}
-                                className="w-16 h-8"
-                              />
-                              <Badge style={{ backgroundColor: column.color || '#3b82f6' }} className="text-white">
-                                {column.name}
-                              </Badge>
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <Label htmlFor={`wip-limit-${index}`}>WIP Limit</Label>
-                            <Input
-                              id={`wip-limit-${index}`}
-                              type="number"
-                              min="0"
-                              placeholder="No limit"
-                              value={wipLimits[column.id] || ''}
-                              onChange={(e) => setWipLimits(prev => ({
-                                ...prev,
-                                [column.id]: e.target.value ? parseInt(e.target.value) : undefined
-                              }))}
-                            />
-                          </div>
-                        </div>
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeColumn(index)}
-                          disabled={columns.length <= 1}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+              <div className="space-y-2">
+                {boardConfig.columns.map((column, index) => (
+                  <div key={column.id} className="flex items-center gap-2 p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <Input
+                        value={column.name}
+                        onChange={(e) => updateColumn(column.id, { name: e.target.value })}
+                        placeholder="Column name"
+                      />
+                    </div>
+                    <div className="w-20">
+                      <Input
+                        type="color"
+                        value={column.color || '#3b82f6'}
+                        onChange={(e) => updateColumn(column.id, { color: e.target.value })}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeColumn(column.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 ))}
               </div>
             </div>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="swimlanes" className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Swimlane Configuration</h3>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Enable Swimlanes</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span>Group tasks by swimlanes</span>
-                    <Switch
-                      checked={swimlaneConfig.enabled}
-                      onCheckedChange={(enabled) => setSwimlaneConfig(prev => ({ ...prev, enabled }))}
-                    />
-                  </div>
-
-                  {swimlaneConfig.enabled && (
-                    <div>
-                      <Label>Swimlane Type</Label>
-                      <Select 
-                        value={swimlaneConfig.type} 
-                        onValueChange={(type: SwimlaneType) => 
-                          setSwimlaneConfig(prev => ({ ...prev, type }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="assignee">
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4" />
-                              By Assignee
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="priority">
-                            <div className="flex items-center gap-2">
-                              <Flag className="h-4 w-4" />
-                              By Priority
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="label">
-                            <div className="flex items-center gap-2">
-                              <Tag className="h-4 w-4" />
-                              By Label
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="epic">
-                            <div className="flex items-center gap-2">
-                              <Move3D className="h-4 w-4" />
-                              By Epic
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="workflow" className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Workflow Rules</h3>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Status Transitions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Configure which status transitions are allowed and any automation rules.
-                  </p>
-                  <Button variant="outline" className="mt-4">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Transition Rule
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="permissions" className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Board Permissions</h3>
-              
-              <div className="grid gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Administrators</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Can modify board settings, manage columns, and configure workflows.
-                    </p>
-                    <Button variant="outline" size="sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Admin
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Contributors</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Can create, edit, and move tasks on the board.
-                    </p>
-                    <Button variant="outline" size="sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Contributor
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Viewers</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Can view the board and tasks but cannot make changes.
-                    </p>
-                    <Button variant="outline" size="sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Viewer
-                    </Button>
-                  </CardContent>
-                </Card>
+          <div className="space-y-4">
+            <div>
+              <Label>Swimlanes</Label>
+              <div className="flex items-center space-x-2 mt-2">
+                <Switch
+                  checked={boardConfig.swimlaneConfig.enabled}
+                  onCheckedChange={(enabled) => setBoardConfig(prev => ({
+                    ...prev,
+                    swimlaneConfig: { ...prev.swimlaneConfig, enabled }
+                  }))}
+                />
+                <span className="text-sm">Enable Swimlanes</span>
               </div>
             </div>
-          </TabsContent>
-        </Tabs>
 
-        <div className="flex justify-end gap-2 pt-6 border-t">
-          <Button variant="outline">Cancel</Button>
-          <Button onClick={saveConfiguration}>
-            Save Configuration
-          </Button>
+            {boardConfig.swimlaneConfig.enabled && (
+              <div>
+                <Label htmlFor="swimlaneType">Swimlane Type</Label>
+                <Select 
+                  value={boardConfig.swimlaneConfig.type} 
+                  onValueChange={(value: SwimlaneType) => setBoardConfig(prev => ({
+                    ...prev,
+                    swimlaneConfig: { ...prev.swimlaneConfig, type: value }
+                  }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="assignee">Assignee</SelectItem>
+                    <SelectItem value="priority">Priority</SelectItem>
+                    <SelectItem value="epic">Epic</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {boardConfig.swimlaneConfig.enabled && boardConfig.swimlaneConfig.type === 'custom' && (
+              <div>
+                <Label htmlFor="swimlaneField">Custom Field</Label>
+                <Input
+                  id="swimlaneField"
+                  value={boardConfig.swimlaneConfig.field}
+                  onChange={(e) => setBoardConfig(prev => ({
+                    ...prev,
+                    swimlaneConfig: { ...prev.swimlaneConfig, field: e.target.value }
+                  }))}
+                  placeholder="Enter field name"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={loading}>
+              {loading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

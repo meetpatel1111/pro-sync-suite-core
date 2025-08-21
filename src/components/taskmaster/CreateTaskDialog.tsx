@@ -1,317 +1,317 @@
 
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import React, { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Plus, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { X, Plus } from 'lucide-react';
 import { taskmasterService } from '@/services/taskmasterService';
+import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/context/AuthContext';
-import type { TaskMasterTask } from '@/types/taskmaster';
+import type { Project, Board } from '@/types/taskmaster';
 
 interface CreateTaskDialogProps {
-  boardId: string;
-  projectId: string;
-  onTaskCreated: (task: TaskMasterTask) => void;
-  defaultStatus?: string;
-  children?: React.ReactNode;
+  project: Project;
+  board: Board;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onTaskCreated: () => void;
 }
 
 const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
-  boardId,
-  projectId,
-  onTaskCreated,
-  defaultStatus = 'todo',
-  children
+  project,
+  board,
+  open,
+  onOpenChange,
+  onTaskCreated
 }) => {
-  const { user } = useAuthContext();
-  const { toast } = useToast();
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    status: defaultStatus,
-    priority: 'medium',
     type: 'task',
-    visibility: 'team',
+    priority: 'medium',
+    status: 'todo',
     assignee_id: '',
-    estimate_hours: '',
+    estimate_hours: 0,
+    story_points: 0,
     due_date: '',
+    labels: [] as string[]
   });
+  const [newLabel, setNewLabel] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuthContext();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!user) {
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      type: 'task',
+      priority: 'medium',
+      status: board?.config?.columns?.[0]?.id || 'todo',
+      assignee_id: '',
+      estimate_hours: 0,
+      story_points: 0,
+      due_date: '',
+      labels: []
+    });
+    setNewLabel('');
+  };
+
+  useEffect(() => {
+    if (open) {
+      resetForm();
+    }
+  }, [open, board]);
+
+  const handleSave = async () => {
+    if (!formData.title.trim()) {
       toast({
-        title: 'Authentication Required',
-        description: 'You must be logged in to create tasks',
-        variant: 'destructive',
+        title: 'Error',
+        description: 'Task title is required',
+        variant: 'destructive'
       });
       return;
     }
 
-    if (!formData.title.trim()) {
+    if (!user) {
       toast({
-        title: 'Validation Error',
-        description: 'Task title is required',
-        variant: 'destructive',
+        title: 'Error',
+        description: 'User not authenticated',
+        variant: 'destructive'
       });
       return;
     }
 
     setLoading(true);
-
     try {
       const taskData = {
-        board_id: boardId,
-        project_id: projectId,
-        title: formData.title.trim(),
-        description: formData.description.trim(),
-        status: formData.status,
-        priority: formData.priority as 'low' | 'medium' | 'high' | 'critical',
-        type: formData.type as 'task' | 'bug' | 'story' | 'epic',
-        visibility: formData.visibility as 'team' | 'private' | 'public',
-        assignee_id: formData.assignee_id || null,
-        estimate_hours: formData.estimate_hours ? parseFloat(formData.estimate_hours) : null,
-        due_date: formData.due_date || null,
-        actual_hours: 0,
-        position: 0,
+        ...formData,
+        project_id: project.id,
+        board_id: board.id,
         created_by: user.id,
+        reporter_id: user.id,
+        assignee_id: formData.assignee_id || null,
+        assigned_to: formData.assignee_id ? [formData.assignee_id] : [],
+        position: 0
       };
 
-      console.log('Creating task with data:', taskData);
-
-      const { data: task, error } = await taskmasterService.createTask(taskData);
-
+      const { data, error } = await taskmasterService.createTask(taskData, user.id);
+      
       if (error) {
-        console.error('Error creating task:', error);
-        toast({
-          title: 'Creation Failed',
-          description: error.message || 'Failed to create task. Please try again.',
-          variant: 'destructive',
-        });
-        return;
+        throw error;
       }
 
-      if (task) {
-        onTaskCreated(task);
-        setOpen(false);
-        setFormData({
-          title: '',
-          description: '',
-          status: defaultStatus,
-          priority: 'medium',
-          type: 'task',
-          visibility: 'team',
-          assignee_id: '',
-          estimate_hours: '',
-          due_date: '',
-        });
-        
-        toast({
-          title: 'Task Created',
-          description: `Task "${task.title}" has been created successfully`,
-        });
-      }
-    } catch (error) {
-      console.error('Unexpected error creating task:', error);
       toast({
-        title: 'Unexpected Error',
-        description: 'An unexpected error occurred while creating the task',
-        variant: 'destructive',
+        title: 'Success',
+        description: `Task ${data?.task_key || 'created'} successfully`
+      });
+
+      onTaskCreated();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error creating task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create task',
+        variant: 'destructive'
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const addLabel = () => {
+    if (newLabel.trim() && !formData.labels.includes(newLabel.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        labels: [...prev.labels, newLabel.trim()]
+      }));
+      setNewLabel('');
+    }
+  };
+
+  const removeLabel = (label: string) => {
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      labels: prev.labels.filter(l => l !== label)
     }));
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children || (
-          <Button size="sm" className="animate-fade-in-up">
-            <Plus className="h-4 w-4 mr-2 icon-bounce" />
-            Add Task
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md animate-scale-in">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-gradient">Create New Task</DialogTitle>
+          <DialogTitle>Create New Task</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
+        
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="title">Task Title *</Label>
             <Input
               id="title"
               value={formData.title}
-              onChange={(e) => handleInputChange('title', e.target.value)}
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
               placeholder="Enter task title"
-              required
-              disabled={loading}
-              className="input-focus"
             />
           </div>
 
-          <div className="space-y-2">
+          <div>
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
               value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder="Enter task description"
-              rows={3}
-              disabled={loading}
-              className="input-focus"
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Describe the task"
+              rows={4}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select 
-                value={formData.status} 
-                onValueChange={(value) => handleInputChange('status', value)}
-                disabled={loading}
-              >
-                <SelectTrigger className="input-focus">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todo">To Do</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="review">Review</SelectItem>
-                  <SelectItem value="done">Done</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="priority">Priority</Label>
-              <Select 
-                value={formData.priority} 
-                onValueChange={(value) => handleInputChange('priority', value)}
-                disabled={loading}
-              >
-                <SelectTrigger className="input-focus">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="critical">Critical</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="type">Type</Label>
-              <Select 
-                value={formData.type} 
-                onValueChange={(value) => handleInputChange('type', value)}
-                disabled={loading}
-              >
-                <SelectTrigger className="input-focus">
+              <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}>
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="task">Task</SelectItem>
-                  <SelectItem value="bug">Bug</SelectItem>
                   <SelectItem value="story">Story</SelectItem>
+                  <SelectItem value="bug">Bug</SelectItem>
                   <SelectItem value="epic">Epic</SelectItem>
+                  <SelectItem value="subtask">Subtask</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="visibility">Visibility</Label>
-              <Select 
-                value={formData.visibility} 
-                onValueChange={(value) => handleInputChange('visibility', value)}
-                disabled={loading}
-              >
-                <SelectTrigger className="input-focus">
+            <div>
+              <Label htmlFor="priority">Priority</Label>
+              <Select value={formData.priority} onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value }))}>
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="team">Team</SelectItem>
-                  <SelectItem value="private">Private</SelectItem>
-                  <SelectItem value="public">Public</SelectItem>
+                  <SelectItem value="lowest">Lowest</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="highest">Highest</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {board?.config?.columns?.map((column) => (
+                    <SelectItem key={column.id} value={column.id}>
+                      {column.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="assignee">Assignee (User ID)</Label>
+              <Input
+                id="assignee"
+                value={formData.assignee_id}
+                onChange={(e) => setFormData(prev => ({ ...prev, assignee_id: e.target.value }))}
+                placeholder="Enter assignee user ID"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="story_points">Story Points</Label>
+              <Input
+                id="story_points"
+                type="number"
+                min="0"
+                value={formData.story_points}
+                onChange={(e) => setFormData(prev => ({ ...prev, story_points: parseInt(e.target.value) || 0 }))}
+                placeholder="0"
+              />
+            </div>
+
+            <div>
               <Label htmlFor="estimate_hours">Estimate (hours)</Label>
               <Input
                 id="estimate_hours"
                 type="number"
-                step="0.5"
                 min="0"
+                step="0.5"
                 value={formData.estimate_hours}
-                onChange={(e) => handleInputChange('estimate_hours', e.target.value)}
+                onChange={(e) => setFormData(prev => ({ ...prev, estimate_hours: parseFloat(e.target.value) || 0 }))}
                 placeholder="0"
-                disabled={loading}
-                className="input-focus"
               />
             </div>
 
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="due_date">Due Date</Label>
               <Input
                 id="due_date"
                 type="date"
                 value={formData.due_date}
-                onChange={(e) => handleInputChange('due_date', e.target.value)}
-                disabled={loading}
-                className="input-focus"
+                onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))}
               />
             </div>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => setOpen(false)}
-              disabled={loading}
-              className="button-hover"
-            >
+          <div>
+            <Label>Labels</Label>
+            <div className="flex gap-2 mb-2">
+              <Input
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+                placeholder="Add label"
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addLabel())}
+              />
+              <Button type="button" variant="outline" onClick={addLabel}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {formData.labels.map(label => (
+                <Badge key={label} variant="secondary" className="cursor-pointer" onClick={() => removeLabel(label)}>
+                  {label}
+                  <X className="h-3 w-3 ml-1" />
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button 
-              type="submit" 
-              disabled={loading}
-              className="button-hover"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                'Create Task'
-              )}
+            <Button onClick={handleSave} disabled={loading}>
+              {loading ? 'Creating...' : 'Create Task'}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

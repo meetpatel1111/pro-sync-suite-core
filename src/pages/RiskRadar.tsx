@@ -1,54 +1,72 @@
 
 import React, { useState, useEffect } from 'react';
-import AppLayout from '@/components/AppLayout';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { 
-  ArrowLeft, 
-  Plus, 
-  Filter, 
-  AlertTriangle, 
-  Shield, 
-  ShieldAlert,
-  ShieldCheck,
-  Clock,
-  ChevronDown,
-  Search,
-  Target,
-  Zap
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import RiskRadarChart from '@/components/RiskRadarChart';
-import RiskTable from '@/components/RiskTable';
-import RiskDialog from '@/components/RiskDialog';
-import { riskService } from '@/services/riskService';
+import { 
+  AlertTriangle, 
+  TrendingUp, 
+  Shield, 
+  Target,
+  Search,
+  Filter,
+  Plus
+} from 'lucide-react';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import AppLayout from '@/components/AppLayout';
+import RiskDialog from '@/components/RiskDialog';
+import RiskMitigationDialog from '@/components/RiskMitigationDialog';
+import RiskTable from '@/components/RiskTable';
+import RiskRadarChart from '@/components/RiskRadarChart';
+import { riskService, Risk } from '@/services/riskService';
+import { useToast } from '@/hooks/use-toast';
 
 const RiskRadar = () => {
-  const navigate = useNavigate();
-  const [analytics, setAnalytics] = useState({
-    totalRisks: 0,
-    highRisks: 0,
-    mediumRisks: 0,
-    lowRisks: 0,
-    byCategory: {} as Record<string, number>,
-    byStatus: {} as Record<string, number>
+  const [risks, setRisks] = useState<Risk[]>([]);
+  const [analytics, setAnalytics] = useState<any>({
+    total: 0,
+    byStatus: { active: 0, mitigated: 0, closed: 0, monitoring: 0 },
+    byLevel: { low: 0, medium: 0, high: 0 },
+    byCategory: {},
   });
   const [loading, setLoading] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
+  const { toast } = useToast();
 
   useEffect(() => {
+    loadRisks();
     loadAnalytics();
-  }, [refreshKey]);
+  }, [statusFilter, categoryFilter]);
+
+  const loadRisks = async () => {
+    try {
+      setLoading(true);
+      const filters = {
+        status: statusFilter || undefined,
+        category: categoryFilter || undefined,
+      };
+      const data = await riskService.getRisks(filters);
+      setRisks(data);
+    } catch (error) {
+      console.error('Error loading risks:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load risks',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadAnalytics = async () => {
     try {
@@ -56,269 +74,198 @@ const RiskRadar = () => {
       setAnalytics(data);
     } catch (error) {
       console.error('Error loading analytics:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
-  };
-  
+  const filteredRisks = risks.filter(risk =>
+    risk.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    risk.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    risk.category.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <AppLayout>
-      <div className="space-y-6 animate-fade-in-up">
-        {/* Compact Header */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-rose-500 via-rose-600 to-red-700 p-4 text-white shadow-lg">
-          <div className="absolute inset-0 bg-black/10"></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
+      <div className="space-y-6 animate-fade-in">
+        {/* Enhanced Header */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-red-600 via-orange-700 to-amber-800 p-6 text-white shadow-xl">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"></div>
+          
+          <div className="absolute -top-16 -right-16 w-40 h-40 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-orange-300/20 rounded-full blur-2xl"></div>
+          
           <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
-                <Shield className="h-5 w-5" />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm border border-white/30 shadow-lg">
+                <AlertTriangle className="h-6 w-6" />
               </div>
-              <h1 className="text-2xl font-bold tracking-tight">RiskRadar</h1>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-white to-orange-100 bg-clip-text">
+                  RiskRadar
+                </h1>
+                <p className="text-lg text-orange-100/90 font-medium">Risk Management & Assessment Platform</p>
+              </div>
             </div>
-            <p className="text-sm text-rose-100 max-w-2xl mb-3 leading-relaxed">
-              Proactive risk and issue tracking for confident project management
+            
+            <p className="text-orange-50/95 max-w-3xl mb-4 leading-relaxed">
+              Comprehensive risk identification, assessment, and mitigation platform with 
+              real-time monitoring and predictive analytics capabilities.
             </p>
-            <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 text-xs">
-                <Target className="h-3 w-3 mr-1" />
+            
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm animate-scale-in">
+                <Shield className="h-4 w-4 mr-2" />
                 Risk Assessment
               </Badge>
-              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 text-xs">
-                <AlertTriangle className="h-3 w-3 mr-1" />
-                Issue Tracking
+              <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm animate-scale-in">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Trend Analysis
               </Badge>
-              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/20 text-xs">
-                <Zap className="h-3 w-3 mr-1" />
-                Mitigation Plans
+              <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20 px-4 py-2 text-sm animate-scale-in">
+                <Target className="h-4 w-4 mr-2" />
+                Mitigation Planning
               </Badge>
             </div>
           </div>
-          <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-24 translate-x-24 backdrop-blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-16 -translate-x-16 backdrop-blur-3xl"></div>
         </div>
 
-        <div className="mb-4">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="gap-1 mb-4" 
-            onClick={() => navigate('/')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Button>
+        {/* Analytics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Risks</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{analytics.total}</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">High Risk</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">{analytics.byLevel.high}</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Risks</CardTitle>
+              <Target className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">{analytics.byStatus.active}</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Mitigated</CardTitle>
+              <Shield className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{analytics.byStatus.mitigated}</div>
+            </CardContent>
+          </Card>
         </div>
-        
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <Filter className="h-4 w-4 mr-2" />
-              Filter
-            </Button>
-            <RiskDialog onSave={handleRefresh} />
+
+        {/* Filters and Actions */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div className="flex flex-1 gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search risks..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="mitigated">Mitigated</SelectItem>
+                <SelectItem value="monitoring">Monitoring</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="technical">Technical</SelectItem>
+                <SelectItem value="financial">Financial</SelectItem>
+                <SelectItem value="operational">Operational</SelectItem>
+                <SelectItem value="strategic">Strategic</SelectItem>
+                <SelectItem value="compliance">Compliance</SelectItem>
+                <SelectItem value="security">Security</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          
+          <RiskDialog
+            onSave={loadRisks}
+            trigger={
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                New Risk
+              </Button>
+            }
+          />
         </div>
-        
-        {/* Risk Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card className="p-4">
-            <div className="flex items-center mb-3">
-              <div className="p-2 rounded-full bg-blue-100 mr-3">
-                <AlertTriangle className="h-5 w-5 text-blue-700" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Total Risks</p>
-                <h3 className="text-2xl font-bold">{analytics.totalRisks}</h3>
-              </div>
-            </div>
-            <Progress value={analytics.totalRisks > 0 ? 100 : 0} className="h-1 bg-blue-100" />
-            <p className="text-xs text-muted-foreground mt-2">Active risk assessments</p>
+
+        {/* Risk Chart */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Risk Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RiskRadarChart data={analytics} />
+            </CardContent>
           </Card>
           
-          <Card className="p-4">
-            <div className="flex items-center mb-3">
-              <div className="p-2 rounded-full bg-red-100 mr-3">
-                <ShieldAlert className="h-5 w-5 text-red-700" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">High Priority</p>
-                <h3 className="text-2xl font-bold">{analytics.highRisks}</h3>
-              </div>
-            </div>
-            <Progress 
-              value={analytics.totalRisks > 0 ? (analytics.highRisks / analytics.totalRisks) * 100 : 0} 
-              className="h-1 bg-red-100" 
-            />
-            <p className="text-xs text-muted-foreground mt-2">Require immediate attention</p>
-          </Card>
-          
-          <Card className="p-4">
-            <div className="flex items-center mb-3">
-              <div className="p-2 rounded-full bg-amber-100 mr-3">
-                <Shield className="h-5 w-5 text-amber-700" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Medium Priority</p>
-                <h3 className="text-2xl font-bold">{analytics.mediumRisks}</h3>
-              </div>
-            </div>
-            <Progress 
-              value={analytics.totalRisks > 0 ? (analytics.mediumRisks / analytics.totalRisks) * 100 : 0} 
-              className="h-1 bg-amber-100" 
-            />
-            <p className="text-xs text-muted-foreground mt-2">Monitored regularly</p>
-          </Card>
-          
-          <Card className="p-4">
-            <div className="flex items-center mb-3">
-              <div className="p-2 rounded-full bg-green-100 mr-3">
-                <ShieldCheck className="h-5 w-5 text-green-700" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Low Priority</p>
-                <h3 className="text-2xl font-bold">{analytics.lowRisks}</h3>
-              </div>
-            </div>
-            <Progress 
-              value={analytics.totalRisks > 0 ? (analytics.lowRisks / analytics.totalRisks) * 100 : 0} 
-              className="h-1 bg-green-100" 
-            />
-            <p className="text-xs text-muted-foreground mt-2">Under control</p>
-          </Card>
-        </div>
-        
-        {/* Risk Visualization and Management */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <Card className="lg:col-span-2 p-4">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-medium">Risk Assessment Matrix</h3>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">
-                  <Clock className="h-4 w-4 mr-2" />
-                  Last 30 Days
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleRefresh}>
-                  Refresh
-                </Button>
-              </div>
-            </div>
-            
-            <Tabs defaultValue="matrix">
-              <TabsList className="mb-4">
-                <TabsTrigger value="matrix">Risk Matrix</TabsTrigger>
-                <TabsTrigger value="trends">Risk Trends</TabsTrigger>
-                <TabsTrigger value="categories">Categories</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="matrix" className="space-y-4">
-                <div className="h-[300px]">
-                  <RiskRadarChart key={refreshKey} />
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="trends" className="space-y-4">
-                <div className="h-[300px] flex items-center justify-center">
-                  <div className="text-center">
-                    <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-lg font-medium mb-2">Risk Trends</h3>
-                    <p className="text-muted-foreground max-w-md mb-4">
-                      Track how risks evolve over time with detailed trend analysis.
-                    </p>
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="categories" className="space-y-4">
-                <div className="h-[300px] flex items-center justify-center">
-                  <div className="text-center">
-                    <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-lg font-medium mb-2">Risk Categories</h3>
-                    <p className="text-muted-foreground max-w-md mb-4">
-                      Visualize distribution of risks across different categories.
-                    </p>
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </Card>
-          
-          <Card className="p-4">
-            <h3 className="font-medium mb-4">Risk Categories</h3>
-            
-            <div className="space-y-4">
-              {Object.entries(analytics.byCategory).map(([category, count]) => (
-                <div key={category}>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm capitalize">{category}</span>
-                    <span className="text-sm font-medium">{count} risks</span>
-                  </div>
-                  <Progress 
-                    value={analytics.totalRisks > 0 ? (count / analytics.totalRisks * 100) : 0} 
-                    className="h-2" 
-                  />
-                </div>
-              ))}
-              
-              {Object.keys(analytics.byCategory).length === 0 && (
-                <div className="text-center py-4">
-                  <p className="text-sm text-muted-foreground">No risk categories yet</p>
-                </div>
-              )}
-            </div>
-            
-            <div className="mt-6 pt-4 border-t">
-              <h4 className="text-sm font-medium mb-2">Risk Status</h4>
-              
+          <Card>
+            <CardHeader>
+              <CardTitle>Risk Categories</CardTitle>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-2">
-                {Object.entries(analytics.byStatus).map(([status, count]) => (
-                  <div key={status} className="flex justify-between text-sm">
-                    <span className="capitalize">{status}</span>
-                    <span className="font-medium">{count}</span>
+                {Object.entries(analytics.byCategory).map(([category, count]: [string, any]) => (
+                  <div key={category} className="flex justify-between items-center">
+                    <span className="capitalize">{category}</span>
+                    <Badge variant="outline">{count}</Badge>
                   </div>
                 ))}
               </div>
-            </div>
+            </CardContent>
           </Card>
         </div>
-        
-        {/* Risk List */}
-        <div>
-          <Card className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-medium">Risk Register</h3>
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    type="search" 
-                    placeholder="Search risks..." 
-                    className="pl-8 w-[200px]"
-                  />
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      Status: All
-                      <ChevronDown className="ml-2 h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem>All</DropdownMenuItem>
-                    <DropdownMenuItem>Active</DropdownMenuItem>
-                    <DropdownMenuItem>Mitigated</DropdownMenuItem>
-                    <DropdownMenuItem>Closed</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-            
-            <RiskTable key={refreshKey} onRefresh={handleRefresh} />
-          </Card>
-        </div>
+
+        {/* Risk Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Risk Registry</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RiskTable 
+              risks={filteredRisks} 
+              loading={loading}
+              onRiskUpdated={loadRisks}
+            />
+          </CardContent>
+        </Card>
       </div>
     </AppLayout>
   );

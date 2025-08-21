@@ -158,6 +158,93 @@ class RiskService {
     }
   }
 
+  async getProjectRisks(projectId: string): Promise<Risk[]> {
+    try {
+      const { data, error } = await supabase
+        .from('risks')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('risk_score', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching project risks:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error in getProjectRisks:', error);
+      return [];
+    }
+  }
+
+  async createRiskFromTask(taskId: string, riskData: Partial<Risk>): Promise<Risk> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('User not authenticated');
+
+      const risk = {
+        ...riskData,
+        task_id: taskId,
+        created_by: user.user.id,
+        user_id: user.user.id,
+        title: riskData.title || 'Task-related Risk',
+        category: riskData.category || 'technical',
+        probability: riskData.probability || 3,
+        impact: riskData.impact || 3,
+        status: riskData.status || 'active' as const,
+      };
+
+      return this.createRisk(risk as Omit<Risk, 'id' | 'created_at' | 'updated_at' | 'risk_score' | 'level'>);
+    } catch (error) {
+      console.error('Error creating risk from task:', error);
+      throw error;
+    }
+  }
+
+  async getRiskAnalytics(): Promise<any> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('User not authenticated');
+
+      const { data: risks, error } = await supabase
+        .from('risks')
+        .select('*')
+        .eq('user_id', user.user.id);
+
+      if (error) throw error;
+
+      const analytics = {
+        total: risks?.length || 0,
+        byStatus: {
+          active: risks?.filter(r => r.status === 'active').length || 0,
+          mitigated: risks?.filter(r => r.status === 'mitigated').length || 0,
+          closed: risks?.filter(r => r.status === 'closed').length || 0,
+          monitoring: risks?.filter(r => r.status === 'monitoring').length || 0,
+        },
+        byLevel: {
+          low: risks?.filter(r => r.level === 'low').length || 0,
+          medium: risks?.filter(r => r.level === 'medium').length || 0,
+          high: risks?.filter(r => r.level === 'high').length || 0,
+        },
+        byCategory: risks?.reduce((acc: any, risk) => {
+          acc[risk.category] = (acc[risk.category] || 0) + 1;
+          return acc;
+        }, {}) || {},
+      };
+
+      return analytics;
+    } catch (error) {
+      console.error('Error fetching risk analytics:', error);
+      return {
+        total: 0,
+        byStatus: { active: 0, mitigated: 0, closed: 0, monitoring: 0 },
+        byLevel: { low: 0, medium: 0, high: 0 },
+        byCategory: {},
+      };
+    }
+  }
+
   async createMitigation(mitigation: Omit<RiskMitigation, 'id' | 'created_at' | 'updated_at'>): Promise<RiskMitigation> {
     try {
       const { data: user } = await supabase.auth.getUser();

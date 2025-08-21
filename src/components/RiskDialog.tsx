@@ -38,13 +38,13 @@ const RiskDialog: React.FC<RiskDialogProps> = ({ risk, onSave, trigger }) => {
     title: '',
     description: '',
     category: 'technical',
-    probability: 0.5,
-    impact: 0.5,
+    probability: 3,
+    impact: 3,
     status: 'active' as RiskStatus,
     mitigation_plan: '',
     tags: [] as string[],
     affected_areas: [] as string[],
-    cost_impact: 0,
+    cost_impact_amount: 0,
     time_impact_days: 0
   });
   const [newTag, setNewTag] = useState('');
@@ -64,7 +64,7 @@ const RiskDialog: React.FC<RiskDialogProps> = ({ risk, onSave, trigger }) => {
         mitigation_plan: risk.mitigation_plan || '',
         tags: risk.tags || [],
         affected_areas: risk.affected_areas || [],
-        cost_impact: risk.cost_impact || 0,
+        cost_impact_amount: risk.cost_impact_amount || 0,
         time_impact_days: risk.time_impact_days || 0
       });
     }
@@ -82,6 +82,12 @@ const RiskDialog: React.FC<RiskDialogProps> = ({ risk, onSave, trigger }) => {
 
     setLoading(true);
     try {
+      const { data: user } = await riskService.createRisk({
+        ...formData,
+        user_id: '',
+        created_by: ''
+      } as any);
+
       if (risk) {
         await riskService.updateRisk(risk.id, formData);
         toast({
@@ -89,7 +95,11 @@ const RiskDialog: React.FC<RiskDialogProps> = ({ risk, onSave, trigger }) => {
           description: 'Risk updated successfully'
         });
       } else {
-        await riskService.createRisk(formData);
+        await riskService.createRisk({
+          ...formData,
+          user_id: '',
+          created_by: ''
+        } as any);
         toast({
           title: 'Success',
           description: 'Risk created successfully'
@@ -102,13 +112,13 @@ const RiskDialog: React.FC<RiskDialogProps> = ({ risk, onSave, trigger }) => {
           title: '',
           description: '',
           category: 'technical',
-          probability: 0.5,
-          impact: 0.5,
+          probability: 3,
+          impact: 3,
           status: 'active',
           mitigation_plan: '',
           tags: [],
           affected_areas: [],
-          cost_impact: 0,
+          cost_impact_amount: 0,
           time_impact_days: 0
         });
       }
@@ -160,8 +170,8 @@ const RiskDialog: React.FC<RiskDialogProps> = ({ risk, onSave, trigger }) => {
 
   const getRiskLevel = () => {
     const score = formData.probability * formData.impact;
-    if (score >= 0.7) return { label: 'High', color: 'bg-red-500' };
-    if (score >= 0.3) return { label: 'Medium', color: 'bg-amber-500' };
+    if (score >= 15) return { label: 'High', color: 'bg-red-500' };
+    if (score >= 8) return { label: 'Medium', color: 'bg-amber-500' };
     return { label: 'Low', color: 'bg-green-500' };
   };
 
@@ -242,25 +252,25 @@ const RiskDialog: React.FC<RiskDialogProps> = ({ risk, onSave, trigger }) => {
           
           <div className="space-y-4">
             <div>
-              <Label>Probability: {Math.round(formData.probability * 100)}%</Label>
+              <Label>Probability: {formData.probability}/5</Label>
               <Slider
                 value={[formData.probability]}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, probability: value[0] }))}
-                max={1}
-                min={0}
-                step={0.1}
+                max={5}
+                min={1}
+                step={1}
                 className="mt-2"
               />
             </div>
             
             <div>
-              <Label>Impact: {Math.round(formData.impact * 100)}%</Label>
+              <Label>Impact: {formData.impact}/5</Label>
               <Slider
                 value={[formData.impact]}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, impact: value[0] }))}
-                max={1}
-                min={0}
-                step={0.1}
+                max={5}
+                min={1}
+                step={1}
                 className="mt-2"
               />
             </div>
@@ -271,7 +281,7 @@ const RiskDialog: React.FC<RiskDialogProps> = ({ risk, onSave, trigger }) => {
                 {getRiskLevel().label}
               </Badge>
               <span className="text-sm text-muted-foreground">
-                Score: {Math.round(formData.probability * formData.impact * 100) / 100}
+                Score: {formData.probability * formData.impact}
               </span>
             </div>
           </div>
@@ -293,8 +303,8 @@ const RiskDialog: React.FC<RiskDialogProps> = ({ risk, onSave, trigger }) => {
               <Input
                 id="cost"
                 type="number"
-                value={formData.cost_impact}
-                onChange={(e) => setFormData(prev => ({ ...prev, cost_impact: parseFloat(e.target.value) || 0 }))}
+                value={formData.cost_impact_amount}
+                onChange={(e) => setFormData(prev => ({ ...prev, cost_impact_amount: parseFloat(e.target.value) || 0 }))}
                 placeholder="0"
               />
             </div>

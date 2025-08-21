@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,7 +29,6 @@ const TaskDetailWithIntegrations: React.FC<TaskDetailWithIntegrationsProps> = ({
 
   const loadTaskRisks = async () => {
     try {
-      // Load risks related to this task's project
       if (projectId) {
         const projectRisks = await riskService.getProjectRisks(projectId);
         setRisks(projectRisks);
@@ -123,8 +123,8 @@ const TaskDetailWithIntegrations: React.FC<TaskDetailWithIntegrationsProps> = ({
                     <div key={risk.id} className="border rounded-lg p-3">
                       <div className="flex items-start justify-between mb-2">
                         <h4 className="font-medium">{risk.title}</h4>
-                        <Badge variant={risk.risk_score >= 0.7 ? 'destructive' : risk.risk_score >= 0.3 ? 'default' : 'secondary'}>
-                          {risk.risk_score >= 0.7 ? 'High' : risk.risk_score >= 0.3 ? 'Medium' : 'Low'}
+                        <Badge variant={risk.risk_score >= 15 ? 'destructive' : risk.risk_score >= 8 ? 'default' : 'secondary'}>
+                          {risk.level}
                         </Badge>
                       </div>
                       {risk.description && (
