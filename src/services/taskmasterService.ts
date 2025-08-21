@@ -1,588 +1,446 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import type { Project, Board, TaskMasterTask } from '@/types/taskmaster';
+import { Task, Project, Board, BoardColumn, Sprint } from '@/types/taskmaster';
 
-class TaskmasterService {
-  private handleError(error: any, operation: string) {
-    console.error(`Error in ${operation}:`, error);
-    return {
-      message: error?.message || `Failed to ${operation}`,
-      details: error
-    };
-  }
+export interface TaskHistory {
+  id: string;
+  task_id: string;
+  user_id: string;
+  action: string;
+  field_name?: string;
+  old_value?: string;
+  new_value?: string;
+  description?: string;
+  created_at: string;
+}
 
+export interface TaskFile {
+  id: string;
+  task_id: string;
+  file_url: string;
+  file_name: string;
+  file_type?: string;
+  file_size?: number;
+  uploaded_by: string;
+  created_at: string;
+}
+
+export interface TaskTag {
+  id: string;
+  project_id?: string;
+  name: string;
+  color: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface TaskDependency {
+  id: string;
+  task_id: string;
+  depends_on_task_id: string;
+  dependency_type: 'blocks' | 'relates' | 'duplicates' | 'causes';
+  created_by: string;
+  created_at: string;
+}
+
+export interface TaskChecklist {
+  id: string;
+  task_id: string;
+  title: string;
+  description?: string;
+  is_completed: boolean;
+  position: number;
+  created_by: string;
+  created_at: string;
+}
+
+class TaskMasterService {
+  // Project Management
   async getProjects(userId: string) {
     try {
-      console.log('Fetching projects for user:', userId);
-      
       const { data, error } = await supabase
         .from('projects')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Supabase error fetching projects:', error);
-        return { data: null, error: this.handleError(error, 'fetch projects') };
-      }
-
-      // Transform the data to match Project interface
-      const projects: Project[] = (data || []).map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description || '',
-        key: item.key || item.name?.substring(0, 3).toUpperCase() || 'PRJ',
-        status: (item.status === 'active' || item.status === 'archived') ? item.status as 'active' | 'archived' : 'active',
-        created_by: item.created_by || item.owner_id || userId,
-        user_id: item.user_id || userId,
-        created_at: item.created_at,
-        updated_at: item.updated_at || item.created_at
-      }));
-
-      console.log('Successfully fetched projects:', projects);
-      return { data: projects, error: null };
-    } catch (e) {
-      console.error('Unexpected error fetching projects:', e);
-      return { data: null, error: this.handleError(e, 'fetch projects') };
+      return { data: data || [], error };
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      return { data: [], error };
     }
   }
 
-  async createProject(projectData: Omit<Project, 'id' | 'created_at' | 'updated_at'>) {
+  async createProject(project: Omit<Project, 'id' | 'created_at' | 'updated_at'>) {
     try {
-      console.log('Creating project with data:', projectData);
-
-      // Validate required fields
-      if (!projectData.name?.trim()) {
-        return { data: null, error: { message: 'Project name is required' } };
-      }
-
-      if (!projectData.key?.trim()) {
-        return { data: null, error: { message: 'Project key is required' } };
-      }
-
-      if (!projectData.user_id) {
-        return { data: null, error: { message: 'User ID is required' } };
-      }
-
       const { data, error } = await supabase
         .from('projects')
-        .insert([{
-          name: projectData.name.trim(),
-          key: projectData.key.trim().toUpperCase(),
-          description: projectData.description || '',
-          status: projectData.status || 'active',
-          created_by: projectData.created_by,
-          user_id: projectData.user_id
-        }])
+        .insert(project)
         .select()
         .single();
 
-      if (error) {
-        console.error('Supabase error creating project:', error);
-        return { data: null, error: this.handleError(error, 'create project') };
-      }
-
-      // Transform the result to match Project interface
-      const project: Project = {
-        id: data.id,
-        name: data.name,
-        description: data.description || '',
-        key: data.key || data.name?.substring(0, 3).toUpperCase() || 'PRJ',
-        status: (data.status === 'active' || data.status === 'archived') ? data.status as 'active' | 'archived' : 'active',
-        created_by: data.created_by || data.owner_id || projectData.created_by,
-        user_id: data.user_id || projectData.user_id,
-        created_at: data.created_at,
-        updated_at: data.updated_at || data.created_at
-      };
-
-      console.log('Successfully created project:', project);
-      return { data: project, error: null };
-    } catch (e) {
-      console.error('Unexpected error creating project:', e);
-      return { data: null, error: this.handleError(e, 'create project') };
+      return { data, error };
+    } catch (error) {
+      console.error('Error creating project:', error);
+      return { data: null, error };
     }
   }
 
-  async updateProject(projectId: string, updates: Partial<Project>) {
-    const { data, error } = await supabase
-      .from('projects')
-      .update(updates)
-      .eq('id', projectId)
-      .select()
-      .single();
-
-    if (error) return { data: null, error };
-
-    // Transform the result to match Project interface
-    const project: Project = {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
-      key: data.key || data.name?.substring(0, 3).toUpperCase() || 'PRJ',
-      status: (data.status === 'active' || data.status === 'archived') ? data.status as 'active' | 'archived' : 'active',
-      created_by: data.created_by || data.owner_id || data.user_id,
-      user_id: data.user_id,
-      created_at: data.created_at,
-      updated_at: data.updated_at || data.created_at
-    };
-
-    return { data: project, error };
-  }
-
-  async deleteProject(projectId: string) {
-    const { error } = await supabase
-      .from('projects')
-      .delete()
-      .eq('id', projectId);
-
-    return { error };
-  }
-
-  private validateAndTransformBoard(item: any): Board {
-    // Validate and cast board type
-    const validTypes = ['kanban', 'scrum', 'timeline', 'issue_tracker'] as const;
-    const boardType = validTypes.includes(item.type) ? item.type as typeof validTypes[number] : 'kanban';
-    
-    // Parse and validate config
-    let config;
-    try {
-      if (typeof item.config === 'string') {
-        config = JSON.parse(item.config);
-      } else {
-        config = item.config;
-      }
-    } catch {
-      config = {
-        columns: [
-          { id: 'todo', name: 'To Do' },
-          { id: 'in_progress', name: 'In Progress' },
-          { id: 'done', name: 'Done' }
-        ]
-      };
-    }
-
-    return {
-      id: item.id,
-      project_id: item.project_id,
-      name: item.name,
-      type: boardType,
-      description: item.description || '',
-      config: config || {
-        columns: [
-          { id: 'todo', name: 'To Do' },
-          { id: 'in_progress', name: 'In Progress' },
-          { id: 'done', name: 'Done' }
-        ]
-      },
-      created_by: item.created_by,
-      created_at: item.created_at,
-      updated_at: item.updated_at || item.created_at
-    };
-  }
-
+  // Board Management
   async getBoards(projectId: string) {
     try {
       const { data, error } = await supabase
         .from('boards')
         .select('*')
-        .eq('project_id', projectId);
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching boards:', error);
-        return { data: [], error: this.handleError(error, 'fetch boards') };
-      }
-
-      const boards: Board[] = (data || []).map((item: any) => 
-        this.validateAndTransformBoard(item)
-      );
-
-      return { data: boards, error: null };
-    } catch (e) {
-      console.error('Unexpected error fetching boards:', e);
-      // Fallback: return empty array if boards table doesn't exist yet
-      return { data: [], error: null };
+      return { data: data || [], error };
+    } catch (error) {
+      console.error('Error fetching boards:', error);
+      return { data: [], error };
     }
   }
 
-  async createBoard(boardData: Omit<Board, 'id' | 'created_at' | 'updated_at'>) {
+  async createBoard(board: Omit<Board, 'id' | 'created_at' | 'updated_at'>) {
     try {
       const { data, error } = await supabase
         .from('boards')
-        .insert([{
-          project_id: boardData.project_id,
-          name: boardData.name,
-          type: boardData.type,
-          description: boardData.description || '',
-          config: boardData.config || {
-            columns: [
-              { id: 'todo', name: 'To Do' },
-              { id: 'in_progress', name: 'In Progress' },
-              { id: 'done', name: 'Done' }
-            ]
-          },
-          created_by: boardData.created_by
-        }])
+        .insert(board)
         .select()
         .single();
 
-      if (error) return { data: null, error };
-
-      const board = this.validateAndTransformBoard(data);
-      return { data: board, error: null };
-    } catch (e) {
-      // Fallback: create a mock board if boards table doesn't exist yet
-      const mockBoard: Board = {
-        id: crypto.randomUUID(),
-        project_id: boardData.project_id,
-        name: boardData.name,
-        type: boardData.type,
-        description: boardData.description || '',
-        config: boardData.config || {
-          columns: [
-            { id: 'todo', name: 'To Do' },
-            { id: 'in_progress', name: 'In Progress' },
-            { id: 'done', name: 'Done' }
-          ]
-        },
-        created_by: boardData.created_by,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      return { data: mockBoard, error: null };
+      return { data, error };
+    } catch (error) {
+      console.error('Error creating board:', error);
+      return { data: null, error };
     }
   }
 
-  async updateBoard(boardId: string, updates: Partial<Board>) {
-    try {
-      const { data, error } = await supabase
-        .from('boards')
-        .update(updates)
-        .eq('id', boardId)
-        .select()
-        .single();
-
-      if (error) return { data: null, error };
-
-      const board = this.validateAndTransformBoard(data);
-      return { data: board, error: null };
-    } catch (e) {
-      return { data: null, error: { message: 'Board update not implemented yet' } };
-    }
-  }
-
-  async deleteBoard(boardId: string) {
-    try {
-      const { error } = await supabase
-        .from('boards')
-        .delete()
-        .eq('id', boardId);
-
-      return { error };
-    } catch (e) {
-      return { error: null };
-    }
-  }
-
-  private async getNextTaskNumber(boardId: string): Promise<number> {
-    try {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('task_number')
-        .eq('board_id', boardId)
-        .order('task_number', { ascending: false })
-        .limit(1);
-
-      if (error) {
-        console.error('Error getting next task number:', error);
-        return 1;
-      }
-
-      const lastTaskNumber = data && data.length > 0 ? data[0].task_number : 0;
-      return (lastTaskNumber || 0) + 1;
-    } catch (e) {
-      console.error('Unexpected error getting next task number:', e);
-      return 1;
-    }
-  }
-
-  private generateBoardPrefix(boardName: string): string {
-    // Generate a 3-letter prefix from board name
-    const cleanName = boardName.replace(/[^A-Za-z]/g, '').toUpperCase();
-    if (cleanName.length >= 3) {
-      return cleanName.substring(0, 3);
-    } else if (cleanName.length > 0) {
-      return cleanName.padEnd(3, 'X');
-    } else {
-      return 'TSK';
-    }
-  }
-
-  private validateAndTransformTask(item: any, boardId?: string): TaskMasterTask {
-    // Validate priority
-    const validPriorities = ['low', 'medium', 'high', 'critical'] as const;
-    const priority = validPriorities.includes(item.priority) ? item.priority as typeof validPriorities[number] : 'medium';
-    
-    // Validate type
-    const validTypes = ['task', 'bug', 'story', 'epic'] as const;
-    const type = validTypes.includes(item.type) ? item.type as typeof validTypes[number] : 'task';
-    
-    // Validate visibility
-    const validVisibilities = ['team', 'private', 'public'] as const;
-    const visibility = validVisibilities.includes(item.visibility) ? item.visibility as typeof validVisibilities[number] : 'team';
-
-    // Handle assigned_to array field - the database trigger maintains consistency
-    let assignedTo: string[] | undefined;
-    if (item.assigned_to && Array.isArray(item.assigned_to)) {
-      assignedTo = item.assigned_to;
-    }
-
-    return {
-      id: item.id,
-      task_number: item.task_number || 1,
-      task_key: item.task_key || `TASK-${item.id?.substring(0, 4)}`,
-      board_id: item.board_id || boardId || '',
-      project_id: item.project_id,
-      sprint_id: item.sprint_id,
-      title: item.title,
-      description: item.description || '',
-      status: item.status,
-      priority: priority,
-      type: type,
-      start_date: item.start_date,
-      due_date: item.due_date,
-      estimate_hours: item.estimate_hours,
-      actual_hours: item.actual_hours || 0,
-      assignee_id: item.assignee_id,
-      reporter_id: item.reporter_id,
-      created_by: item.created_by,
-      assigned_to: assignedTo,
-      reviewer_id: item.reviewer_id,
-      parent_task_id: item.parent_task_id,
-      linked_task_ids: item.linked_task_ids,
-      recurrence_rule: item.recurrence_rule,
-      visibility: visibility,
-      position: item.position || 0,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-      updated_by: item.updated_by
-    };
-  }
-
+  // Task Management
   async getTasks(boardId: string) {
     try {
-      console.log('Fetching tasks for board:', boardId);
-      
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
         .eq('board_id', boardId)
         .order('position', { ascending: true });
 
-      if (error) {
-        console.error('Supabase error fetching tasks:', error);
-        return { data: null, error: this.handleError(error, 'fetch tasks') };
-      }
-
-      // Transform the data using the helper method
-      const tasks: TaskMasterTask[] = (data || []).map((item: any) => 
-        this.validateAndTransformTask(item, boardId)
-      );
-
-      console.log('Successfully fetched tasks:', tasks);
-      return { data: tasks, error: null };
-    } catch (e) {
-      console.error('Unexpected error fetching tasks:', e);
-      return { data: null, error: this.handleError(e, 'fetch tasks') };
+      return { data: data || [], error };
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      return { data: [], error };
     }
   }
 
-  async createTask(taskData: Omit<TaskMasterTask, 'id' | 'task_number' | 'task_key' | 'created_at' | 'updated_at'>) {
+  async createTask(task: any, userId: string) {
     try {
-      console.log('Creating task with data:', taskData);
-      
-      // Validate required fields
-      if (!taskData.title?.trim()) {
-        return { data: null, error: { message: 'Task title is required' } };
+      // Generate task key if not provided
+      if (!task.task_key) {
+        const { data: project } = await supabase
+          .from('projects')
+          .select('key, name')
+          .eq('id', task.project_id)
+          .single();
+
+        const projectKey = project?.key || project?.name?.substring(0, 3).toUpperCase() || 'TASK';
+        
+        // Get next task number for the project
+        const { data: lastTask } = await supabase
+          .from('tasks')
+          .select('task_number')
+          .eq('project_id', task.project_id)
+          .order('task_number', { ascending: false })
+          .limit(1)
+          .single();
+
+        const nextNumber = (lastTask?.task_number || 0) + 1;
+        task.task_key = `${projectKey}-${nextNumber}`;
+        task.task_number = nextNumber;
       }
 
-      if (!taskData.board_id) {
-        return { data: null, error: { message: 'Board ID is required' } };
+      task.created_by = userId;
+      if (!task.reporter_id) {
+        task.reporter_id = userId;
       }
-
-      if (!taskData.project_id) {
-        return { data: null, error: { message: 'Project ID is required' } };
-      }
-
-      if (!taskData.created_by) {
-        return { data: null, error: { message: 'Created by user ID is required' } };
-      }
-
-      // Get the board to generate prefix
-      const { data: boardData, error: boardError } = await supabase
-        .from('boards')
-        .select('name')
-        .eq('id', taskData.board_id)
-        .single();
-
-      if (boardError) {
-        console.error('Error fetching board for task creation:', boardError);
-        return { data: null, error: this.handleError(boardError, 'fetch board for task creation') };
-      }
-
-      // Get next task number
-      const taskNumber = await this.getNextTaskNumber(taskData.board_id);
-      
-      // Generate board prefix and task key
-      const boardPrefix = this.generateBoardPrefix(boardData.name);
-      const taskKey = `${boardPrefix}-${taskNumber}`;
-
-      // Prepare the insert data - the database trigger will handle assignment consistency
-      const insertData = {
-        board_id: taskData.board_id,
-        project_id: taskData.project_id,
-        task_number: taskNumber,
-        task_key: taskKey,
-        title: taskData.title.trim(),
-        description: taskData.description || '',
-        status: taskData.status,
-        priority: taskData.priority,
-        type: taskData.type,
-        visibility: taskData.visibility,
-        position: taskData.position,
-        actual_hours: taskData.actual_hours,
-        created_by: taskData.created_by,
-        assignee_id: taskData.assignee_id || null,
-        estimate_hours: taskData.estimate_hours || null,
-        due_date: taskData.due_date || null,
-        start_date: taskData.start_date || null,
-        sprint_id: taskData.sprint_id || null,
-        reporter_id: taskData.reporter_id || null,
-        reviewer_id: taskData.reviewer_id || null,
-        parent_task_id: taskData.parent_task_id || null,
-        linked_task_ids: taskData.linked_task_ids || null,
-        recurrence_rule: taskData.recurrence_rule || null,
-        // Don't set assigned_to manually - let the database trigger handle it
-      };
-
-      console.log('Insert data for task:', insertData);
 
       const { data, error } = await supabase
         .from('tasks')
-        .insert([insertData])
+        .insert(task)
         .select()
         .single();
 
-      if (error) {
-        console.error('Supabase error creating task:', error);
-        return { data: null, error: this.handleError(error, 'create task') };
+      // Log task creation
+      if (data) {
+        await this.logTaskHistory(data.id, userId, 'created', '', '', `Task ${data.task_key} created`);
       }
 
-      // Transform the result using the helper method
-      const task = this.validateAndTransformTask(data);
-      console.log('Successfully created task:', task);
-      return { data: task, error: null };
-    } catch (e) {
-      console.error('Unexpected error creating task:', e);
-      return { data: null, error: this.handleError(e, 'create task') };
+      return { data, error };
+    } catch (error) {
+      console.error('Error creating task:', error);
+      return { data: null, error };
     }
   }
 
-  async updateTask(taskId: string, updates: Partial<TaskMasterTask>, userId: string) {
+  async updateTask(taskId: string, updates: any, userId: string) {
     try {
-      console.log('Updating task:', taskId, 'with updates:', updates);
-
-      if (!taskId) {
-        return { data: null, error: { message: 'Task ID is required' } };
-      }
-
-      if (!userId) {
-        return { data: null, error: { message: 'User ID is required' } };
-      }
-
-      // Prepare updates - let the database trigger handle assignment consistency
-      const updateData: any = {
-        ...updates,
-        updated_by: userId,
-        updated_at: new Date().toISOString()
-      };
-
-      // Remove assigned_to from updates to let the trigger handle it
-      if ('assigned_to' in updateData) {
-        delete updateData.assigned_to;
-      }
+      // Get current task for comparison
+      const { data: currentTask } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('id', taskId)
+        .single();
 
       const { data, error } = await supabase
         .from('tasks')
-        .update(updateData)
+        .update({ ...updates, updated_by: userId })
         .eq('id', taskId)
         .select()
         .single();
 
-      if (error) {
-        console.error('Supabase error updating task:', error);
-        return { data: null, error: this.handleError(error, 'update task') };
+      // Log changes
+      if (data && currentTask) {
+        for (const [key, newValue] of Object.entries(updates)) {
+          const oldValue = currentTask[key as keyof typeof currentTask];
+          if (oldValue !== newValue) {
+            await this.logTaskHistory(
+              taskId, 
+              userId, 
+              'updated', 
+              key, 
+              String(oldValue), 
+              String(newValue)
+            );
+          }
+        }
       }
 
-      // Transform the result using the helper method
-      const task = this.validateAndTransformTask(data);
-      console.log('Successfully updated task:', task);
-      return { data: task, error: null };
-    } catch (e) {
-      console.error('Unexpected error updating task:', e);
-      return { data: null, error: this.handleError(e, 'update task') };
+      return { data, error };
+    } catch (error) {
+      console.error('Error updating task:', error);
+      return { data: null, error };
     }
   }
 
-  async deleteTask(taskId: string) {
-    const { error } = await supabase
-      .from('tasks')
-      .delete()
-      .eq('id', taskId);
+  // Task History
+  async logTaskHistory(taskId: string, userId: string, action: string, fieldName?: string, oldValue?: string, newValue?: string, description?: string) {
+    try {
+      const { error } = await supabase
+        .from('task_history')
+        .insert({
+          task_id: taskId,
+          user_id: userId,
+          action,
+          field_name: fieldName,
+          old_value: oldValue,
+          new_value: newValue,
+          description: description || `${action} ${fieldName || ''}`
+        });
 
-    return { error };
+      if (error) console.error('Error logging task history:', error);
+    } catch (error) {
+      console.error('Error in logTaskHistory:', error);
+    }
   }
 
-  async getTasksByProject(projectId: string) {
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('created_at', { ascending: false });
+  async getTaskHistory(taskId: string): Promise<{ data: TaskHistory[]; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('task_history')
+        .select('*')
+        .eq('task_id', taskId)
+        .order('created_at', { ascending: false });
 
-    if (error) return { data: null, error };
-
-    // Transform the data using the helper method
-    const tasks: TaskMasterTask[] = (data || []).map((item: any) => 
-      this.validateAndTransformTask(item)
-    );
-
-    return { data: tasks, error };
+      return { data: data || [], error };
+    } catch (error) {
+      console.error('Error fetching task history:', error);
+      return { data: [], error };
+    }
   }
 
-  async getTasksByAssignee(assigneeId: string) {
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('assignee_id', assigneeId)
-      .order('created_at', { ascending: false });
+  // Task Files
+  async uploadTaskFile(taskId: string, file: { file_url: string; file_name: string; file_type?: string; file_size?: number }, userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('task_files')
+        .insert({
+          task_id: taskId,
+          uploaded_by: userId,
+          ...file
+        })
+        .select()
+        .single();
 
-    if (error) return { data: null, error };
-
-    // Transform the data using the helper method
-    const tasks: TaskMasterTask[] = (data || []).map((item: any) => 
-      this.validateAndTransformTask(item)
-    );
-
-    return { data: tasks, error };
+      return { data, error };
+    } catch (error) {
+      console.error('Error uploading task file:', error);
+      return { data: null, error };
+    }
   }
 
-  async updateTaskStatus(taskId: string, status: string, userId: string) {
-    return this.updateTask(taskId, { status }, userId);
+  async getTaskFiles(taskId: string): Promise<{ data: TaskFile[]; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('task_files')
+        .select('*')
+        .eq('task_id', taskId)
+        .order('created_at', { ascending: false });
+
+      return { data: data || [], error };
+    } catch (error) {
+      console.error('Error fetching task files:', error);
+      return { data: [], error };
+    }
   }
 
-  async assignTask(taskId: string, assigneeId: string, userId: string) {
-    return this.updateTask(taskId, { assignee_id: assigneeId }, userId);
+  // Task Tags
+  async createTaskTag(projectId: string, name: string, color: string, userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('task_tags')
+        .insert({
+          project_id: projectId,
+          name,
+          color,
+          created_by: userId
+        })
+        .select()
+        .single();
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error creating task tag:', error);
+      return { data: null, error };
+    }
+  }
+
+  async getTaskTags(projectId: string): Promise<{ data: TaskTag[]; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('task_tags')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('name', { ascending: true });
+
+      return { data: data || [], error };
+    } catch (error) {
+      console.error('Error fetching task tags:', error);
+      return { data: [], error };
+    }
+  }
+
+  async assignTagToTask(taskId: string, tagId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('task_tag_assignments')
+        .insert({ task_id: taskId, tag_id: tagId })
+        .select()
+        .single();
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error assigning tag to task:', error);
+      return { data: null, error };
+    }
+  }
+
+  // Task Dependencies
+  async addTaskDependency(taskId: string, dependsOnTaskId: string, dependencyType: string, userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('task_dependencies')
+        .insert({
+          task_id: taskId,
+          depends_on_task_id: dependsOnTaskId,
+          dependency_type: dependencyType as any,
+          created_by: userId
+        })
+        .select()
+        .single();
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error adding task dependency:', error);
+      return { data: null, error };
+    }
+  }
+
+  async getTaskDependencies(taskId: string): Promise<{ data: TaskDependency[]; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('task_dependencies')
+        .select('*')
+        .eq('task_id', taskId);
+
+      return { data: data || [], error };
+    } catch (error) {
+      console.error('Error fetching task dependencies:', error);
+      return { data: [], error };
+    }
+  }
+
+  // Task Checklists
+  async addChecklistItem(taskId: string, title: string, description: string, userId: string) {
+    try {
+      const { data: maxPosition } = await supabase
+        .from('task_checklists')
+        .select('position')
+        .eq('task_id', taskId)
+        .order('position', { ascending: false })
+        .limit(1)
+        .single();
+
+      const position = (maxPosition?.position || 0) + 1;
+
+      const { data, error } = await supabase
+        .from('task_checklists')
+        .insert({
+          task_id: taskId,
+          title,
+          description,
+          position,
+          created_by: userId
+        })
+        .select()
+        .single();
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error adding checklist item:', error);
+      return { data: null, error };
+    }
+  }
+
+  async updateChecklistItem(itemId: string, updates: { title?: string; description?: string; is_completed?: boolean }) {
+    try {
+      const { data, error } = await supabase
+        .from('task_checklists')
+        .update(updates)
+        .eq('id', itemId)
+        .select()
+        .single();
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error updating checklist item:', error);
+      return { data: null, error };
+    }
+  }
+
+  async getTaskChecklists(taskId: string): Promise<{ data: TaskChecklist[]; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('task_checklists')
+        .select('*')
+        .eq('task_id', taskId)
+        .order('position', { ascending: true });
+
+      return { data: data || [], error };
+    } catch (error) {
+      console.error('Error fetching task checklists:', error);
+      return { data: [], error };
+    }
   }
 }
 
-export const taskmasterService = new TaskmasterService();
+export const taskmasterService = new TaskMasterService();

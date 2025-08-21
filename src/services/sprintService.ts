@@ -1,234 +1,161 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import type { Sprint, SprintTask, BoardBacklog, BoardReport } from '@/types/taskmaster';
+
+export interface Sprint {
+  id: string;
+  project_id: string;
+  board_id?: string;
+  name: string;
+  goal?: string;
+  start_date?: string;
+  end_date?: string;
+  status: 'planned' | 'active' | 'completed' | 'cancelled';
+  capacity: number;
+  velocity: number;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SprintTask {
+  id: string;
+  sprint_id: string;
+  task_id: string;
+  committed_at: string;
+  initial_story_points?: number;
+  current_story_points?: number;
+  created_at: string;
+}
 
 class SprintService {
-  async getSprints(boardId: string) {
-    const { data, error } = await supabase
-      .from('sprints')
-      .select('*')
-      .eq('board_id', boardId)
-      .order('created_at', { ascending: false });
+  async getSprints(boardId: string): Promise<{ data: Sprint[]; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('sprints')
+        .select('*')
+        .eq('board_id', boardId)
+        .order('created_at', { ascending: false });
 
-    if (error) return { data: null, error };
-
-    const sprints: Sprint[] = (data || []).map((item: any) => ({
-      id: item.id,
-      project_id: item.project_id,
-      board_id: item.board_id,
-      name: item.name,
-      goal: item.goal,
-      start_date: item.start_date,
-      end_date: item.end_date,
-      status: item.status as 'planned' | 'active' | 'completed',
-      capacity: item.capacity || 0,
-      velocity: item.velocity || 0,
-      created_by: item.created_by,
-      created_at: item.created_at,
-      updated_at: item.updated_at
-    }));
-
-    return { data: sprints, error: null };
+      return { data: data || [], error };
+    } catch (error) {
+      console.error('Error fetching sprints:', error);
+      return { data: [], error };
+    }
   }
 
-  async createSprint(sprintData: Omit<Sprint, 'id' | 'created_at' | 'updated_at'>) {
-    const { data, error } = await supabase
-      .from('sprints')
-      .insert([{
-        project_id: sprintData.project_id,
-        board_id: sprintData.board_id,
-        name: sprintData.name,
-        goal: sprintData.goal,
-        start_date: sprintData.start_date,
-        end_date: sprintData.end_date,
-        status: sprintData.status,
-        capacity: sprintData.capacity || 0,
-        velocity: sprintData.velocity || 0,
-        created_by: sprintData.created_by
-      }])
-      .select('*')
-      .single();
+  async createSprint(sprint: Omit<Sprint, 'id' | 'created_at' | 'updated_at' | 'capacity' | 'velocity'>): Promise<{ data: Sprint | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('sprints')
+        .insert({
+          ...sprint,
+          capacity: 0,
+          velocity: 0
+        })
+        .select()
+        .single();
 
-    if (error) return { data: null, error };
-
-    const sprint: Sprint = {
-      id: data.id,
-      project_id: data.project_id,
-      board_id: data.board_id,
-      name: data.name,
-      goal: data.goal,
-      start_date: data.start_date,
-      end_date: data.end_date,
-      status: data.status as 'planned' | 'active' | 'completed',
-      capacity: data.capacity || 0,
-      velocity: data.velocity || 0,
-      created_by: data.created_by,
-      created_at: data.created_at,
-      updated_at: data.updated_at
-    };
-
-    return { data: sprint, error: null };
+      return { data, error };
+    } catch (error) {
+      console.error('Error creating sprint:', error);
+      return { data: null, error };
+    }
   }
 
-  async updateSprint(sprintId: string, updates: Partial<Sprint>) {
-    const { data, error } = await supabase
-      .from('sprints')
-      .update(updates)
-      .eq('id', sprintId)
-      .select('*')
-      .single();
+  async updateSprint(sprintId: string, updates: Partial<Sprint>): Promise<{ data: Sprint | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('sprints')
+        .update(updates)
+        .eq('id', sprintId)
+        .select()
+        .single();
 
-    if (error) return { data: null, error };
-
-    const sprint: Sprint = {
-      id: data.id,
-      project_id: data.project_id,
-      board_id: data.board_id,
-      name: data.name,
-      goal: data.goal,
-      start_date: data.start_date,
-      end_date: data.end_date,
-      status: data.status as 'planned' | 'active' | 'completed',
-      capacity: data.capacity || 0,
-      velocity: data.velocity || 0,
-      created_by: data.created_by,
-      created_at: data.created_at,
-      updated_at: data.updated_at
-    };
-
-    return { data: sprint, error: null };
+      return { data, error };
+    } catch (error) {
+      console.error('Error updating sprint:', error);
+      return { data: null, error };
+    }
   }
 
-  async deleteSprint(sprintId: string) {
-    const { error } = await supabase
-      .from('sprints')
-      .delete()
-      .eq('id', sprintId);
+  async addTaskToSprint(sprintId: string, taskId: string, storyPoints?: number): Promise<{ data: SprintTask | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('sprint_tasks')
+        .insert({
+          sprint_id: sprintId,
+          task_id: taskId,
+          initial_story_points: storyPoints,
+          current_story_points: storyPoints
+        })
+        .select()
+        .single();
 
-    return { error };
+      // Update task with sprint_id
+      await supabase
+        .from('tasks')
+        .update({ sprint_id: sprintId })
+        .eq('id', taskId);
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error adding task to sprint:', error);
+      return { data: null, error };
+    }
   }
 
-  async addTaskToSprint(sprintId: string, taskId: string, storyPoints?: number) {
-    const { data, error } = await supabase
-      .from('sprint_tasks')
-      .insert([{
-        sprint_id: sprintId,
-        task_id: taskId,
-        initial_story_points: storyPoints,
-        current_story_points: storyPoints
-      }])
-      .select()
-      .single();
+  async removeTaskFromSprint(sprintId: string, taskId: string): Promise<{ error: any }> {
+    try {
+      const { error } = await supabase
+        .from('sprint_tasks')
+        .delete()
+        .eq('sprint_id', sprintId)
+        .eq('task_id', taskId);
 
-    if (error) return { data: null, error };
+      // Remove sprint_id from task
+      await supabase
+        .from('tasks')
+        .update({ sprint_id: null })
+        .eq('id', taskId);
 
-    // Also update the task's sprint_id
-    await supabase
-      .from('tasks')
-      .update({ sprint_id: sprintId })
-      .eq('id', taskId);
-
-    return { data, error: null };
+      return { error };
+    } catch (error) {
+      console.error('Error removing task from sprint:', error);
+      return { error };
+    }
   }
 
-  async removeTaskFromSprint(sprintId: string, taskId: string) {
-    const { error } = await supabase
-      .from('sprint_tasks')
-      .delete()
-      .eq('sprint_id', sprintId)
-      .eq('task_id', taskId);
+  async getSprintTasks(sprintId: string): Promise<{ data: SprintTask[]; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('sprint_tasks')
+        .select('*')
+        .eq('sprint_id', sprintId);
 
-    // Also clear the task's sprint_id
-    await supabase
-      .from('tasks')
-      .update({ sprint_id: null })
-      .eq('id', taskId);
-
-    return { error };
+      return { data: data || [], error };
+    } catch (error) {
+      console.error('Error fetching sprint tasks:', error);
+      return { data: [], error };
+    }
   }
 
-  async getSprintTasks(sprintId: string) {
-    const { data, error } = await supabase
-      .from('sprint_tasks')
-      .select(`
-        *,
-        tasks (*)
-      `)
-      .eq('sprint_id', sprintId);
+  async calculateSprintVelocity(sprintId: string): Promise<number> {
+    try {
+      const { data: tasks } = await supabase
+        .from('sprint_tasks')
+        .select('current_story_points, tasks!inner(status)')
+        .eq('sprint_id', sprintId);
 
-    if (error) return { data: null, error };
-    return { data, error: null };
-  }
+      if (!tasks) return 0;
 
-  async getBacklogItems(boardId: string) {
-    const { data, error } = await supabase
-      .from('board_backlogs')
-      .select(`
-        *,
-        tasks (*)
-      `)
-      .eq('board_id', boardId)
-      .order('priority_order', { ascending: true });
+      const completedPoints = tasks
+        .filter((task: any) => task.tasks.status === 'done')
+        .reduce((sum: number, task: any) => sum + (task.current_story_points || 0), 0);
 
-    if (error) return { data: null, error };
-    return { data, error: null };
-  }
-
-  async addToBacklog(backlogData: Omit<BoardBacklog, 'id' | 'created_at' | 'updated_at'>) {
-    const { data, error } = await supabase
-      .from('board_backlogs')
-      .insert([backlogData])
-      .select()
-      .single();
-
-    if (error) return { data: null, error };
-    return { data, error: null };
-  }
-
-  async updateBacklogPriority(backlogId: string, newPriority: number) {
-    const { data, error } = await supabase
-      .from('board_backlogs')
-      .update({ priority_order: newPriority })
-      .eq('id', backlogId)
-      .select()
-      .single();
-
-    if (error) return { data: null, error };
-    return { data, error: null };
-  }
-
-  async generateReport(boardId: string, reportType: BoardReport['report_type'], parameters: Record<string, any> = {}) {
-    // This would generate actual report data based on the report type
-    const reportData = await this.calculateReportData(boardId, reportType, parameters);
-    
-    const { data, error } = await supabase
-      .from('board_reports')
-      .insert([{
-        board_id: boardId,
-        report_type: reportType,
-        report_data: reportData,
-        parameters,
-        generated_by: (await supabase.auth.getUser()).data.user?.id
-      }])
-      .select()
-      .single();
-
-    if (error) return { data: null, error };
-    return { data, error: null };
-  }
-
-  private async calculateReportData(boardId: string, reportType: string, parameters: Record<string, any>) {
-    // Placeholder for actual report calculation logic
-    switch (reportType) {
-      case 'burndown':
-        return { chartData: [], totalPoints: 0, remainingPoints: 0 };
-      case 'velocity':
-        return { averageVelocity: 0, sprintVelocities: [] };
-      case 'cumulative_flow':
-        return { flowData: [] };
-      case 'sprint_summary':
-        return { completedTasks: 0, totalTasks: 0, velocity: 0 };
-      default:
-        return {};
+      return completedPoints;
+    } catch (error) {
+      console.error('Error calculating sprint velocity:', error);
+      return 0;
     }
   }
 }

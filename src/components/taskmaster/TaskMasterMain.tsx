@@ -126,7 +126,7 @@ const TaskMasterMain: React.FC = () => {
           <TabsContent value="timeline" className="space-y-4">
             <div className="p-8 text-center">
               <h3 className="text-lg font-semibold mb-2">Timeline View</h3>
-              <p className="text-muted-foreground">Timeline view will be available soon</p>
+              <p className="text-muted-foreground">Timeline view with Gantt charts coming soon</p>
             </div>
           </TabsContent>
 
